@@ -3,6 +3,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  preview: {
+    allowedHosts: true,
+  },
   optimizeDeps: {
     include: ['@mui/material', '@emotion/react', '@emotion/styled'],
   },
