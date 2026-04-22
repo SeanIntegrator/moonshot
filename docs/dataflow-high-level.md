@@ -1,6 +1,6 @@
 # High-level dataflow
 
-Zappuccino v2 treats **Postgres as the single source of truth** for orders that appear on the KDS and in the customer app. POS systems (Square first, others later) are integrated through a **POS adapter layer** that normalises catalogue and order events into internal shapes. Payment (Stripe) is similarly abstracted.
+Moonshot v2 treats **Postgres as the single source of truth** for orders that appear on the KDS and in the customer app. POS systems (Square first, others later) are integrated through a **POS adapter layer** that normalises catalogue and order events into internal shapes. Payment (Stripe) is similarly abstracted.
 
 This replaces the v0.1 pattern where the KDS merged live Square `SearchOrders` results with web-app rows at read time (`mergeKdsBoardOrdersWithWebAppDb`). In v2, every visible order row exists in Postgres first; adapters only ingest and reconcile external IDs.
 
