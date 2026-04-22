@@ -1,0 +1,26 @@
+node_modules
+dist
+.next
+.turbo
+*.tsbuildinfo
+.DS_Store
+
+# Local env & secrets (templates like .env.example are tracked)
+.env
+.env.*
+!.env.example
+
+# Logs & test output
+*.log
+npm-debug.log*
+coverage
+.nyc_output
+
+# Keys & downloaded service accounts (never commit)
+*.pem
+*.p12
+*-firebase-adminsdk-*.json
+*credentials*.json
+
+# Direnv / local shell env
+.envrc

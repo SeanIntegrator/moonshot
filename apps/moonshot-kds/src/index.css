@@ -1,0 +1,32 @@
+:root {
+  --kds-bg: #0f1115;
+  --kds-text: #e8eaed;
+  --kds-accent: #3b82f6;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--kds-bg);
+  color: var(--kds-text);
+  font-family: system-ui, sans-serif;
+}
+
+.kds-shell {
+  min-height: 100%;
+  padding: 1rem 1.25rem;
+}
+
+.kds-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.kds-placeholder {
+  margin-top: 0.75rem;
+  opacity: 0.75;
+  font-size: 0.95rem;
+}

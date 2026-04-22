@@ -1,0 +1,22 @@
+/* App shell: MUI CssBaseline supplies typography/scrollbars; keep structural minimum */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
