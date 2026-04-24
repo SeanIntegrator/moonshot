@@ -20,6 +20,14 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.get('/', (_req, res) => {
+  res.json({
+    service: '@moonshot/api',
+    health: '/health',
+    versionedHealth: `${API_VERSION_PREFIX}/health`,
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: '@moonshot/api' });
 });
@@ -32,6 +40,6 @@ app.use(`${API_VERSION_PREFIX}/auth`, authRouter);
 app.use(`${API_VERSION_PREFIX}/cafe`, cafeRouter);
 app.use(`${API_VERSION_PREFIX}/menu`, menuRouter);
 
-app.listen(PORT, () => {
-  console.log(`@moonshot/api listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`@moonshot/api listening on 0.0.0.0:${PORT}`);
 });
