@@ -1,5 +1,5 @@
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import { API_VERSION_PREFIX, type ApiEnvelope, type Cafe, type FeatureFlagKey } from '@moonshot/types';
+import type { Cafe, FeatureFlagKey } from '@moonshot/types';
 import {
   createContext,
   useContext,
@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { CafeTheme } from '@moonshot/types';
-import { getApiBaseUrl, getCafeSlug } from '../lib/api.js';
+import { apiFetch, getCafeSlug } from '../lib/api.js';
 import { createCafeMuiTheme } from '../theme/createCafeMuiTheme.js';
 import { getTheme } from '../themes/index.js';
 
@@ -32,24 +32,15 @@ export function CafeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const slug = getCafeSlug();
-    const base = getApiBaseUrl();
-    const url = `${base}${API_VERSION_PREFIX}/cafe/${encodeURIComponent(slug)}`;
 
     void (async () => {
       try {
-        const res = await fetch(url);
-        const json = (await res.json()) as ApiEnvelope<{
-          cafe: Cafe;
-          activeFeatures: FeatureFlagKey[];
-        }>;
-        if (!json.ok) {
-          setError(json.error ?? 'Failed to load café');
-          setLoading(false);
-          return;
-        }
-        const { cafe: c, activeFeatures: flags } = json.data;
+        const data = await apiFetch<{ cafe: Cafe; activeFeatures: FeatureFlagKey[] }>(
+          `/cafe/${encodeURIComponent(slug)}`,
+        );
+        const c = data.cafe;
         setCafe(c);
-        setActiveFeatures(flags);
+        setActiveFeatures(data.activeFeatures);
         setTheme(getTheme(c.themeId, c.themeOverrides));
         setError(null);
       } catch (e) {
