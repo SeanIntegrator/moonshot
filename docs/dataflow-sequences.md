@@ -1,12 +1,105 @@
 # Mid-level sequence diagrams
 
-Concrete HTTP routes and Socket.io event names for implementation and for `@moonshot/types` contracts. Paths use the `/api/v1` prefix assumed in the master architecture doc.
+This file separates the current Phase 1 runtime from planned flows. Paths use the shared `API_VERSION_PREFIX`, currently `/api/v1`.
+
+Implemented today:
+
+- Café lookup and active feature loading.
+- Manual menu reads from Postgres.
+- Google auth and JWT session hydration.
+- Menu admin writes through API routes.
+
+Planned, not implemented yet:
+
+- Orders and checkout.
+- Stripe webhooks.
+- POS webhooks/polling.
+- Socket.io rooms/events.
+- Pickup ETA recalculation.
+- Loyalty and feedback persistence.
 
 ---
 
-## S1 — POS walk-in order (Square)
+## S0 — Order-ahead startup: café + menu
 
-Square does not reliably emit `order.created` for register-originated orders; the resilient pattern is **`payment.created` / `payment.updated`** → fetch order by id → normalise → upsert Postgres → emit to KDS room.
+Current runtime path for the customer app landing page and menu.
+
+```mermaid
+sequenceDiagram
+  participant PWA as moonshotOrderAhead
+  participant API as moonshotApi
+  participant Cafe as cafe_context
+  participant Menu as manual_menu_adapter
+  participant DB as Postgres
+
+  PWA->>API: GET_api_v1_cafe_slug
+  API->>Cafe: requireCafeContext_slug_param
+  Cafe->>DB: SELECT_cafes_by_slug
+  API-->>PWA: Cafe_activeFeatures
+  PWA->>API: GET_api_v1_menu_X_Cafe_Slug
+  API->>Cafe: requireCafeContext_header_slug
+  Cafe->>DB: SELECT_cafes_by_slug
+  API->>Menu: fetchMenu_cafeId
+  Menu->>DB: SELECT_menu_items_available
+  API-->>PWA: NormalisedMenu
+```
+
+The order-ahead app builds API URLs from `VITE_API_URL + /api/v1`. `VITE_API_URL` should be the API origin only.
+
+---
+
+## S1 — Google sign-in and session hydration
+
+Current runtime path for order-ahead profile/auth.
+
+```mermaid
+sequenceDiagram
+  participant PWA as moonshotOrderAhead
+  participant Google as Google_Identity
+  participant API as moonshotApi
+  participant DB as Postgres
+
+  PWA->>Google: Google_One_Tap_or_button
+  Google-->>PWA: credential
+  PWA->>API: POST_api_v1_auth_google_credential_cafeSlug
+  API->>Google: verifyIdToken
+  API->>DB: SELECT_cafes_by_slug
+  API->>DB: UPSERT_users
+  API->>DB: INSERT_cafe_users_ON_CONFLICT_DO_NOTHING
+  API-->>PWA: JWT_user
+  PWA->>API: GET_api_v1_auth_me_JWT_X_Cafe_Slug
+  API->>DB: SELECT_user_membership_cafe
+  API-->>PWA: user_cafe_membership
+```
+
+The API requires `GOOGLE_CLIENT_ID` and `JWT_SECRET` for the sign-in route. Menu admin capability is currently represented by an `adminCafeIds` JWT claim when the signed-in email is in `MENU_ADMIN_EMAILS`.
+
+---
+
+## S2 — Manual menu admin writes
+
+Current API capability. The admin app UI does not expose this yet.
+
+```mermaid
+sequenceDiagram
+  participant AdminClient as admin_or_manual_client
+  participant API as moonshotApi
+  participant DB as Postgres
+
+  AdminClient->>API: POST_or_PATCH_or_DELETE_api_v1_menu_JWT_X_Cafe_Slug
+  API->>API: requireAuth
+  API->>API: isMenuAdminEmail
+  API->>DB: INSERT_or_UPDATE_menu_items
+  API-->>AdminClient: NormalisedMenuItem_or_removed
+```
+
+`DELETE /api/v1/menu/:itemId` soft-disables a row by setting `is_available = FALSE`.
+
+---
+
+## F1 — Planned POS walk-in order (Square)
+
+Square does not reliably emit `order.created` for register-originated orders; the intended resilient pattern is `payment.created` / `payment.updated` → fetch order by id → normalise → upsert Postgres → emit to KDS room.
 
 ```mermaid
 sequenceDiagram
@@ -30,11 +123,11 @@ sequenceDiagram
   IO->>KDS: kds_order_new
 ```
 
-**Polling fallback (optional):** a scheduled `SearchOrders` (or provider equivalent) runs as a safety net; only orders **not already visible** in the last poll window emit `kds:order:new`. Dedupe is **DB-level** on `(cafe_id, pos_order_id)`, not in-memory.
+Polling fallback remains planned as a safety net. Dedupe should be DB-level on `(cafe_id, pos_order_id)`.
 
 ---
 
-## S2 — Order-ahead: new order + checkout
+## F2 — Planned order-ahead checkout
 
 ```mermaid
 sequenceDiagram
@@ -60,13 +153,13 @@ sequenceDiagram
   IO->>PWA: customerEtaUpdated
 ```
 
-After payment confirmation, **pickup ETA** is computed (S5) so `quoted_pickup_time` and live `pickup_time` are populated before the KDS sees the card.
+After payment confirmation, pickup ETA should be computed before the KDS sees the card.
 
 ---
 
-## S3 — Order-ahead: merge / add items to existing order
+## F3 — Planned order merge / add items
 
-Customer edits an already-placed order; server issues a **delta** Stripe Checkout for the price difference, then merges line items when paid.
+Customer edits an already placed order; server issues a delta Stripe Checkout for the price difference, then merges line items when paid.
 
 ```mermaid
 sequenceDiagram
@@ -93,11 +186,11 @@ sequenceDiagram
   IO->>PWA: customerEtaUpdated
 ```
 
-**KDS contract:** `kds:order:updated` carries `mergeFlag: true` and `newItemIds: string[]` so the UI can pulse the card and mark new lines (see `@moonshot/types`).
+KDS contract target: `kds:order:updated` carries `mergeFlag: true` and `newItemIds: string[]`.
 
 ---
 
-## S4 — KDS marks done → loyalty → customer completion → review prompt gate
+## F4 — Planned KDS done → loyalty → customer completion → review prompt gate
 
 ```mermaid
 sequenceDiagram
@@ -120,13 +213,11 @@ sequenceDiagram
   PWA->>PWA: if_counter_eq_3_and_not_shown_show_drawer
 ```
 
-**On-time rule:** `completed_at <= pickup_time + 2 minutes` (product decision; encoded in types/docs).
-
-**Review prompt:** see [feedback-prompt-flow.md](feedback-prompt-flow.md). Both thumbs-up and thumbs-down paths surface a **Google review CTA** (compliance).
+On-time rule target: `completed_at <= pickup_time + 2 minutes`.
 
 ---
 
-## S5 — Pickup ETA recalculation (automatic v1)
+## F5 — Planned pickup ETA recalculation
 
 Triggered whenever queue-affecting state changes: new confirmed order, merge paid, order completed/cancelled, or line items change prep weight.
 
@@ -157,7 +248,7 @@ Constants `base_prep_minutes` and `per_item_minutes` live in `cafes.kds_config` 
 
 ---
 
-## Socket event summary
+## Planned socket event summary
 
 | Event                     | Room / audience | Payload idea                                      |
 | ------------------------- | --------------- | ------------------------------------------------- |

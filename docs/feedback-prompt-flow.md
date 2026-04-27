@@ -1,5 +1,7 @@
 # Review prompt flow (Google TOS–aligned)
 
+This is a planned flow. The Phase 1 database already has `cafe_users.on_time_completed_orders`, `cafe_users.review_prompt_state`, and `cafes.owner_feedback_email`, but the runtime order completion, loyalty update, feedback API, and review drawer are not implemented yet.
+
 After **three on-time completed app orders** for the same user at the same café, show a **bottom drawer** asking for a quick thumbs up / thumbs down. **Both outcomes** must offer a path to **post a public Google review** so the flow is not review-gated.
 
 ## Definitions
@@ -31,9 +33,9 @@ When `on_time_completed_orders` becomes **3** and `review_prompt_state = 'not_sh
 On any terminal action (positive chosen, negative submitted/dismissed with or without email, user dismiss):
 
 - Set `review_prompt_state` to `shown_positive`, `shown_negative`, or `dismissed`.
-- Insert `feedback_responses` row when sentiment captured (optional for dismiss-only).
+- Insert `feedback_responses` row when sentiment captured (optional for dismiss-only). This table is planned and does not exist in the current Phase 1 migration.
 
-## API sketch (future)
+## API sketch
 
 - `POST /api/v1/feedback/review-prompt` — body: `{ sentiment?, ownerMessage?, googleCtaClicked }`
 - `GET /api/v1/cafe-users/me` — returns counter + state for hydration

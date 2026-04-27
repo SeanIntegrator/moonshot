@@ -1,6 +1,8 @@
-# Postgres schema draft (v2)
+# Postgres schema (Phase 1 + planned v2)
 
-Markdown-only draft for review **before** SQL migrations. Multi-tenant: **`cafe_id` on all tenant-scoped tables**. Clay & Bean is the only live café at launch; schema still uses UUIDs everywhere.
+The repo now has a Phase 1 migration at `apps/moonshot-api/migrations/sql/001_initial_schema.sql`. That migration creates `cafes`, `users`, `cafe_users`, and `menu_items`, and seeds the `clay-and-bean` café plus one menu item.
+
+The later tables in this document are still the planned v2 shape for orders, payments, loyalty, feedback, and webhook idempotency. Multi-tenant data should continue to use `cafe_id` on tenant-scoped tables. Clay & Bean is the only seeded café at this stage; schema still uses UUIDs everywhere.
 
 ## Conventions
 
@@ -12,6 +14,8 @@ Markdown-only draft for review **before** SQL migrations. Multi-tenant: **`cafe_
 ---
 
 ## `cafes`
+
+Implemented in Phase 1.
 
 | Column             | Type        | Notes |
 | ------------------ | ----------- | ----- |
@@ -36,6 +40,8 @@ Markdown-only draft for review **before** SQL migrations. Multi-tenant: **`cafe_
 
 ## `users`
 
+Implemented in Phase 1.
+
 | Column       | Type        | Notes |
 | ------------ | ----------- | ----- |
 | id           | UUID        | PK |
@@ -50,6 +56,8 @@ Markdown-only draft for review **before** SQL migrations. Multi-tenant: **`cafe_
 ## `cafe_users`
 
 Membership + per-café loyalty and review-prompt state.
+
+Implemented in Phase 1. The review and loyalty counters exist, but the order/loyalty/review flows that update them are not implemented yet.
 
 | Column                     | Type        | Notes |
 | -------------------------- | ----------- | ----- |
@@ -69,6 +77,8 @@ Membership + per-café loyalty and review-prompt state.
 ## `menu_items`
 
 Synced from POS adapter or edited via manual adapter / admin.
+
+Implemented in Phase 1. Current runtime uses the manual POS adapter, which reads available rows from this table. Admin menu writes exist in the API and are gated by JWT plus `MENU_ADMIN_EMAILS`.
 
 | Column           | Type        | Notes |
 | ---------------- | ----------- | ----- |
@@ -95,6 +105,8 @@ Synced from POS adapter or edited via manual adapter / admin.
 ---
 
 ## `orders`
+
+Planned. Not created by the current migration.
 
 | Column               | Type        | Notes |
 | -------------------- | ----------- | ----- |
@@ -130,6 +142,8 @@ Synced from POS adapter or edited via manual adapter / admin.
 
 ## `order_items`
 
+Planned. Not created by the current migration.
+
 | Column            | Type        | Notes |
 | ----------------- | ----------- | ----- |
 | id                | UUID        | PK |
@@ -150,6 +164,8 @@ Synced from POS adapter or edited via manual adapter / admin.
 ## `payment_sessions`
 
 Normalises what v0.1 stored as JSONB on `orders`.
+
+Planned. Not created by the current migration.
 
 | Column              | Type        | Notes |
 | ------------------- | ----------- | ----- |
@@ -172,6 +188,8 @@ Normalises what v0.1 stored as JSONB on `orders`.
 
 Append-only stamps / rewards (replaces or supplements simple `loyalty_stamps` table from master doc).
 
+Planned. Not created by the current migration.
+
 | Column          | Type        | Notes |
 | --------------- | ----------- | ----- |
 | id              | UUID        | PK |
@@ -189,11 +207,15 @@ Append-only stamps / rewards (replaces or supplements simple `loyalty_stamps` ta
 
 As in master context §6.2 — reward inventory / expiry if product needs it.
 
+Planned. Not created by the current migration.
+
 ---
 
 ## `feedback_responses`
 
 Stores thumbs + optional owner email + Google follow-through.
+
+Planned. Not created by the current migration.
 
 | Column              | Type        | Notes |
 | ------------------- | ----------- | ----- |
@@ -212,9 +234,13 @@ Stores thumbs + optional owner email + Google follow-through.
 
 As master §6.2 — unchanged intent.
 
+Planned. Not created by the current migration.
+
 ---
 
 ## Webhook idempotency (recommended)
+
+Planned. Not created by the current migration.
 
 | Table | Purpose |
 | ----- | ------- |

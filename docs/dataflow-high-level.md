@@ -1,8 +1,13 @@
 # High-level dataflow
 
-Moonshot v2 treats **Postgres as the single source of truth** for orders that appear on the KDS and in the customer app. POS systems (Square first, others later) are integrated through a **POS adapter layer** that normalises catalogue and order events into internal shapes. Payment (Stripe) is similarly abstracted.
+Moonshot is currently in an early Phase 1 state. The deployed monorepo has four Railway services, one per app:
 
-This replaces the v0.1 pattern where the KDS merged live Square `SearchOrders` results with web-app rows at read time (`mergeKdsBoardOrdersWithWebAppDb`). In v2, every visible order row exists in Postgres first; adapters only ingest and reconcile external IDs.
+- `apps/moonshot-api` — Express API backed by Postgres.
+- `apps/moonshot-order-ahead` — Vite/React/MUI customer app.
+- `apps/moonshot-kds` — Vite/React placeholder shell.
+- `apps/moonshot-admin` — Vite/React/MUI placeholder shell.
+
+The API currently implements café lookup, Google auth, session hydration, and manual menu reads/admin writes. Postgres is already the source of truth for café, user, membership, and menu data. Orders, Stripe checkout, live KDS sockets, POS webhooks, pickup ETA, loyalty, and feedback are still planned flows represented by contracts/docs rather than runtime code.
 
 ## Topology
 
@@ -10,79 +15,90 @@ This replaces the v0.1 pattern where the KDS merged live Square `SearchOrders` r
 flowchart LR
   subgraph clients [Clients]
     OA[moonshotOrderAhead_PWA]
-    KDS[moonshotKDS_tablet]
-    Admin[moonshotAdmin]
-    WA["WhatsApp_n8n_Phase7"]
+    KDS[moonshotKDS_placeholder]
+    Admin[moonshotAdmin_placeholder]
   end
 
   subgraph api [moonshotApi]
-    Gateway[Express_JWT_cafeContext]
-    OrderSvc[order_service]
-    LoyaltySvc[loyalty_service]
-    FeedbackSvc[feedback_service]
-    PickupEta[pickup_eta_calculator]
-    Sockets["Socket_io_rooms_per_cafe"]
+    Gateway[Express_api_v1]
+    CafeContext[cafe_context_by_slug]
+    Auth[Google_auth_JWT]
+    Menu[manual_menu_adapter]
   end
 
-  subgraph adapters [Adapter_layer]
-    PosIdx[pos_adapters_factory]
-    Square[square_adapter]
-    Manual[manual_adapter]
-    Stripe[payment_stripe]
+  subgraph planned [Planned_next_flows]
+    Orders[orders_service]
+    Stripe[Stripe_checkout]
+    Sockets[Socket_io]
+    PosWebhooks[POS_webhooks]
   end
 
   DB[("Postgres_source_of_truth")]
-  POS[Square_POS]
-  StripeAPI[Stripe]
 
   OA --> Gateway
-  KDS --> Gateway
-  Admin --> Gateway
-  WA -.->|"Phase_7"| Gateway
-  Gateway --> OrderSvc
-  Gateway --> LoyaltySvc
-  Gateway --> FeedbackSvc
-  OrderSvc --> PickupEta
-  OrderSvc --> PosIdx
-  OrderSvc --> DB
-  LoyaltySvc --> DB
-  FeedbackSvc --> DB
-  PosIdx --> Square
-  PosIdx --> Manual
-  Square <--> POS
-  OrderSvc --> Stripe
-  Stripe <--> StripeAPI
-  Sockets --> KDS
-  Sockets --> OA
-  OrderSvc --> Sockets
+  Gateway --> CafeContext
+  Gateway --> Auth
+  Gateway --> Menu
+  CafeContext --> DB
+  Auth --> DB
+  Menu --> DB
+  Gateway -.-> Orders
+  Orders -.-> Stripe
+  Orders -.-> Sockets
+  Orders -.-> PosWebhooks
 ```
 
-## Request path (HTTP)
+## Current HTTP surface
 
-1. **Cafe resolution** — subdomain, `Host`, or `X-Cafe-Id` resolves to `cafes` row (multi-tenant from day one).
-2. **Auth** — customer JWT for order-ahead; KDS may use device/session token; admin uses owner role (future).
-3. **Handlers** — routes delegate to services; services read/write Postgres and enqueue socket emissions.
+- `GET /` — API service metadata.
+- `GET /health` and `GET /api/v1/health` — health checks.
+- `GET /api/v1/cafe/:slug` — public café config and active feature flags.
+- `POST /api/v1/auth/google` — verifies a Google credential, upserts `users` and `cafe_users`, then returns a JWT.
+- `GET /api/v1/auth/me` — JWT-protected session hydration with café membership data.
+- `GET /api/v1/menu` and `GET /api/v1/menu/:category` — public manual menu reads.
+- `POST /api/v1/menu`, `PATCH /api/v1/menu/:itemId`, `DELETE /api/v1/menu/:itemId` — menu admin writes for JWT users whose email is listed in `MENU_ADMIN_EMAILS`.
 
-## Real-time path (Socket.io)
+All versioned API routes use `API_VERSION_PREFIX` from `@moonshot/types`, currently `/api/v1`.
 
-- Clients join a room keyed by `cafe_id` (e.g. `cafe:{uuid}:kds`, `cafe:{uuid}:customer`).
-- Server emits **granular** events (`kds:order:new`, `kds:order:updated`, `kds:order:removed`, `kds:eta:updated`, `customerOrderCompleted`, etc.) so clients avoid full-board refetches.
-- Emissions happen **after** a successful DB transaction so reconnects can hydrate from REST.
+## Current café resolution
 
-## Ingest paths (orders into Postgres)
+The API resolves café context from:
 
-| Source            | Ingress                                      | Dedup key                          |
-| ----------------- | -------------------------------------------- | ---------------------------------- |
-| POS walk-in       | Webhook + optional polling fallback          | `(cafe_id, pos_order_id)`          |
-| Order-ahead app   | `POST/PATCH /orders` + Stripe webhooks       | internal `orders.id` + Stripe ids |
-| WhatsApp (later)  | `POST /orders` with API key, `source=whatsapp` | idempotency key + `cafe_id`        |
+- `:slug` on routes that include a path slug, such as `/api/v1/cafe/:slug`.
+- `X-Cafe-Slug` on other café-scoped routes, such as `/api/v1/menu`.
 
-## Pickup ETA (v1)
+Subdomain, `Host`, and `X-Cafe-Id` resolution are not implemented yet.
 
-Automatic: when queue membership or item counts change, `pickup_eta_calculator` recomputes `pickup_time` / `quoted_pickup_time` for affected orders (see [dataflow-sequences.md](dataflow-sequences.md) S5). Barista manual overrides are a later extension; types reserve `etaMode: manual_override`.
+## App status
+
+- Order-ahead has routes for `/`, `/menu`, and `/profile`. It fetches café and menu data from the API and supports Google sign-in/session hydration.
+- KDS is a placeholder React shell with shared socket types imported for compile-time coverage only. No socket client or API integration is wired yet.
+- Admin is a placeholder MUI shell. Menu CRUD exists in the API but is not yet exposed through the admin UI.
+
+## Local and Railway environment
+
+API env vars:
+
+- `PORT`
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `MENU_ADMIN_EMAILS`
+
+Order-ahead env vars:
+
+- `VITE_API_URL` — API origin only, for example `http://localhost:3000` or the public Railway API service URL. Do not include `/api/v1`.
+- `VITE_CAFE_SLUG` — defaults in code to `clay-and-bean`.
+- `VITE_GOOGLE_CLIENT_ID`
+
+Each Railway app is a separate service with its root directory set to the app folder. The order-ahead service must point `VITE_API_URL` at the public API service URL, not at its own container URL.
+
+## Planned dataflow direction
+
+The intended v2 architecture still treats Postgres as the single source of truth for orders visible in KDS and customer apps. POS adapters, Stripe payment, order ingestion, live sockets, pickup ETA, loyalty, and review feedback should be added around that invariant. See [dataflow-sequences.md](dataflow-sequences.md) for current-vs-planned sequence details.
 
 ## Related docs
 
 - [dataflow-sequences.md](dataflow-sequences.md) — sequence diagrams per critical path.
-- [schema-draft.md](schema-draft.md) — tables and indexes.
-- [feedback-prompt-flow.md](feedback-prompt-flow.md) — post-completion review prompt.
+- [schema-draft.md](schema-draft.md) — migrated Phase 1 schema plus planned schema.
+- [feedback-prompt-flow.md](feedback-prompt-flow.md) — future post-completion review prompt.
