@@ -2,7 +2,9 @@
 
 The repo now has a Phase 1 migration at `apps/moonshot-api/migrations/sql/001_initial_schema.sql`. That migration creates `cafes`, `users`, `cafe_users`, and `menu_items`, and seeds the `clay-and-bean` café plus one menu item.
 
-The later tables in this document are still the planned v2 shape for orders, payments, loyalty, feedback, and webhook idempotency. Multi-tenant data should continue to use `cafe_id` on tenant-scoped tables. Clay & Bean is the only seeded café at this stage; schema still uses UUIDs everywhere.
+Phase 2 migration `apps/moonshot-api/migrations/sql/002_orders_schema.sql` (wrapper `apps/moonshot-api/migrations/1734900000000_orders_schema.cjs`) adds `orders` and `order_items` with CHECK constraints and indexes aligned with `@moonshot/types`.
+
+The later tables in this document are still the planned v2 shape for payments, loyalty, feedback, and webhook idempotency (beyond orders). Multi-tenant data should continue to use `cafe_id` on tenant-scoped tables. Clay & Bean is the only seeded café at this stage; schema still uses UUIDs everywhere.
 
 ## Conventions
 
@@ -106,7 +108,7 @@ Implemented in Phase 1. Current runtime uses the manual POS adapter, which reads
 
 ## `orders`
 
-Planned. Not created by the current migration.
+Implemented in Phase 2 (`002_orders_schema.sql`). Runtime API routes for orders are not wired yet.
 
 | Column               | Type        | Notes |
 | -------------------- | ----------- | ----- |
@@ -135,14 +137,17 @@ Planned. Not created by the current migration.
 
 **Indexes:**
 
-- `(cafe_id, status, created_at DESC)` for KDS open queue
-- `UNIQUE (cafe_id, pos_order_id)` where `pos_order_id IS NOT NULL`
+- `(cafe_id, status, created_at DESC)` for KDS open queue (`idx_orders_cafe_status_created`)
+- `UNIQUE (cafe_id, pos_order_id)` where `pos_order_id IS NOT NULL` (`orders_cafe_pos_order_unique`)
+- `(user_id, created_at DESC)` for customer history (`idx_orders_user_created`)
+
+**Checks:** `total_minor >= 0`; `order_type`, `source`, `status`, `payment_status` constrained to the enums used in `@moonshot/types`.
 
 ---
 
 ## `order_items`
 
-Planned. Not created by the current migration.
+Implemented in Phase 2 (`002_orders_schema.sql`).
 
 | Column            | Type        | Notes |
 | ----------------- | ----------- | ----- |
@@ -158,6 +163,10 @@ Planned. Not created by the current migration.
 | created_at        | TIMESTAMPTZ | |
 
 **Derived:** order-level allergy summary for KDS = union of line `allergens` at read time (not stored).
+
+**Indexes:** `(order_id)` (`idx_order_items_order_id`); `(menu_item_id)` (`idx_order_items_menu_item_id`).
+
+**Checks:** `quantity > 0`; `unit_price_minor >= 0`.
 
 ---
 
