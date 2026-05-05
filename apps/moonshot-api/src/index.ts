@@ -1,13 +1,29 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+import { createServer } from 'node:http';
 import { API_VERSION_PREFIX } from '@moonshot/types';
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import { Server } from 'socket.io';
+import { attachKdsSocketIO } from './realtime/kds-events.js';
+import { registerKdsSocketHandlers } from './realtime/kds-socket.js';
 import { authRouter } from './routes/auth.js';
 import { cafeRouter } from './routes/cafe.js';
+import { kdsRouter } from './routes/kds.js';
 import { menuRouter } from './routes/menu.js';
+import { ordersRouter } from './routes/orders.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: true,
+    credentials: true,
+  },
+});
+attachKdsSocketIO(io);
+registerKdsSocketHandlers(io);
 
 app.use(helmet());
 app.use(
@@ -39,7 +55,9 @@ app.get(`${API_VERSION_PREFIX}/health`, (_req, res) => {
 app.use(`${API_VERSION_PREFIX}/auth`, authRouter);
 app.use(`${API_VERSION_PREFIX}/cafe`, cafeRouter);
 app.use(`${API_VERSION_PREFIX}/menu`, menuRouter);
+app.use(`${API_VERSION_PREFIX}/orders`, ordersRouter);
+app.use(`${API_VERSION_PREFIX}/kds`, kdsRouter);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`@moonshot/api listening on 0.0.0.0:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`@moonshot/api listening on 0.0.0.0:${PORT} (HTTP + Socket.io)`);
 });

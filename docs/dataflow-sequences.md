@@ -1,6 +1,6 @@
 # Mid-level sequence diagrams
 
-This file separates the current Phase 1 runtime from planned flows. Paths use the shared `API_VERSION_PREFIX`, currently `/api/v1`.
+This file separates current runtime behaviour from planned flows. Paths use the shared `API_VERSION_PREFIX`, currently `/api/v1`.
 
 Implemented today:
 
@@ -8,15 +8,18 @@ Implemented today:
 - Manual menu reads from Postgres.
 - Google auth and JWT session hydration.
 - Menu admin writes through API routes.
+- Guest pay-in-store order creation via `POST /api/v1/orders` (`X-Cafe-Slug`): persists `orders` and `order_items` as `confirmed` / `unpaid`; server derives line prices from `menu_items`. Non-empty line modifiers are rejected until modifier validation exists.
+- Café-scoped **KDS login** (`POST /api/v1/kds/auth/login`), **open orders** (`GET /api/v1/kds/orders`), **complete order** (`POST /api/v1/kds/orders/:orderId/complete`), and **Socket.io** fan-out (`kds:event` with `KdsServerToClientEvent`). Guest order creation emits `kds:order:new` after commit.
 
 Planned, not implemented yet:
 
-- Orders and checkout.
+- Stripe checkout and webhook-paid confirmation (replacing or augmenting guest unpaid orders).
 - Stripe webhooks.
 - POS webhooks/polling.
 - Socket.io rooms/events.
 - Pickup ETA recalculation.
 - Loyalty and feedback persistence.
+- Public KDS HTTP surface and Socket.io (`kds:event`) after KDS login.
 
 ---
 
@@ -94,6 +97,32 @@ sequenceDiagram
 ```
 
 `DELETE /api/v1/menu/:itemId` soft-disables a row by setting `is_available = FALSE`.
+
+---
+
+## S3 — Guest pay-in-store order creation
+
+Current API capability for the core ordering loop without Stripe. Intended for development and pay-in-store flows; the order-ahead PWA **can** call this route from the menu basket (guest pay-in-store).
+
+```mermaid
+sequenceDiagram
+  participant Client as customer_or_tooling
+  participant API as moonshotApi
+  participant Cafe as cafe_context
+  participant DB as Postgres
+
+  Client->>API: POST_api_v1_orders_X_Cafe_Slug_JSON_body
+  API->>Cafe: requireCafeContext_header_slug
+  Cafe->>DB: SELECT_cafes_by_slug
+  API->>DB: SELECT_menu_items_validate_price_currency
+  API->>DB: INSERT_orders_confirmed_unpaid
+  API->>DB: INSERT_order_items_snapshots
+  API-->>Client: NormalisedOrder
+```
+
+Request body uses `CreateOrderRequest` from `@moonshot/types`: `customerName`, optional `notes`, `orderType`, and `items[]` with `menuItemId` and `quantity`. **Do not trust client prices:** totals and unit prices come from `menu_items`.
+
+**KDS:** listing open orders and completing orders are implemented only as internal repository functions (`listOpenOrdersForKds`, `completeOrderForKds`). Public KDS routes wait on café-scoped KDS login (separate from menu admin / owner admin apps).
 
 ---
 

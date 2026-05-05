@@ -23,8 +23,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
   const token = header.slice('Bearer '.length).trim();
   try {
-    const payload = jwt.verify(token, secret) as JwtClaims;
-    req.user = payload;
+    const payload = jwt.verify(token, secret) as JwtClaims & { purpose?: string };
+    if (payload.purpose === 'kds') {
+      void fail(res, 401, 'Invalid token for this route');
+      return;
+    }
+    if (typeof payload.userId !== 'string' || !payload.userId) {
+      void fail(res, 401, 'Invalid or expired token');
+      return;
+    }
+    req.user = payload as JwtClaims;
     next();
   } catch {
     void fail(res, 401, 'Invalid or expired token');

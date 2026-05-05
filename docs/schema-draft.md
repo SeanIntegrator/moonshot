@@ -4,6 +4,8 @@ The repo now has a Phase 1 migration at `apps/moonshot-api/migrations/sql/001_in
 
 Phase 2 migration `apps/moonshot-api/migrations/sql/002_orders_schema.sql` (wrapper `apps/moonshot-api/migrations/1734900000000_orders_schema.cjs`) adds `orders` and `order_items` with CHECK constraints and indexes aligned with `@moonshot/types`.
 
+Phase 3 migration `apps/moonshot-api/migrations/sql/003_kds_users_schema.sql` (wrapper `apps/moonshot-api/migrations/1735000000000_kds_users_schema.cjs`) adds `kds_users` for café-scoped KDS device login (hashed passwords).
+
 The later tables in this document are still the planned v2 shape for payments, loyalty, feedback, and webhook idempotency (beyond orders). Multi-tenant data should continue to use `cafe_id` on tenant-scoped tables. Clay & Bean is the only seeded café at this stage; schema still uses UUIDs everywhere.
 
 ## Conventions
@@ -106,9 +108,31 @@ Implemented in Phase 1. Current runtime uses the manual POS adapter, which reads
 
 ---
 
+## `kds_users`
+
+Café-scoped credentials for KDS tablets (separate from Google `users`).
+
+Implemented in Phase 3 (`003_kds_users_schema.sql`). Passwords are stored as opaque **`scrypt$...`** hashes from the API; never store or log plaintext passwords.
+
+| Column         | Type        | Notes |
+| -------------- | ----------- | ----- |
+| id             | UUID        | PK |
+| cafe_id        | UUID        | FK → cafes |
+| username       | TEXT        | unique per café |
+| password_hash  | TEXT        | server-side hash only |
+| display_name   | TEXT        | optional label |
+| is_active      | BOOLEAN     | |
+| last_login_at  | TIMESTAMPTZ | |
+| created_at     | TIMESTAMPTZ | |
+| updated_at     | TIMESTAMPTZ | |
+
+**Unique:** `(cafe_id, username)`
+
+---
+
 ## `orders`
 
-Implemented in Phase 2 (`002_orders_schema.sql`). Runtime API routes for orders are not wired yet.
+Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store creation is exposed as `POST /api/v1/orders` (see `docs/dataflow-sequences.md` S3). KDS list/complete and Socket.io fan-out are implemented after KDS login; Stripe/POS webhooks and customer sockets remain planned.
 
 | Column               | Type        | Notes |
 | -------------------- | ----------- | ----- |

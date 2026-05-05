@@ -85,3 +85,28 @@ export interface NormalisedOrder {
   /** When this row is an add-on payment linked to a prior checkout */
   parentOrderId: string | null;
 }
+
+/**
+ * Guest pay-in-store order creation payload.
+ * Prices are derived server-side from `menu_items`. Do not trust client prices.
+ *
+ * Modifiers: omit or pass empty arrays until the API validates selections against
+ * `modifier_groups` and applies priced deltas.
+ */
+export interface CreateOrderLineInput {
+  menuItemId: string;
+  quantity: number;
+  modifiers?: NormalisedOrderLineModifier[];
+  notes?: string | null;
+}
+
+export interface CreateOrderRequest {
+  customerName: string;
+  notes?: string | null;
+  orderType: OrderType;
+  items: CreateOrderLineInput[];
+}
+
+export interface CreateOrderResponse {
+  order: NormalisedOrder;
+}

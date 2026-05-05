@@ -1,13 +1,13 @@
 # High-level dataflow
 
-Moonshot is currently in an early Phase 1 state. The deployed monorepo has four Railway services, one per app:
+Moonshot is currently in an early Phase 1 state with Phase 2 ordering schema work underway. The deployed monorepo has four Railway services, one per app:
 
 - `apps/moonshot-api` — Express API backed by Postgres.
 - `apps/moonshot-order-ahead` — Vite/React/MUI customer app.
 - `apps/moonshot-kds` — Vite/React placeholder shell.
 - `apps/moonshot-admin` — Vite/React/MUI placeholder shell.
 
-The API currently implements café lookup, Google auth, session hydration, and manual menu reads/admin writes. Postgres is already the source of truth for café, user, membership, and menu data. Orders, Stripe checkout, live KDS sockets, POS webhooks, pickup ETA, loyalty, and feedback are still planned flows represented by contracts/docs rather than runtime code.
+The API implements café lookup, Google auth, session hydration, manual menu reads/admin writes, and **guest pay-in-store order creation** (`POST /api/v1/orders`) which persists `orders` and `order_items` as `confirmed` / `unpaid`. Postgres holds café, user, membership, menu, and order rows. **Stripe checkout, KDS HTTP APIs, live sockets, POS webhooks, pickup ETA, loyalty, and feedback** are still planned or gated: KDS read/complete endpoints are intentionally not exposed until café-scoped KDS username/password auth exists.
 
 ## Topology
 
@@ -24,13 +24,14 @@ flowchart LR
     CafeContext[cafe_context_by_slug]
     Auth[Google_auth_JWT]
     Menu[manual_menu_adapter]
+    OrdersGuest[guest_POST_orders]
   end
 
   subgraph planned [Planned_next_flows]
-    Orders[orders_service]
     Stripe[Stripe_checkout]
     Sockets[Socket_io]
     PosWebhooks[POS_webhooks]
+    KdsHttp[KDS_HTTP_after_login]
   end
 
   DB[("Postgres_source_of_truth")]
@@ -39,13 +40,16 @@ flowchart LR
   Gateway --> CafeContext
   Gateway --> Auth
   Gateway --> Menu
+  Gateway --> OrdersGuest
   CafeContext --> DB
   Auth --> DB
   Menu --> DB
-  Gateway -.-> Orders
-  Orders -.-> Stripe
-  Orders -.-> Sockets
-  Orders -.-> PosWebhooks
+  OrdersGuest --> DB
+  Gateway -.-> Stripe
+  Stripe -.-> Sockets
+  Stripe -.-> KdsHttp
+  OrdersGuest -.-> KdsHttp
+  Gateway -.-> PosWebhooks
 ```
 
 ## Current HTTP surface
@@ -57,6 +61,7 @@ flowchart LR
 - `GET /api/v1/auth/me` — JWT-protected session hydration with café membership data.
 - `GET /api/v1/menu` and `GET /api/v1/menu/:category` — public manual menu reads.
 - `POST /api/v1/menu`, `PATCH /api/v1/menu/:itemId`, `DELETE /api/v1/menu/:itemId` — menu admin writes for JWT users whose email is listed in `MENU_ADMIN_EMAILS`.
+- `POST /api/v1/orders` — guest pay-in-store order creation (`X-Cafe-Slug`); server derives line prices from `menu_items`. Does not require a customer JWT. Modifiers on lines are rejected until modifier validation exists.
 
 All versioned API routes use `API_VERSION_PREFIX` from `@moonshot/types`, currently `/api/v1`.
 
@@ -65,14 +70,14 @@ All versioned API routes use `API_VERSION_PREFIX` from `@moonshot/types`, curren
 The API resolves café context from:
 
 - `:slug` on routes that include a path slug, such as `/api/v1/cafe/:slug`.
-- `X-Cafe-Slug` on other café-scoped routes, such as `/api/v1/menu`.
+- `X-Cafe-Slug` on other café-scoped routes, such as `/api/v1/menu` and `/api/v1/orders`.
 
 Subdomain, `Host`, and `X-Cafe-Id` resolution are not implemented yet.
 
 ## App status
 
-- Order-ahead has routes for `/`, `/menu`, and `/profile`. It fetches café and menu data from the API and supports Google sign-in/session hydration.
-- KDS is a placeholder React shell with shared socket types imported for compile-time coverage only. No socket client or API integration is wired yet.
+- Order-ahead has routes for `/`, `/menu`, and `/profile`. It fetches café and menu data from the API and supports Google sign-in/session hydration. The menu page can place **guest pay-in-store** orders via `POST /api/v1/orders` (basket + name + order type).
+- KDS supports **café-scoped username/password** login (`POST /api/v1/kds/auth/login`), open orders (`GET /api/v1/kds/orders`), complete order (`POST /api/v1/kds/orders/:orderId/complete`), and **Socket.io** live updates on `kds:event` (payloads: `KdsServerToClientEvent` in `@moonshot/types`). Credentials live in `kds_users` with hashed passwords; bootstrap via `pnpm bootstrap:kds-user` using env vars only (no committed secrets).
 - Admin is a placeholder MUI shell. Menu CRUD exists in the API but is not yet exposed through the admin UI.
 
 ## Local and Railway environment
