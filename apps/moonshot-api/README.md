@@ -10,6 +10,14 @@ Run migrations (requires `DATABASE_URL`):
 pnpm migrate
 ```
 
+## Tests
+
+```bash
+pnpm test
+```
+
+Vitest covers CORS parsing and customer socket JWT classification (`src/**/*.test.ts`).
+
 ## KDS device login
 
 After migration `kds_users` exists. Create or update a KDS user from **environment variables only** (do not commit credentials):
@@ -27,10 +35,16 @@ The HTTP server hosts **Socket.io** on two namespaces:
 
 | Namespace | Client | Auth |
 |-----------|--------|------|
-| **`/kds`** | `moonshot-kds` | JWT from `POST /api/v1/kds/auth/login` in `auth.token` handshake |
-| **`/customer`** | `moonshot-order-ahead` (order tracking) | None for guest flow; optional customer JWT in `customer:subscribe` for future use |
+| **`/kds`** | `moonshot-kds` | JWT from `POST /api/v1/kds/auth/login` in `auth.token` handshake only |
+| **`/customer`** | `moonshot-order-ahead` | After connect, emit `customer:subscribe` with `orderId` + **`authToken`**: guest **`trackingToken`** from `POST /orders`, or **Google session JWT** if the order row has `user_id` |
 
-- **KDS**: connect to `{API_ORIGIN}/kds`. Events on `kds:event` with payloads matching `KdsServerToClientEvent` in `@moonshot/types`.
-- **Customer**: connect to `{API_ORIGIN}/customer`. After connect, emit `customer:subscribe` with `{ type: 'customer:subscribe', orderId }`. Events on `customer:event` with payloads matching `CustomerServerToClientEvent`.
+- **KDS**: `io('{API_ORIGIN}/kds', { auth: { token } })`. Events on **`kds:event`** (`KdsServerToClientEvent`).
+- **Customer**: `io('{API_ORIGIN}/customer')`. Events on **`customer:event`** (`CustomerServerToClientEvent`).
 
-**URL note:** `socket.io-client` uses the path `/socket.io` on the same host; the namespace is the URL path segment after the origin (e.g. `io('https://api.example.com/kds')`).
+**Orders:** optional `Authorization` on `POST /api/v1/orders` links the row to the signed-in user; guests get **`trackingToken`** in the JSON response for subscribe.
+
+## CORS / Socket.io origins
+
+Configure **`CORS_ORIGINS`** (comma-separated HTTPS origins). In **production**, an empty allowlist denies browser **`Origin`** headers until you set Railway front-end URLs — see `.env.example` and **`docs/current/http-surface.md`**.
+
+**URL note:** the namespace follows the origin (`io('https://api.example.com/kds')`). The engine uses path `/socket.io` automatically.

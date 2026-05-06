@@ -8,6 +8,10 @@ export const API_VERSION_PREFIX = '/api/v1' as const;
 
 export type ApiVersionPrefix = typeof API_VERSION_PREFIX;
 
+/** Socket.io namespace pathnames (client: `io(origin + namespace)`). */
+export const KDS_SOCKET_NAMESPACE = '/kds' as const;
+export const CUSTOMER_SOCKET_NAMESPACE = '/customer' as const;
+
 /** KDS namespace — server → client */
 export const KDS_SOCKET_SERVER_EVENT = {
   ORDER_NEW: 'kds:order:new',
@@ -19,7 +23,7 @@ export const KDS_SOCKET_SERVER_EVENT = {
 export type KdsSocketServerEventName =
   (typeof KDS_SOCKET_SERVER_EVENT)[keyof typeof KDS_SOCKET_SERVER_EVENT];
 
-/** KDS namespace — client → server */
+/** @deprecated KDS uses handshake `auth.token` only; no emitted client event with this name today. */
 export const KDS_SOCKET_CLIENT_EVENT = {
   SUBSCRIBE: 'kds:subscribe',
 } as const;

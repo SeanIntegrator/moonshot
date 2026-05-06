@@ -2,8 +2,10 @@ import { Router } from 'express';
 import type { CreateOrderLineInput, CreateOrderResponse, OrderType } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { ApiHttpError } from '../lib/http-errors.js';
+import { signTrackOrderJwt } from '../lib/customer-socket-token.js';
 import { createGuestPayInStoreOrder } from '../lib/orders-repository.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
+import { optionalCustomerAuth } from '../middleware/optional-customer-auth.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 
 const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
@@ -12,7 +14,7 @@ export const ordersRouter: Router = Router();
 
 ordersRouter.use(requireCafeContext);
 
-ordersRouter.post('/', async (req, res) => {
+ordersRouter.post('/', optionalCustomerAuth, async (req, res) => {
   try {
     const cafeId = req.cafe!.cafeId;
     const body = req.body as Record<string, unknown>;
@@ -56,8 +58,11 @@ ordersRouter.post('/', async (req, res) => {
       };
     });
 
+    const userId = req.customerUserId ?? null;
+
     const order = await createGuestPayInStoreOrder({
       cafeId,
+      userId,
       customerName,
       notes: notes ?? null,
       orderType,
@@ -66,7 +71,19 @@ ordersRouter.post('/', async (req, res) => {
 
     emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
 
-    const data: CreateOrderResponse = { order };
+    const jwtSecret = process.env.JWT_SECRET;
+    const data: CreateOrderResponse =
+      userId != null || !jwtSecret
+        ? { order }
+        : {
+            order,
+            trackingToken: signTrackOrderJwt({
+              orderId: order.id,
+              cafeId,
+              secret: jwtSecret,
+            }),
+          };
+
     return res.status(201).json({ ok: true, data });
   } catch (e) {
     if (e instanceof ApiHttpError) {

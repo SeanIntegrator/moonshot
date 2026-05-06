@@ -132,7 +132,7 @@ Implemented in Phase 3 (`003_kds_users_schema.sql`). Passwords are stored as opa
 
 ## `orders`
 
-Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store creation is exposed as `POST /api/v1/orders` (see `docs/dataflow-sequences.md` S3). KDS list/complete and Socket.io fan-out are implemented after KDS login; Stripe/POS webhooks and customer sockets remain planned.
+Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store creation is exposed as `POST /api/v1/orders` (see `docs/dataflow-sequences.md` S3). KDS list/complete and Socket.io fan-out are implemented after KDS login; **customer tracking** uses namespace `/customer` with JWT validation (see `docs/architecture/realtime.md`). Stripe/POS webhooks remain planned.
 
 | Column               | Type        | Notes |
 | -------------------- | ----------- | ----- |

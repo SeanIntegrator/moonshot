@@ -1,14 +1,13 @@
 import type { CustomerClientToServerEvent } from '@moonshot/types';
 import type { Server } from 'socket.io';
+import { authorizeCustomerSubscribe } from '../lib/customer-track-auth.js';
 import { customerOrderRoom } from './customer-events.js';
+import { pool } from '../db.js';
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function isSubscribePayload(p: unknown): p is Pick<CustomerClientToServerEvent, 'orderId' | 'token'> {
+function isSubscribePayload(p: unknown): p is Pick<CustomerClientToServerEvent, 'orderId' | 'authToken'> {
   if (typeof p !== 'object' || p === null) return false;
   const o = p as Record<string, unknown>;
-  return typeof o.orderId === 'string' && (o.token === undefined || typeof o.token === 'string');
+  return typeof o.orderId === 'string' && typeof o.authToken === 'string';
 }
 
 export function registerCustomerSocketHandlers(io: Server): void {
@@ -18,20 +17,33 @@ export function registerCustomerSocketHandlers(io: Server): void {
     socket.on(
       'customer:subscribe',
       (payload: unknown, ack?: (err?: string) => void) => {
-        if (!isSubscribePayload(payload)) {
-          ack?.('Invalid subscribe payload');
-          return;
-        }
-        const trimmed = payload.orderId.trim();
-        if (!UUID_RE.test(trimmed)) {
-          ack?.('Invalid orderId');
-          return;
-        }
+        void (async () => {
+          if (!isSubscribePayload(payload)) {
+            ack?.('Invalid subscribe payload');
+            return;
+          }
+          const jwtSecret = process.env.JWT_SECRET;
+          if (!jwtSecret) {
+            ack?.('Server configuration missing');
+            return;
+          }
 
-        /* Future: validate payload.token against customer JWT and ensure user may track this order. */
+          const result = await authorizeCustomerSubscribe({
+            pool,
+            jwtSecret,
+            subscribeOrderId: payload.orderId,
+            authToken: payload.authToken,
+          });
 
-        void socket.join(customerOrderRoom(trimmed));
-        ack?.();
+          if (!result.ok) {
+            ack?.(result.message);
+            return;
+          }
+
+          const trimmedOrderId = payload.orderId.trim();
+          void socket.join(customerOrderRoom(trimmedOrderId));
+          ack?.();
+        })();
       },
     );
   });

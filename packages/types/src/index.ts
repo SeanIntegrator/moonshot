@@ -7,6 +7,7 @@ export * from './kds.js';
 export * from './kds-auth.js';
 export * from './loyalty.js';
 export * from './menu.js';
+export * from './order-tracking-auth.js';
 export * from './order.js';
 export * from './payment.js';
 export * from './pos.js';

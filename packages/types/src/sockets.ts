@@ -23,15 +23,18 @@ export type KdsServerToClientEvent =
 /** @alias KdsServerToClientEvent — plan/doc shorthand */
 export type KdsSocketEvent = KdsServerToClientEvent;
 
-// --- KDS room: client → server ---
-// Connect to the `/kds` Socket.io namespace; auth token is passed in handshake (see moonshot-api kds-socket).
-
-export type KdsClientToServerEvent = {
-  type: 'kds:subscribe';
-  cafeId: string;
-  /** Device/session secret issued by moonshotApi */
+/**
+ * KDS Socket.io clients authenticate via namespace `/kds` handshake only: `io(url, { auth: { token } })`.
+ * There is no separate client→server socket event for auth.
+ */
+export interface KdsSocketHandshakeAuth {
   token: string;
-};
+}
+
+/**
+ * @deprecated Use {@link KdsSocketHandshakeAuth}; KDS never emits a `kds:subscribe` payload.
+ */
+export type KdsClientToServerEvent = KdsSocketHandshakeAuth;
 
 // --- Customer room: server → client ---
 
@@ -53,12 +56,12 @@ export type CustomerServerToClientEvent =
 export type CustomerClientToServerEvent = {
   type: 'customer:subscribe';
   orderId: string;
-  /** Optional customer JWT for future authenticated tracking */
-  token?: string;
+  /** Guest: `trackingToken` from `POST /orders`. Signed-in: Google session JWT from `POST /auth/google`. */
+  authToken: string;
 };
 
 /** Union of every server-emitted payload (discriminate on `type`) */
 export type MoonshotServerToClientEvent = KdsServerToClientEvent | CustomerServerToClientEvent;
 
-/** Union of every client-emitted payload */
-export type MoonshotClientToServerEvent = KdsClientToServerEvent | CustomerClientToServerEvent;
+/** Client→server payloads customers may emit (KDS uses handshake only). */
+export type MoonshotClientToServerEvent = CustomerClientToServerEvent;

@@ -35,11 +35,15 @@ export function Menu() {
   const [orderType, setOrderType] = useState<OrderType>('takeaway');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [placedOrder, setPlacedOrder] = useState<CreateOrderResponse['order'] | null>(null);
+  const [placement, setPlacement] = useState<{
+    order: CreateOrderResponse['order'];
+    trackingToken?: string;
+  } | null>(null);
 
   const { trackingStatus, completedAt, stepIndex } = useOrderTracking(
-    placedOrder?.id ?? null,
-    placedOrder?.status,
+    placement?.order.id ?? null,
+    placement?.order.status,
+    placement?.trackingToken ?? null,
   );
 
   useEffect(() => {
@@ -94,7 +98,7 @@ export function Menu() {
           })),
         }),
       });
-      setPlacedOrder(data.order);
+      setPlacement({ order: data.order, trackingToken: data.trackingToken });
       setQuantities({});
       setNotes('');
     } catch (e) {
@@ -109,16 +113,16 @@ export function Menu() {
       <Typography variant="h4" component="h1" sx={{ mt: 0 }}>
         Menu
       </Typography>
-      {placedOrder && (
+      {placement && (
         <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: 'action.hover' }}>
           <Typography variant="subtitle1" fontWeight={700}>
             Order placed
           </Typography>
           <Typography variant="body2" sx={{ mt: 0.5 }}>
-            {placedOrder.customerName} — {placedOrder.paymentStatus}
+            {placement.order.customerName} — {placement.order.paymentStatus}
           </Typography>
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-            Order id: {placedOrder.id}
+            Order id: {placement.order.id}
           </Typography>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5, alignItems: 'center' }}>
@@ -160,7 +164,7 @@ export function Menu() {
             </Typography>
           )}
 
-          <Button size="small" sx={{ mt: 1 }} onClick={() => setPlacedOrder(null)}>
+          <Button size="small" sx={{ mt: 1 }} onClick={() => setPlacement(null)}>
             Dismiss
           </Button>
         </Box>

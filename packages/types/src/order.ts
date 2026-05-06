@@ -109,4 +109,9 @@ export interface CreateOrderRequest {
 
 export interface CreateOrderResponse {
   order: NormalisedOrder;
+  /**
+   * Present for **guest** orders only: sign with `TRACK_ORDER_JWT_PURPOSE` for `/customer` subscribe.
+   * Omitted when the order is tied to a logged-in user (`orders.user_id`).
+   */
+  trackingToken?: string;
 }

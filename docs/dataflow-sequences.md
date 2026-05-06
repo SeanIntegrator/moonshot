@@ -8,18 +8,17 @@ Implemented today:
 - Manual menu reads from Postgres.
 - Google auth and JWT session hydration.
 - Menu admin writes through API routes.
-- Guest pay-in-store order creation via `POST /api/v1/orders` (`X-Cafe-Slug`): persists `orders` and `order_items` as `confirmed` / `unpaid`; server derives line prices from `menu_items`. Non-empty line modifiers are rejected until modifier validation exists.
-- Café-scoped **KDS login** (`POST /api/v1/kds/auth/login`), **open orders** (`GET /api/v1/kds/orders`), **complete order** (`POST /api/v1/kds/orders/:orderId/complete`), and **Socket.io** fan-out (`kds:event` with `KdsServerToClientEvent`). Guest order creation emits `kds:order:new` after commit.
+- Guest pay-in-store order creation via `POST /api/v1/orders` (`X-Cafe-Slug`): persists `orders` and `order_items` as `confirmed` / `unpaid`; optional `Authorization` attaches **`orders.user_id`**; guests receive a **`trackingToken`** JWT when `JWT_SECRET` is configured. Fan-out emits `kds:order:new` after commit. Non-empty line modifiers are rejected until modifier validation exists.
+- Café-scoped **KDS login** (`POST /api/v1/kds/auth/login`), **open orders** (`GET /api/v1/kds/orders`), **complete order** (`POST /api/v1/kds/orders/:orderId/complete`), and **Socket.io** namespace **`/kds`** (`kds:event` with `KdsServerToClientEvent`).
+- **Customer tracking** Socket.io namespace **`/customer`**: `customer:subscribe` accepts **`trackingToken`** (guest) or **session JWT** (signed-in, must match `orders.user_id`); server emits **`customerOrderCompleted`** on KDS completion. See **`docs/architecture/realtime.md`**.
 
 Planned, not implemented yet:
 
 - Stripe checkout and webhook-paid confirmation (replacing or augmenting guest unpaid orders).
 - Stripe webhooks.
 - POS webhooks/polling.
-- Socket.io rooms/events.
-- Pickup ETA recalculation.
+- Pickup ETA recalculation and broadcast (`kds:eta:updated` / `customerEtaUpdated` live).
 - Loyalty and feedback persistence.
-- Public KDS HTTP surface and Socket.io (`kds:event`) after KDS login.
 
 ---
 
@@ -288,4 +287,4 @@ Constants `base_prep_minutes` and `per_item_minutes` live in `cafes.kds_config` 
 | `customerOrderCompleted`  | customer        | `{ orderId, cafeId, completedAt }`                |
 | `customerEtaUpdated`      | customer        | `{ updates: { orderId, pickupTime }[] }`          |
 
-Exact shapes are defined in `@moonshot/types` (`KdsSocketEvent`, `CustomerSocketEvent`).
+Exact shapes are defined in `@moonshot/types` (`KdsSocketEvent`, customer `CustomerServerToClientEvent`).

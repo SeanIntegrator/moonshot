@@ -40,6 +40,8 @@ export function useOrderTracking(
   orderId: string | null,
   /** From `POST /orders` response — drives steps until realtime status exists */
   initialOrderStatus?: OrderStatus,
+  /** Present for guest checkout only — JWT for `/customer` subscribe */
+  orderTrackingToken?: string | null,
 ): {
   trackingStatus: OrderTrackingStatus;
   completedAt: IsoDateTime | null;
@@ -62,6 +64,13 @@ export function useOrderTracking(
       return;
     }
 
+    const sessionJwt = getStoredToken();
+    const guestJwt = orderTrackingToken?.trim() ?? '';
+    if (!guestJwt && !sessionJwt?.trim()) {
+      setTrackingStatus('error');
+      return;
+    }
+
     setTrackingStatus('connecting');
     const socket = createCustomerSocket();
 
@@ -80,13 +89,18 @@ export function useOrderTracking(
 
     socket.on('connect', () => {
       setTrackingStatus('tracking');
-      const token = getStoredToken();
+      const authToken =
+        guestJwt.trim() || getStoredToken()?.trim() || '';
+      if (!authToken) {
+        setTrackingStatus('error');
+        return;
+      }
       socket.emit(
         'customer:subscribe',
         {
           type: 'customer:subscribe',
           orderId,
-          ...(token ? { token } : {}),
+          authToken,
         },
         (err?: string) => {
           if (err) {
@@ -106,7 +120,7 @@ export function useOrderTracking(
       socket.off('customer:event', onCustomerEvent);
       socket.disconnect();
     };
-  }, [orderId]);
+  }, [orderId, orderTrackingToken]);
 
   const stepIndex = trackingStepFromStatus(trackingStatus, liveOrderStatus);
 

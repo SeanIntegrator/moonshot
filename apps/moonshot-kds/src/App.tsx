@@ -1,5 +1,9 @@
 import './index.css';
-import type { KdsServerToClientEvent, NormalisedOrder } from '@moonshot/types';
+import {
+  KDS_SOCKET_NAMESPACE,
+  type KdsServerToClientEvent,
+  type NormalisedOrder,
+} from '@moonshot/types';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type Socket, io } from 'socket.io-client';
@@ -109,7 +113,7 @@ export function App() {
       setError(e instanceof Error ? e.message : 'Failed to load orders');
     });
 
-    const socket = io(`${base}/kds`, {
+    const socket = io(`${base}${KDS_SOCKET_NAMESPACE}`, {
       auth: { token: session.token },
       transports: ['websocket', 'polling'],
     });

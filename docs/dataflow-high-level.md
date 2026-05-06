@@ -1,13 +1,8 @@
 # High-level dataflow
 
-Moonshot is currently in an early Phase 1 state with Phase 2 ordering schema work underway. The deployed monorepo has four Railway services, one per app:
+The monorepo ships **four Railway services** (production): API, order-ahead customer PWA, kitchen **KDS**, and **admin** (placeholder UI). Postgres is the canonical store for cafes, users, menu, and orders.
 
-- `apps/moonshot-api` — Express API backed by Postgres.
-- `apps/moonshot-order-ahead` — Vite/React/MUI customer app.
-- `apps/moonshot-kds` — Vite/React placeholder shell.
-- `apps/moonshot-admin` — Vite/React/MUI placeholder shell.
-
-The API implements café lookup, Google auth, session hydration, manual menu reads/admin writes, and **guest pay-in-store order creation** (`POST /api/v1/orders`) which persists `orders` and `order_items` as `confirmed` / `unpaid`. Postgres holds café, user, membership, menu, and order rows. **Stripe checkout, KDS HTTP APIs, live sockets, POS webhooks, pickup ETA, loyalty, and feedback** are still planned or gated: KDS read/complete endpoints are intentionally not exposed until café-scoped KDS username/password auth exists.
+Implementations today include **café + menu reads**, **Google customer auth**, **guest or signed-in pay-in-store orders**, **KDS login + open/complete APIs**, **Socket.io** on namespaces **`/kds`** and **`/customer`**, and **CORS allowlists** via **`CORS_ORIGINS`**. Planned: Stripe checkout, POS webhooks, pickup ETA automation, loyalty surfaces. See [docs/README.md](README.md), [current/http-surface.md](current/http-surface.md), and [architecture/realtime.md](architecture/realtime.md).
 
 ## Topology
 
@@ -15,95 +10,75 @@ The API implements café lookup, Google auth, session hydration, manual menu rea
 flowchart LR
   subgraph clients [Clients]
     OA[moonshotOrderAhead_PWA]
-    KDS[moonshotKDS_placeholder]
+    KDS[moonshotKDS]
     Admin[moonshotAdmin_placeholder]
   end
 
   subgraph api [moonshotApi]
     Gateway[Express_api_v1]
     CafeContext[cafe_context_by_slug]
-    Auth[Google_auth_JWT]
+    Auth[Google_customer_JWT]
     Menu[manual_menu_adapter]
-    OrdersGuest[guest_POST_orders]
+    Orders[outbound_orders_KDS_fanout]
+    KdsRoutes[KDS_rest_JWT]
+    IoKds["Socket_/kds"]
+    IoCust["Socket_/customer"]
   end
 
-  subgraph planned [Planned_next_flows]
-    Stripe[Stripe_checkout]
-    Sockets[Socket_io]
+  subgraph plannedFlows [Roadmap_Stripe_POS_ETA]
+    Stripe[Stripe_checkout_webhooks]
     PosWebhooks[POS_webhooks]
-    KdsHttp[KDS_HTTP_after_login]
+    EtaPickup[pickup_ETA_broadcast]
   end
 
   DB[("Postgres_source_of_truth")]
 
   OA --> Gateway
+  KDS --> Gateway
+  KDS --> IoKds
+  OA --> IoCust
+  Admin --> Gateway
+
   Gateway --> CafeContext
   Gateway --> Auth
   Gateway --> Menu
-  Gateway --> OrdersGuest
+  Gateway --> Orders
+  Gateway --> KdsRoutes
   CafeContext --> DB
   Auth --> DB
   Menu --> DB
-  OrdersGuest --> DB
+  Orders --> DB
+  KdsRoutes --> DB
+  IoKds --> KdsRoutes
+  IoCust --> Orders
+
   Gateway -.-> Stripe
-  Stripe -.-> Sockets
-  Stripe -.-> KdsHttp
-  OrdersGuest -.-> KdsHttp
   Gateway -.-> PosWebhooks
+  Orders -.-> EtaPickup
 ```
 
 ## Current HTTP surface
 
-- `GET /` — API service metadata.
-- `GET /health` and `GET /api/v1/health` — health checks.
-- `GET /api/v1/cafe/:slug` — public café config and active feature flags.
-- `POST /api/v1/auth/google` — verifies a Google credential, upserts `users` and `cafe_users`, then returns a JWT.
-- `GET /api/v1/auth/me` — JWT-protected session hydration with café membership data.
-- `GET /api/v1/menu` and `GET /api/v1/menu/:category` — public manual menu reads.
-- `POST /api/v1/menu`, `PATCH /api/v1/menu/:itemId`, `DELETE /api/v1/menu/:itemId` — menu admin writes for JWT users whose email is listed in `MENU_ADMIN_EMAILS`.
-- `POST /api/v1/orders` — guest pay-in-store order creation (`X-Cafe-Slug`); server derives line prices from `menu_items`. Does not require a customer JWT. Modifiers on lines are rejected until modifier validation exists.
+Listed concisely at [docs/current/http-surface.md](current/http-surface.md).
 
-All versioned API routes use `API_VERSION_PREFIX` from `@moonshot/types`, currently `/api/v1`.
+## Café resolution
 
-## Current café resolution
+- Path slug **`/api/v1/cafe/:slug`**
+- Header **`X-Cafe-Slug`** on other café-scoped routes
 
-The API resolves café context from:
-
-- `:slug` on routes that include a path slug, such as `/api/v1/cafe/:slug`.
-- `X-Cafe-Slug` on other café-scoped routes, such as `/api/v1/menu` and `/api/v1/orders`.
-
-Subdomain, `Host`, and `X-Cafe-Id` resolution are not implemented yet.
+Subdomain / `Host` resolution is **not** implemented yet.
 
 ## App status
 
-- Order-ahead has routes for `/`, `/menu`, and `/profile`. It fetches café and menu data from the API and supports Google sign-in/session hydration. The menu page can place **guest pay-in-store** orders via `POST /api/v1/orders` (basket + name + order type).
-- KDS supports **café-scoped username/password** login (`POST /api/v1/kds/auth/login`), open orders (`GET /api/v1/kds/orders`), complete order (`POST /api/v1/kds/orders/:orderId/complete`), and **Socket.io** live updates on `kds:event` (payloads: `KdsServerToClientEvent` in `@moonshot/types`). Credentials live in `kds_users` with hashed passwords; bootstrap via `pnpm bootstrap:kds-user` using env vars only (no committed secrets).
-- Admin is a placeholder MUI shell. Menu CRUD exists in the API but is not yet exposed through the admin UI.
+- **Order-ahead:** Café + menu fetch, optional Google JWT, **`POST /orders`** with **`trackingToken`** for guests when signed-out; realtime completion via **`/customer`** Socket.
+- **KDS:** Username/password **`POST /kds/auth/login`**, **`GET /kds/orders`**, complete route, realtime **`io('{API_ORIGIN}/kds')`** with JWT handshake.
+- **Admin:** Shell only; APIs exist elsewhere.
 
-## Local and Railway environment
-
-API env vars:
-
-- `PORT`
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `GOOGLE_CLIENT_ID`
-- `MENU_ADMIN_EMAILS`
-
-Order-ahead env vars:
-
-- `VITE_API_URL` — API origin only, for example `http://localhost:3000` or the public Railway API service URL. Do not include `/api/v1`.
-- `VITE_CAFE_SLUG` — defaults in code to `clay-and-bean`.
-- `VITE_GOOGLE_CLIENT_ID`
-
-Each Railway app is a separate service with its root directory set to the app folder. The order-ahead service must point `VITE_API_URL` at the public API service URL, not at its own container URL.
-
-## Planned dataflow direction
-
-The intended v2 architecture still treats Postgres as the single source of truth for orders visible in KDS and customer apps. POS adapters, Stripe payment, order ingestion, live sockets, pickup ETA, loyalty, and review feedback should be added around that invariant. See [dataflow-sequences.md](dataflow-sequences.md) for current-vs-planned sequence details.
+See [architecture/realtime.md](architecture/realtime.md), [progress.md](progress.md), [roadmap.md](roadmap.md).
 
 ## Related docs
 
-- [dataflow-sequences.md](dataflow-sequences.md) — sequence diagrams per critical path.
-- [schema-draft.md](schema-draft.md) — migrated Phase 1 schema plus planned schema.
-- [feedback-prompt-flow.md](feedback-prompt-flow.md) — future post-completion review prompt.
+- [Current HTTP + CORS](current/http-surface.md)
+- [Sequences](dataflow-sequences.md) — detailed implemented vs roadmap flows
+- [Schema phases](schema-draft.md)
+- [Feedback UX](feedback-prompt-flow.md)

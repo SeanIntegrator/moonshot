@@ -7,6 +7,8 @@ declare global {
       user?: JwtClaims;
       kdsUser?: KdsJwtClaims;
       cafe?: ResolvedCafe;
+      /** Set by `optionalCustomerAuth` when a valid customer JWT is present */
+      customerUserId?: string;
     }
   }
 }

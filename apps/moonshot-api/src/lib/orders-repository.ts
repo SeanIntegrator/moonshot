@@ -83,16 +83,19 @@ async function fetchOrderWithItems(
 }
 
 /**
- * Guest pay-in-store: confirmed + unpaid, prices from menu_items.
+ * Pay-in-store: confirmed + unpaid, prices from menu_items.
+ * When `userId` is set (logged-in customer JWT on `POST /orders`), `orders.user_id` is stored.
  */
 export async function createGuestPayInStoreOrder(params: {
   cafeId: string;
+  /** Logged-in app user UUID, otherwise null for guest checkout */
+  userId: string | null;
   customerName: string;
   notes: string | null;
   orderType: OrderType;
   lines: CreateOrderLineInput[];
 }): Promise<NormalisedOrder> {
-  const { cafeId, customerName, notes, orderType, lines } = params;
+  const { cafeId, userId, customerName, notes, orderType, lines } = params;
 
   if (!ORDER_TYPES.includes(orderType)) {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid orderType');
@@ -165,13 +168,13 @@ export async function createGuestPayInStoreOrder(params: {
       `INSERT INTO orders (
         cafe_id, user_id, customer_name, notes, total_minor, currency,
         order_type, source, status, payment_status
-      ) VALUES ($1, NULL, $2, $3, $4, $5, $6, 'app', 'confirmed', 'unpaid')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'app', 'confirmed', 'unpaid')
       RETURNING
         id, cafe_id, user_id, pos_order_id, customer_name, notes, total_minor, currency,
         order_type, source, status, payment_status, quoted_pickup_time, pickup_time,
         completed_at, edit_token, parent_order_id, stripe_checkout_session_id,
         created_at, updated_at`,
-      [cafeId, trimmedName, notes, totalMinor, currency!, orderType],
+      [cafeId, userId, trimmedName, notes, totalMinor, currency!, orderType],
     );
 
     const orderRow = insertOrder.rows[0];
