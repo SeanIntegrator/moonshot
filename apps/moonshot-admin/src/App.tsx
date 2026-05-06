@@ -1,24 +1,64 @@
-import { API_VERSION_PREFIX } from '@moonshot/types';
-import { AppBar, Box, Container, Toolbar, Typography } from '@mui/material';
+import {
+  AppBar,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Toolbar,
+  Typography,
+} from '@mui/material';
+import { AuthProvider, useAuth } from './context/AuthContext.js';
+import { LoginPage } from './pages/LoginPage.js';
+import { DashboardPage } from './pages/DashboardPage.js';
 
-export function App() {
+function AppContent() {
+  const { session, loading, logout } = useAuth();
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.100' }}>
       <AppBar position="static" color="default" elevation={0}>
-        <Toolbar>
-          <Typography variant="h6" component="div">
+        <Toolbar sx={{ gap: 2 }}>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Moonshot Admin
           </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+            {session.adminUser.email} · {session.cafe.name}
+          </Typography>
+          <Button color="inherit" onClick={logout}>
+            Sign out
+          </Button>
         </Toolbar>
       </AppBar>
       <Container sx={{ py: 3 }}>
-        <Typography variant="body1" gutterBottom>
-          Café owner dashboard shell (MUI).
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          API prefix from <code>@moonshot/types</code>: <code>{API_VERSION_PREFIX}</code>
-        </Typography>
+        <DashboardPage session={session} />
       </Container>
     </Box>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

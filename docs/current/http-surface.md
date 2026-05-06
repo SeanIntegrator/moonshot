@@ -16,9 +16,13 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
   - `GET /api/v1/auth/me` — `Authorization` + café context
 - **Menu**
   - `GET /api/v1/menu`, `GET /api/v1/menu/:segment` — public reads (`X-Cafe-Slug`)
-  - `POST/PATCH/DELETE /api/v1/menu` — admin emails in `MENU_ADMIN_EMAILS`
+  - `POST/PATCH/DELETE /api/v1/menu` — café-scoped **`purpose: admin`** JWT, or Google customer JWT when email is in **`MENU_ADMIN_EMAILS`** (`X-Cafe-Slug` + `Authorization`)
 - **Orders**
   - `POST /api/v1/orders` — guest or **optional** `Authorization: Bearer` session JWT; sets `orders.user_id` when signed in. Guest responses may include **`trackingToken`** (for Socket `/customer` subscribe). **`X-Cafe-Slug`** required.
+- **Admin (pre-seeded / invite-ready accounts)**
+  - `POST /api/v1/admin/auth/login` — `{ email, password }` → JWT (`purpose: admin`)
+  - `GET /api/v1/admin/auth/me` — `Authorization: Bearer`
+  - `PATCH /api/v1/admin/settings` — `Authorization: Bearer`; body `featuresPatch` (`loyalty`, `order_ahead`) and/or `kdsConfigPatch` (whitelisted KDS keys); merges into `cafes.features` / `cafes.kds_config`
 - **KDS**
   - `POST /api/v1/kds/auth/login`
   - `GET /api/v1/kds/orders`

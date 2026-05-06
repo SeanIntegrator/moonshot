@@ -5,8 +5,8 @@ import type { PosProvider } from '@moonshot/types';
 import { pool } from '../db.js';
 import { getPosAdapter } from '../lib/pos-adapters/index.js';
 import { mapMenuItemRow } from '../lib/menu-map.js';
-import { isMenuAdminEmail, requireAuth } from '../middleware/auth.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
+import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
 
 const MENU_CATEGORIES: MenuCategory[] = ['hot_drinks', 'cold_drinks', 'food', 'extras'];
 
@@ -17,15 +17,7 @@ export const menuRouter: Router = Router();
 
 menuRouter.use(requireCafeContext);
 
-menuRouter.post('/', requireAuth, async (req, res) => {
-  if (!isMenuAdminEmail(req.user?.email)) {
-    return res.status(403).json({
-      ok: false,
-      error: 'Forbidden',
-      code: ApiErrorCode.FORBIDDEN,
-    });
-  }
-
+menuRouter.post('/', requireMenuMutationAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
   const body = req.body as Record<string, unknown>;
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -92,15 +84,7 @@ menuRouter.post('/', requireAuth, async (req, res) => {
   }
 });
 
-menuRouter.patch('/:itemId', requireAuth, async (req, res) => {
-  if (!isMenuAdminEmail(req.user?.email)) {
-    return res.status(403).json({
-      ok: false,
-      error: 'Forbidden',
-      code: ApiErrorCode.FORBIDDEN,
-    });
-  }
-
+menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const rawId = req.params.itemId;
   const itemId = Array.isArray(rawId) ? rawId[0] : rawId;
   if (!itemId || !UUID_RE.test(itemId)) {
@@ -207,15 +191,7 @@ menuRouter.patch('/:itemId', requireAuth, async (req, res) => {
   }
 });
 
-menuRouter.delete('/:itemId', requireAuth, async (req, res) => {
-  if (!isMenuAdminEmail(req.user?.email)) {
-    return res.status(403).json({
-      ok: false,
-      error: 'Forbidden',
-      code: ApiErrorCode.FORBIDDEN,
-    });
-  }
-
+menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const rawDel = req.params.itemId;
   const itemId = Array.isArray(rawDel) ? rawDel[0] : rawDel;
   if (!itemId || !UUID_RE.test(itemId)) {

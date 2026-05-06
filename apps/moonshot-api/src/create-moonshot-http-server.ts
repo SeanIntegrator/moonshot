@@ -9,6 +9,7 @@ import { attachCustomerSocketIO } from './realtime/customer-events.js';
 import { registerCustomerSocketHandlers } from './realtime/customer-socket.js';
 import { attachKdsSocketIO } from './realtime/kds-events.js';
 import { registerKdsSocketHandlers } from './realtime/kds-socket.js';
+import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
 import { cafeRouter } from './routes/cafe.js';
 import { kdsRouter } from './routes/kds.js';
@@ -72,6 +73,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   });
 
   app.use(`${API_VERSION_PREFIX}/auth`, authRouter);
+  app.use(`${API_VERSION_PREFIX}/admin`, adminRouter);
   app.use(`${API_VERSION_PREFIX}/cafe`, cafeRouter);
   app.use(`${API_VERSION_PREFIX}/menu`, menuRouter);
   app.use(`${API_VERSION_PREFIX}/orders`, ordersRouter);
