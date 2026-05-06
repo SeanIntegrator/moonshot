@@ -27,12 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function hydrate() {
       if (!getApiBaseUrl()) {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
       const token = localStorage.getItem(TOKEN_KEY);
       if (!token) {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
       try {
