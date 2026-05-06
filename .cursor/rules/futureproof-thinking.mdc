@@ -1,0 +1,38 @@
+---
+description: Write code for the project's future, not just the current prompt
+alwaysApply: true
+---
+
+# Futureproof Thinking
+
+Each prompt is a stepping stone. Before writing code, ask: *will this still make sense when the project is 3x larger?*
+
+## Principles
+
+**Prefer abstraction over shortcuts**
+If a pattern will repeat, abstract it now even if only one instance exists today.
+
+```typescript
+// ❌ BAD — hardcoded for one cafe
+const menu = await db.query('SELECT * FROM menu_items WHERE cafe_id = 1');
+
+// ✅ GOOD — accepts context it will need later
+const menu = await getMenuForCafe(cafeId);
+```
+
+**Design interfaces before implementations**
+Define the shape of data and contracts first. The implementation can evolve; a stable interface makes refactoring cheaper.
+
+**Don't couple things that will need to diverge**
+If two features share logic today but serve different purposes, keep them separate. Shared code that diverges later is painful to unpick.
+
+**Leave extension points**
+Where a feature will obviously grow (e.g. order statuses, payment methods, roles), use enums, maps, or strategy patterns instead of `if/else` chains.
+
+## What This Is Not
+
+This is not a licence to over-engineer. Don't add abstraction layers for imaginary future requirements. The test is: *is this a known, likely extension of the current feature?* If yes, build for it. If speculative, skip it.
+
+## When in Doubt
+
+Briefly note in a comment or in `docs/` what the intended future direction is, so the next agent has the context to extend correctly.

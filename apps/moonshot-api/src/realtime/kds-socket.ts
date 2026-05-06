@@ -16,7 +16,9 @@ function isKdsClaims(payload: unknown): payload is KdsJwtClaims {
 }
 
 export function registerKdsSocketHandlers(io: Server): void {
-  io.use((socket, next) => {
+  const ns = io.of('/kds');
+
+  ns.use((socket, next) => {
     const tokenRaw = socket.handshake.auth;
     const token =
       tokenRaw &&
@@ -47,7 +49,7 @@ export function registerKdsSocketHandlers(io: Server): void {
     }
   });
 
-  io.on('connection', (socket) => {
+  ns.on('connection', (socket) => {
     const claims = socket.data.kdsUser;
     if (!claims) {
       socket.disconnect(true);

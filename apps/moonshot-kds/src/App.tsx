@@ -109,7 +109,7 @@ export function App() {
       setError(e instanceof Error ? e.message : 'Failed to load orders');
     });
 
-    const socket = io(base, {
+    const socket = io(`${base}/kds`, {
       auth: { token: session.token },
       transports: ['websocket', 'polling'],
     });

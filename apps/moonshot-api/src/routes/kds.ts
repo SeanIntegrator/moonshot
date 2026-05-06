@@ -10,6 +10,7 @@ import { mapCafeRow } from '../lib/cafe-map.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { findKdsUserForLogin, touchKdsUserLogin } from '../lib/kds-users-repository.js';
 import { completeOrderForKds, listOpenOrdersForKds } from '../lib/orders-repository.js';
+import { emitCustomerServerToClient } from '../realtime/customer-events.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 import { requireKdsAuth } from '../middleware/kds-auth.js';
 import { pool } from '../db.js';
@@ -137,6 +138,16 @@ kdsRouter.post('/orders/:orderId/complete', requireKdsAuth, async (req, res) => 
       });
     }
     emitKdsServerToClient(cafeId, { type: 'kds:order:removed', orderId });
+    const completedAt = order.pickup.completedAt;
+    if (completedAt) {
+      emitCustomerServerToClient(orderId, {
+        type: 'customerOrderCompleted',
+        orderId,
+        cafeId,
+        completedAt,
+        userId: order.customerId,
+      });
+    }
     const data: KdsCompleteOrderResponse = { order };
     return res.json({ ok: true, data });
   } catch (e) {

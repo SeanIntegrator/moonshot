@@ -1,0 +1,45 @@
+---
+description: Code documentation standards — inline comments, docs folder artifacts
+alwaysApply: true
+---
+
+# Documentation Standards
+
+## Inline Comments
+
+Add brief comments to explain **why**, not **what**. Focus on:
+
+- Non-obvious logic or business rules
+- Workarounds or known limitations
+- Complex async flows or state transitions
+
+```typescript
+// ❌ BAD — narrates the code
+// Loop through orders and update status
+for (const order of orders) { ... }
+
+// ✅ GOOD — explains intent
+// Orders arrive unsorted from the KDS; process oldest-first to preserve ticket priority
+for (const order of sortByCreatedAt(orders)) { ... }
+```
+
+## Complex Workflows
+
+For multi-step or async workflows (e.g. socket lifecycles, auth flows, multi-service calls), add a short block comment at the top of the function or module describing the sequence:
+
+```typescript
+/**
+ * Order flow: customer places order → API persists → KDS socket event → KDS display
+ * On failure at any step, the order stays in PENDING and is retried by the polling fallback.
+ */
+```
+
+## Docs Folder
+
+When implementing something architecturally significant, create or update a file in `docs/` to record it:
+
+- **Diagrams**: Use Mermaid in `.md` files for flows, data models, or service maps
+- **Decision records**: Note *why* an approach was chosen when the alternative was reasonable
+- Keep docs close to the code concern (e.g. `docs/realtime.md` for socket architecture)
+
+Docs files are first-class — future agents will read them for context.

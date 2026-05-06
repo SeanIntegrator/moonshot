@@ -7,6 +7,7 @@ import type {
 import {
   Box,
   Button,
+  Chip,
   Container,
   Divider,
   List,
@@ -17,7 +18,10 @@ import {
   Typography,
 } from '@mui/material';
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useOrderTracking } from '../hooks/useOrderTracking.js';
 import { apiFetch } from '../lib/api.js';
+
+const PROGRESS_STEPS = ['Confirmed', 'Preparing', 'Ready', 'Done'] as const;
 
 function lineTotal(item: NormalisedMenuItem, qty: number): number {
   return item.priceMinor * qty;
@@ -32,6 +36,11 @@ export function Menu() {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<CreateOrderResponse['order'] | null>(null);
+
+  const { trackingStatus, completedAt, stepIndex } = useOrderTracking(
+    placedOrder?.id ?? null,
+    placedOrder?.status,
+  );
 
   useEffect(() => {
     void (async () => {
@@ -106,11 +115,51 @@ export function Menu() {
             Order placed
           </Typography>
           <Typography variant="body2" sx={{ mt: 0.5 }}>
-            {placedOrder.customerName} — {placedOrder.status} / {placedOrder.paymentStatus}
+            {placedOrder.customerName} — {placedOrder.paymentStatus}
           </Typography>
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
             Order id: {placedOrder.id}
           </Typography>
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5, alignItems: 'center' }}>
+            {PROGRESS_STEPS.map((label, i) => {
+              const allDone = trackingStatus === 'completed';
+              const stepComplete = allDone || i < stepIndex;
+              const stepActive = !allDone && i === stepIndex;
+              return (
+                <Chip
+                  key={label}
+                  label={label}
+                  size="small"
+                  color={stepComplete || stepActive ? 'primary' : 'default'}
+                  variant={stepActive ? 'filled' : stepComplete ? 'filled' : 'outlined'}
+                />
+              );
+            })}
+          </Box>
+
+          {trackingStatus === 'connecting' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Connecting for live updates…
+            </Typography>
+          )}
+          {trackingStatus === 'tracking' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              We’ll update this when the kitchen marks your order ready.
+            </Typography>
+          )}
+          {trackingStatus === 'error' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Tracking unavailable — we’ll call your name when it’s ready.
+            </Typography>
+          )}
+          {trackingStatus === 'completed' && (
+            <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
+              Your order is ready!
+              {completedAt ? ` (${new Date(completedAt).toLocaleTimeString()})` : ''}
+            </Typography>
+          )}
+
           <Button size="small" sx={{ mt: 1 }} onClick={() => setPlacedOrder(null)}>
             Dismiss
           </Button>

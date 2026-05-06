@@ -23,4 +23,14 @@ Then sign in from `moonshot-kds` with the same slug and username.
 
 ## Realtime
 
-The HTTP server also hosts **Socket.io**. KDS clients authenticate with the same JWT as HTTP (`auth.token`). Events are emitted on `kds:event` with payloads matching `KdsServerToClientEvent` in `@moonshot/types`.
+The HTTP server hosts **Socket.io** on two namespaces:
+
+| Namespace | Client | Auth |
+|-----------|--------|------|
+| **`/kds`** | `moonshot-kds` | JWT from `POST /api/v1/kds/auth/login` in `auth.token` handshake |
+| **`/customer`** | `moonshot-order-ahead` (order tracking) | None for guest flow; optional customer JWT in `customer:subscribe` for future use |
+
+- **KDS**: connect to `{API_ORIGIN}/kds`. Events on `kds:event` with payloads matching `KdsServerToClientEvent` in `@moonshot/types`.
+- **Customer**: connect to `{API_ORIGIN}/customer`. After connect, emit `customer:subscribe` with `{ type: 'customer:subscribe', orderId }`. Events on `customer:event` with payloads matching `CustomerServerToClientEvent`.
+
+**URL note:** `socket.io-client` uses the path `/socket.io` on the same host; the namespace is the URL path segment after the origin (e.g. `io('https://api.example.com/kds')`).

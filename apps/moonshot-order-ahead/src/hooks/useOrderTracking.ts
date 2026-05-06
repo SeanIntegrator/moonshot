@@ -1,0 +1,114 @@
+import type {
+  CustomerServerToClientEvent,
+  IsoDateTime,
+  OrderStatus,
+} from '@moonshot/types';
+import { useEffect, useState } from 'react';
+import { getStoredToken } from '../lib/api.js';
+import { createCustomerSocket } from '../lib/socket.js';
+
+export type OrderTrackingStatus =
+  | 'idle'
+  | 'connecting'
+  | 'tracking'
+  | 'completed'
+  | 'error';
+
+/** Derives user-visible step index 0–3 from order status until socket confirms completion. */
+export function trackingStepFromStatus(
+  status: OrderTrackingStatus,
+  orderStatus: OrderStatus | undefined,
+): number {
+  if (status === 'completed') return 3;
+  if (!orderStatus) return 0;
+  switch (orderStatus) {
+    case 'confirmed':
+    case 'pending':
+      return 0;
+    case 'preparing':
+      return 1;
+    case 'ready':
+      return 2;
+    case 'completed':
+      return 3;
+    default:
+      return 0;
+  }
+}
+
+export function useOrderTracking(
+  orderId: string | null,
+  /** From `POST /orders` response — drives steps until realtime status exists */
+  initialOrderStatus?: OrderStatus,
+): {
+  trackingStatus: OrderTrackingStatus;
+  completedAt: IsoDateTime | null;
+  /** Step 0 Confirmed … 3 Done — for UI progression */
+  stepIndex: number;
+} {
+  const [trackingStatus, setTrackingStatus] = useState<OrderTrackingStatus>('idle');
+  const [completedAt, setCompletedAt] = useState<IsoDateTime | null>(null);
+  const [liveOrderStatus, setLiveOrderStatus] = useState<OrderStatus | undefined>(initialOrderStatus);
+
+  useEffect(() => {
+    setLiveOrderStatus(initialOrderStatus);
+  }, [orderId, initialOrderStatus]);
+
+  useEffect(() => {
+    setCompletedAt(null);
+
+    if (!orderId?.trim()) {
+      setTrackingStatus('idle');
+      return;
+    }
+
+    setTrackingStatus('connecting');
+    const socket = createCustomerSocket();
+
+    function onCustomerEvent(ev: CustomerServerToClientEvent): void {
+      if (ev.type === 'customerOrderCompleted' && ev.orderId === orderId) {
+        setCompletedAt(ev.completedAt);
+        setTrackingStatus('completed');
+        setLiveOrderStatus('completed');
+      }
+      if (ev.type === 'customerEtaUpdated') {
+        /* Reserved for ETA push */
+      }
+    }
+
+    socket.on('customer:event', onCustomerEvent);
+
+    socket.on('connect', () => {
+      setTrackingStatus('tracking');
+      const token = getStoredToken();
+      socket.emit(
+        'customer:subscribe',
+        {
+          type: 'customer:subscribe',
+          orderId,
+          ...(token ? { token } : {}),
+        },
+        (err?: string) => {
+          if (err) {
+            setTrackingStatus('error');
+          }
+        },
+      );
+    });
+
+    socket.on('connect_error', () => {
+      setTrackingStatus('error');
+    });
+
+    socket.connect();
+
+    return () => {
+      socket.off('customer:event', onCustomerEvent);
+      socket.disconnect();
+    };
+  }, [orderId]);
+
+  const stepIndex = trackingStepFromStatus(trackingStatus, liveOrderStatus);
+
+  return { trackingStatus, completedAt, stepIndex };
+}

@@ -4,6 +4,8 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { Server } from 'socket.io';
+import { attachCustomerSocketIO } from './realtime/customer-events.js';
+import { registerCustomerSocketHandlers } from './realtime/customer-socket.js';
 import { attachKdsSocketIO } from './realtime/kds-events.js';
 import { registerKdsSocketHandlers } from './realtime/kds-socket.js';
 import { authRouter } from './routes/auth.js';
@@ -24,6 +26,8 @@ const io = new Server(httpServer, {
 });
 attachKdsSocketIO(io);
 registerKdsSocketHandlers(io);
+attachCustomerSocketIO(io);
+registerCustomerSocketHandlers(io);
 
 app.use(helmet());
 app.use(
