@@ -1,6 +1,9 @@
 /**
  * One-off: upsert a pre-seeded admin user for a café. Reads secrets from environment only.
- * Usage (local): pnpm --filter @moonshot/api exec tsx --env-file-if-exists=.env scripts/bootstrap-admin-user.ts
+ * Requires `admin_users` table — run `pnpm --filter @moonshot/api migrate` against this DATABASE_URL first.
+ * Usage: from repo root, pass env inline (same pattern as bootstrap:kds-user):
+ *   DATABASE_URL='…' ADMIN_BOOTSTRAP_CAFE_SLUG=clay-and-bean ADMIN_BOOTSTRAP_EMAIL=a@b.com \
+ *     ADMIN_BOOTSTRAP_PASSWORD='min-8-chars' pnpm --filter @moonshot/api bootstrap:admin-user
  */
 import pg from 'pg';
 import { hashKdsPassword } from '../src/lib/kds-password.js';

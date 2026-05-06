@@ -11,7 +11,8 @@
     "test": "vitest run",
     "migrate": "node --env-file-if-exists=.env ./node_modules/node-pg-migrate/bin/node-pg-migrate.js up -m migrations",
     "migrate:down": "node --env-file-if-exists=.env ./node_modules/node-pg-migrate/bin/node-pg-migrate.js down -m migrations",
-    "bootstrap:kds-user": "tsx --env-file-if-exists=.env scripts/bootstrap-kds-user.ts"
+    "bootstrap:kds-user": "tsx --env-file-if-exists=.env scripts/bootstrap-kds-user.ts",
+    "bootstrap:admin-user": "tsx --env-file-if-exists=.env scripts/bootstrap-admin-user.ts"
   },
   "dependencies": {
     "@moonshot/types": "workspace:*",
