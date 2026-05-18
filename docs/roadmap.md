@@ -2,13 +2,13 @@
 
 | Initiative | Notes |
 |------------|-------|
-| **Guest pay-in-store + KDS board + realtime customer completion** | Shipped (`POST /orders`, `/kds` HTTP + `/kds` Socket, `/customer` Socket + JWT validation on subscribe). |
-| **Stripe Checkout + webhook confirmation** | Replaces unpaid guest path; webhook flips status + emits KDS (`dataflow-sequences.md` F2). |
-| **Modifier selection & validation** | API rejects modifiers today; POS/menu schema partly ready. |
-| **Pickup ETA** | Types/events exist (`kds:eta:updated`, `customerEtaUpdated`); formula in `cafes.kds_config` draft. |
-| **POS adapter / Square ingress** | Walk-in parity with app orders (`dataflow-sequences.md` F1). |
-| **Admin UI menu CRUD** | API routes gated by `MENU_ADMIN_EMAILS`; app shell only. |
-| **Loyalty + review prompts** | `feedback-prompt-flow.md`. |
-| **KDS session recovery** | JWT expiry UX when socket fails auth. |
+| **Guest pay-in-store + KDS board + realtime customer completion** | Shipped when `paymentProvider === 'pay_in_store'`. |
+| **Stripe Checkout + webhook confirmation** | Shipped for `paymentProvider === 'stripe'`: pending order + Checkout URL, webhook confirms paid → KDS (`dataflow-sequences.md` F2). F3 merge flow still planned. |
+| **Modifier selection & validation** | Server validates `groupId`/`optionId` against menu JSON; UI pickers still a separate workstream. |
+| **Pickup ETA** | FIFO recomputation + `kds:eta:updated` / `customerEtaUpdated` wired; formula from `cafes.kds_config.eta`. |
+| **POS adapter / Square ingress** | Manual adapter + `posConfig` hook only; see [pos-normalisation.md](pos-normalisation.md). |
+| **Admin app operations** | Pre-seeded admin login + Stripe Connect card + settings/menu PATCH. Full create/delete menu UI, invites, audit remain planned. |
+| **Loyalty + review prompts** | Counter-based MVP on `cafe_users` + `customerReviewEligible` socket; persistence/ledger still thin. |
+| **KDS session recovery** | 90d JWT; KDS PWA clears session on HTTP 401 (`SESSION_EXPIRED`). |
 
 Changelog flavour + snags live in **progress.md**. Architecture invariants stay in **architecture/overview.md**.

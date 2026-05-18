@@ -31,14 +31,19 @@ export interface PickupWindow {
   etaMode: EtaMode;
 }
 
-/** Selected modifier on a line — denormalised for KDS + receipts */
+/** Selected modifier on an order line — group + option for multi-dimensional customisation */
 export interface NormalisedOrderLineModifier {
-  id: string;
-  name: string;
-  /** Minor units */
+  /** Modifier group id (from `NormalisedModifierGroup.id`) */
+  groupId: string;
+  groupName: string;
+  /** Selected option id (from `NormalisedModifierOption.id`) */
+  optionId: string;
+  optionName: string;
+  /** Minor units — delta added to base item price for this option */
   priceMinor: number;
   posOptionId?: string | null;
 }
+
 
 export interface NormalisedOrderItem {
   /** Internal UUID for this line */
@@ -87,18 +92,26 @@ export interface NormalisedOrder {
 }
 
 /**
- * Guest pay-in-store order creation payload.
+ * Guest pay-in-store / checkout order creation payload.
  * Prices are derived server-side from `menu_items`. Do not trust client prices.
  *
- * Modifiers: omit or pass empty arrays until the API validates selections against
+ * Modifiers: send selected option ids per group; server validates against
  * `modifier_groups` and applies priced deltas.
  */
 export interface CreateOrderLineInput {
   menuItemId: string;
   quantity: number;
-  modifiers?: NormalisedOrderLineModifier[];
+  /** Selected options keyed by modifier group */
+  modifiers?: OrderLineModifierSelectionInput[];
   notes?: string | null;
 }
+
+/** Client selection — server resolves names and prices from menu JSON */
+export interface OrderLineModifierSelectionInput {
+  groupId: string;
+  optionId: string;
+}
+
 
 export interface CreateOrderRequest {
   customerName: string;
@@ -114,4 +127,6 @@ export interface CreateOrderResponse {
    * Omitted when the order is tied to a logged-in user (`orders.user_id`).
    */
   trackingToken?: string;
+  /** Stripe Checkout URL when order is `pending` awaiting payment */
+  checkoutUrl?: string;
 }

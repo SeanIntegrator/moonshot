@@ -10,6 +10,8 @@ import { mapCafeRow } from '../lib/cafe-map.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { findKdsUserForLogin, touchKdsUserLogin } from '../lib/kds-users-repository.js';
 import { completeOrderForKds, listOpenOrdersForKds } from '../lib/orders-repository.js';
+import { applyLoyaltyAfterKdsComplete } from '../lib/loyalty-after-kds-complete.js';
+import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 import { requireKdsAuth } from '../middleware/kds-auth.js';
@@ -79,7 +81,7 @@ kdsRouter.post('/auth/login', async (req, res) => {
         purpose: 'kds',
       },
       jwtSecret,
-      { expiresIn: '30d' },
+      { expiresIn: '90d' },
     );
 
     const data: KdsLoginResponse = {
@@ -148,6 +150,25 @@ kdsRouter.post('/orders/:orderId/complete', requireKdsAuth, async (req, res) => 
         userId: order.customerId,
       });
     }
+
+    await applyLoyaltyAfterKdsComplete({ cafeId, order });
+
+    const cafeReload = await pool.query(
+      `SELECT
+        id, name, slug, pos_provider, pos_config, payment_provider, payment_config,
+        features, theme_id, theme_overrides, kds_config, timezone, owner_feedback_email
+      FROM cafes WHERE id = $1`,
+      [cafeId],
+    );
+    if (cafeReload.rows.length > 0) {
+      const mapped = mapCafeRow(cafeReload.rows[0] as Parameters<typeof mapCafeRow>[0]);
+      await recomputePickupEtasForCafe({
+        db: pool,
+        cafeId,
+        kdsConfig: mapped.kdsConfig,
+      });
+    }
+
     const data: KdsCompleteOrderResponse = { order };
     return res.json({ ok: true, data });
   } catch (e) {

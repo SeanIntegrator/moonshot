@@ -1,0 +1,103 @@
+import type { CreateOrderLineInput, OrderAheadFeatureConfig, OrderType } from '@moonshot/types';
+import { ApiErrorCode } from '@moonshot/types';
+import { ApiHttpError } from './http-errors.js';
+
+const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
+
+export type ParsedCreateOrderBody = {
+  customerName: string;
+  notes: string | null | undefined;
+  orderType: OrderType;
+  items: CreateOrderLineInput[];
+};
+
+export function parseOrderAheadPaymentMode(
+  orderAhead: OrderAheadFeatureConfig | null | undefined,
+): 'stripe' | 'pay_in_store' {
+  if (!orderAhead?.enabled) {
+    throw new ApiHttpError(
+      403,
+      ApiErrorCode.FORBIDDEN,
+      'Order ahead is disabled for this café',
+    );
+  }
+  const p = orderAhead.paymentProvider;
+  if (p === 'pay_in_store') return 'pay_in_store';
+  if (p === 'square_payment_links') {
+    throw new ApiHttpError(
+      501,
+      ApiErrorCode.VALIDATION,
+      'square_payment_links checkout is not implemented yet',
+    );
+  }
+  return 'stripe';
+}
+
+export function checkoutUrlsFromEnv(): { successUrl: string; cancelUrl: string } {
+  const success = process.env.ORDER_AHEAD_SUCCESS_URL?.trim();
+  const cancel = process.env.ORDER_AHEAD_CANCEL_URL?.trim();
+  if (!success || !cancel) {
+    throw new ApiHttpError(
+      500,
+      ApiErrorCode.CONFIG,
+      'ORDER_AHEAD_SUCCESS_URL and ORDER_AHEAD_CANCEL_URL must be set for Stripe checkout',
+    );
+  }
+  const successUrl = success.includes('{CHECKOUT_SESSION_ID}')
+    ? success
+    : `${success.replace(/\/?$/, '')}?checkout_session_id={CHECKOUT_SESSION_ID}`;
+  return { successUrl, cancelUrl: cancel };
+}
+
+/** Parse `POST /orders` JSON; returns validation issues without throwing (Express-friendly). */
+export function parseCreateOrderBody(body: Record<string, unknown>):
+  | { ok: true; value: ParsedCreateOrderBody }
+  | { ok: false; error: string } {
+  const customerName = typeof body.customerName === 'string' ? body.customerName : '';
+  const notes =
+    typeof body.notes === 'string' ? body.notes : body.notes === null ? null : undefined;
+  const orderType = body.orderType as OrderType;
+
+  if (!ORDER_TYPES.includes(orderType)) {
+    return { ok: false, error: 'orderType must be takeaway or eat_in' };
+  }
+
+  const rawItems = body.items;
+  if (!Array.isArray(rawItems)) {
+    return { ok: false, error: 'items must be an array' };
+  }
+
+  const items: CreateOrderLineInput[] = rawItems.map((raw) => {
+    const row = raw as Record<string, unknown>;
+    const modRaw = row.modifiers;
+    let modifiers: CreateOrderLineInput['modifiers'];
+    if (Array.isArray(modRaw)) {
+      modifiers = modRaw
+        .map((m) => {
+          const x = (m ?? {}) as Record<string, unknown>;
+          return {
+            groupId: typeof x.groupId === 'string' ? x.groupId : '',
+            optionId: typeof x.optionId === 'string' ? x.optionId : '',
+          };
+        })
+        .filter((m) => m.groupId.length > 0 && m.optionId.length > 0);
+      if (modifiers.length === 0) modifiers = undefined;
+    }
+    return {
+      menuItemId: typeof row.menuItemId === 'string' ? row.menuItemId : '',
+      quantity: typeof row.quantity === 'number' ? row.quantity : NaN,
+      modifiers,
+      notes:
+        typeof row.notes === 'string'
+          ? row.notes
+          : row.notes === null
+            ? null
+            : undefined,
+    };
+  });
+
+  return {
+    ok: true,
+    value: { customerName, notes, orderType, items },
+  };
+}

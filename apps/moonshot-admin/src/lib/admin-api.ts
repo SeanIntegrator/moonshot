@@ -3,6 +3,8 @@ import {
   type AdminLoginResponse,
   type AdminSettingsPatchBody,
   type AdminSettingsResponse,
+  type AdminStripeAccountLinkResponse,
+  type AdminStripeAccountStatusResponse,
   type ApiEnvelope,
   type Cafe,
   type FeatureFlagKey,
@@ -153,6 +155,33 @@ export async function patchMenuItem(
   const envelope = await parseEnvelope<NormalisedMenuItem>(res);
   if (!envelope.ok) {
     throw new Error(envelope.error || `Update failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function adminStripeOnboardingLink(token: string): Promise<AdminStripeAccountLinkResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/payments/stripe/onboarding-link`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const envelope = await parseEnvelope<AdminStripeAccountLinkResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Stripe link failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function adminStripeStatus(token: string): Promise<AdminStripeAccountStatusResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/payments/stripe/status`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const envelope = await parseEnvelope<AdminStripeAccountStatusResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Stripe status failed (${res.status})`);
   }
   return envelope.data;
 }

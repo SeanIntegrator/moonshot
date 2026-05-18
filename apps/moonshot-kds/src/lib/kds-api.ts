@@ -60,6 +60,9 @@ export async function kdsFetchOrders(token: string): Promise<KdsOrdersResponse> 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (res.status === 401) {
+    throw new Error('SESSION_EXPIRED');
+  }
   const json = await parseEnvelope<KdsOrdersResponse>(res);
   if (!json.ok) throw new Error(json.error ?? 'Failed to load orders');
   return json.data;
@@ -73,6 +76,9 @@ export async function kdsCompleteOrder(token: string, orderId: string): Promise<
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (res.status === 401) {
+    throw new Error('SESSION_EXPIRED');
+  }
   const json = await parseEnvelope<KdsCompleteOrderResponse>(res);
   if (!json.ok) throw new Error(json.error ?? 'Complete failed');
   return json.data;

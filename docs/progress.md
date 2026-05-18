@@ -10,31 +10,41 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 
 ## What is now working in production
 
-### Guest + signed-in pay-in-store orders
+### Order creation paths (`POST /api/v1/orders`)
 
-- Order-ahead (`/menu`) loads menu, basket, **Place order** → `POST /api/v1/orders`.
-- **Optional `Authorization`** from Google sign-in sets **`orders.user_id`**; otherwise guest checkout.
-- **Guest** responses include **`trackingToken`** (short-lived JWT) for Socket subscribe when `JWT_SECRET` is set.
-- Server validates lines against `menu_items`, persists **`confirmed` / `unpaid`**, emits **`kds:order:new`**.
+- **`pay_in_store`** (when `features.order_ahead.paymentProvider` is `pay_in_store`): **`confirmed` / `unpaid`**, **`kds:order:new`** immediately, **modifier validation** against `menu_items.modifier_groups`, FIFO **pickup ETA** + socket broadcasts.
+- **`stripe`** (default in seed cafés): requires **Stripe Connect** ready (`chargesEnabled`). Order created **`pending` / `unpaid`**, response includes **`checkoutUrl`**. **`checkout.session.completed`** webhook confirms **`paid` / `confirmed`**, then **KDS** + ETA. Guests get **`trackingToken`** when `JWT_SECRET` is set and `user_id` is null.
 
-### KDS authentication + live board
+### Modifier support
 
-- Café-scoped device login, JWT with `purpose: 'kds'`, `kds_users` + bootstrap script.
-- Socket namespace **`/kds`**, `kds:event`, HTTP list/complete.
-- 90s periodic HTTP reconcile if the socket drops.
+- Client sends `{ groupId, optionId }[]` per line; server resolves names/prices, snapshots **`NormalisedOrderLineModifier`** (group + option dimensions) on `order_items.modifiers`.
 
-### Customer completion push
+### Stripe Connect + webhooks
 
-- Socket namespace **`/customer`**: subscribe with **`authToken`** = `trackingToken` **or** session JWT; order must match token rules.
-- **`customerOrderCompleted`** when KDS marks done.
+- Admin **`POST /admin/payments/stripe/onboarding-link`** + **`GET /admin/payments/stripe/status`**, Express connected accounts, **direct Checkout** on the connected account.
+- **`POST /api/v1/webhooks/stripe`** with signature verification + **`webhook_events`** idempotency; **`payment_sessions`** table stores checkout metadata.
+
+### KDS + customer realtime
+
+- KDS JWT **90 days**; HTTP **401** clears session in the KDS PWA (`SESSION_EXPIRED`).
+- **`kds:eta:updated`** and **`customerEtaUpdated`** emitted after queue changes.
+- **`customerReviewEligible`** may fire after the third **on-time** completed app order when review nudge is enabled (simple counter MVP on `cafe_users`).
+
+### Loyalty MVP
+
+- On KDS complete, signed-in **app** orders increment **`total_orders`**, **`loyalty_stamps`** when loyalty feature is enabled, **`on_time_completed_orders`** when completed within **pickup_time + 2 minutes** (if a pickup time was set).
+
+### Operator tooling
+
+- **Admin** dashboard: order-ahead + KDS settings, menu PATCH edits, **Stripe onboarding card**.
 
 ### CORS / origins
 
-- **`CORS_ORIGINS`** allowlist for Express + Socket.io in production; document local dev fallbacks in `apps/moonshot-api/.env.example`.
+- **`CORS_ORIGINS`** allowlist for Express + Socket.io in production; see `apps/moonshot-api/.env.example` for **Stripe-related env vars** (API only).
 
 ### Documentation layout
 
-- **`docs/README.md`** hub; **`docs/architecture/`**, **`docs/current/`**, **`docs/roadmap.md`** split “stable / today / target”.
+- **`docs/README.md`** hub; **`docs/pos-normalisation.md`** for future POS providers; **`docs/architecture/realtime.md`** updated for ETA + review event.
 
 ### Deployed on Railway
 
@@ -43,29 +53,30 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 | `moonshot-api` | `moonshot-api-production.up.railway.app` |
 | `moonshot-kds` | `moonshot-kds-production.up.railway.app` |
 | `moonshot-order-ahead` | `moonshot-order-ahead-production.up.railway.app` |
-| `moonshot-admin` | `moonshot-admin-production.up.railway.app` (placeholder) |
+| `moonshot-admin` | `moonshot-admin-production.up.railway.app` |
 
-Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). Replace with custom domains by updating that env var only.
+Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). Add Stripe keys + webhook URL to **`moonshot-api`**. Replace with custom domains by updating env vars only.
 
 ---
 
 ## Known snags
 
-1. **Guest orders always `unpaid`** — intentional until Stripe (barista collects in person).
-2. **Order-ahead UI is skeletal** — design system WIP; tracking chips are placeholder UX.
-3. **No modifier support** — API rejects non-empty modifier arrays.
-4. **KDS JWT expiry** — poor UX on expiry; re-login not polished.
-5. **Bootstrap uses sync scrypt** — fine for CLI only.
+1. **Seed cafés default to `stripe`** — `POST /orders` fails with *payments not ready* until Stripe onboarding completes; switch to **`pay_in_store`** in admin for local pay-in-store-only dev.
+2. **Order-ahead UI is skeletal** — design system WIP; `useOrderTracking` now exposes **`lastPickupTime`** from ETA pushes.
+3. **Stripe incremental / merge checkout (F3)** — not implemented; only initial **Checkout Session** per order.
+4. **Admin** — still no invite flow or full menu create/delete UI; Stripe card is minimal.
+5. **Loyalty ledger** — counters only; no `loyalty_transactions` table yet.
+6. **Bootstrap uses sync scrypt** — fine for CLI only.
 
 ---
 
 ## Next steps (see `docs/roadmap.md`)
 
-1. Stripe checkout + webhooks.
-2. Modifier validation + UI.
-3. Pickup ETA + broadcast events.
-4. KDS session recovery.
-5. Admin menu UI, loyalty/review, POS adapter.
+1. Order-ahead + KDS **UI** polish (checkout redirect, modifier pickers, ETA display).
+2. **Order merge** + incremental Stripe sessions.
+3. **POS adapter implementations** (Square, etc.) using [pos-normalisation.md](pos-normalisation.md).
+4. Admin **invites**, full menu CRUD, audit trail.
+5. **Feedback persistence** (`feedback_responses`) and richer review flows.
 
 ---
 
@@ -76,3 +87,4 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). R
 - [current/http-surface.md](current/http-surface.md) — routes + CORS
 - [dataflow-sequences.md](dataflow-sequences.md) — sequences
 - [schema-draft.md](schema-draft.md) — schema
+- [pos-normalisation.md](pos-normalisation.md) — future POS mapping

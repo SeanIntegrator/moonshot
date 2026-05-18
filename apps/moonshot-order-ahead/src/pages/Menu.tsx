@@ -35,6 +35,7 @@ export function Menu() {
   const [orderType, setOrderType] = useState<OrderType>('takeaway');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [checkoutRecovering, setCheckoutRecovering] = useState(false);
   const [placement, setPlacement] = useState<{
     order: CreateOrderResponse['order'];
     trackingToken?: string;
@@ -53,6 +54,31 @@ export function Menu() {
         setMenu(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load menu');
+      }
+    })();
+  }, []);
+
+  /** Stripe success URL includes `checkout_session_id`; restore placement after redirect or refresh. */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('checkout_session_id');
+    if (!sessionId?.trim()) return;
+
+    setCheckoutRecovering(true);
+    void (async () => {
+      try {
+        const data = await apiFetch<CreateOrderResponse>(
+          `/orders/checkout-session/${encodeURIComponent(sessionId.trim())}`,
+        );
+        setPlacement({ order: data.order, trackingToken: data.trackingToken });
+        params.delete('checkout_session_id');
+        const qs = params.toString();
+        const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+        window.history.replaceState(null, '', next);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Could not restore order from checkout');
+      } finally {
+        setCheckoutRecovering(false);
       }
     })();
   }, []);
@@ -98,6 +124,10 @@ export function Menu() {
           })),
         }),
       });
+      if (data.checkoutUrl) {
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
       setPlacement({ order: data.order, trackingToken: data.trackingToken });
       setQuantities({});
       setNotes('');
@@ -113,14 +143,27 @@ export function Menu() {
       <Typography variant="h4" component="h1" sx={{ mt: 0 }}>
         Menu
       </Typography>
+      {checkoutRecovering && (
+        <Typography color="text.secondary" sx={{ mt: 1 }}>
+          Restoring your order from checkout…
+        </Typography>
+      )}
       {placement && (
         <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: 'action.hover' }}>
           <Typography variant="subtitle1" fontWeight={700}>
-            Order placed
+            {placement.order.paymentStatus === 'unpaid' && placement.order.status === 'pending'
+              ? 'Awaiting payment'
+              : 'Order placed'}
           </Typography>
           <Typography variant="body2" sx={{ mt: 0.5 }}>
             {placement.order.customerName} — {placement.order.paymentStatus}
           </Typography>
+          {placement.order.paymentStatus === 'unpaid' && placement.order.status === 'pending' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Complete payment in Stripe if you haven’t already. We’ll confirm here once the payment succeeds (usually
+              within a few seconds).
+            </Typography>
+          )}
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
             Order id: {placement.order.id}
           </Typography>

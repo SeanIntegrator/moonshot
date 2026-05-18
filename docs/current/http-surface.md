@@ -18,11 +18,18 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
   - `GET /api/v1/menu`, `GET /api/v1/menu/:segment` — public reads (`X-Cafe-Slug`)
   - `POST/PATCH/DELETE /api/v1/menu` — café-scoped **`purpose: admin`** JWT, or Google customer JWT when email is in **`MENU_ADMIN_EMAILS`** (`X-Cafe-Slug` + `Authorization`)
 - **Orders**
-  - `POST /api/v1/orders` — guest or **optional** `Authorization: Bearer` session JWT; sets `orders.user_id` when signed in. Guest responses may include **`trackingToken`** (for Socket `/customer` subscribe). **`X-Cafe-Slug`** required.
+  - `POST /api/v1/orders` — guest or **optional** `Authorization: Bearer` session JWT; sets `orders.user_id` when signed in. **`X-Cafe-Slug`** required. Behaviour depends on `features.order_ahead.paymentProvider`:
+    - **`pay_in_store`** — persists **`confirmed` / `unpaid`**, emits **`kds:order:new`** immediately, validates **modifiers** against menu JSON.
+    - **`stripe`** — requires **Stripe Connect onboarding complete** (`chargesEnabled` on the connected account). Creates **`pending` / `unpaid`** order + **Stripe Checkout** session; response includes **`checkoutUrl`**. **`kds:order:new`** fires only after **`checkout.session.completed`** webhook marks the order **`paid` / `confirmed`**. Guests receive **`trackingToken`** when `JWT_SECRET` is set (same as pay-in-store).
+  - `GET /api/v1/orders/checkout-session/:sessionId` — **`X-Cafe-Slug`** required; validates Stripe Checkout session id (`cs_…`). Returns **`CreateOrderResponse`** so order-ahead can restore state after the Stripe success redirect (`checkout_session_id` query param). Guest **`trackingToken`** included when `JWT_SECRET` is set and the order has no `user_id`.
+- **Webhooks**
+  - `POST /api/v1/webhooks/stripe` — **raw body**; **`Stripe-Signature`** verification. Handles `checkout.session.completed` and `account.updated` (idempotent via `webhook_events` with **`processing_status`** so failed deliveries remain retryable).
 - **Admin (pre-seeded / invite-ready accounts)**
   - `POST /api/v1/admin/auth/login` — `{ email, password }` → JWT (`purpose: admin`)
   - `GET /api/v1/admin/auth/me` — `Authorization: Bearer`
   - `PATCH /api/v1/admin/settings` — `Authorization: Bearer`; body `featuresPatch` (`loyalty`, `order_ahead`) and/or `kdsConfigPatch` (whitelisted KDS keys); merges into `cafes.features` / `cafes.kds_config`
+  - `POST /api/v1/admin/payments/stripe/onboarding-link` — `Authorization: Bearer`; creates Express connected account if needed, returns Stripe-hosted **Account Link** URL.
+  - `GET /api/v1/admin/payments/stripe/status` — `Authorization: Bearer`; syncs **`chargesEnabled`** etc. into `cafes.payment_config.stripe`.
 - **KDS**
   - `POST /api/v1/kds/auth/login`
   - `GET /api/v1/kds/orders`

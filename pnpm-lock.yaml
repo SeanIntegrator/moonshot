@@ -87,6 +87,9 @@ importers:
       socket.io:
         specifier: ^4.8.3
         version: 4.8.3
+      stripe:
+        specifier: ^17.7.0
+        version: 17.7.0
     devDependencies:
       '@types/cors':
         specifier: ^2.8.19
@@ -1974,6 +1977,10 @@ packages:
 
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
+
+  stripe@17.7.0:
+    resolution: {integrity: sha512-aT2BU9KkizY9SATf14WhhYVv2uOapBWX0OFWF4xvcj1mPaNotlSc2CsxpS4DS46ZueSppmCF5BX1sNYBtwBvfw==}
+    engines: {node: '>=12.*'}
 
   stylis@4.2.0:
     resolution: {integrity: sha512-Orov6g6BB1sDfYgzWfTHDOxamtX1bE/zo104Dh9e6fqJ3PooipYyfJ0pUmrZO2wAvO8YbEyeFrkV91XTsGMSrw==}
@@ -3919,6 +3926,11 @@ snapshots:
   strip-literal@3.1.0:
     dependencies:
       js-tokens: 9.0.1
+
+  stripe@17.7.0:
+    dependencies:
+      '@types/node': 22.19.17
+      qs: 6.15.1
 
   stylis@4.2.0: {}
 

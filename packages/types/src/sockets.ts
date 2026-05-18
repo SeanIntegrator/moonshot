@@ -49,6 +49,12 @@ export type CustomerServerToClientEvent =
   | {
       type: 'customerEtaUpdated';
       updates: Array<{ orderId: string; pickupTime: IsoDateTime }>;
+    }
+  | {
+      type: 'customerReviewEligible';
+      orderId: string;
+      cafeId: string;
+      googlePlaceId: string | null;
     };
 
 // --- Customer room: client → server ---

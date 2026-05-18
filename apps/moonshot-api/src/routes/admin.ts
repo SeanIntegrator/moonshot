@@ -4,6 +4,8 @@ import {
   ApiErrorCode,
   type AdminLoginResponse,
   type AdminSettingsResponse,
+  type AdminStripeAccountLinkResponse,
+  type AdminStripeAccountStatusResponse,
   type Cafe,
   type PosProvider,
 } from '@moonshot/types';
@@ -21,6 +23,8 @@ import {
   parseAdminSettingsPatchBody,
 } from '../lib/admin-settings-merge.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
+import { ApiHttpError } from '../lib/http-errors.js';
+import { createAdminStripeOnboardingLink, syncAdminStripeAccountStatus } from '../lib/admin-stripe-service.js';
 
 export const adminRouter: Router = Router();
 
@@ -260,6 +264,52 @@ adminRouter.get('/auth/me', requireAdminAuth, async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: 'Database error',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+});
+
+adminRouter.post('/payments/stripe/onboarding-link', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+
+  try {
+    const data: AdminStripeAccountLinkResponse = await createAdminStripeOnboardingLink(cafeId);
+    return res.json({ ok: true, data });
+  } catch (e) {
+    if (e instanceof ApiHttpError) {
+      return res.status(e.status).json({
+        ok: false,
+        error: e.message,
+        code: e.code,
+      });
+    }
+    console.error(e);
+    return res.status(500).json({
+      ok: false,
+      error: 'Failed to create Stripe onboarding link',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+});
+
+adminRouter.get('/payments/stripe/status', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+
+  try {
+    const data: AdminStripeAccountStatusResponse = await syncAdminStripeAccountStatus(cafeId);
+    return res.json({ ok: true, data });
+  } catch (e) {
+    if (e instanceof ApiHttpError) {
+      return res.status(e.status).json({
+        ok: false,
+        error: e.message,
+        code: e.code,
+      });
+    }
+    console.error(e);
+    return res.status(500).json({
+      ok: false,
+      error: 'Failed to load Stripe account status',
       code: ApiErrorCode.INTERNAL,
     });
   }

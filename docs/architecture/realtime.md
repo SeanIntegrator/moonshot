@@ -32,8 +32,10 @@ The raw order UUID alone is **not** sufficient — this avoids unauthenticated l
 
 | Trigger | Audience | Event |
 |---------|----------|-------|
-| `POST /orders` committed | `/kds` | `kds:order:new` |
-| `POST /kds/orders/:id/complete` | `/kds` | `kds:order:removed` (+ optional future updates) |
+| Pay-in-store `POST /orders` committed | `/kds` | `kds:order:new` |
+| Stripe `checkout.session.completed` (paid) | `/kds` | `kds:order:new` |
+| `POST /kds/orders/:id/complete` | `/kds` | `kds:order:removed` |
+| Queue/ETA recompute (FIFO) | `/kds` | `kds:eta:updated` |
+| Same ETA recompute | `/customer` room `customer:order:{id}` | `customerEtaUpdated` |
 | Same complete route | `/customer` room `customer:order:{id}` | `customerOrderCompleted` |
-
-ETA updates (`customerEtaUpdated`, `kds:eta:updated`) are typed but not wired end-to-end yet.
+| Loyalty/review threshold (optional) | `/customer` | `customerReviewEligible` |

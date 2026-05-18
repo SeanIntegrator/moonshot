@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { KdsSettingsCard } from '../components/KdsSettingsCard.js';
 import { MenuEditorCard } from '../components/MenuEditorCard.js';
 import { OrderAheadSettingsCard } from '../components/OrderAheadSettingsCard.js';
+import { StripePaymentsCard } from '../components/StripePaymentsCard.js';
 import type { AdminSession } from '../context/AuthContext.js';
 import { fetchPublicCafe } from '../lib/admin-api.js';
 
@@ -55,6 +56,7 @@ export function DashboardPage({ session }: Props) {
   return (
     <Stack spacing={3}>
       <OrderAheadSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
+      <StripePaymentsCard token={session.token} />
       <MenuEditorCard cafeSlug={session.cafe.slug} token={session.token} />
       <KdsSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
     </Stack>

@@ -4,35 +4,17 @@ import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { ApiHttpError } from './http-errors.js';
 import { mapOrderItemRow, mapOrderRow, type OrderItemRowDb, type OrderRowDb } from './order-map.js';
+import { resolveOrderLinesWithModifiers, type ResolvedOrderLine } from './order-modifiers.js';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
 
-/** Orders visible on KDS board before completion (Phase 2 guest flow). */
+/** Orders visible on KDS board before completion */
 export const KDS_OPEN_ORDER_STATUSES = ['confirmed', 'preparing', 'ready'] as const;
 
 const COMPLETABLE_STATUSES = ['confirmed', 'preparing', 'ready'] as const;
-
-type MenuItemPriceRow = {
-  id: string;
-  name: string;
-  price_minor: number;
-  currency: string;
-};
-
-function assertModifiersEmpty(lines: CreateOrderLineInput[]): void {
-  for (const line of lines) {
-    if (line.modifiers != null && line.modifiers.length > 0) {
-      throw new ApiHttpError(
-        400,
-        ApiErrorCode.VALIDATION,
-        'Modifiers are not supported yet; omit modifiers or send an empty array.',
-      );
-    }
-  }
-}
 
 function validateLines(lines: CreateOrderLineInput[]): void {
   if (lines.length === 0) {
@@ -52,7 +34,7 @@ function validateLines(lines: CreateOrderLineInput[]): void {
   }
 }
 
-async function fetchOrderWithItems(
+export async function fetchOrderWithItems(
   db: typeof pool | PoolClient,
   orderId: string,
   cafeId: string,
@@ -83,12 +65,10 @@ async function fetchOrderWithItems(
 }
 
 /**
- * Pay-in-store: confirmed + unpaid, prices from menu_items.
- * When `userId` is set (logged-in customer JWT on `POST /orders`), `orders.user_id` is stored.
+ * Pay-in-store: confirmed + unpaid, prices from menu_items + modifiers.
  */
 export async function createGuestPayInStoreOrder(params: {
   cafeId: string;
-  /** Logged-in app user UUID, otherwise null for guest checkout */
   userId: string | null;
   customerName: string;
   notes: string | null;
@@ -107,58 +87,12 @@ export async function createGuestPayInStoreOrder(params: {
   }
 
   validateLines(lines);
-  assertModifiersEmpty(lines);
 
-  const ids = [...new Set(lines.map((l) => l.menuItemId))];
-
-  const menuRes = await pool.query<MenuItemPriceRow>(
-    `SELECT id, name, price_minor, currency
-     FROM menu_items
-     WHERE cafe_id = $1 AND id = ANY($2::uuid[]) AND is_available = TRUE`,
-    [cafeId, ids],
-  );
-
-  const byId = new Map(menuRes.rows.map((r) => [r.id, r]));
-  if (byId.size !== ids.length) {
-    throw new ApiHttpError(
-      404,
-      ApiErrorCode.NOT_FOUND,
-      'One or more menu items were not found or are unavailable for this café',
-    );
-  }
-
-  let currency: string | null = null;
-  let totalMinor = 0;
-
-  const resolvedLines: Array<{
-    menuItemId: string;
-    itemName: string;
-    unitPriceMinor: number;
-    quantity: number;
-    notes: string | null;
-    currency: string;
-  }> = [];
-
-  for (const line of lines) {
-    const row = byId.get(line.menuItemId)!;
-    if (currency == null) currency = row.currency;
-    if (row.currency !== currency) {
-      throw new ApiHttpError(
-        400,
-        ApiErrorCode.VALIDATION,
-        'All line items must use the same currency for this order',
-      );
-    }
-    totalMinor += row.price_minor * line.quantity;
-    resolvedLines.push({
-      menuItemId: line.menuItemId,
-      itemName: row.name,
-      unitPriceMinor: row.price_minor,
-      quantity: line.quantity,
-      notes: line.notes ?? null,
-      currency: row.currency,
-    });
-  }
+  const { lines: resolvedLines, currency, totalMinor } = await resolveOrderLinesWithModifiers({
+    db: pool,
+    cafeId,
+    lines,
+  });
 
   const client = await pool.connect();
   try {
@@ -174,7 +108,7 @@ export async function createGuestPayInStoreOrder(params: {
         order_type, source, status, payment_status, quoted_pickup_time, pickup_time,
         completed_at, edit_token, parent_order_id, stripe_checkout_session_id,
         created_at, updated_at`,
-      [cafeId, userId, trimmedName, notes, totalMinor, currency!, orderType],
+      [cafeId, userId, trimmedName, notes, totalMinor, currency, orderType],
     );
 
     const orderRow = insertOrder.rows[0];
@@ -196,7 +130,7 @@ export async function createGuestPayInStoreOrder(params: {
           rl.itemName,
           rl.quantity,
           rl.unitPriceMinor,
-          JSON.stringify([]),
+          JSON.stringify(rl.modifiers),
           [],
           rl.notes,
         ],
@@ -218,14 +152,276 @@ export async function createGuestPayInStoreOrder(params: {
   }
 }
 
+/**
+ * Persist a pending unpaid order using already-resolved menu lines (single pricing snapshot).
+ */
+export async function insertPendingOrderWithResolvedLines(params: {
+  cafeId: string;
+  userId: string | null;
+  customerName: string;
+  notes: string | null;
+  orderType: OrderType;
+  resolvedLines: ResolvedOrderLine[];
+  currency: string;
+  totalMinor: number;
+}): Promise<NormalisedOrder> {
+  const { cafeId, userId, customerName, notes, orderType, resolvedLines, currency, totalMinor } =
+    params;
+
+  if (!ORDER_TYPES.includes(orderType)) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid orderType');
+  }
+
+  const trimmedName = customerName.trim();
+  if (!trimmedName) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'customerName is required');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const insertOrder = await client.query<OrderRowDb>(
+      `INSERT INTO orders (
+        cafe_id, user_id, customer_name, notes, total_minor, currency,
+        order_type, source, status, payment_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'app', 'pending', 'unpaid')
+      RETURNING
+        id, cafe_id, user_id, pos_order_id, customer_name, notes, total_minor, currency,
+        order_type, source, status, payment_status, quoted_pickup_time, pickup_time,
+        completed_at, edit_token, parent_order_id, stripe_checkout_session_id,
+        created_at, updated_at`,
+      [cafeId, userId, trimmedName, notes, totalMinor, currency, orderType],
+    );
+
+    const orderRow = insertOrder.rows[0];
+    if (!orderRow) {
+      throw new ApiHttpError(500, ApiErrorCode.INTERNAL, 'Failed to create order');
+    }
+
+    const orderId = orderRow.id;
+
+    for (const rl of resolvedLines) {
+      await client.query(
+        `INSERT INTO order_items (
+          order_id, menu_item_id, item_name, quantity, unit_price_minor,
+          modifiers, allergens, notes
+        ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)`,
+        [
+          orderId,
+          rl.menuItemId,
+          rl.itemName,
+          rl.quantity,
+          rl.unitPriceMinor,
+          JSON.stringify(rl.modifiers),
+          [],
+          rl.notes,
+        ],
+      );
+    }
+
+    await client.query('COMMIT');
+
+    const full = await fetchOrderWithItems(pool, orderId, cafeId);
+    if (!full) {
+      throw new ApiHttpError(500, ApiErrorCode.INTERNAL, 'Order created but could not be loaded');
+    }
+    return full;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/** Remove a pending checkout draft when Stripe session creation fails or recording the session fails. */
+export async function deleteAbandonedPendingOrder(orderId: string, cafeId: string): Promise<void> {
+  await pool.query(
+    `DELETE FROM orders
+     WHERE id = $1 AND cafe_id = $2 AND status = 'pending' AND payment_status = 'unpaid'`,
+    [orderId, cafeId],
+  );
+}
+
+/**
+ * Record Checkout session immediately so customers can recover state after redirect.
+ */
+export async function recordStripeCheckoutSessionForOrder(params: {
+  orderId: string;
+  cafeId: string;
+  sessionId: string;
+  paymentIntentId: string | null;
+  amountMinor: number;
+  currency: string;
+}): Promise<void> {
+  const { orderId, cafeId, sessionId, paymentIntentId, amountMinor, currency } = params;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query(
+      `INSERT INTO payment_sessions (
+        order_id, cafe_id, provider, session_id, payment_intent_id, amount_minor, currency, type
+      ) VALUES ($1, $2, 'stripe', $3, $4, $5, $6, 'initial')
+      ON CONFLICT (session_id) DO NOTHING`,
+      [orderId, cafeId, sessionId, paymentIntentId, amountMinor, currency],
+    );
+
+    await client.query(
+      `UPDATE orders SET stripe_checkout_session_id = $1, updated_at = NOW()
+       WHERE id = $2 AND cafe_id = $3 AND status = 'pending' AND payment_status = 'unpaid'`,
+      [sessionId, orderId, cafeId],
+    );
+
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+export async function findOrderByStripeCheckoutSessionForCafe(
+  sessionId: string,
+  cafeId: string,
+): Promise<NormalisedOrder | null> {
+  const res = await pool.query<{ order_id: string }>(
+    `SELECT ps.order_id
+     FROM payment_sessions ps
+     INNER JOIN orders o ON o.id = ps.order_id AND o.cafe_id = ps.cafe_id
+     WHERE ps.session_id = $1 AND ps.cafe_id = $2`,
+    [sessionId, cafeId],
+  );
+  const orderId = res.rows[0]?.order_id;
+  if (!orderId) return null;
+  return fetchOrderWithItems(pool, orderId, cafeId);
+}
+
+/**
+ * Stripe path: pending + unpaid until Checkout webhook confirms payment.
+ */
+export async function createPendingOrderForCheckout(params: {
+  cafeId: string;
+  userId: string | null;
+  customerName: string;
+  notes: string | null;
+  orderType: OrderType;
+  lines: CreateOrderLineInput[];
+}): Promise<NormalisedOrder> {
+  const { cafeId, userId, customerName, notes, orderType, lines } = params;
+
+  if (!ORDER_TYPES.includes(orderType)) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid orderType');
+  }
+
+  const trimmedName = customerName.trim();
+  if (!trimmedName) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'customerName is required');
+  }
+
+  validateLines(lines);
+
+  const { lines: resolvedLines, currency, totalMinor } = await resolveOrderLinesWithModifiers({
+    db: pool,
+    cafeId,
+    lines,
+  });
+
+  return insertPendingOrderWithResolvedLines({
+    cafeId,
+    userId,
+    customerName,
+    notes,
+    orderType,
+    resolvedLines,
+    currency,
+    totalMinor,
+  });
+}
+
+/**
+ * Webhook: mark pending order paid + confirmed; idempotent if already paid.
+ */
+export async function confirmOrderPaidFromStripeCheckout(params: {
+  orderId: string;
+  cafeId: string;
+  stripeSessionId: string;
+  paymentIntentId: string | null;
+  amountMinor: number;
+  currency: string;
+}): Promise<NormalisedOrder | null> {
+  const { orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency } = params;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const existing = await fetchOrderWithItems(client, orderId, cafeId);
+    if (!existing) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    if (existing.paymentStatus === 'paid') {
+      await client.query('ROLLBACK');
+      return existing;
+    }
+
+    if (existing.status !== 'pending' || existing.paymentStatus !== 'unpaid') {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    if (amountMinor !== existing.totalMinor || currency !== existing.currency) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const upd = await client.query<OrderRowDb>(
+      `UPDATE orders
+       SET status = 'confirmed',
+           payment_status = 'paid',
+           stripe_checkout_session_id = $1,
+           updated_at = NOW()
+       WHERE id = $2 AND cafe_id = $3 AND status = 'pending' AND payment_status = 'unpaid'
+       RETURNING
+         id, cafe_id, user_id, pos_order_id, customer_name, notes, total_minor, currency,
+         order_type, source, status, payment_status, quoted_pickup_time, pickup_time,
+         completed_at, edit_token, parent_order_id, stripe_checkout_session_id,
+         created_at, updated_at`,
+      [stripeSessionId, orderId, cafeId],
+    );
+
+    if (upd.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return fetchOrderWithItems(pool, orderId, cafeId);
+    }
+
+    await client.query(
+      `INSERT INTO payment_sessions (
+        order_id, cafe_id, provider, session_id, payment_intent_id, amount_minor, currency, type
+      ) VALUES ($1, $2, 'stripe', $3, $4, $5, $6, 'initial')
+      ON CONFLICT (session_id) DO NOTHING`,
+      [orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency],
+    );
+
+    await client.query('COMMIT');
+    return fetchOrderWithItems(pool, orderId, cafeId);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 export async function findOrderByIdAndCafe(orderId: string, cafeId: string): Promise<NormalisedOrder | null> {
   if (!UUID_RE.test(orderId)) return null;
   return fetchOrderWithItems(pool, orderId, cafeId);
 }
 
-/**
- * Open orders for KDS display. Not exposed via HTTP until café-scoped KDS auth exists.
- */
 export async function listOpenOrdersForKds(cafeId: string): Promise<NormalisedOrder[]> {
   const ordersRes = await pool.query<OrderRowDb>(
     `SELECT
@@ -267,10 +463,6 @@ export async function listOpenOrdersForKds(cafeId: string): Promise<NormalisedOr
   });
 }
 
-/**
- * Mark order completed. Intended for future KDS routes behind KDS login.
- * Returns null if the order does not exist or is not in a completable status.
- */
 export async function completeOrderForKds(orderId: string, cafeId: string): Promise<NormalisedOrder | null> {
   if (!UUID_RE.test(orderId)) return null;
 

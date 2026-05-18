@@ -1,8 +1,8 @@
 # High-level dataflow
 
-The monorepo ships **four Railway services** (production): API, order-ahead customer PWA, kitchen **KDS**, and **admin** (placeholder UI). Postgres is the canonical store for cafes, users, menu, and orders.
+The monorepo ships **four Railway services** (production): API, order-ahead customer PWA, kitchen **KDS**, and **admin**. Postgres is the canonical store for cafes, users, menu, orders, KDS device accounts, and admin accounts.
 
-Implementations today include **café + menu reads**, **Google customer auth**, **guest or signed-in pay-in-store orders**, **KDS login + open/complete APIs**, **Socket.io** on namespaces **`/kds`** and **`/customer`**, and **CORS allowlists** via **`CORS_ORIGINS`**. Planned: Stripe checkout, POS webhooks, pickup ETA automation, loyalty surfaces. See [docs/README.md](README.md), [current/http-surface.md](current/http-surface.md), and [architecture/realtime.md](architecture/realtime.md).
+Implementations today include **café + menu reads**, **Google customer auth**, **guest or signed-in pay-in-store orders**, **KDS login + open/complete APIs**, **admin settings/menu maintenance**, **Socket.io** on namespaces **`/kds`** and **`/customer`**, and **CORS allowlists** via **`CORS_ORIGINS`**. Planned: Stripe checkout, POS webhooks, pickup ETA automation, loyalty surfaces, admin invites, and full menu CRUD UI. See [docs/README.md](README.md), [current/http-surface.md](current/http-surface.md), and [architecture/realtime.md](architecture/realtime.md).
 
 ## Topology
 
@@ -11,7 +11,7 @@ flowchart LR
   subgraph clients [Clients]
     OA[moonshotOrderAhead_PWA]
     KDS[moonshotKDS]
-    Admin[moonshotAdmin_placeholder]
+    Admin[moonshotAdmin]
   end
 
   subgraph api [moonshotApi]
@@ -72,7 +72,7 @@ Subdomain / `Host` resolution is **not** implemented yet.
 
 - **Order-ahead:** Café + menu fetch, optional Google JWT, **`POST /orders`** with **`trackingToken`** for guests when signed-out; realtime completion via **`/customer`** Socket.
 - **KDS:** Username/password **`POST /kds/auth/login`**, **`GET /kds/orders`**, complete route, realtime **`io('{API_ORIGIN}/kds')`** with JWT handshake.
-- **Admin:** Shell only; APIs exist elsewhere.
+- **Admin:** Pre-seeded login, order-ahead settings, KDS settings, and existing menu item price/availability/modifier option price edits.
 
 See [architecture/realtime.md](architecture/realtime.md), [progress.md](progress.md), [roadmap.md](roadmap.md).
 

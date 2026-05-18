@@ -15,6 +15,7 @@ import { cafeRouter } from './routes/cafe.js';
 import { kdsRouter } from './routes/kds.js';
 import { menuRouter } from './routes/menu.js';
 import { ordersRouter } from './routes/orders.js';
+import { stripeWebhookRouter } from './routes/webhooks-stripe.js';
 
 export type MoonshotHttpPack = {
   app: express.Application;
@@ -53,6 +54,13 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Cafe-Slug'],
     }),
   );
+
+  app.use(
+    `${API_VERSION_PREFIX}/webhooks/stripe`,
+    express.raw({ type: 'application/json', limit: '2mb' }),
+    stripeWebhookRouter,
+  );
+
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 

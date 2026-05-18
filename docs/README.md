@@ -17,4 +17,4 @@ Historical narrative files ([dataflow-high-level.md](dataflow-high-level.md), [d
 
 - [Realtime / Socket auth](architecture/realtime.md) — `/kds` vs `/customer`, JWT rules
 - [HTTP routes & CORS](current/http-surface.md)
-- [Postgres phases](schema-draft.md)
+- [POS → normalised menu/order mapping (future providers)](pos-normalisation.md)

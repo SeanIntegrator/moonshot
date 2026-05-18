@@ -47,10 +47,12 @@ export function useOrderTracking(
   completedAt: IsoDateTime | null;
   /** Step 0 Confirmed … 3 Done — for UI progression */
   stepIndex: number;
+  lastPickupTime: IsoDateTime | null;
 } {
   const [trackingStatus, setTrackingStatus] = useState<OrderTrackingStatus>('idle');
   const [completedAt, setCompletedAt] = useState<IsoDateTime | null>(null);
   const [liveOrderStatus, setLiveOrderStatus] = useState<OrderStatus | undefined>(initialOrderStatus);
+  const [lastPickupTime, setLastPickupTime] = useState<IsoDateTime | null>(null);
 
   useEffect(() => {
     setLiveOrderStatus(initialOrderStatus);
@@ -58,6 +60,7 @@ export function useOrderTracking(
 
   useEffect(() => {
     setCompletedAt(null);
+    setLastPickupTime(null);
 
     if (!orderId?.trim()) {
       setTrackingStatus('idle');
@@ -81,7 +84,8 @@ export function useOrderTracking(
         setLiveOrderStatus('completed');
       }
       if (ev.type === 'customerEtaUpdated') {
-        /* Reserved for ETA push */
+        const u = ev.updates.find((x) => x.orderId === orderId);
+        if (u) setLastPickupTime(u.pickupTime);
       }
     }
 
@@ -124,5 +128,5 @@ export function useOrderTracking(
 
   const stepIndex = trackingStepFromStatus(trackingStatus, liveOrderStatus);
 
-  return { trackingStatus, completedAt, stepIndex };
+  return { trackingStatus, completedAt, stepIndex, lastPickupTime };
 }

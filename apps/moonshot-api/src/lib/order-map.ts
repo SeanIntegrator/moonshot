@@ -53,7 +53,34 @@ function toIso(value: Date | string | null): string | null {
 
 function parseModifiers(raw: unknown): NormalisedOrderLineModifier[] {
   if (!Array.isArray(raw)) return [];
-  return raw as NormalisedOrderLineModifier[];
+  const out: NormalisedOrderLineModifier[] = [];
+  for (const m of raw) {
+    if (!m || typeof m !== 'object') continue;
+    const o = m as Record<string, unknown>;
+    if (typeof o.groupId === 'string' && typeof o.optionId === 'string') {
+      out.push({
+        groupId: o.groupId,
+        groupName: typeof o.groupName === 'string' ? o.groupName : '',
+        optionId: o.optionId,
+        optionName: typeof o.optionName === 'string' ? o.optionName : '',
+        priceMinor: typeof o.priceMinor === 'number' ? o.priceMinor : 0,
+        posOptionId: typeof o.posOptionId === 'string' ? o.posOptionId : null,
+      });
+      continue;
+    }
+    /* Legacy snapshot: id + name */
+    if (typeof o.id === 'string' && typeof o.name === 'string') {
+      out.push({
+        groupId: '',
+        groupName: '',
+        optionId: o.id,
+        optionName: o.name,
+        priceMinor: typeof o.priceMinor === 'number' ? o.priceMinor : 0,
+        posOptionId: typeof o.posOptionId === 'string' ? o.posOptionId : null,
+      });
+    }
+  }
+  return out;
 }
 
 export function mapPickupWindow(row: OrderRowDb): PickupWindow {

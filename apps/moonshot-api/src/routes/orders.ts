@@ -1,79 +1,58 @@
 import { Router } from 'express';
-import type { CreateOrderLineInput, CreateOrderResponse, OrderType } from '@moonshot/types';
+import type { CreateOrderResponse } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { ApiHttpError } from '../lib/http-errors.js';
 import { signTrackOrderJwt } from '../lib/customer-socket-token.js';
-import { createGuestPayInStoreOrder } from '../lib/orders-repository.js';
+import {
+  createGuestPayInStoreOrder,
+  findOrderByStripeCheckoutSessionForCafe,
+} from '../lib/orders-repository.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 import { optionalCustomerAuth } from '../middleware/optional-customer-auth.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
-
-const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
+import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
+import { pool } from '../db.js';
+import { createStripeCheckoutOrderResponse } from '../lib/orders-checkout-service.js';
+import {
+  parseCreateOrderBody,
+  parseOrderAheadPaymentMode,
+} from '../lib/order-checkout-env.js';
 
 export const ordersRouter: Router = Router();
 
 ordersRouter.use(requireCafeContext);
 
-ordersRouter.post('/', optionalCustomerAuth, async (req, res) => {
+const STRIPE_CHECKOUT_SESSION_ID_RE = /^cs_[a-zA-Z0-9]+$/;
+
+ordersRouter.get('/checkout-session/:sessionId', async (req, res) => {
   try {
+    const raw = req.params.sessionId;
+    const sessionId = Array.isArray(raw) ? raw[0] : raw;
+    if (
+      !sessionId ||
+      sessionId.length > 256 ||
+      !STRIPE_CHECKOUT_SESSION_ID_RE.test(sessionId)
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Invalid checkout session id',
+        code: ApiErrorCode.VALIDATION,
+      });
+    }
+
     const cafeId = req.cafe!.cafeId;
-    const body = req.body as Record<string, unknown>;
-
-    const customerName = typeof body.customerName === 'string' ? body.customerName : '';
-    const notes =
-      typeof body.notes === 'string' ? body.notes : body.notes === null ? null : undefined;
-    const orderType = body.orderType as OrderType;
-
-    if (!ORDER_TYPES.includes(orderType)) {
-      return res.status(400).json({
+    const order = await findOrderByStripeCheckoutSessionForCafe(sessionId, cafeId);
+    if (!order) {
+      return res.status(404).json({
         ok: false,
-        error: 'orderType must be takeaway or eat_in',
-        code: ApiErrorCode.VALIDATION,
+        error: 'Order not found for this checkout session',
+        code: ApiErrorCode.NOT_FOUND,
       });
     }
-
-    const rawItems = body.items;
-    if (!Array.isArray(rawItems)) {
-      return res.status(400).json({
-        ok: false,
-        error: 'items must be an array',
-        code: ApiErrorCode.VALIDATION,
-      });
-    }
-
-    const items: CreateOrderLineInput[] = rawItems.map((raw) => {
-      const row = raw as Record<string, unknown>;
-      return {
-        menuItemId: typeof row.menuItemId === 'string' ? row.menuItemId : '',
-        quantity: typeof row.quantity === 'number' ? row.quantity : NaN,
-        modifiers: Array.isArray(row.modifiers)
-          ? (row.modifiers as CreateOrderLineInput['modifiers'])
-          : undefined,
-        notes:
-          typeof row.notes === 'string'
-            ? row.notes
-            : row.notes === null
-              ? null
-              : undefined,
-      };
-    });
-
-    const userId = req.customerUserId ?? null;
-
-    const order = await createGuestPayInStoreOrder({
-      cafeId,
-      userId,
-      customerName,
-      notes: notes ?? null,
-      orderType,
-      lines: items,
-    });
-
-    emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
 
     const jwtSecret = process.env.JWT_SECRET;
     const data: CreateOrderResponse =
-      userId != null || !jwtSecret
+      order.customerId != null || !jwtSecret
         ? { order }
         : {
             order,
@@ -83,6 +62,79 @@ ordersRouter.post('/', optionalCustomerAuth, async (req, res) => {
               secret: jwtSecret,
             }),
           };
+
+    return res.json({ ok: true, data });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({
+      ok: false,
+      error: 'Database error',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+});
+
+ordersRouter.post('/', optionalCustomerAuth, async (req, res) => {
+  try {
+    const cafeId = req.cafe!.cafeId;
+    const body = req.body as Record<string, unknown>;
+
+    const parsed = parseCreateOrderBody(body);
+    if (!parsed.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: parsed.error,
+        code: ApiErrorCode.VALIDATION,
+      });
+    }
+
+    const { customerName, notes, orderType, items } = parsed.value;
+    const userId = req.customerUserId ?? null;
+    const paymentMode = parseOrderAheadPaymentMode(req.cafe!.features.order_ahead);
+
+    const jwtSecret = process.env.JWT_SECRET;
+
+    if (paymentMode === 'pay_in_store') {
+      const order = await createGuestPayInStoreOrder({
+        cafeId,
+        userId,
+        customerName,
+        notes: notes ?? null,
+        orderType,
+        lines: items,
+      });
+
+      emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
+      await recomputePickupEtasForCafe({
+        db: pool,
+        cafeId,
+        kdsConfig: req.cafe!.kdsConfig,
+      });
+
+      const data: CreateOrderResponse =
+        userId != null || !jwtSecret
+          ? { order }
+          : {
+              order,
+              trackingToken: signTrackOrderJwt({
+                orderId: order.id,
+                cafeId,
+                secret: jwtSecret,
+              }),
+            };
+
+      return res.status(201).json({ ok: true, data });
+    }
+
+    const data = await createStripeCheckoutOrderResponse({
+      cafeId,
+      userId,
+      customerName,
+      notes,
+      orderType,
+      lines: items,
+      paymentConfig: req.cafe!.paymentConfig,
+    });
 
     return res.status(201).json({ ok: true, data });
   } catch (e) {

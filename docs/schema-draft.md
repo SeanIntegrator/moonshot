@@ -6,7 +6,11 @@ Phase 2 migration `apps/moonshot-api/migrations/sql/002_orders_schema.sql` (wrap
 
 Phase 3 migration `apps/moonshot-api/migrations/sql/003_kds_users_schema.sql` (wrapper `apps/moonshot-api/migrations/1735000000000_kds_users_schema.cjs`) adds `kds_users` for café-scoped KDS device login (hashed passwords).
 
-The later tables in this document are still the planned v2 shape for payments, loyalty, feedback, and webhook idempotency (beyond orders). Multi-tenant data should continue to use `cafe_id` on tenant-scoped tables. Clay & Bean is the only seeded café at this stage; schema still uses UUIDs everywhere.
+Phase 4 migration `apps/moonshot-api/migrations/sql/004_admin_users_schema.sql` (wrapper `apps/moonshot-api/migrations/1735100000000_admin_users_schema.cjs`) adds pre-seeded café admin accounts. Invite columns exist for a future onboarding flow, but runtime login currently uses pre-created credentials.
+
+Phase 5 migration `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.sql` (wrapper `apps/moonshot-api/migrations/1735200000000_payment_webhook_schema.cjs`) adds **`payment_sessions`** and **`webhook_events`** for Stripe Checkout + Connect webhook idempotency.
+
+The later sections of this document (`loyalty_transactions`, `feedback_responses`, additional POS tables, etc.) remain **planned v2** shapes beyond what migrations 1–5 create today.
 
 ## Conventions
 
@@ -82,7 +86,7 @@ Implemented in Phase 1. The review and loyalty counters exist, but the order/loy
 
 Synced from POS adapter or edited via manual adapter / admin.
 
-Implemented in Phase 1. Current runtime uses the manual POS adapter, which reads available rows from this table. Admin menu writes exist in the API and are gated by JWT plus `MENU_ADMIN_EMAILS`.
+Implemented in Phase 1. Current runtime uses the manual POS adapter, which reads available rows from this table. Admin menu writes exist in the API and are gated by either admin JWT or Google/session JWT plus `MENU_ADMIN_EMAILS`. The admin UI currently edits existing item price, availability, and modifier option prices; full create/delete menu UI remains planned.
 
 | Column           | Type        | Notes |
 | ---------------- | ----------- | ----- |
@@ -127,6 +131,31 @@ Implemented in Phase 3 (`003_kds_users_schema.sql`). Passwords are stored as opa
 | updated_at     | TIMESTAMPTZ | |
 
 **Unique:** `(cafe_id, username)`
+
+---
+
+## `admin_users`
+
+Pre-seeded café admin credentials for the admin app.
+
+Implemented in Phase 4 (`004_admin_users_schema.sql`). Passwords use the same opaque **`scrypt$...`** hash format as KDS users. Invite fields are reserved for future onboarding and are not wired to an email/invite flow yet.
+
+| Column             | Type        | Notes |
+| ------------------ | ----------- | ----- |
+| id                 | UUID        | PK |
+| cafe_id            | UUID        | FK → cafes |
+| email              | TEXT        | unique per café |
+| password_hash      | TEXT        | server-side hash only |
+| display_name       | TEXT        | optional label |
+| is_active          | BOOLEAN     | |
+| invite_token       | TEXT        | future invite flow, unique nullable |
+| invite_expires_at  | TIMESTAMPTZ | future invite flow |
+| invite_accepted_at | TIMESTAMPTZ | future invite flow |
+| last_login_at      | TIMESTAMPTZ | |
+| created_at         | TIMESTAMPTZ | |
+| updated_at         | TIMESTAMPTZ | |
+
+**Unique:** `(cafe_id, email)`; additional lower-email index supports login lookup.
 
 ---
 
@@ -196,9 +225,9 @@ Implemented in Phase 2 (`002_orders_schema.sql`).
 
 ## `payment_sessions`
 
-Normalises what v0.1 stored as JSONB on `orders`.
+Normalises checkout sessions per provider (Stripe first).
 
-Planned. Not created by the current migration.
+**Implemented** in migration `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.sql`.
 
 | Column              | Type        | Notes |
 | ------------------- | ----------- | ----- |
@@ -271,12 +300,12 @@ Planned. Not created by the current migration.
 
 ---
 
-## Webhook idempotency (recommended)
+## Webhook idempotency
 
-Planned. Not created by the current migration.
+**Implemented** as `webhook_events` in `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.sql`.
 
 | Table | Purpose |
 | ----- | ------- |
-| `webhook_events` | `(cafe_id, provider, event_id)` UNIQUE processed log |
+| `webhook_events` | `(provider, event_id)` UNIQUE processed log |
 
-Prevents double-processing `payment.created` bursts.
+Prevents double-processing Stripe webhook deliveries.

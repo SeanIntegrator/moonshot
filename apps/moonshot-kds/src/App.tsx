@@ -63,6 +63,19 @@ export function App() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
+  const clearExpiredSession = useCallback((current: Session | null): void => {
+    if (current) {
+      setLoginForm((f) => ({
+        ...f,
+        cafeSlug: current.cafeSlug,
+        username: current.username,
+        password: '',
+      }));
+    }
+    saveSession(null);
+    setSession(null);
+  }, []);
+
   const applyEvent = useCallback((ev: KdsServerToClientEvent) => {
     setOrders((prev) => {
       switch (ev.type) {
@@ -110,6 +123,11 @@ export function App() {
 
     setError(null);
     void refreshOrders(session.token).catch((e) => {
+      if (e instanceof Error && e.message === 'SESSION_EXPIRED') {
+        clearExpiredSession(session);
+        setError('Session expired — please sign in again.');
+        return;
+      }
       setError(e instanceof Error ? e.message : 'Failed to load orders');
     });
 
@@ -121,7 +139,12 @@ export function App() {
 
     socket.on('connect', () => {
       setError(null);
-      void refreshOrders(session.token).catch(() => {});
+      void refreshOrders(session.token).catch((e) => {
+        if (e instanceof Error && e.message === 'SESSION_EXPIRED') {
+          clearExpiredSession(session);
+          setError('Session expired — please sign in again.');
+        }
+      });
     });
 
     socket.on('kds:event', (ev: KdsServerToClientEvent) => {
@@ -133,7 +156,12 @@ export function App() {
     });
 
     const interval = window.setInterval(() => {
-      void refreshOrders(session.token).catch(() => {});
+      void refreshOrders(session.token).catch((e) => {
+        if (e instanceof Error && e.message === 'SESSION_EXPIRED') {
+          clearExpiredSession(session);
+          setError('Session expired — please sign in again.');
+        }
+      });
     }, 90_000);
 
     return () => {
@@ -141,7 +169,7 @@ export function App() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [session, applyEvent, refreshOrders]);
+  }, [session, applyEvent, refreshOrders, clearExpiredSession]);
 
   async function handleLogin(e: FormEvent): Promise<void> {
     e.preventDefault();
@@ -180,7 +208,12 @@ export function App() {
       await kdsCompleteOrder(session.token, orderId);
       setOrders((prev) => prev.filter((o) => o.id !== orderId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Complete failed');
+      if (err instanceof Error && err.message === 'SESSION_EXPIRED') {
+        clearExpiredSession(session);
+        setError('Session expired — please sign in again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Complete failed');
+      }
     } finally {
       setBusyId(null);
     }

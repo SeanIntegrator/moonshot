@@ -5,20 +5,19 @@ This file separates current runtime behaviour from planned flows. Paths use the 
 Implemented today:
 
 - Café lookup and active feature loading.
-- Manual menu reads from Postgres.
+- Manual menu reads from Postgres (POS adapter boundary passes **`posConfig`** for future non-manual providers — see [pos-normalisation.md](pos-normalisation.md)).
 - Google auth and JWT session hydration.
-- Menu admin writes through API routes.
-- Guest pay-in-store order creation via `POST /api/v1/orders` (`X-Cafe-Slug`): persists `orders` and `order_items` as `confirmed` / `unpaid`; optional `Authorization` attaches **`orders.user_id`**; guests receive a **`trackingToken`** JWT when `JWT_SECRET` is configured. Fan-out emits `kds:order:new` after commit. Non-empty line modifiers are rejected until modifier validation exists.
-- Café-scoped **KDS login** (`POST /api/v1/kds/auth/login`), **open orders** (`GET /api/v1/kds/orders`), **complete order** (`POST /api/v1/kds/orders/:orderId/complete`), and **Socket.io** namespace **`/kds`** (`kds:event` with `KdsServerToClientEvent`).
-- **Customer tracking** Socket.io namespace **`/customer`**: `customer:subscribe` accepts **`trackingToken`** (guest) or **session JWT** (signed-in, must match `orders.user_id`); server emits **`customerOrderCompleted`** on KDS completion. See **`docs/architecture/realtime.md`**.
+- Pre-seeded admin login plus settings updates for order-ahead and KDS configuration; **Stripe Connect onboarding** via admin routes + **`payment_config.stripe`** cache.
+- Menu admin writes through API routes; the admin UI currently exposes item price, availability, and modifier option price edits.
+- **Pay-in-store** order creation when `features.order_ahead.paymentProvider === 'pay_in_store'`: `POST /api/v1/orders` persists **`confirmed` / `unpaid`**, validates **modifiers** from `menu_items.modifier_groups`, emits **`kds:order:new`**, FIFO **pickup ETA** recalculation + **`kds:eta:updated`** / **`customerEtaUpdated`**.
+- **Stripe Checkout** when `paymentProvider === 'stripe'`: same `POST /orders` creates **`pending` / `unpaid`**, returns **`checkoutUrl`**; **`checkout.session.completed`** webhook marks **`paid` / `confirmed`**, then **`kds:order:new`** + ETA recompute. Cafés without **Connect + charges enabled** are rejected at order time.
+- Café-scoped **KDS login** (JWT **90d**), **open orders**, **complete order**, and **`/kds`** Socket.io.
+- **Customer** **`/customer`** tracking: completion, **ETA pushes**, optional **`customerReviewEligible`** after simple loyalty counters on KDS complete.
 
 Planned, not implemented yet:
 
-- Stripe checkout and webhook-paid confirmation (replacing or augmenting guest unpaid orders).
-- Stripe webhooks.
-- POS webhooks/polling.
-- Pickup ETA recalculation and broadcast (`kds:eta:updated` / `customerEtaUpdated` live).
-- Loyalty and feedback persistence.
+- POS webhooks/polling (Square, etc.) beyond manual adapter notes.
+- Stripe incremental checkout / order merge (F3) and richer loyalty ledger tables.
 
 ---
 
@@ -74,28 +73,34 @@ sequenceDiagram
   API-->>PWA: user_cafe_membership
 ```
 
-The API requires `GOOGLE_CLIENT_ID` and `JWT_SECRET` for the sign-in route. Menu admin capability is currently represented by an `adminCafeIds` JWT claim when the signed-in email is in `MENU_ADMIN_EMAILS`.
+The API requires `GOOGLE_CLIENT_ID` and `JWT_SECRET` for the sign-in route. Menu admin capability can come from either a pre-seeded admin JWT (`purpose: admin`) or a Google/session JWT whose email is in `MENU_ADMIN_EMAILS`.
 
 ---
 
-## S2 — Manual menu admin writes
+## S2 — Admin settings + manual menu maintenance
 
-Current API capability. The admin app UI does not expose this yet.
+Current runtime path for the admin app. Admin accounts are pre-seeded; invite/onboarding flows are still planned.
 
 ```mermaid
 sequenceDiagram
-  participant AdminClient as admin_or_manual_client
+  participant Admin as moonshotAdmin
   participant API as moonshotApi
   participant DB as Postgres
 
-  AdminClient->>API: POST_or_PATCH_or_DELETE_api_v1_menu_JWT_X_Cafe_Slug
-  API->>API: requireAuth
-  API->>API: isMenuAdminEmail
-  API->>DB: INSERT_or_UPDATE_menu_items
-  API-->>AdminClient: NormalisedMenuItem_or_removed
+  Admin->>API: POST_api_v1_admin_auth_login
+  API->>DB: SELECT_admin_users_and_cafe
+  API-->>Admin: JWT_admin
+  Admin->>API: PATCH_api_v1_admin_settings_JWT
+  API->>DB: UPDATE_cafes_features_kds_config
+  API-->>Admin: Cafe_activeFeatures
+  Admin->>API: GET_api_v1_menu_X_Cafe_Slug
+  API-->>Admin: NormalisedMenu
+  Admin->>API: PATCH_api_v1_menu_item_JWT_X_Cafe_Slug
+  API->>DB: UPDATE_menu_items
+  API-->>Admin: NormalisedMenuItem
 ```
 
-`DELETE /api/v1/menu/:itemId` soft-disables a row by setting `is_available = FALSE`.
+The API also supports `POST /api/v1/menu` and `DELETE /api/v1/menu/:itemId` for manual clients. The current admin UI is narrower: it edits existing item price, availability, and modifier option prices; `DELETE` soft-disables a row by setting `is_available = FALSE`.
 
 ---
 
@@ -121,7 +126,7 @@ sequenceDiagram
 
 Request body uses `CreateOrderRequest` from `@moonshot/types`: `customerName`, optional `notes`, `orderType`, and `items[]` with `menuItemId` and `quantity`. **Do not trust client prices:** totals and unit prices come from `menu_items`.
 
-**KDS:** listing open orders and completing orders are implemented only as internal repository functions (`listOpenOrdersForKds`, `completeOrderForKds`). Public KDS routes wait on café-scoped KDS login (separate from menu admin / owner admin apps).
+**KDS:** listing open orders and completing orders are public HTTP routes guarded by café-scoped KDS JWTs; the repository functions remain the shared persistence layer behind those routes.
 
 ---
 

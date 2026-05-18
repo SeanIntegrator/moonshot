@@ -229,7 +229,7 @@ menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
 
 menuRouter.get('/', async (req, res) => {
   try {
-    const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider);
+    const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
     const menu = await adapter.fetchMenu(req.cafe!.cafeId);
     res.set('Cache-Control', 'public, max-age=300');
     return res.json({ ok: true, data: menu });
@@ -270,7 +270,7 @@ menuRouter.get('/:segment', async (req, res) => {
   }
 
   try {
-    const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider);
+    const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
     const menu = await adapter.fetchMenu(req.cafe!.cafeId);
     const filtered = {
       ...menu,

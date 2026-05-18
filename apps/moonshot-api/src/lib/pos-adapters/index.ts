@@ -2,7 +2,15 @@ import type { PosAdapter } from '@moonshot/types';
 import { POS_PROVIDERS, type PosProvider } from '@moonshot/types';
 import { manualPosAdapter } from './manual.js';
 
-export function getPosAdapter(provider: PosProvider): PosAdapter {
+/**
+ * Returns a café-scoped POS adapter. `posConfig` is reserved for provider credentials
+ * (Square, SumUp, etc.); the manual adapter ignores it.
+ */
+export function getPosAdapter(
+  provider: PosProvider,
+  _posConfig?: Record<string, unknown>,
+): PosAdapter {
+  void _posConfig;
   switch (provider) {
     case POS_PROVIDERS.manual:
       return manualPosAdapter;

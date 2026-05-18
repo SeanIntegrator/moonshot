@@ -9,10 +9,10 @@ Monorepo layout:
 - **`@moonshot/api`** — Express 5 HTTP API + Postgres + Socket.io on the **same HTTP server**
 - **`@moonshot/order-ahead`** — Customer PWA (Vite/React)
 - **`@moonshot/kds`** — Kitchen display login + live board
-- **`@moonshot/admin`** — Placeholder shell; menu mutation lives in API only today
+- **`@moonshot/admin`** — Pre-seeded café admin console for settings and manual menu maintenance
 - **`@moonshot/types`** — Shared DTO envelopes, JWT contract shapes, socket payload types (`API_VERSION_PREFIX`, etc.)
 
-Postgres remains the **source of truth** for cafes, menus, users, memberships, orders, and KDS device accounts.
+Postgres remains the **source of truth** for cafes, menus, users, memberships, orders, KDS device accounts, and admin accounts.
 
 ## HTTP versioning
 
