@@ -17,22 +17,17 @@ import {
   parseCreateOrderBody,
   parseOrderAheadPaymentMode,
 } from '../lib/order-checkout-env.js';
+import { isStripeCheckoutSessionIdWellFormed } from '../lib/stripe-checkout-session-id.js';
 
 export const ordersRouter: Router = Router();
 
 ordersRouter.use(requireCafeContext);
 
-const STRIPE_CHECKOUT_SESSION_ID_RE = /^cs_[a-zA-Z0-9]+$/;
-
 ordersRouter.get('/checkout-session/:sessionId', async (req, res) => {
   try {
     const raw = req.params.sessionId;
     const sessionId = Array.isArray(raw) ? raw[0] : raw;
-    if (
-      !sessionId ||
-      sessionId.length > 256 ||
-      !STRIPE_CHECKOUT_SESSION_ID_RE.test(sessionId)
-    ) {
+    if (!sessionId || !isStripeCheckoutSessionIdWellFormed(sessionId)) {
       return res.status(400).json({
         ok: false,
         error: 'Invalid checkout session id',

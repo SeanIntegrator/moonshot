@@ -8,9 +8,11 @@ Phase 3 migration `apps/moonshot-api/migrations/sql/003_kds_users_schema.sql` (w
 
 Phase 4 migration `apps/moonshot-api/migrations/sql/004_admin_users_schema.sql` (wrapper `apps/moonshot-api/migrations/1735100000000_admin_users_schema.cjs`) adds pre-seeded café admin accounts. Invite columns exist for a future onboarding flow, but runtime login currently uses pre-created credentials.
 
-Phase 5 migration `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.sql` (wrapper `apps/moonshot-api/migrations/1735200000000_payment_webhook_schema.cjs`) adds **`payment_sessions`** and **`webhook_events`** for Stripe Checkout + Connect webhook idempotency.
+Phase 5 migration `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.sql` (wrapper `apps/moonshot-api/migrations/1735200000000_payment_webhook_schema.cjs`) adds **`payment_sessions`** and **`webhook_events`** for Stripe Checkout + Connect webhook delivery tracking.
 
-The later sections of this document (`loyalty_transactions`, `feedback_responses`, additional POS tables, etc.) remain **planned v2** shapes beyond what migrations 1–5 create today.
+Phase 6 migration `apps/moonshot-api/migrations/sql/006_webhook_events_processing_status.sql` (wrapper `apps/moonshot-api/migrations/1735300000000_webhook_events_processing_status.cjs`) adds **`processing_status`**, **`last_error`**, and **`updated_at`** on **`webhook_events`** so failed Stripe handlers can be retried safely (same `event.id`) without dropping retries as duplicates.
+
+The later sections of this document (`loyalty_transactions`, `feedback_responses`, additional POS tables, etc.) remain **planned v2** shapes beyond what migrations 1–6 create today.
 
 ## Conventions
 
@@ -161,7 +163,7 @@ Implemented in Phase 4 (`004_admin_users_schema.sql`). Passwords use the same op
 
 ## `orders`
 
-Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store creation is exposed as `POST /api/v1/orders` (see `docs/dataflow-sequences.md` S3). KDS list/complete and Socket.io fan-out are implemented after KDS login; **customer tracking** uses namespace `/customer` with JWT validation (see `docs/architecture/realtime.md`). Stripe/POS webhooks remain planned.
+Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store and Stripe Checkout creation are exposed as `POST /api/v1/orders` (see `docs/dataflow-sequences.md` S3). KDS list/complete and Socket.io fan-out run after KDS login; **customer tracking** uses namespace `/customer` with JWT validation (see `docs/architecture/realtime.md`). Stripe **`checkout.session.completed`** updates orders via **`POST /api/v1/webhooks/stripe`** using **`webhook_events.processing_status`** for safe retries.
 
 | Column               | Type        | Notes |
 | -------------------- | ----------- | ----- |
@@ -246,6 +248,27 @@ Normalises checkout sessions per provider (Stripe first).
 
 ---
 
+## `webhook_events`
+
+One row per **`(provider, event_id)`** so Stripe retries never double-apply business logic.
+
+**Created** in Phase 5 (`005_payment_webhook_schema.sql`). **Phase 6** (`006_webhook_events_processing_status.sql`) adds **`processing_status`**, **`last_error`**, and **`updated_at`** so failed handlers remain retryable. Claim / complete / fail helpers: `apps/moonshot-api/src/lib/payments/repository.ts`.
+
+| Column              | Type        | Notes |
+| ------------------- | ----------- | ----- |
+| id                  | UUID        | PK |
+| provider            | TEXT        | e.g. `stripe` |
+| event_id            | TEXT        | Stripe `evt_…` |
+| cafe_id             | UUID        | nullable FK → cafes |
+| processed_at        | TIMESTAMPTZ | updated when marked **`processed`** |
+| processing_status   | TEXT        | **`pending`** \| **`processing`** \| **`processed`** \| **`failed`** (CHECK) |
+| last_error          | TEXT        | set when **`failed`** |
+| updated_at          | TIMESTAMPTZ | reclaim stuck **`processing`** after **15 minutes** → **`failed`** |
+
+**Unique:** `(provider, event_id)` — duplicate successful deliveries no-op; **`failed`** rows can be claimed again on Stripe retry.
+
+---
+
 ## `loyalty_transactions` (ledger)
 
 Append-only stamps / rewards (replaces or supplements simple `loyalty_stamps` table from master doc).
@@ -297,15 +320,3 @@ Planned. Not created by the current migration.
 As master §6.2 — unchanged intent.
 
 Planned. Not created by the current migration.
-
----
-
-## Webhook idempotency
-
-**Implemented** as `webhook_events` in `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.sql`.
-
-| Table | Purpose |
-| ----- | ------- |
-| `webhook_events` | `(provider, event_id)` UNIQUE processed log |
-
-Prevents double-processing Stripe webhook deliveries.
