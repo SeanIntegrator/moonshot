@@ -1,51 +1,33 @@
-import type {
-  CreateOrderResponse,
-  NormalisedMenu,
-  NormalisedMenuItem,
-  OrderType,
-} from '@moonshot/types';
+import type { NormalisedMenu, NormalisedMenuItem } from '@moonshot/types';
 import {
   Box,
   Button,
-  Chip,
   Container,
   Divider,
+  Link,
   List,
   ListItem,
   ListItemText,
-  MenuItem,
-  TextField,
   Typography,
 } from '@mui/material';
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { useOrderTracking } from '../hooks/useOrderTracking.js';
+import { Link as RouterLink } from 'react-router-dom';
 import { apiFetch } from '../lib/api.js';
-
-const PROGRESS_STEPS = ['Confirmed', 'Preparing', 'Ready', 'Done'] as const;
+import { useCart } from '../providers/CartProvider.js';
 
 function lineTotal(item: NormalisedMenuItem, qty: number): number {
   return item.priceMinor * qty;
 }
 
+function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
+  const hit = lines.find((l) => l.menuItemId === menuItemId && l.modifiers.length === 0);
+  return hit?.quantity ?? 0;
+}
+
 export function Menu() {
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [customerName, setCustomerName] = useState('');
-  const [orderType, setOrderType] = useState<OrderType>('takeaway');
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [checkoutRecovering, setCheckoutRecovering] = useState(false);
-  const [placement, setPlacement] = useState<{
-    order: CreateOrderResponse['order'];
-    trackingToken?: string;
-  } | null>(null);
-
-  const { trackingStatus, completedAt, stepIndex } = useOrderTracking(
-    placement?.order.id ?? null,
-    placement?.order.status,
-    placement?.trackingToken ?? null,
-  );
+  const { lines, bumpSimpleQuantity } = useCart();
 
   useEffect(() => {
     void (async () => {
@@ -58,160 +40,26 @@ export function Menu() {
     })();
   }, []);
 
-  /** Stripe success URL includes `checkout_session_id`; restore placement after redirect or refresh. */
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('checkout_session_id');
-    if (!sessionId?.trim()) return;
-
-    setCheckoutRecovering(true);
-    void (async () => {
-      try {
-        const data = await apiFetch<CreateOrderResponse>(
-          `/orders/checkout-session/${encodeURIComponent(sessionId.trim())}`,
-        );
-        setPlacement({ order: data.order, trackingToken: data.trackingToken });
-        params.delete('checkout_session_id');
-        const qs = params.toString();
-        const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
-        window.history.replaceState(null, '', next);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Could not restore order from checkout');
-      } finally {
-        setCheckoutRecovering(false);
-      }
-    })();
-  }, []);
-
   const cartLines = useMemo(() => {
     if (!menu) return [];
     return menu.items
-      .map((item) => ({ item, qty: quantities[item.id] ?? 0 }))
+      .map((item) => ({ item, qty: simpleLineQty(lines, item.id) }))
       .filter((x) => x.qty > 0);
-  }, [menu, quantities]);
+  }, [menu, lines]);
 
   const cartTotalMinor = useMemo(
     () => cartLines.reduce((sum, { item, qty }) => sum + lineTotal(item, qty), 0),
     [cartLines],
   );
 
-  function bumpQty(menuItemId: string, delta: number): void {
-    setQuantities((prev) => {
-      const current = prev[menuItemId] ?? 0;
-      const next = Math.max(0, current + delta);
-      if (next === 0) {
-        const { [menuItemId]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [menuItemId]: next };
-    });
-  }
-
-  async function placeOrder(): Promise<void> {
-    if (!menu || cartLines.length === 0) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      const data = await apiFetch<CreateOrderResponse>('/orders', {
-        method: 'POST',
-        body: JSON.stringify({
-          customerName: customerName.trim(),
-          orderType,
-          notes: notes.trim() ? notes.trim() : null,
-          items: cartLines.map(({ item, qty }) => ({
-            menuItemId: item.id,
-            quantity: qty,
-          })),
-        }),
-      });
-      if (data.checkoutUrl) {
-        window.location.assign(data.checkoutUrl);
-        return;
-      }
-      setPlacement({ order: data.order, trackingToken: data.trackingToken });
-      setQuantities({});
-      setNotes('');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Order failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
       <Typography variant="h4" component="h1" sx={{ mt: 0 }}>
-        Menu
+        Order
       </Typography>
-      {checkoutRecovering && (
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Restoring your order from checkout…
-        </Typography>
-      )}
-      {placement && (
-        <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: 'action.hover' }}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {placement.order.paymentStatus === 'unpaid' && placement.order.status === 'pending'
-              ? 'Awaiting payment'
-              : 'Order placed'}
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5 }}>
-            {placement.order.customerName} — {placement.order.paymentStatus}
-          </Typography>
-          {placement.order.paymentStatus === 'unpaid' && placement.order.status === 'pending' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Complete payment in Stripe if you haven’t already. We’ll confirm here once the payment succeeds (usually
-              within a few seconds).
-            </Typography>
-          )}
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-            Order id: {placement.order.id}
-          </Typography>
-
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5, alignItems: 'center' }}>
-            {PROGRESS_STEPS.map((label, i) => {
-              const allDone = trackingStatus === 'completed';
-              const stepComplete = allDone || i < stepIndex;
-              const stepActive = !allDone && i === stepIndex;
-              return (
-                <Chip
-                  key={label}
-                  label={label}
-                  size="small"
-                  color={stepComplete || stepActive ? 'primary' : 'default'}
-                  variant={stepActive ? 'filled' : stepComplete ? 'filled' : 'outlined'}
-                />
-              );
-            })}
-          </Box>
-
-          {trackingStatus === 'connecting' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Connecting for live updates…
-            </Typography>
-          )}
-          {trackingStatus === 'tracking' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              We’ll update this when the kitchen marks your order ready.
-            </Typography>
-          )}
-          {trackingStatus === 'error' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Tracking unavailable — we’ll call your name when it’s ready.
-            </Typography>
-          )}
-          {trackingStatus === 'completed' && (
-            <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-              Your order is ready!
-              {completedAt ? ` (${new Date(completedAt).toLocaleTimeString()})` : ''}
-            </Typography>
-          )}
-
-          <Button size="small" sx={{ mt: 1 }} onClick={() => setPlacement(null)}>
-            Dismiss
-          </Button>
-        </Box>
-      )}
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        Tap + for a quick add with defaults, or open an item title to choose modifiers and allergens.
+      </Typography>
       {error && (
         <Typography color="error" sx={{ mt: 1 }}>
           {error}
@@ -228,9 +76,12 @@ export function Menu() {
             <Fragment key={item.id}>
               <ListItem alignItems="flex-start" disableGutters sx={{ py: 1.5, flexWrap: 'wrap', gap: 1 }}>
                 <ListItemText
-                  primary={item.name}
-                  secondary={item.category.replace(/_/g, ' ')}
-                  primaryTypographyProps={{ fontWeight: 600 }}
+                  primary={
+                    <Link component={RouterLink} to={`/order/item/${item.id}`} underline="hover" fontWeight={600}>
+                      {item.name}
+                    </Link>
+                  }
+                  secondary={`${item.category.replace(/_/g, ' ')}${item.subcategory ? ` · ${item.subcategory}` : ''}`}
                   secondaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
                   sx={{ flex: '1 1 160px' }}
                 />
@@ -238,13 +89,18 @@ export function Menu() {
                   <Typography variant="body1" sx={{ fontVariantNumeric: 'tabular-nums' }}>
                     £{(item.priceMinor / 100).toFixed(2)}
                   </Typography>
-                  <Button size="small" variant="outlined" onClick={() => bumpQty(item.id, -1)} disabled={!quantities[item.id]}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => bumpSimpleQuantity(item.id, -1)}
+                    disabled={simpleLineQty(lines, item.id) === 0}
+                  >
                     −
                   </Button>
                   <Typography sx={{ minWidth: '1.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-                    {quantities[item.id] ?? 0}
+                    {simpleLineQty(lines, item.id)}
                   </Typography>
-                  <Button size="small" variant="contained" onClick={() => bumpQty(item.id, 1)}>
+                  <Button size="small" variant="contained" onClick={() => bumpSimpleQuantity(item.id, 1)}>
                     +
                   </Button>
                 </Box>
@@ -275,50 +131,18 @@ export function Menu() {
         </Typography>
         {cartLines.length === 0 ? (
           <Typography variant="body2" sx={{ mt: 0.5 }} color="text.secondary">
-            Add items to place an order (pay in store).
+            Add items, then continue to checkout.
           </Typography>
         ) : (
           <>
             <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {cartLines.length} line(s) — £{(cartTotalMinor / 100).toFixed(2)}
+              {cartLines.length} line(s) — £{(cartTotalMinor / 100).toFixed(2)}{' '}
+              <Typography component="span" variant="caption" color="text.secondary">
+                (detailed lines may include modifiers)
+              </Typography>
             </Typography>
-            <TextField
-              label="Your name"
-              fullWidth
-              size="small"
-              sx={{ mt: 1.5 }}
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              required
-            />
-            <TextField
-              select
-              label="Order type"
-              fullWidth
-              size="small"
-              sx={{ mt: 1.5 }}
-              value={orderType}
-              onChange={(e) => setOrderType(e.target.value as OrderType)}
-            >
-              <MenuItem value="takeaway">Takeaway</MenuItem>
-              <MenuItem value="eat_in">Eat in</MenuItem>
-            </TextField>
-            <TextField
-              label="Notes (optional)"
-              fullWidth
-              size="small"
-              sx={{ mt: 1.5 }}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-            <Button
-              variant="contained"
-              fullWidth
-              sx={{ mt: 1.5 }}
-              disabled={submitting || !customerName.trim()}
-              onClick={() => void placeOrder()}
-            >
-              {submitting ? 'Placing…' : 'Place order'}
+            <Button component={RouterLink} to="/checkout" variant="contained" fullWidth sx={{ mt: 1.5 }}>
+              Checkout
             </Button>
           </>
         )}

@@ -30,9 +30,9 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 - **`kds:eta:updated`** and **`customerEtaUpdated`** emitted after queue changes.
 - **`customerReviewEligible`** may fire after the third **on-time** completed app order when review nudge is enabled (simple counter MVP on `cafe_users`).
 
-### Loyalty MVP
+### Loyalty MVP + ledger
 
-- On KDS complete, signed-in **app** orders increment **`total_orders`**, **`loyalty_stamps`** when loyalty feature is enabled, **`on_time_completed_orders`** when completed within **pickup_time + 2 minutes** (if a pickup time was set).
+- On KDS complete, signed-in **app** orders increment **`total_orders`**, append **`loyalty_transactions`** (**`stamp_earned`**) when loyalty is enabled, issue **`loyalty_rewards`** + reset stamp cache at threshold, and increment **`on_time_completed_orders`** when completed within **pickup_time + 2 minutes** (if a pickup time was set).
 
 ### Operator tooling
 
@@ -62,10 +62,10 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). A
 ## Known snags
 
 1. **Seed cafés default to `stripe`** — `POST /orders` fails with *payments not ready* until Stripe onboarding completes; switch to **`pay_in_store`** in admin for local pay-in-store-only dev.
-2. **Order-ahead UI is skeletal** — design system WIP; `useOrderTracking` now exposes **`lastPickupTime`** from ETA pushes.
-3. **Stripe incremental / merge checkout (F3)** — not implemented; only initial **Checkout Session** per order.
-4. **Admin** — still no invite flow or full menu create/delete UI; Stripe card is minimal.
-5. **Loyalty ledger** — counters only; no `loyalty_transactions` table yet.
+2. **Order-ahead UI is routing-complete for production shells** — Home / Order / Checkout / Order detail / Rewards / Profile with **`CartProvider`**, **`ActiveOrdersProvider`**, **`useLoyalty`**, and **`src/api/*`** wrappers; polish is ongoing.
+3. **Stripe refunds on cancel** — customer cancel updates **`orders.status`** only; **`refundPending: true`** signals paid orders until Stripe refund work ships.
+4. **Stripe incremental / merge checkout (F3)** — not implemented; only initial **Checkout Session** per order.
+5. **Admin** — still no invite flow or full menu create/delete UI; Stripe card is minimal.
 6. **Bootstrap uses sync scrypt** — fine for CLI only.
 
 ---

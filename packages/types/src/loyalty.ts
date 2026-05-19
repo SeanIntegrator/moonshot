@@ -40,6 +40,8 @@ export interface LoyaltyReward {
   redeemedAt: IsoDateTime | null;
   expiresAt: IsoDateTime | null;
   createdAt: IsoDateTime;
+  /** Issuance metadata / POS correlation — optional */
+  metadata?: Record<string, unknown>;
 }
 
 export interface RewardRedemptionRequest {
@@ -47,4 +49,30 @@ export interface RewardRedemptionRequest {
   userId: string;
   rewardId: string;
   orderId?: string | null;
+}
+
+/** GET /loyalty/me — café loyalty settings + cache snapshot */
+export interface LoyaltySummaryResponse {
+  stamps: number;
+  stampsPerReward: number;
+  rewardsAvailable: number;
+  rewardDescription: string;
+  /** Stable short id for QR / till (scoped per café membership) */
+  displayId: string;
+  loyaltyEnabled: boolean;
+}
+
+export interface LoyaltyTransactionsResponse {
+  transactions: LoyaltyTransaction[];
+  /** ISO timestamp cursor for next page (exclusive) */
+  nextCursor: IsoDateTime | null;
+}
+
+export interface LoyaltyRewardsListResponse {
+  rewards: LoyaltyReward[];
+}
+
+export interface RedeemRewardResponse {
+  reward: LoyaltyReward;
+  transaction: LoyaltyTransaction;
 }

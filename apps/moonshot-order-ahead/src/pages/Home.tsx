@@ -1,10 +1,23 @@
 import { API_VERSION_PREFIX } from '@moonshot/types';
-import { Box, Container, Link, Typography } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Box, Container, Link, List, ListItem, ListItemButton, ListItemText, Typography } from '@mui/material';
+import { useEffect } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useCafe } from '../hooks/useCafe.js';
 
 export function Home() {
   const { loading, error, cafe } = useCafe();
+  const { active, loading: ordersLoading } = useActiveOrders();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('checkout_session_id')?.trim();
+    if (!sessionId) return;
+    navigate(`/checkout/restore?checkout_session_id=${encodeURIComponent(sessionId)}`, {
+      replace: true,
+    });
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -48,7 +61,33 @@ export function Home() {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Theme: <code>{cafe.themeId}</code> · POS: <code>{cafe.posProvider}</code>
       </Typography>
-      <Link component={RouterLink} to="/menu" underline="hover" fontWeight={600}>
+
+      {ordersLoading && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Loading your orders…
+        </Typography>
+      )}
+      {!ordersLoading && active.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+            In progress
+          </Typography>
+          <List dense disablePadding>
+            {active.map((o) => (
+              <ListItem key={o.id} disablePadding>
+                <ListItemButton component={RouterLink} to={`/orders/${o.id}`}>
+                  <ListItemText
+                    primary={`${o.customerName} · ${o.status}`}
+                    secondary={`£${(o.totalMinor / 100).toFixed(2)}`}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
+
+      <Link component={RouterLink} to="/order" underline="hover" fontWeight={600}>
         Browse menu
       </Link>
     </Container>

@@ -15,6 +15,7 @@ import { cafeRouter } from './routes/cafe.js';
 import { kdsRouter } from './routes/kds.js';
 import { menuRouter } from './routes/menu.js';
 import { ordersRouter } from './routes/orders.js';
+import { loyaltyRouter } from './routes/loyalty.js';
 import { stripeWebhookRouter } from './routes/webhooks-stripe.js';
 
 export type MoonshotHttpPack = {
@@ -85,6 +86,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   app.use(`${API_VERSION_PREFIX}/cafe`, cafeRouter);
   app.use(`${API_VERSION_PREFIX}/menu`, menuRouter);
   app.use(`${API_VERSION_PREFIX}/orders`, ordersRouter);
+  app.use(`${API_VERSION_PREFIX}/loyalty`, loyaltyRouter);
   app.use(`${API_VERSION_PREFIX}/kds`, kdsRouter);
 
   return { app, httpServer, io };

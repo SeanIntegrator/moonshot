@@ -3,7 +3,7 @@ import { SignInButton } from '../components/auth/SignInButton.js';
 import { useAuth } from '../hooks/useAuth.js';
 
 export function Profile() {
-  const { user, loading, signOut, isSignedIn } = useAuth();
+  const { user, membership, loading, signOut, isSignedIn } = useAuth();
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 8 }}>
@@ -23,6 +23,12 @@ export function Profile() {
           <Typography variant="body2" color="text.secondary">
             {user.email}
           </Typography>
+          {membership && (
+            <Typography variant="body2" sx={{ mt: 1 }} color="text.secondary">
+              Loyalty code <strong>{membership.loyaltyDisplayId}</strong> · {membership.loyaltyStamps} stamps cached ·{' '}
+              {membership.totalOrders} orders
+            </Typography>
+          )}
           <Button variant="outlined" color="primary" sx={{ mt: 2 }} onClick={() => signOut()}>
             Sign out
           </Button>

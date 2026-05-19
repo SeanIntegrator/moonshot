@@ -1,6 +1,7 @@
 import type { CreateOrderLineInput, OrderAheadFeatureConfig, OrderType } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { ApiHttpError } from './http-errors.js';
+import { parseDeclaredAllergens } from './declared-allergens.js';
 
 const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
 
@@ -67,7 +68,9 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
     return { ok: false, error: 'items must be an array' };
   }
 
-  const items: CreateOrderLineInput[] = rawItems.map((raw) => {
+  const items: CreateOrderLineInput[] = [];
+
+  for (const raw of rawItems) {
     const row = raw as Record<string, unknown>;
     const modRaw = row.modifiers;
     let modifiers: CreateOrderLineInput['modifiers'];
@@ -83,7 +86,13 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
         .filter((m) => m.groupId.length > 0 && m.optionId.length > 0);
       if (modifiers.length === 0) modifiers = undefined;
     }
-    return {
+
+    const allergensParsed = parseDeclaredAllergens(row.allergens);
+    if (!allergensParsed.ok) {
+      return { ok: false, error: allergensParsed.error };
+    }
+
+    items.push({
       menuItemId: typeof row.menuItemId === 'string' ? row.menuItemId : '',
       quantity: typeof row.quantity === 'number' ? row.quantity : NaN,
       modifiers,
@@ -93,8 +102,9 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
           : row.notes === null
             ? null
             : undefined,
-    };
-  });
+      allergens: allergensParsed.allergens.length > 0 ? allergensParsed.allergens : undefined,
+    });
+  }
 
   return {
     ok: true,

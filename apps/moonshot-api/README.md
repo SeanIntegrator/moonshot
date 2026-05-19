@@ -19,7 +19,7 @@ pnpm test
 Vitest loads `src/**/*.test.ts`.
 
 - **Always-on:** pure unit tests (e.g. modifier resolution, checkout orchestration mocks, HTTP validation for checkout-session route shape).
-- **Integration:** `*.integration.test.ts` files run **only when `DATABASE_URL` or `TEST_DATABASE_URL`** is set (same Postgres as migrations applied). They use transactions or scoped fixtures and cover **`webhook_events` lifecycle** and **checkout recovery** via `payment_sessions`.
+- **Integration:** `*.integration.test.ts` files run **only when `DATABASE_URL` or `TEST_DATABASE_URL`** is set (same Postgres as migrations applied). They use scoped fixtures and cover **`webhook_events` lifecycle**, **checkout recovery** via `payment_sessions`, and **customer order reads/cancel** (`customer-orders.integration.test.ts`).
 
 CI without a database still passes; set **`TEST_DATABASE_URL`** locally or in CI to execute DB-backed suites.
 

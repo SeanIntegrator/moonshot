@@ -12,7 +12,11 @@ Phase 5 migration `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.s
 
 Phase 6 migration `apps/moonshot-api/migrations/sql/006_webhook_events_processing_status.sql` (wrapper `apps/moonshot-api/migrations/1735300000000_webhook_events_processing_status.cjs`) adds **`processing_status`**, **`last_error`**, and **`updated_at`** on **`webhook_events`** so failed Stripe handlers can be retried safely (same `event.id`) without dropping retries as duplicates.
 
-The later sections of this document (`loyalty_transactions`, `feedback_responses`, additional POS tables, etc.) remain **planned v2** shapes beyond what migrations 1–6 create today.
+Phase 7 migration `apps/moonshot-api/migrations/sql/007_loyalty_ledger.sql` (wrapper `apps/moonshot-api/migrations/1735400000000_loyalty_ledger.cjs`) adds **`loyalty_transactions`**, **`loyalty_rewards`**, and **`cafe_users.loyalty_display_id`** (plus indexes / trigger to assign display ids).
+
+Phase 8 migration `apps/moonshot-api/migrations/sql/008_menu_seed_dev.sql` (wrapper `apps/moonshot-api/migrations/1735500000000_menu_seed_dev.cjs`) refreshes dev seed menu structure (modifiers / subcategories) and enables loyalty on the seed café.
+
+Sections below for **`feedback_responses`**, additional POS tables, etc. remain **planned v2** beyond what migrations 1–8 create today.
 
 ## Conventions
 
@@ -67,17 +71,18 @@ Implemented in Phase 1.
 
 Membership + per-café loyalty and review-prompt state.
 
-Implemented in Phase 1. The review and loyalty counters exist, but the order/loyalty/review flows that update them are not implemented yet.
+Implemented in Phase 1 with counters; Phase 7 adds **`loyalty_display_id`** and the loyalty ledger tables that stamp/reward flows write to (keeping **`loyalty_stamps`** as a denormalised cache).
 
 | Column                     | Type        | Notes |
 | -------------------------- | ----------- | ----- |
 | cafe_id                    | UUID        | FK → cafes, part of PK |
 | user_id                    | UUID        | FK → users, part of PK |
-| loyalty_stamps             | INTEGER     | denormalised cache optional; ledger is source of truth |
+| loyalty_stamps             | INTEGER     | denormalised cache; ledger + reward issuance update this in-DB |
 | total_orders               | INTEGER     | optional analytics |
 | on_time_completed_orders   | INTEGER     | **increments only** for `source = app` when S4 on-time rule passes |
 | review_prompt_state        | TEXT        | `not_shown` \| `shown_positive` \| `shown_negative` \| `dismissed` |
 | first_visit                | TIMESTAMPTZ | |
+| loyalty_display_id         | TEXT        | short till / QR code (**Phase 7**) |
 
 **PK:** `(cafe_id, user_id)`  
 **Indexes:** `(cafe_id, user_id)` already PK
@@ -271,9 +276,9 @@ One row per **`(provider, event_id)`** so Stripe retries never double-apply busi
 
 ## `loyalty_transactions` (ledger)
 
-Append-only stamps / rewards (replaces or supplements simple `loyalty_stamps` table from master doc).
+Append-only stamps / rewards; **`cafe_users.loyalty_stamps`** is updated in the same transaction as ledger writes for fast reads.
 
-Planned. Not created by the current migration.
+**Created** in Phase 7 (`007_loyalty_ledger.sql`). Partial unique index enforces idempotent **`stamp_earned`** per `(cafe_id, user_id, order_id)`.
 
 | Column          | Type        | Notes |
 | --------------- | ----------- | ----- |
@@ -290,9 +295,9 @@ Planned. Not created by the current migration.
 
 ## `loyalty_rewards` (optional)
 
-As in master context §6.2 — reward inventory / expiry if product needs it.
+Free-drink (or other) vouchers before redemption.
 
-Planned. Not created by the current migration.
+**Created** in Phase 7 (`007_loyalty_ledger.sql`).
 
 ---
 

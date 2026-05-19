@@ -7,6 +7,11 @@ Thin path in production today:
 3. **KDS:** device login → `GET /kds/orders` + Socket namespace **`/kds`** (`kds:order:new` / `kds:order:removed`).
 4. **Customer tracking:** order-ahead opens **`/customer`**, emits `customer:subscribe` with `orderId` + `authToken` (tracking JWT or session JWT); KDS completion emits **`customerOrderCompleted`** to that room.
 5. **Admin:** pre-seeded admin login → dashboard updates order-ahead feature settings, KDS config, and existing menu item price/availability/modifier option prices.
+6. **Track order:** order-ahead **`/orders/:id`** polls while the order is open and opens **`/customer`** socket tracking where possible (`useOrderTracking`). **`checkout_session_id`** redirects via **`/checkout/restore`** (or Home forwards there).
+
+### Order status stepper (v1)
+
+Kitchen statuses **`preparing` / `ready`** are not yet pushed on every flow; the UI uses a **four-chip** stepper driven by **`OrderStatus`** when present and **`customerOrderCompleted`** for the final step. **Practical v1:** treat non-terminal orders as **queue-bound** — poll **`GET /orders/:id`** every ~15s (and rely on socket ETA events when connected). When most tickets stay in **`confirmed`** until completion, the customer sees a **two-phase mental model**: *Queued* (chips 0–2 collapsed visually or idle) → *Done*. A fast-follow can wire explicit **`preparing` / `ready`** transitions from KDS for richer steps.
 
 Auth details — [architecture/realtime.md](../architecture/realtime.md).
 

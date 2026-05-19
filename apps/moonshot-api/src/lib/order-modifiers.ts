@@ -8,6 +8,7 @@ import type {
 import { ApiErrorCode } from '@moonshot/types';
 import { mapMenuItemRow } from './menu-map.js';
 import { ApiHttpError } from './http-errors.js';
+import { parseDeclaredAllergens } from './declared-allergens.js';
 import type { Pool } from 'pg';
 
 export type ResolvedOrderLine = {
@@ -18,6 +19,7 @@ export type ResolvedOrderLine = {
   notes: string | null;
   currency: string;
   modifiers: NormalisedOrderLineModifier[];
+  allergens: string[];
 };
 
 /**
@@ -66,6 +68,11 @@ export async function resolveOrderLinesWithModifiers(params: {
     const menuItem = mapMenuItemRow(row);
     const { unitPriceMinor, modifiers } = resolveModifiersForLine(menuItem, line);
 
+    const allergensParsed = parseDeclaredAllergens(line.allergens);
+    if (!allergensParsed.ok) {
+      throw new ApiHttpError(400, ApiErrorCode.VALIDATION, allergensParsed.error);
+    }
+
     const lineTotal = unitPriceMinor * line.quantity;
     totalMinor += lineTotal;
 
@@ -77,6 +84,7 @@ export async function resolveOrderLinesWithModifiers(params: {
       notes: line.notes ?? null,
       currency: row.currency,
       modifiers,
+      allergens: allergensParsed.allergens,
     });
   }
 

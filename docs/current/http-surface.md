@@ -21,7 +21,16 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
   - `POST /api/v1/orders` — guest or **optional** `Authorization: Bearer` session JWT; sets `orders.user_id` when signed in. **`X-Cafe-Slug`** required. Behaviour depends on `features.order_ahead.paymentProvider`:
     - **`pay_in_store`** — persists **`confirmed` / `unpaid`**, emits **`kds:order:new`** immediately, validates **modifiers** against menu JSON.
     - **`stripe`** — requires **Stripe Connect onboarding complete** (`chargesEnabled` on the connected account). Creates **`pending` / `unpaid`** order + **Stripe Checkout** session; response includes **`checkoutUrl`**. **`kds:order:new`** fires only after **`checkout.session.completed`** webhook marks the order **`paid` / `confirmed`**. Guests receive **`trackingToken`** when `JWT_SECRET` is set (same as pay-in-store).
+  - `GET /api/v1/orders/me` — signed-in customer active + recent orders (`Authorization` + café context).
+  - `GET /api/v1/orders/pickup-estimate` — read-only ETA tail estimate for the café (`X-Cafe-Slug`).
+  - `GET /api/v1/orders/:orderId` — optional session JWT **or** guest `?trackingToken=` (same JWT purpose as socket subscribe).
+  - `POST /api/v1/orders/:orderId/cancel` — same auth model as GET; sets **`cancelled`** for open statuses; **Stripe refunds are not implemented** — paid orders return **`refundPending: true`** until a refunds phase lands.
   - `GET /api/v1/orders/checkout-session/:sessionId` — **`X-Cafe-Slug`** required; validates session id shape (`cs_` plus alphanumeric / underscores, max length). Returns **`CreateOrderResponse`** so order-ahead can restore state after the Stripe success redirect (`checkout_session_id` query param). Guest **`trackingToken`** included when `JWT_SECRET` is set and the order has no `user_id`.
+- **Loyalty (signed-in, café context)**
+  - `GET /api/v1/loyalty/me` — stamps progress, rewards available, **`displayId`** for till / QR.
+  - `GET /api/v1/loyalty/transactions` — paginated ledger (`limit`, `cursor`).
+  - `GET /api/v1/loyalty/rewards` — unredeemed rewards.
+  - `POST /api/v1/loyalty/rewards/:rewardId/redeem` — sets **`redeemed_at`**, appends **`reward_redeemed`** ledger row.
 - **Webhooks**
   - `POST /api/v1/webhooks/stripe` — **raw body**; **`Stripe-Signature`** verification. Handles `checkout.session.completed` and `account.updated` (idempotent via `webhook_events` with **`processing_status`** so failed deliveries remain retryable).
 - **Admin (pre-seeded / invite-ready accounts)**

@@ -174,7 +174,7 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
     };
 
     const membership = await pool.query(
-      `SELECT loyalty_stamps, total_orders, on_time_completed_orders, review_prompt_state, first_visit
+      `SELECT loyalty_stamps, loyalty_display_id, total_orders, on_time_completed_orders, review_prompt_state, first_visit
        FROM cafe_users
        WHERE cafe_id = $1 AND user_id = $2`,
       [cafeId, userId],
@@ -211,6 +211,7 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
           membership.rows.length > 0
             ? {
                 loyaltyStamps: membership.rows[0].loyalty_stamps as number,
+                loyaltyDisplayId: membership.rows[0].loyalty_display_id as string,
                 totalOrders: membership.rows[0].total_orders as number,
                 onTimeCompletedOrders: membership.rows[0].on_time_completed_orders as number,
                 reviewPromptState: membership.rows[0].review_prompt_state as string,

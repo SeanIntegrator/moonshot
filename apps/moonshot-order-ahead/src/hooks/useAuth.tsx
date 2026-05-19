@@ -21,6 +21,7 @@ type MeResponse = {
   cafe: { id: string; slug: string; name: string };
   membership: {
     loyaltyStamps: number;
+    loyaltyDisplayId: string;
     totalOrders: number;
     onTimeCompletedOrders: number;
     reviewPromptState: string;
@@ -30,6 +31,7 @@ type MeResponse = {
 
 export type AuthContextValue = {
   user: MeUser | null;
+  membership: MeResponse['membership'];
   isSignedIn: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
@@ -40,20 +42,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function useAuthState(): AuthContextValue {
   const [user, setUser] = useState<MeUser | null>(null);
+  const [membership, setMembership] = useState<MeResponse['membership']>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     const token = getStoredToken();
     if (!token) {
       setUser(null);
+      setMembership(null);
       setLoading(false);
       return;
     }
     try {
       const data = await apiFetch<MeResponse>('/auth/me');
       setUser(data.user);
+      setMembership(data.membership);
     } catch {
       setUser(null);
+      setMembership(null);
       clearToken();
     } finally {
       setLoading(false);
@@ -67,17 +73,19 @@ function useAuthState(): AuthContextValue {
   const signOut = useCallback(() => {
     clearToken();
     setUser(null);
+    setMembership(null);
   }, []);
 
   return useMemo(
     () => ({
       user,
+      membership,
       isSignedIn: Boolean(user),
       loading,
       refresh,
       signOut,
     }),
-    [user, loading, refresh, signOut],
+    [user, membership, loading, refresh, signOut],
   );
 }
 

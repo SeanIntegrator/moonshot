@@ -104,6 +104,8 @@ export interface CreateOrderLineInput {
   /** Selected options keyed by modifier group */
   modifiers?: OrderLineModifierSelectionInput[];
   notes?: string | null;
+  /** UK FSA allergen codes declared for this line (`packages/types` allergens list) */
+  allergens?: string[];
 }
 
 /** Client selection — server resolves names and prices from menu JSON */
