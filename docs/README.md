@@ -16,5 +16,6 @@ Historical narrative files ([dataflow-high-level.md](dataflow-high-level.md), [d
 ## Quick links
 
 - [Realtime / Socket auth](architecture/realtime.md) — `/kds` vs `/customer`, JWT rules
+- [API module layout](architecture/api-modules.md) — where order/loyalty/admin logic lives in `@moonshot/api`
 - [HTTP routes & CORS](current/http-surface.md)
 - [POS → normalised menu/order mapping (future providers)](pos-normalisation.md)

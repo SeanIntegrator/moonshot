@@ -32,7 +32,19 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 
 ### Loyalty MVP + ledger
 
-- On KDS complete, signed-in **app** orders increment **`total_orders`**, append **`loyalty_transactions`** (**`stamp_earned`**) when loyalty is enabled, issue **`loyalty_rewards`** + reset stamp cache at threshold, and increment **`on_time_completed_orders`** when completed within **pickup_time + 2 minutes** (if a pickup time was set).
+- On KDS complete, signed-in **app** orders append **`loyalty_transactions`** (**`stamp_earned`**) when loyalty is enabled, update **`cafe_users.loyalty_card_progress`** (punch-card position; authoritative history in the ledger), issue **`loyalty_rewards`** at threshold rollover, and increment **`total_orders` / `on_time_completed_orders`** only when a **new** stamp ledger row is inserted (idempotent on KDS retries).
+- **`GET /api/v1/loyalty/me`**, transactions, rewards list, and reward redeem routes for the order-ahead profile.
+- Review prompt: third **on-time** completed app order may emit **`customerReviewEligible`** when review nudge is enabled.
+- New memberships get a **6-digit numeric `loyalty_display_id`** per café (migration 010); existing hex IDs are preserved.
+
+### Backend refactor (Pass A + B, May 2026)
+
+- **KDS Done** never returns 500 for post-success loyalty or ETA failures (order already `completed`).
+- **`cafes-repository`** centralises café SELECT columns; global **`errorHandler`** returns **`Internal error`** for unknown 500s (structured logs server-side).
+- **`orders/`** module split (read / create / checkout / KDS / customer) with **`orders-repository.ts`** barrel.
+- **`admin-settings-service`** owns settings PATCH merge + persist (route is thin like Stripe).
+- **`buildGuestTrackingTokenIfNeeded`** shared by create-order and checkout-session recovery.
+- See [architecture/api-modules.md](architecture/api-modules.md).
 
 ### Operator tooling
 

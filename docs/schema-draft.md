@@ -12,7 +12,7 @@ Phase 5 migration `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.s
 
 Phase 6 migration `apps/moonshot-api/migrations/sql/006_webhook_events_processing_status.sql` (wrapper `apps/moonshot-api/migrations/1735300000000_webhook_events_processing_status.cjs`) adds **`processing_status`**, **`last_error`**, and **`updated_at`** on **`webhook_events`** so failed Stripe handlers can be retried safely (same `event.id`) without dropping retries as duplicates.
 
-Phase 7 migration `apps/moonshot-api/migrations/sql/007_loyalty_ledger.sql` (wrapper `apps/moonshot-api/migrations/1735400000000_loyalty_ledger.cjs`) adds **`loyalty_transactions`**, **`loyalty_rewards`**, and **`cafe_users.loyalty_display_id`** (plus indexes / trigger to assign display ids).
+Phase 7 migration `apps/moonshot-api/migrations/sql/007_loyalty_ledger.sql` (wrapper `apps/moonshot-api/migrations/1735400000000_loyalty_ledger.cjs`) adds **`loyalty_transactions`**, **`loyalty_rewards`**, and **`cafe_users.loyalty_display_id`** (plus indexes / trigger to assign display ids). Phase 9 renames **`loyalty_stamps` → `loyalty_card_progress`**. Phase 10 adds **`cafes.loyalty_display_counter`** and replaces the display-id trigger with per-café 6-digit numeric IDs for new rows (existing IDs unchanged).
 
 Phase 8 migration `apps/moonshot-api/migrations/sql/008_menu_seed_dev.sql` (wrapper `apps/moonshot-api/migrations/1735500000000_menu_seed_dev.cjs`) refreshes dev seed menu structure (modifiers / subcategories) and enables loyalty on the seed café.
 
@@ -46,6 +46,7 @@ Implemented in Phase 1.
 | kds_config         | JSONB       | milk colours, timer thresholds, **eta: `{ base_prep_minutes, per_item_minutes }`**, layout |
 | timezone           | TEXT        | default `Europe/London` |
 | owner_feedback_email | TEXT      | optional; used for negative-review path `mailto:` |
+| loyalty_display_counter | INTEGER  | **Phase 10** — next 6-digit `loyalty_display_id` for new `cafe_users` rows |
 | created_at         | TIMESTAMPTZ | |
 
 **Indexes:** `slug UNIQUE`
@@ -82,7 +83,7 @@ Implemented in Phase 1 with counters; Phase 7 adds **`loyalty_display_id`** and 
 | on_time_completed_orders   | INTEGER     | **increments only** for `source = app` when S4 on-time rule passes |
 | review_prompt_state        | TEXT        | `not_shown` \| `shown_positive` \| `shown_negative` \| `dismissed` |
 | first_visit                | TIMESTAMPTZ | |
-| loyalty_display_id         | TEXT        | short till / QR code (**Phase 7**) |
+| loyalty_display_id         | TEXT        | short till / QR code (**Phase 7**); legacy rows may be 8-char hex; **Phase 10** assigns 6-digit numeric IDs for new memberships via `cafes.loyalty_display_counter` |
 
 **PK:** `(cafe_id, user_id)`  
 **Indexes:** `(cafe_id, user_id)` already PK

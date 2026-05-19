@@ -14,6 +14,8 @@ Monorepo layout:
 
 Postgres remains the **source of truth** for cafes, menus, users, memberships, orders, KDS device accounts, and admin accounts.
 
+For where repositories and services live in the API codebase, see [api-modules.md](api-modules.md).
+
 ## HTTP versioning
 
 Versioned REST lives under **`/api/v1`**, exposed as [`API_VERSION_PREFIX`](../../packages/types/src/api.ts) in `@moonshot/types`. Apps must prepend it to logical paths (`/orders`, `/menu`, …).

@@ -5,7 +5,7 @@ Thin path in production today:
 1. **Order-ahead** loads café + menu (`GET /cafe/:slug`, `GET /menu`). Optional Google sign-in (`POST /auth/google`, `GET /auth/me`).
 2. **Place order:** `POST /orders` with basket. **Guest** responses include **`trackingToken`** when `JWT_SECRET` is set and the row stays guest (`user_id` null). **Signed-in** calls may send **`Authorization`** to attach **`orders.user_id`** (then no `trackingToken`).
 3. **KDS:** device login → `GET /kds/orders` + Socket namespace **`/kds`** (`kds:order:new` / `kds:order:removed`).
-4. **Customer tracking:** order-ahead opens **`/customer`**, emits `customer:subscribe` with `orderId` + `authToken` (tracking JWT or session JWT); KDS completion emits **`customerOrderCompleted`** to that room.
+4. **Customer tracking:** order-ahead opens **`/customer`**, emits `customer:subscribe` with `orderId` + `authToken` (tracking JWT or session JWT); KDS completion emits **`customerOrderCompleted`** to that room. **Loyalty + ETA recompute** run after the order row is `completed`; failures there are logged and **do not** fail the KDS **Done** HTTP response.
 5. **Admin:** pre-seeded admin login → dashboard updates order-ahead feature settings, KDS config, and existing menu item price/availability/modifier option prices.
 6. **Track order:** order-ahead **`/orders/:id`** polls while the order is open and opens **`/customer`** socket tracking where possible (`useOrderTracking`). **`checkout_session_id`** redirects via **`/checkout/restore`** (or Home forwards there).
 

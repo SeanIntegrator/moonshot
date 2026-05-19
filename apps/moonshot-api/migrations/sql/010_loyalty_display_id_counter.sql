@@ -63,7 +63,7 @@ BEGIN
 
     attempt := attempt + 1;
     IF attempt > 100 THEN
-      RAISE EXCEPTION 'could not assign unique loyalty_display_id for cafe %% after % attempts', NEW.cafe_id, attempt;
+      RAISE EXCEPTION 'could not assign unique loyalty_display_id for cafe % after % attempts', NEW.cafe_id, attempt;
     END IF;
   END LOOP;
 END;

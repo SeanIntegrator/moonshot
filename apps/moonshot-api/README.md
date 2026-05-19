@@ -10,6 +10,20 @@ Run migrations (requires `DATABASE_URL`):
 pnpm migrate
 ```
 
+## Source layout (lib)
+
+Persistence is grouped by domain under `src/lib/`:
+
+| Area | Entry / modules |
+|------|-----------------|
+| Cafés | `cafes-repository.ts` |
+| Orders | `orders-repository.ts` → `orders/order-{read,create,checkout,kds,customer}.ts` |
+| Loyalty | `loyalty/`, `loyalty-after-kds-complete.ts` |
+| Admin | `admin-settings-service.ts`, `admin-stripe-service.ts` |
+| Errors | `middleware/error-handler.ts` (registered last on the Express app) |
+
+See **`docs/architecture/api-modules.md`** for the full map.
+
 ## Tests
 
 ```bash
