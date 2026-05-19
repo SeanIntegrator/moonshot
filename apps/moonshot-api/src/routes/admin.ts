@@ -15,7 +15,11 @@ import { findCafeById } from '../lib/cafes-repository.js';
 import { patchAdminCafeSettings } from '../lib/admin-settings-service.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
-import { createAdminStripeOnboardingLink, syncAdminStripeAccountStatus } from '../lib/admin-stripe-service.js';
+import {
+  createAdminStripeOnboardingLink,
+  syncAdminStripeAccountStatus,
+} from '../lib/admin-stripe-service.js';
+import { stripeConnectCallbacksRouter } from './stripe-connect-callbacks.js';
 
 export const adminRouter: Router = Router();
 
@@ -143,6 +147,8 @@ adminRouter.get('/auth/me', requireAdminAuth, async (req, res) => {
     },
   });
 });
+
+adminRouter.use('/payments/stripe', stripeConnectCallbacksRouter);
 
 adminRouter.post('/payments/stripe/onboarding-link', requireAdminAuth, async (req, res) => {
   const cafeId = req.adminUser!.cafeId;

@@ -14,6 +14,11 @@ import {
 import { updateCafePaymentConfig } from './payments/repository.js';
 import { getStripeOrNull } from './payments/stripe-client.js';
 import {
+  adminRedirectWithStripeQuery,
+  buildStripeConnectCallbackUrl,
+  verifyStripeConnectState,
+} from './admin-stripe-connect-urls.js';
+import {
   createStripeAccountOnboardingLink,
   createStripeExpressConnectedAccount,
   retrieveStripeConnectAccount,
@@ -63,10 +68,32 @@ export async function createAdminStripeOnboardingLink(cafeId: string): Promise<A
   }
   const link = await createStripeAccountOnboardingLink({
     accountId,
-    refreshUrl,
-    returnUrl,
+    refreshUrl: buildStripeConnectCallbackUrl(refreshUrl, cafeId),
+    returnUrl: buildStripeConnectCallbackUrl(returnUrl, cafeId),
   });
   return { url: link.url, accountId };
+}
+
+/** Stripe return_url: sync account flags, then redirect to admin dashboard. */
+export async function handleStripeConnectReturn(state: string): Promise<{ redirectUrl: string }> {
+  const cafeId = verifyStripeConnectState(state);
+  if (!cafeId) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid or missing Stripe Connect state');
+  }
+  await syncAdminStripeAccountStatus(cafeId);
+  return { redirectUrl: adminRedirectWithStripeQuery('return') };
+}
+
+/**
+ * Stripe refresh_url: Account Link expired — issue a new link and send the user back to Stripe.
+ */
+export async function handleStripeConnectRefresh(state: string): Promise<{ redirectUrl: string }> {
+  const cafeId = verifyStripeConnectState(state);
+  if (!cafeId) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid or missing Stripe Connect state');
+  }
+  const { url } = await createAdminStripeOnboardingLink(cafeId);
+  return { redirectUrl: url };
 }
 
 export async function syncAdminStripeAccountStatus(cafeId: string): Promise<AdminStripeAccountStatusResponse> {

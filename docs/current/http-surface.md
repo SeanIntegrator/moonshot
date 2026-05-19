@@ -39,6 +39,8 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
   - `PATCH /api/v1/admin/settings` — `Authorization: Bearer`; body `featuresPatch` (`loyalty`, `order_ahead`) and/or `kdsConfigPatch` (whitelisted KDS keys); merges into `cafes.features` / `cafes.kds_config`
   - `POST /api/v1/admin/payments/stripe/onboarding-link` — `Authorization: Bearer`; creates Express connected account if needed, returns Stripe-hosted **Account Link** URL.
   - `GET /api/v1/admin/payments/stripe/status` — `Authorization: Bearer`; syncs **`chargesEnabled`** etc. into `cafes.payment_config.stripe`.
+  - `GET /api/v1/admin/payments/stripe/return` — Stripe **return_url** (no JWT); signed `state` → sync account → **302** to admin (`?stripeConnect=return`).
+  - `GET /api/v1/admin/payments/stripe/refresh` — Stripe **refresh_url** (no JWT); signed `state` → new Account Link → **302** to Stripe.
 - **KDS**
   - `POST /api/v1/kds/auth/login`
   - `GET /api/v1/kds/orders`

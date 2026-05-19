@@ -16,6 +16,9 @@ export function StripePaymentsCard({ token }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ severity: 'success' | 'warning'; text: string } | null>(
+    null,
+  );
 
   const load = useCallback(() => {
     setLoading(true);
@@ -28,6 +31,25 @@ export function StripePaymentsCard({ token }: Props) {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get('stripeConnect');
+    if (!outcome) return;
+    if (outcome === 'return') {
+      setNotice({ severity: 'success', text: 'Stripe setup updated. Status refreshed below.' });
+      load();
+    } else if (outcome === 'error') {
+      setNotice({
+        severity: 'warning',
+        text: 'Could not complete Stripe redirect. Use Refresh status or try Connect again.',
+      });
+    }
+    params.delete('stripeConnect');
+    const qs = params.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ''}`;
+    window.history.replaceState(null, '', next);
   }, [load]);
 
   async function openOnboarding(): Promise<void> {
@@ -52,6 +74,11 @@ export function StripePaymentsCard({ token }: Props) {
         Order-ahead uses Stripe when payment provider is set to Stripe. Customers cannot place paid orders until
         charges are enabled on the connected account.
       </Typography>
+      {notice && (
+        <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}>
+          {notice.text}
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
