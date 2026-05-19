@@ -27,18 +27,9 @@ customerOrdersRouter.get('/me', requireAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
   const userId = req.user!.userId;
 
-  try {
-    const { active, recent } = await listCustomerOrdersForUser({ cafeId, userId });
-    const data: CustomerOrdersListResponse = { active, recent };
-    return res.json({ ok: true, data });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
-    });
-  }
+  const { active, recent } = await listCustomerOrdersForUser({ cafeId, userId });
+  const data: CustomerOrdersListResponse = { active, recent };
+  return res.json({ ok: true, data });
 });
 
 customerOrdersRouter.get('/pickup-estimate', async (req, res) => {
@@ -53,25 +44,16 @@ customerOrdersRouter.get('/pickup-estimate', async (req, res) => {
     return res.json({ ok: true, data });
   }
 
-  try {
-    const { pickupIso, minutesFromNow } = await estimateTailPickupForCafe({
-      db: pool,
-      cafeId: req.cafe!.cafeId,
-      kdsConfig: req.cafe!.kdsConfig,
-    });
-    const data: PickupEstimateResponse = {
-      pickupTime: pickupIso,
-      minutesFromNow,
-    };
-    return res.json({ ok: true, data });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
-    });
-  }
+  const { pickupIso, minutesFromNow } = await estimateTailPickupForCafe({
+    db: pool,
+    cafeId: req.cafe!.cafeId,
+    kdsConfig: req.cafe!.kdsConfig,
+  });
+  const data: PickupEstimateResponse = {
+    pickupTime: pickupIso,
+    minutesFromNow,
+  };
+  return res.json({ ok: true, data });
 });
 
 customerOrdersRouter.post('/:orderId/cancel', optionalCustomerAuth, async (req, res) => {
@@ -96,55 +78,46 @@ customerOrdersRouter.post('/:orderId/cancel', optionalCustomerAuth, async (req, 
     });
   }
 
-  try {
-    const result = await cancelOrderAtCafe(trimmed, cafeId);
+  const result = await cancelOrderAtCafe(trimmed, cafeId);
 
-    if (result.kind === 'not_found') {
-      return res.status(404).json({
-        ok: false,
-        error: 'Order not found',
-        code: ApiErrorCode.NOT_FOUND,
-      });
-    }
-
-    if (result.kind === 'not_cancellable') {
-      return res.status(409).json({
-        ok: false,
-        error: 'Order cannot be cancelled in its current state',
-        code: ApiErrorCode.CONFLICT,
-      });
-    }
-
-    if (result.kind === 'already_cancelled') {
-      const order = result.order;
-      const data: CancelOrderResponse = {
-        order,
-        refundPending: order.paymentStatus === 'paid',
-      };
-      return res.json({ ok: true, data });
-    }
-
-    const order = result.order;
-
-    emitKdsServerToClient(cafeId, { type: 'kds:order:removed', orderId: trimmed });
-    await recomputePickupEtasForCafe({
-      db: pool,
-      cafeId,
-      kdsConfig: req.cafe!.kdsConfig,
-    });
-
-    const refundPending = order.paymentStatus === 'paid';
-
-    const data: CancelOrderResponse = { order, refundPending };
-    return res.json({ ok: true, data });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
+  if (result.kind === 'not_found') {
+    return res.status(404).json({
       ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
+      error: 'Order not found',
+      code: ApiErrorCode.NOT_FOUND,
     });
   }
+
+  if (result.kind === 'not_cancellable') {
+    return res.status(409).json({
+      ok: false,
+      error: 'Order cannot be cancelled in its current state',
+      code: ApiErrorCode.CONFLICT,
+    });
+  }
+
+  if (result.kind === 'already_cancelled') {
+    const order = result.order;
+    const data: CancelOrderResponse = {
+      order,
+      refundPending: order.paymentStatus === 'paid',
+    };
+    return res.json({ ok: true, data });
+  }
+
+  const order = result.order;
+
+  emitKdsServerToClient(cafeId, { type: 'kds:order:removed', orderId: trimmed });
+  await recomputePickupEtasForCafe({
+    db: pool,
+    cafeId,
+    kdsConfig: req.cafe!.kdsConfig,
+  });
+
+  const refundPending = order.paymentStatus === 'paid';
+
+  const data: CancelOrderResponse = { order, refundPending };
+  return res.json({ ok: true, data });
 });
 
 customerOrdersRouter.get('/:orderId', optionalCustomerAuth, async (req, res) => {

@@ -1,16 +1,7 @@
 import type { KdsConfig } from '@moonshot/types';
 import type { Pool } from 'pg';
 import { KDS_OPEN_ORDER_STATUSES } from './orders-repository.js';
-
-const DEFAULT_ETA_BASE = 8;
-const DEFAULT_ETA_PER_ITEM = 2;
-
-function etaParams(kds: KdsConfig): { base: number; perItem: number } {
-  const e = kds.eta;
-  const base = Number.isFinite(e.basePrepMinutes) ? e.basePrepMinutes : DEFAULT_ETA_BASE;
-  const perItem = Number.isFinite(e.perItemMinutes) ? e.perItemMinutes : DEFAULT_ETA_PER_ITEM;
-  return { base, perItem: Math.max(0, perItem) };
-}
+import { resolveEtaParams } from './pickup-eta-params.js';
 
 /**
  * FIFO tail estimate: if a **new** order joined the back of the open queue now,
@@ -22,7 +13,7 @@ export async function estimateTailPickupForCafe(params: {
   kdsConfig: KdsConfig;
 }): Promise<{ pickupIso: string; minutesFromNow: number }> {
   const { db, cafeId, kdsConfig } = params;
-  const { base, perItem } = etaParams(kdsConfig);
+  const { base, perItem } = resolveEtaParams(kdsConfig);
 
   const sumRes = await db.query<{ sum_qty: string }>(
     `SELECT COALESCE(SUM(oi.quantity), 0)::text AS sum_qty

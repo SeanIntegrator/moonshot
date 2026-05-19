@@ -29,44 +29,35 @@ loyaltyRouter.get('/me', requireAuth, async (req, res) => {
   const userId = req.user!.userId;
   const features = req.cafe!.features as CafeFeatures;
 
-  try {
-    const membership = await pool.query<{
-      loyalty_stamps: number;
-      loyalty_display_id: string;
-    }>(
-      `SELECT loyalty_stamps, loyalty_display_id FROM cafe_users WHERE cafe_id = $1 AND user_id = $2`,
-      [cafeId, userId],
-    );
+  const membership = await pool.query<{
+    loyalty_card_progress: number;
+    loyalty_display_id: string;
+  }>(
+    `SELECT loyalty_card_progress, loyalty_display_id FROM cafe_users WHERE cafe_id = $1 AND user_id = $2`,
+    [cafeId, userId],
+  );
 
-    if (membership.rows.length === 0) {
-      return res.status(404).json({
-        ok: false,
-        error: 'No café membership for this user',
-        code: ApiErrorCode.NOT_FOUND,
-      });
-    }
-
-    const loyaltyCfg = features.loyalty;
-    const rewardsAvailable = await countUnredeemedRewards({ pool, cafeId, userId });
-
-    const data: LoyaltySummaryResponse = {
-      stamps: membership.rows[0]!.loyalty_stamps,
-      stampsPerReward: loyaltyCfg?.enabled ? loyaltyCfg.stampsPerReward : 10,
-      rewardsAvailable,
-      rewardDescription: loyaltyCfg?.rewardDescription ?? 'Free drink',
-      displayId: membership.rows[0]!.loyalty_display_id,
-      loyaltyEnabled: loyaltyCfg?.enabled === true,
-    };
-
-    return res.json({ ok: true, data });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
+  if (membership.rows.length === 0) {
+    return res.status(404).json({
       ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
+      error: 'No café membership for this user',
+      code: ApiErrorCode.NOT_FOUND,
     });
   }
+
+  const loyaltyCfg = features.loyalty;
+  const rewardsAvailable = await countUnredeemedRewards({ pool, cafeId, userId });
+
+  const data: LoyaltySummaryResponse = {
+    stamps: membership.rows[0]!.loyalty_card_progress,
+    stampsPerReward: loyaltyCfg?.enabled ? loyaltyCfg.stampsPerReward : 10,
+    rewardsAvailable,
+    rewardDescription: loyaltyCfg?.rewardDescription ?? 'Free drink',
+    displayId: membership.rows[0]!.loyalty_display_id,
+    loyaltyEnabled: loyaltyCfg?.enabled === true,
+  };
+
+  return res.json({ ok: true, data });
 });
 
 loyaltyRouter.get('/transactions', requireAuth, async (req, res) => {
@@ -77,54 +68,36 @@ loyaltyRouter.get('/transactions', requireAuth, async (req, res) => {
   const limit = Number.isFinite(limitRaw) ? limitRaw : 20;
   const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
 
-  try {
-    const { transactions, nextCursor } = await fetchLoyaltyTransactionsPage({
-      pool,
-      cafeId,
-      userId,
-      limit,
-      cursorCreatedAt: cursor,
-    });
+  const { transactions, nextCursor } = await fetchLoyaltyTransactionsPage({
+    pool,
+    cafeId,
+    userId,
+    limit,
+    cursorCreatedAt: cursor,
+  });
 
-    const data: LoyaltyTransactionsResponse = { transactions, nextCursor };
-    return res.json({ ok: true, data });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
-    });
-  }
+  const data: LoyaltyTransactionsResponse = { transactions, nextCursor };
+  return res.json({ ok: true, data });
 });
 
 loyaltyRouter.get('/rewards', requireAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
   const userId = req.user!.userId;
 
-  try {
-    const rows = await listUnredeemedRewards({ pool, cafeId, userId });
-    const rewards: LoyaltyReward[] = rows.map((r) => ({
-      id: r.id,
-      cafeId: r.cafe_id,
-      userId: r.user_id,
-      rewardType: r.reward_type,
-      redeemedAt: r.redeemed_at ? r.redeemed_at.toISOString() : null,
-      expiresAt: r.expires_at ? r.expires_at.toISOString() : null,
-      createdAt: r.created_at.toISOString(),
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
-    }));
+  const rows = await listUnredeemedRewards({ pool, cafeId, userId });
+  const rewards: LoyaltyReward[] = rows.map((r) => ({
+    id: r.id,
+    cafeId: r.cafe_id,
+    userId: r.user_id,
+    rewardType: r.reward_type,
+    redeemedAt: r.redeemed_at ? r.redeemed_at.toISOString() : null,
+    expiresAt: r.expires_at ? r.expires_at.toISOString() : null,
+    createdAt: r.created_at.toISOString(),
+    metadata: (r.metadata as Record<string, unknown>) ?? {},
+  }));
 
-    const data: LoyaltyRewardsListResponse = { rewards };
-    return res.json({ ok: true, data });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
-    });
-  }
+  const data: LoyaltyRewardsListResponse = { rewards };
+  return res.json({ ok: true, data });
 });
 
 loyaltyRouter.post('/rewards/:rewardId/redeem', requireAuth, async (req, res) => {
@@ -205,13 +178,14 @@ loyaltyRouter.post('/rewards/:rewardId/redeem', requireAuth, async (req, res) =>
     const data: RedeemRewardResponse = { reward, transaction };
     return res.json({ ok: true, data });
   } catch (e) {
-    await client.query('ROLLBACK');
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
-    });
+    /* Rollback is best-effort — if the connection is already broken, throwing
+     * here would hide the original error from the global handler. */
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      /* swallow secondary failure */
+    }
+    throw e;
   } finally {
     client.release();
   }

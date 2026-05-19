@@ -1,18 +1,9 @@
 import type { KdsConfig } from '@moonshot/types';
 import type { Pool, PoolClient } from 'pg';
 import { KDS_OPEN_ORDER_STATUSES } from './orders-repository.js';
+import { resolveEtaParams } from './pickup-eta-params.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
-
-const DEFAULT_ETA_BASE = 8;
-const DEFAULT_ETA_PER_ITEM = 2;
-
-function etaParams(kds: KdsConfig): { base: number; perItem: number } {
-  const e = kds.eta;
-  const base = Number.isFinite(e.basePrepMinutes) ? e.basePrepMinutes : DEFAULT_ETA_BASE;
-  const perItem = Number.isFinite(e.perItemMinutes) ? e.perItemMinutes : DEFAULT_ETA_PER_ITEM;
-  return { base, perItem: Math.max(0, perItem) };
-}
 
 type OpenOrderQtyRow = { id: string; items_qty: string };
 
@@ -26,7 +17,7 @@ export async function recomputePickupEtasForCafe(params: {
   kdsConfig: KdsConfig;
 }): Promise<void> {
   const { db, cafeId, kdsConfig } = params;
-  const { base, perItem } = etaParams(kdsConfig);
+  const { base, perItem } = resolveEtaParams(kdsConfig);
 
   const ordersRes = await db.query<OpenOrderQtyRow>(
     `SELECT o.id,

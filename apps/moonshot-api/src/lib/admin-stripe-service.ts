@@ -4,7 +4,8 @@ import type {
 } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../db.js';
-import { mapCafeRow } from './cafe-map.js';
+import { findCafeById } from './cafes-repository.js';
+import type { ResolvedCafe } from './resolved-cafe.js';
 import { ApiHttpError } from './http-errors.js';
 import {
   getStripeConnectAccountId,
@@ -18,20 +19,12 @@ import {
   retrieveStripeConnectAccount,
 } from './payments/stripe-checkout.js';
 
-type CafeRow = Parameters<typeof mapCafeRow>[0];
-
-async function loadCafeRow(cafeId: string): Promise<ReturnType<typeof mapCafeRow>> {
-  const current = await pool.query(
-    `SELECT
-      id, name, slug, pos_provider, pos_config, payment_provider, payment_config,
-      features, theme_id, theme_overrides, kds_config, timezone, owner_feedback_email
-    FROM cafes WHERE id = $1`,
-    [cafeId],
-  );
-  if (current.rows.length === 0) {
+async function loadCafeOrThrow(cafeId: string): Promise<ResolvedCafe> {
+  const cafe = await findCafeById(cafeId);
+  if (!cafe) {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Café not found');
   }
-  return mapCafeRow(current.rows[0] as CafeRow);
+  return cafe;
 }
 
 /** Stripe Connect onboarding links require Return URLs in env */
@@ -60,7 +53,7 @@ function requireStripeForRead(): void {
 export async function createAdminStripeOnboardingLink(cafeId: string): Promise<AdminStripeAccountLinkResponse> {
   const { refreshUrl, returnUrl } = requireStripeConnectUrls();
 
-  const cafe = await loadCafeRow(cafeId);
+  const cafe = await loadCafeOrThrow(cafeId);
   let accountId = getStripeConnectAccountId(cafe.paymentConfig);
   if (!accountId) {
     const created = await createStripeExpressConnectedAccount();
@@ -79,7 +72,7 @@ export async function createAdminStripeOnboardingLink(cafeId: string): Promise<A
 export async function syncAdminStripeAccountStatus(cafeId: string): Promise<AdminStripeAccountStatusResponse> {
   requireStripeForRead();
 
-  const cafe = await loadCafeRow(cafeId);
+  const cafe = await loadCafeOrThrow(cafeId);
   const accountId = getStripeConnectAccountId(cafe.paymentConfig);
   if (!accountId) {
     return {

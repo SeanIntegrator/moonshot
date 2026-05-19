@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import Stripe from 'stripe';
 import { pool } from '../db.js';
-import { mapCafeRow } from '../lib/cafe-map.js';
+import { findCafeById, findCafesByStripeAccountId } from '../lib/cafes-repository.js';
 import { mergeStripeIntoPaymentConfig } from '../lib/payments/cafe-payment-config.js';
 import {
   claimStripeWebhookForProcessing,
@@ -13,8 +13,6 @@ import { getStripeOrNull } from '../lib/payments/stripe-client.js';
 import { confirmOrderPaidFromStripeCheckout } from '../lib/orders-repository.js';
 import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
-
-type CafeRow = Parameters<typeof mapCafeRow>[0];
 
 export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
   const stripe = getStripeOrNull();
@@ -86,15 +84,8 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
 
         emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
 
-        const cafeResult = await pool.query(
-          `SELECT
-            id, name, slug, pos_provider, pos_config, payment_provider, payment_config,
-            features, theme_id, theme_overrides, kds_config, timezone, owner_feedback_email
-          FROM cafes WHERE id = $1`,
-          [cafeId],
-        );
-        if (cafeResult.rows.length > 0) {
-          const cafe = mapCafeRow(cafeResult.rows[0] as CafeRow);
+        const cafe = await findCafeById(cafeId);
+        if (cafe) {
           await recomputePickupEtasForCafe({
             db: pool,
             cafeId,
@@ -106,22 +97,15 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
       case 'account.updated': {
         const account = event.data.object as Stripe.Account;
         const accountId = account.id;
-        const cafeResult = await pool.query(
-          `SELECT id, payment_config FROM cafes WHERE payment_config->'stripe'->>'accountId' = $1`,
-          [accountId],
-        );
-        for (const row of cafeResult.rows as Array<{ id: string; payment_config: unknown }>) {
-          const config =
-            row.payment_config && typeof row.payment_config === 'object' && !Array.isArray(row.payment_config)
-              ? (row.payment_config as Record<string, unknown>)
-              : {};
-          const next = mergeStripeIntoPaymentConfig(config, {
+        const matches = await findCafesByStripeAccountId(accountId);
+        for (const { id, paymentConfig } of matches) {
+          const next = mergeStripeIntoPaymentConfig(paymentConfig, {
             accountId,
             chargesEnabled: Boolean(account.charges_enabled),
             detailsSubmitted: Boolean(account.details_submitted),
             payoutsEnabled: Boolean(account.payouts_enabled),
           });
-          await updateCafePaymentConfig({ client: pool, cafeId: row.id, paymentConfig: next });
+          await updateCafePaymentConfig({ client: pool, cafeId: id, paymentConfig: next });
         }
         break;
       }

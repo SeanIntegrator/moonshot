@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildGuestTrackingTokenIfNeeded,
   classifyCustomerSocketToken,
   signTrackOrderJwt,
 } from './customer-socket-token.js';
@@ -53,5 +54,46 @@ describe('classifyCustomerSocketToken', () => {
       SECRET,
     );
     expect(classifyCustomerSocketToken(tok, SECRET).kind).toBe('invalid');
+  });
+});
+
+describe('buildGuestTrackingTokenIfNeeded', () => {
+  const orderId = '123e4567-e89b-12d3-a456-426614174000';
+  const cafeId = '123e4567-e89b-12d3-a456-426614174001';
+
+  it('returns null for signed-in customers', () => {
+    const token = buildGuestTrackingTokenIfNeeded({
+      orderId,
+      cafeId,
+      customerId: 'user-uuid',
+      jwtSecret: SECRET,
+    });
+    expect(token).toBeNull();
+  });
+
+  it('returns null when JWT secret is missing (dev fallback)', () => {
+    const token = buildGuestTrackingTokenIfNeeded({
+      orderId,
+      cafeId,
+      customerId: null,
+      jwtSecret: undefined,
+    });
+    expect(token).toBeNull();
+  });
+
+  it('signs a track_order JWT for guests when secret is configured', () => {
+    const token = buildGuestTrackingTokenIfNeeded({
+      orderId,
+      cafeId,
+      customerId: null,
+      jwtSecret: SECRET,
+    });
+    expect(token).not.toBeNull();
+    const classified = classifyCustomerSocketToken(token!, SECRET);
+    expect(classified.kind).toBe('track_order');
+    if (classified.kind === 'track_order') {
+      expect(classified.claims.orderId).toBe(orderId);
+      expect(classified.claims.cafeId).toBe(cafeId);
+    }
   });
 });

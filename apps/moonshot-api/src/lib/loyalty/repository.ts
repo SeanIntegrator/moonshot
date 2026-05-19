@@ -91,13 +91,13 @@ export async function lockMembershipRow(params: {
   client: PoolClient;
   cafeId: string;
   userId: string;
-}): Promise<{ loyaltyStamps: number } | null> {
-  const res = await params.client.query<{ loyalty_stamps: number }>(
-    `SELECT loyalty_stamps FROM cafe_users WHERE cafe_id = $1 AND user_id = $2 FOR UPDATE`,
+}): Promise<{ cardProgress: number } | null> {
+  const res = await params.client.query<{ loyalty_card_progress: number }>(
+    `SELECT loyalty_card_progress FROM cafe_users WHERE cafe_id = $1 AND user_id = $2 FOR UPDATE`,
     [params.cafeId, params.userId],
   );
   if (res.rows.length === 0) return null;
-  return { loyaltyStamps: res.rows[0]!.loyalty_stamps };
+  return { cardProgress: res.rows[0]!.loyalty_card_progress };
 }
 
 export async function fetchLoyaltyTransactionsPage(params: {

@@ -71,13 +71,13 @@ Implemented in Phase 1.
 
 Membership + per-café loyalty and review-prompt state.
 
-Implemented in Phase 1 with counters; Phase 7 adds **`loyalty_display_id`** and the loyalty ledger tables that stamp/reward flows write to (keeping **`loyalty_stamps`** as a denormalised cache).
+Implemented in Phase 1 with counters; Phase 7 adds **`loyalty_display_id`** and the loyalty ledger tables that stamp/reward flows write to. Phase 9 renames the per-cafe stamp counter to **`loyalty_card_progress`** to reflect that it tracks position on the *current* punch card, not lifetime stamps — those live in `loyalty_transactions`.
 
 | Column                     | Type        | Notes |
 | -------------------------- | ----------- | ----- |
 | cafe_id                    | UUID        | FK → cafes, part of PK |
 | user_id                    | UUID        | FK → users, part of PK |
-| loyalty_stamps             | INTEGER     | denormalised cache; ledger + reward issuance update this in-DB |
+| loyalty_card_progress      | INTEGER     | stamps earned toward the current reward (0..stampsPerReward-1); resets at rollover. Authoritative ledger is `loyalty_transactions` |
 | total_orders               | INTEGER     | optional analytics |
 | on_time_completed_orders   | INTEGER     | **increments only** for `source = app` when S4 on-time rule passes |
 | review_prompt_state        | TEXT        | `not_shown` \| `shown_positive` \| `shown_negative` \| `dismissed` |
@@ -276,7 +276,7 @@ One row per **`(provider, event_id)`** so Stripe retries never double-apply busi
 
 ## `loyalty_transactions` (ledger)
 
-Append-only stamps / rewards; **`cafe_users.loyalty_stamps`** is updated in the same transaction as ledger writes for fast reads.
+Append-only stamps / rewards; **`cafe_users.loyalty_card_progress`** is updated in the same transaction as ledger writes for fast reads.
 
 **Created** in Phase 7 (`007_loyalty_ledger.sql`). Partial unique index enforces idempotent **`stamp_earned`** per `(cafe_id, user_id, order_id)`.
 

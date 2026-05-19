@@ -1,0 +1,64 @@
+import type { CreateOrderLineInput, OrderType } from '@moonshot/types';
+import { ApiErrorCode } from '@moonshot/types';
+import { ApiHttpError } from '../http-errors.js';
+
+export const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
+
+/** Orders visible on KDS board before completion */
+export const KDS_OPEN_ORDER_STATUSES = ['confirmed', 'preparing', 'ready'] as const;
+
+export const COMPLETABLE_STATUSES = ['confirmed', 'preparing', 'ready'] as const;
+
+export const CUSTOMER_ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready'] as const;
+
+export const CUSTOMER_CANCELLABLE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready'] as const;
+
+export const CUSTOMER_TERMINAL_STATUSES = ['completed', 'cancelled'] as const;
+
+/** Shared `orders` projection used across read/write paths. */
+export const ORDER_SELECT_COLUMNS = `
+  id, cafe_id, user_id, pos_order_id, customer_name, notes, total_minor, currency,
+  order_type, source, status, payment_status, quoted_pickup_time, pickup_time,
+  completed_at, edit_token, parent_order_id, stripe_checkout_session_id,
+  created_at, updated_at
+`;
+
+export const ORDER_ITEM_SELECT_COLUMNS = `
+  id, order_id, menu_item_id, item_name, quantity, unit_price_minor,
+  modifiers, allergens, notes, created_at
+`;
+
+export function validateOrderLines(lines: CreateOrderLineInput[]): void {
+  if (lines.length === 0) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Order must include at least one line item');
+  }
+  for (const line of lines) {
+    if (!line.menuItemId?.trim() || !UUID_RE.test(line.menuItemId)) {
+      throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Each item requires a valid menuItemId UUID');
+    }
+    if (!Number.isInteger(line.quantity) || line.quantity < 1) {
+      throw new ApiHttpError(
+        400,
+        ApiErrorCode.VALIDATION,
+        'Each item requires quantity as a positive integer',
+      );
+    }
+  }
+}
+
+export function assertValidOrderType(orderType: OrderType): void {
+  if (!ORDER_TYPES.includes(orderType)) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid orderType');
+  }
+}
+
+export function assertCustomerName(customerName: string): string {
+  const trimmedName = customerName.trim();
+  if (!trimmedName) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'customerName is required');
+  }
+  return trimmedName;
+}

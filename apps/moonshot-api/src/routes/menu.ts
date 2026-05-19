@@ -44,44 +44,35 @@ menuRouter.post('/', requireMenuMutationAuth, async (req, res) => {
     : [];
   const sortOrder = typeof body.sortOrder === 'number' ? body.sortOrder : 0;
 
-  try {
-    const { rows } = await pool.query(
-      `INSERT INTO menu_items (
-        cafe_id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-        image_url, emoji, is_available, tags, modifier_groups, sort_order
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13)
-      RETURNING
-        id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-        image_url, emoji, is_available, tags, modifier_groups`,
-      [
-        cafeId,
-        posItemId,
-        name,
-        description,
-        priceMinor,
-        currency,
-        category,
-        subcategory,
-        imageUrl,
-        emoji,
-        tags,
-        JSON.stringify(modifierGroups),
-        sortOrder,
-      ],
-    );
+  const { rows } = await pool.query(
+    `INSERT INTO menu_items (
+      cafe_id, pos_item_id, name, description, price_minor, currency, category, subcategory,
+      image_url, emoji, is_available, tags, modifier_groups, sort_order
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13)
+    RETURNING
+      id, pos_item_id, name, description, price_minor, currency, category, subcategory,
+      image_url, emoji, is_available, tags, modifier_groups`,
+    [
+      cafeId,
+      posItemId,
+      name,
+      description,
+      priceMinor,
+      currency,
+      category,
+      subcategory,
+      imageUrl,
+      emoji,
+      tags,
+      JSON.stringify(modifierGroups),
+      sortOrder,
+    ],
+  );
 
-    return res.status(201).json({
-      ok: true,
-      data: mapMenuItemRow(rows[0] as Parameters<typeof mapMenuItemRow>[0]),
-    });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
-    });
-  }
+  return res.status(201).json({
+    ok: true,
+    data: mapMenuItemRow(rows[0] as Parameters<typeof mapMenuItemRow>[0]),
+  });
 });
 
 menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
@@ -159,36 +150,27 @@ menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
 
   values.push(itemId, cafeId);
 
-  try {
-    const { rows } = await pool.query(
-      `UPDATE menu_items SET ${sets.join(', ')}
-       WHERE id = $${i++} AND cafe_id = $${i++}
-       RETURNING
-         id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-         image_url, emoji, is_available, tags, modifier_groups`,
-      values,
-    );
+  const { rows } = await pool.query(
+    `UPDATE menu_items SET ${sets.join(', ')}
+     WHERE id = $${i++} AND cafe_id = $${i++}
+     RETURNING
+       id, pos_item_id, name, description, price_minor, currency, category, subcategory,
+       image_url, emoji, is_available, tags, modifier_groups`,
+    values,
+  );
 
-    if (rows.length === 0) {
-      return res.status(404).json({
-        ok: false,
-        error: 'Menu item not found',
-        code: ApiErrorCode.NOT_FOUND,
-      });
-    }
-
-    return res.json({
-      ok: true,
-      data: mapMenuItemRow(rows[0] as Parameters<typeof mapMenuItemRow>[0]),
-    });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
+  if (rows.length === 0) {
+    return res.status(404).json({
       ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
+      error: 'Menu item not found',
+      code: ApiErrorCode.NOT_FOUND,
     });
   }
+
+  return res.json({
+    ok: true,
+    data: mapMenuItemRow(rows[0] as Parameters<typeof mapMenuItemRow>[0]),
+  });
 });
 
 menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
@@ -204,43 +186,25 @@ menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
 
   const cafeId = req.cafe!.cafeId;
 
-  try {
-    const { rowCount } = await pool.query(
-      `UPDATE menu_items SET is_available = FALSE WHERE id = $1 AND cafe_id = $2`,
-      [itemId, cafeId],
-    );
-    if (rowCount === 0) {
-      return res.status(404).json({
-        ok: false,
-        error: 'Menu item not found',
-        code: ApiErrorCode.NOT_FOUND,
-      });
-    }
-    return res.json({ ok: true, data: { removed: true } });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
+  const { rowCount } = await pool.query(
+    `UPDATE menu_items SET is_available = FALSE WHERE id = $1 AND cafe_id = $2`,
+    [itemId, cafeId],
+  );
+  if (rowCount === 0) {
+    return res.status(404).json({
       ok: false,
-      error: 'Database error',
-      code: ApiErrorCode.INTERNAL,
+      error: 'Menu item not found',
+      code: ApiErrorCode.NOT_FOUND,
     });
   }
+  return res.json({ ok: true, data: { removed: true } });
 });
 
 menuRouter.get('/', async (req, res) => {
-  try {
-    const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
-    const menu = await adapter.fetchMenu(req.cafe!.cafeId);
-    res.set('Cache-Control', 'public, max-age=300');
-    return res.json({ ok: true, data: menu });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: e instanceof Error ? e.message : 'Failed to load menu',
-      code: ApiErrorCode.INTERNAL,
-    });
-  }
+  const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
+  const menu = await adapter.fetchMenu(req.cafe!.cafeId);
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.json({ ok: true, data: menu });
 });
 
 menuRouter.get('/:segment', async (req, res) => {
@@ -269,21 +233,12 @@ menuRouter.get('/:segment', async (req, res) => {
     });
   }
 
-  try {
-    const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
-    const menu = await adapter.fetchMenu(req.cafe!.cafeId);
-    const filtered = {
-      ...menu,
-      items: menu.items.filter((item) => item.category === segment),
-    };
-    res.set('Cache-Control', 'public, max-age=300');
-    return res.json({ ok: true, data: filtered });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      ok: false,
-      error: e instanceof Error ? e.message : 'Failed to load menu',
-      code: ApiErrorCode.INTERNAL,
-    });
-  }
+  const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
+  const menu = await adapter.fetchMenu(req.cafe!.cafeId);
+  const filtered = {
+    ...menu,
+    items: menu.items.filter((item) => item.category === segment),
+  };
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.json({ ok: true, data: filtered });
 });

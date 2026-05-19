@@ -25,7 +25,7 @@ export function Profile() {
           </Typography>
           {membership && (
             <Typography variant="body2" sx={{ mt: 1 }} color="text.secondary">
-              Loyalty code <strong>{membership.loyaltyDisplayId}</strong> · {membership.loyaltyStamps} stamps cached ·{' '}
+              Loyalty code <strong>{membership.loyaltyDisplayId}</strong> · {membership.loyaltyCardProgress} stamps on this card ·{' '}
               {membership.totalOrders} orders
             </Typography>
           )}

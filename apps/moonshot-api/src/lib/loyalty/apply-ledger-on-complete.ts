@@ -9,7 +9,10 @@ import {
 
 /**
  * Stamp ledger + punch-card rollover inside an open transaction.
- * Caller owns `BEGIN`/`COMMIT` and updates `total_orders` / `on_time_completed_orders`.
+ *
+ * Caller owns `BEGIN`/`COMMIT` and is responsible for updating `total_orders`
+ * / `on_time_completed_orders` *only when this function reports `inserted: true`*,
+ * so that re-deliveries don't drift the lifetime counters.
  */
 export async function applyLedgerStampAndRewards(params: {
   client: PoolClient;
@@ -19,7 +22,7 @@ export async function applyLedgerStampAndRewards(params: {
   features: CafeFeatures;
   cafeTimezone: string;
   stampsDelta: number;
-}): Promise<{ finalLoyaltyStamps: number }> {
+}): Promise<{ cardProgress: number; inserted: boolean }> {
   const { client, cafeId, userId, order, features, stampsDelta } = params;
 
   const thresholdRaw = features.loyalty?.stampsPerReward ?? 10;
@@ -41,12 +44,12 @@ export async function applyLedgerStampAndRewards(params: {
   });
 
   if (!inserted) {
-    return { finalLoyaltyStamps: lock.loyaltyStamps };
+    return { cardProgress: lock.cardProgress, inserted: false };
   }
 
-  let stamps = lock.loyaltyStamps + stampsDelta;
+  let progress = lock.cardProgress + stampsDelta;
 
-  while (stamps >= stampsPerReward) {
+  while (progress >= stampsPerReward) {
     const rewardId = await insertLoyaltyRewardRow({
       client,
       cafeId,
@@ -63,13 +66,13 @@ export async function applyLedgerStampAndRewards(params: {
       rewardId,
     });
 
-    stamps -= stampsPerReward;
+    progress -= stampsPerReward;
   }
 
   await client.query(
-    `UPDATE cafe_users SET loyalty_stamps = $3 WHERE cafe_id = $1 AND user_id = $2`,
-    [cafeId, userId, stamps],
+    `UPDATE cafe_users SET loyalty_card_progress = $3 WHERE cafe_id = $1 AND user_id = $2`,
+    [cafeId, userId, progress],
   );
 
-  return { finalLoyaltyStamps: stamps };
+  return { cardProgress: progress, inserted: true };
 }

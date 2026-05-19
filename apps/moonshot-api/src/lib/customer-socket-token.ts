@@ -15,6 +15,27 @@ export function signTrackOrderJwt(params: {
   return jwt.sign(payload, secret, { expiresIn: '48h' });
 }
 
+/**
+ * Build the guest tracking token for an order when the caller is *not* a
+ * signed-in customer. Returns `null` when no token should be attached:
+ *   - the order has a signed-in customer (`customerId != null`), or
+ *   - the server has no `JWT_SECRET` configured (dev-only fallback).
+ *
+ * Centralised so order creation, Stripe Checkout recovery, and any future
+ * guest-order surface share the same rules.
+ */
+export function buildGuestTrackingTokenIfNeeded(params: {
+  orderId: string;
+  cafeId: string;
+  customerId: string | null | undefined;
+  jwtSecret: string | undefined;
+}): string | null {
+  const { orderId, cafeId, customerId, jwtSecret } = params;
+  if (customerId != null) return null;
+  if (!jwtSecret) return null;
+  return signTrackOrderJwt({ orderId, cafeId, secret: jwtSecret });
+}
+
 export type ClassifiedCustomerSocketToken =
   | { kind: 'track_order'; claims: TrackOrderJwtClaims }
   | { kind: 'session'; userId: string }

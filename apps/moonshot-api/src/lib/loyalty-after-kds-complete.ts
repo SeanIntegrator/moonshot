@@ -1,6 +1,7 @@
-import type { CafeFeatures, NormalisedOrder } from '@moonshot/types';
+import type { NormalisedOrder } from '@moonshot/types';
 import { pool } from '../db.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
+import { findCafeById } from './cafes-repository.js';
 import { applyLedgerStampAndRewards } from './loyalty/apply-ledger-on-complete.js';
 import { onTimeForReviewPrompt, stampsEarnedForCompletedOrder } from './loyalty/loyalty-rules.js';
 
@@ -28,13 +29,10 @@ export async function applyLoyaltyAfterKdsComplete(params: {
   const userId = order.customerId;
   if (!userId || order.source !== 'app') return;
 
-  const cafeResult = await pool.query<{ features: unknown; timezone: string }>(
-    `SELECT features, timezone FROM cafes WHERE id = $1`,
-    [cafeId],
-  );
-  if (cafeResult.rows.length === 0) return;
-  const features = cafeResult.rows[0]!.features as CafeFeatures;
-  const timezone = cafeResult.rows[0]!.timezone?.trim() || 'Europe/London';
+  const cafe = await findCafeById(cafeId);
+  if (!cafe) return;
+  const { features } = cafe;
+  const timezone = cafe.timezone?.trim() || 'Europe/London';
 
   const loyaltyEnabled = features.loyalty?.enabled === true;
   const reviewEnabled = features.review_nudge?.enabled === true;
@@ -61,8 +59,16 @@ export async function applyLoyaltyAfterKdsComplete(params: {
   try {
     await client.query('BEGIN');
 
+    /**
+     * The stamp ledger has a unique index that makes `stamp_earned` idempotent
+     * per `(cafe_id, user_id, order_id)`. Mirror that idempotency here for the
+     * `cafe_users` lifetime counters so a re-run (replay, retry, future webhook
+     * driven completion) does not drift `total_orders` or
+     * `on_time_completed_orders`.
+     */
+    let ledgerInserted = true;
     if (loyaltyEnabled && stampsDelta > 0 && features.loyalty) {
-      await applyLedgerStampAndRewards({
+      const result = await applyLedgerStampAndRewards({
         client,
         cafeId,
         userId,
@@ -71,6 +77,12 @@ export async function applyLoyaltyAfterKdsComplete(params: {
         cafeTimezone: timezone,
         stampsDelta,
       });
+      ledgerInserted = result.inserted;
+    }
+
+    if (!ledgerInserted) {
+      await client.query('COMMIT');
+      return;
     }
 
     const upd = await client.query<{ on_time_completed_orders: number; review_prompt_state: string }>(

@@ -20,7 +20,8 @@ type MeResponse = {
   user: MeUser;
   cafe: { id: string; slug: string; name: string };
   membership: {
-    loyaltyStamps: number;
+    /** Stamps earned toward the current free reward (0..stampsPerReward-1). */
+    loyaltyCardProgress: number;
     loyaltyDisplayId: string;
     totalOrders: number;
     onTimeCompletedOrders: number;

@@ -1,7 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ApiErrorCode } from '@moonshot/types';
-import { pool } from '../db.js';
-import { mapCafeRow } from '../lib/cafe-map.js';
+import { findCafeBySlug } from '../lib/cafes-repository.js';
 
 function fail(res: Response, status: number, message: string, code?: string) {
   return res.status(status).json({
@@ -14,6 +13,9 @@ function fail(res: Response, status: number, message: string, code?: string) {
 /**
  * Resolves café from `X-Cafe-Slug` header or optional `slug` route param.
  * Use after routes that include `:slug` — param wins when present.
+ *
+ * Unknown DB failures forward to the global error handler so the response
+ * shape stays consistent (`Internal error` 500 envelope).
  */
 export async function requireCafeContext(req: Request, res: Response, next: NextFunction): Promise<void> {
   const slug =
@@ -26,22 +28,14 @@ export async function requireCafeContext(req: Request, res: Response, next: Next
   }
 
   try {
-    const { rows } = await pool.query(
-      `SELECT
-        id, name, slug, pos_provider, pos_config, payment_provider, payment_config,
-        features, theme_id, theme_overrides, kds_config, timezone, owner_feedback_email
-      FROM cafes
-      WHERE slug = $1`,
-      [slug.trim()],
-    );
-    if (rows.length === 0) {
+    const cafe = await findCafeBySlug(slug);
+    if (!cafe) {
       void fail(res, 404, 'Café not found', ApiErrorCode.NOT_FOUND);
       return;
     }
-    req.cafe = mapCafeRow(rows[0] as Parameters<typeof mapCafeRow>[0]);
+    req.cafe = cafe;
     next();
   } catch (e) {
-    console.error(e);
-    void fail(res, 500, 'Database error', ApiErrorCode.INTERNAL);
+    next(e);
   }
 }
