@@ -34,6 +34,6 @@ async function stripeConnectRefresh(req: Request, res: Response, next: NextFunct
 }
 
 /** Stripe Account Link return/refresh — mounted at `/api/v1/admin/payments/stripe/*` and `/connect/*`. */
-export const stripeConnectCallbacksRouter = Router();
+export const stripeConnectCallbacksRouter: Router = Router();
 stripeConnectCallbacksRouter.get('/return', stripeConnectReturn);
 stripeConnectCallbacksRouter.get('/refresh', stripeConnectRefresh);

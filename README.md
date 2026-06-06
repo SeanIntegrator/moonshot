@@ -1,4 +1,4 @@
-# Moonshot (Zappuccino v2)
+# Moonshot
 
 Ground-up rebuild monorepo: API, KDS, order-ahead PWA, and admin.
 
@@ -35,9 +35,3 @@ pnpm --filter @moonshot/order-ahead dev
 pnpm --filter @moonshot/kds dev
 pnpm --filter @moonshot/admin dev
 ```
-
-## Railway
-
-Create one service per app; set **Root directory** to the app folder (e.g. `moonshot/apps/moonshot-api`). Use the same monorepo repo for each service.
-
-Legacy prototypes (`cafe-orders`, `customer-app`) are **not** part of this workspace.
