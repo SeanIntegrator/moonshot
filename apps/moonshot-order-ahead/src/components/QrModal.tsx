@@ -14,7 +14,7 @@ type Props = {
 export function QrModal({ open, onClose, displayId, name, stamps, stampsPerReward }: Props) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogContent sx={{ pt: 3, pb: 3, position: 'relative' }}>
+      <DialogContent sx={{ pt: 3, pb: 3, position: 'relative', px: 2.5 }}>
         <IconButton
           onClick={onClose}
           aria-label="Close"
@@ -24,15 +24,13 @@ export function QrModal({ open, onClose, displayId, name, stamps, stampsPerRewar
             right: 12,
             border: 1,
             borderColor: 'divider',
+            bgcolor: 'background.paper',
           }}
           size="small"
         >
           <CloseIcon fontSize="small" />
         </IconButton>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-          Show at till
-        </Typography>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+        <Typography variant="h5" fontWeight={700} sx={{ mb: 2.25 }}>
           Your QR code
         </Typography>
         <QrCard displayId={displayId} name={name} stamps={stamps} stampsPerReward={stampsPerReward} size={180} />

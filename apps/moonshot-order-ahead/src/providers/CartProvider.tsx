@@ -1,4 +1,5 @@
 import type { OrderLineModifierSelectionInput } from '@moonshot/types';
+import type { PickupDelayMinutes } from '../components/PickupTimeChip.js';
 import {
   createContext,
   useCallback,
@@ -32,6 +33,8 @@ export function cartLineKey(menuItemId: string, modifiers: OrderLineModifierSele
 
 type CartContextValue = {
   lines: CartLine[];
+  pickupDelayMinutes: PickupDelayMinutes;
+  setPickupDelayMinutes: (minutes: PickupDelayMinutes) => void;
   /** Menu grid: increments a line with no modifiers / allergens */
   bumpSimpleQuantity: (menuItemId: string, delta: number) => void;
   /** Item detail / checkout */
@@ -49,6 +52,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
+  const [pickupDelayMinutes, setPickupDelayMinutes] = useState<PickupDelayMinutes>(0);
 
   const bumpSimpleQuantity = useCallback((menuItemId: string, delta: number) => {
     const key = cartLineKey(menuItemId, []);
@@ -107,12 +111,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       lines,
+      pickupDelayMinutes,
+      setPickupDelayMinutes,
       bumpSimpleQuantity,
       upsertLine,
       removeLine,
       clear,
     }),
-    [lines, bumpSimpleQuantity, upsertLine, removeLine, clear],
+    [lines, pickupDelayMinutes, bumpSimpleQuantity, upsertLine, removeLine, clear],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

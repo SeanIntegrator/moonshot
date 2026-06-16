@@ -33,7 +33,16 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
       <Typography fontWeight={600} sx={{ minWidth: 20, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </Typography>
-      <IconButton size="small" onClick={() => onChange(value + 1)} aria-label="Increase quantity">
+      <IconButton
+        size="small"
+        onClick={() => onChange(value + 1)}
+        aria-label="Increase quantity"
+        sx={{
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
+          '&:hover': { bgcolor: 'secondary.main' },
+        }}
+      >
         <AddIcon fontSize="small" />
       </IconButton>
     </Box>

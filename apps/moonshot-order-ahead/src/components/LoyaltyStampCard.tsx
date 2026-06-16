@@ -1,26 +1,51 @@
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import CheckIcon from '@mui/icons-material/Check';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import { Box, Button, Typography } from '@mui/material';
 
 type Props = {
   filled: number;
   total: number;
+  rewardsAvailable?: number;
   onShowQr?: () => void;
   variant?: 'hero' | 'card';
 };
 
-export function LoyaltyStampCard({ filled, total, onShowQr, variant = 'card' }: Props) {
-  const remaining = Math.max(0, total - filled);
+function loyaltyFooterMessage(rewardsAvailable: number, filled: number, total: number): string {
+  if (rewardsAvailable > 0) {
+    return rewardsAvailable === 1 ? '1 reward available' : `${rewardsAvailable} rewards available`;
+  }
+  const drinksUntil = Math.max(0, total - filled);
+  return drinksUntil === 1 ? '1 drink until next reward' : `${drinksUntil} drinks until next reward`;
+}
+
+export function LoyaltyStampCard({
+  filled,
+  total,
+  rewardsAvailable = 0,
+  onShowQr,
+  variant = 'card',
+}: Props) {
+  const hero = variant === 'hero';
+  const footer = loyaltyFooterMessage(rewardsAvailable, filled, total);
+  const hasReward = rewardsAvailable > 0;
 
   return (
     <Box
       sx={{
-        ...(variant === 'hero'
-          ? { bgcolor: 'rgba(255,255,255,0.08)', borderRadius: 1.25, p: 1.5, mt: 2 }
+        ...(hero
+          ? {
+              bgcolor: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: 1.5,
+              p: 1.5,
+              mt: 2,
+            }
           : {
               border: 1,
               borderColor: 'divider',
-              borderRadius: 1.25,
+              borderRadius: 1.5,
               p: 2,
               bgcolor: 'background.paper',
             }),
@@ -28,21 +53,31 @@ export function LoyaltyStampCard({ filled, total, onShowQr, variant = 'card' }: 
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography
-          variant="body2"
+          variant="caption"
           fontWeight={600}
-          sx={{ color: variant === 'hero' ? 'inherit' : 'text.primary' }}
+          sx={{
+            color: hero ? 'inherit' : 'text.secondary',
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
+            opacity: hero ? 0.85 : 1,
+          }}
         >
-          {filled}/{total} stamps
+          Loyalty
         </Typography>
         {onShowQr && (
           <Button
             size="small"
-            variant={variant === 'hero' ? 'contained' : 'outlined'}
+            variant={hero ? 'contained' : 'outlined'}
             startIcon={<QrCode2Icon fontSize="small" />}
             onClick={onShowQr}
             sx={
-              variant === 'hero'
-                ? { bgcolor: 'background.paper', color: 'text.primary', '&:hover': { bgcolor: 'grey.100' } }
+              hero
+                ? {
+                    bgcolor: 'rgba(255,255,255,0.12)',
+                    color: 'common.white',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                  }
                 : undefined
             }
           >
@@ -66,23 +101,33 @@ export function LoyaltyStampCard({ filled, total, onShowQr, variant = 'card' }: 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              bgcolor: i < filled ? 'primary.main' : 'transparent',
+              bgcolor: i < filled ? (hero ? 'common.white' : 'primary.main') : 'transparent',
               border: i < filled ? 'none' : '1px dashed',
-              borderColor: variant === 'hero' ? 'rgba(255,255,255,0.35)' : 'divider',
+              borderColor: hero ? 'rgba(255,255,255,0.35)' : 'divider',
             }}
           >
-            {i < filled && <CheckIcon sx={{ fontSize: 14, color: 'primary.contrastText' }} />}
+            {i < filled && (
+              <CheckIcon sx={{ fontSize: 14, color: hero ? 'primary.main' : 'primary.contrastText' }} />
+            )}
           </Box>
         ))}
       </Box>
-      {remaining > 0 && (
-        <Typography
-          variant="caption"
-          sx={{ display: 'block', mt: 1, opacity: variant === 'hero' ? 0.85 : 1, color: 'text.secondary' }}
-        >
-          {remaining === 1 ? '1 reward available' : `${remaining} more for a free drink`}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          mt: 1,
+          opacity: hero ? 0.9 : 1,
+          color: hero ? 'inherit' : 'text.secondary',
+        }}
+      >
+        {hasReward && <CardGiftcardIcon sx={{ fontSize: 14 }} />}
+        <Typography variant="caption" sx={{ flex: 1, color: 'inherit' }}>
+          {footer}
         </Typography>
-      )}
+        {hasReward && <ChevronRightIcon sx={{ fontSize: 14 }} />}
+      </Box>
     </Box>
   );
 }

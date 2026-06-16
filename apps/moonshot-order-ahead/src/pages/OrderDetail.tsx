@@ -19,15 +19,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useOrderTracking } from '../hooks/useOrderTracking.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
 import { formatMoney, formatTime, modifierSummary } from '../lib/format.js';
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Confirmed',
-  confirmed: 'Confirmed',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  completed: 'Done',
-  cancelled: 'Cancelled',
-};
+import { getOrderStatusMeta } from '../lib/order-status.js';
 
 const ACTIVE_FLOW = ['pending', 'confirmed', 'preparing', 'ready'] as const;
 
@@ -78,6 +70,7 @@ export function OrderDetail() {
 
   const pickupTime = lastPickupTime ?? order?.pickup.pickupTime;
   const allDone = trackingStatus === 'completed' || order?.status === 'completed';
+  const statusMeta = order ? getOrderStatusMeta(order.status) : null;
 
   async function onCancel(): Promise<void> {
     if (!order || !isCancellable(order.status)) return;
@@ -129,9 +122,9 @@ export function OrderDetail() {
               </Typography>
             </Box>
             <Chip
-              label={STATUS_LABEL[order.status] ?? order.status}
+              label={statusMeta?.label ?? order.status}
               size="small"
-              color={order.status === 'ready' ? 'success' : 'primary'}
+              color={statusMeta?.chipColor ?? 'default'}
             />
           </Box>
 

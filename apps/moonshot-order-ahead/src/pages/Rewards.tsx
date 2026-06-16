@@ -44,6 +44,7 @@ export function Rewards() {
             <LoyaltyStampCard
               filled={summary.stamps}
               total={summary.stampsPerReward}
+              rewardsAvailable={summary.rewardsAvailable}
             />
           </Box>
 

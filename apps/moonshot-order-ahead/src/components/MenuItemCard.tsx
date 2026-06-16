@@ -1,4 +1,3 @@
-import AddIcon from '@mui/icons-material/Add';
 import type { NormalisedMenuItem } from '@moonshot/types';
 import { Box, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
@@ -8,36 +7,13 @@ import { useCafePath } from '../hooks/useCafePath.js';
 type Props = {
   item: NormalisedMenuItem;
   qty?: number;
-  onQuickAdd: () => void;
 };
 
-export function MenuItemCard({ item, qty = 0, onQuickAdd }: Props) {
+export function MenuItemCard({ item, qty = 0 }: Props) {
   const cafePath = useCafePath();
 
   return (
     <Box sx={{ position: 'relative' }}>
-      {qty > 0 && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            zIndex: 1,
-            minWidth: 22,
-            height: 22,
-            borderRadius: '50%',
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 12,
-            fontWeight: 700,
-          }}
-        >
-          {qty}
-        </Box>
-      )}
       <Box
         component={RouterLink}
         to={cafePath(`/order/item/${item.id}`)}
@@ -71,12 +47,7 @@ export function MenuItemCard({ item, qty = 0, onQuickAdd }: Props) {
         </Box>
       </Box>
       <Box
-        component="button"
-        onClick={(e) => {
-          e.preventDefault();
-          onQuickAdd();
-        }}
-        aria-label={`Add ${item.name}`}
+        aria-hidden={qty === 0}
         sx={{
           position: 'absolute',
           bottom: 52,
@@ -84,16 +55,18 @@ export function MenuItemCard({ item, qty = 0, onQuickAdd }: Props) {
           width: 32,
           height: 32,
           borderRadius: '50%',
-          border: 'none',
-          bgcolor: 'primary.main',
+          bgcolor: qty > 0 ? 'primary.main' : 'transparent',
           color: 'primary.contrastText',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: 'pointer',
+          fontSize: 13,
+          fontWeight: 700,
+          visibility: qty > 0 ? 'visible' : 'hidden',
+          pointerEvents: 'none',
         }}
       >
-        <AddIcon sx={{ fontSize: 18 }} />
+        {qty > 0 ? qty : null}
       </Box>
     </Box>
   );

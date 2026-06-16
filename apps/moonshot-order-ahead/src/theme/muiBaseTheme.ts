@@ -25,22 +25,22 @@ export const baseMuiThemeOptions: ThemeOptions = {
   },
   palette: {
     mode: 'light',
-    primary: { main: '#0a0a0b', contrastText: '#ffffff' },
-    secondary: { main: '#6b7280', contrastText: '#ffffff' },
-    background: { default: '#fafafa', paper: '#ffffff' },
-    text: { primary: '#111827', secondary: '#6b7280' },
-    divider: '#e5e7eb',
-    success: { main: '#059669' },
-    warning: { main: '#d97706' },
+    primary: { main: '#0d1b3d', contrastText: '#ffffff' },
+    secondary: { main: '#334e85', contrastText: '#ffffff' },
+    background: { default: '#f4f7fc', paper: '#ffffff' },
+    text: { primary: '#111a30', secondary: '#5d6780' },
+    divider: '#dbe3f1',
+    success: { main: '#0f8c62' },
+    warning: { main: '#b97816' },
     error: { main: '#dc2626' },
     cafe: {
       surface: '#ffffff',
-      surfaceElevated: '#ffffff',
-      textMuted: '#6b7280',
-      textOnDark: '#f9fafb',
-      border: '#e5e7eb',
-      heroBg: '#0a0a0b',
-      heroText: '#f9fafb',
+      surfaceElevated: '#f8fafe',
+      textMuted: '#5d6780',
+      textOnDark: '#f4f7ff',
+      border: '#dbe3f1',
+      heroBg: '#0d1b3d',
+      heroText: '#f4f7ff',
     },
   },
   components: {
@@ -51,10 +51,21 @@ export const baseMuiThemeOptions: ThemeOptions = {
     },
     MuiButton: {
       defaultProps: { variant: 'contained', disableElevation: true },
-      styleOverrides: { root: { borderRadius: 10 } },
+      styleOverrides: {
+        root: { borderRadius: 12, fontWeight: 700 },
+        containedPrimary: {
+          backgroundColor: '#0d1b3d',
+          '&:hover': { backgroundColor: '#16295a' },
+        },
+      },
     },
     MuiPaper: {
-      styleOverrides: { root: { backgroundImage: 'none' } },
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          border: '1px solid #dbe3f1',
+        },
+      },
     },
     MuiLink: {
       styleOverrides: { root: { fontWeight: 600 } },

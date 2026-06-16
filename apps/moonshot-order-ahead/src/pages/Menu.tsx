@@ -1,18 +1,14 @@
-import type { MenuCategory, NormalisedMenu, NormalisedMenuItem } from '@moonshot/types';
-import { Alert, Box, Container, Snackbar, Typography } from '@mui/material';
+import type { MenuCategory, NormalisedMenu, PickupEstimateResponse } from '@moonshot/types';
+import { Box, Container, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CategoryStrip } from '../components/CategoryStrip.js';
 import { FloatingCartBar } from '../components/FloatingCartBar.js';
 import { MenuItemCard } from '../components/MenuItemCard.js';
+import { PickupTimeChip } from '../components/PickupTimeChip.js';
 import { apiFetch } from '../lib/api.js';
 import { groupMenuByCategory } from '../lib/menu-utils.js';
 import { useCart } from '../providers/CartProvider.js';
 import { fetchPickupEstimate } from '../api/orders-api.js';
-import { formatTime } from '../lib/format.js';
-
-function lineTotal(item: NormalisedMenuItem, qty: number): number {
-  return item.priceMinor * qty;
-}
 
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
   const hit = lines.find((l) => l.menuItemId === menuItemId && l.modifiers.length === 0);
@@ -27,9 +23,8 @@ export function Menu() {
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<MenuCategory>('hot_drinks');
-  const [snack, setSnack] = useState<string | null>(null);
-  const [pickupLabel, setPickupLabel] = useState<string | null>(null);
-  const { lines, bumpSimpleQuantity } = useCart();
+  const [estimate, setEstimate] = useState<PickupEstimateResponse | null>(null);
+  const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
 
   useEffect(() => {
@@ -49,9 +44,9 @@ export function Menu() {
     void (async () => {
       try {
         const est = await fetchPickupEstimate();
-        setPickupLabel(formatTime(est.pickupTime));
+        setEstimate(est);
       } catch {
-        setPickupLabel(null);
+        setEstimate(null);
       }
     })();
   }, []);
@@ -78,22 +73,17 @@ export function Menu() {
     sectionRefs.current[cat]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function quickAdd(item: NormalisedMenuItem) {
-    bumpSimpleQuantity(item.id, 1);
-    setSnack(`${item.name} added to basket`);
-  }
-
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-        <Typography variant="h4" component="h1" sx={{ mt: 0 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, gap: 1 }}>
+        <Typography variant="h5" component="h1" fontWeight={700} sx={{ mt: 0 }}>
           Order
         </Typography>
-        {pickupLabel && (
-          <Typography variant="body2" color="text.secondary" sx={{ pt: 0.5 }}>
-            Pickup at {pickupLabel}
-          </Typography>
-        )}
+        <PickupTimeChip
+          estimate={estimate}
+          value={pickupDelayMinutes}
+          onChange={setPickupDelayMinutes}
+        />
       </Box>
 
       {sections.length > 0 && (
@@ -131,12 +121,7 @@ export function Menu() {
             }}
           >
             {section.items.map((item) => (
-              <MenuItemCard
-                key={item.id}
-                item={item}
-                qty={simpleLineQty(lines, item.id)}
-                onQuickAdd={() => quickAdd(item)}
-              />
+              <MenuItemCard key={item.id} item={item} qty={simpleLineQty(lines, item.id)} />
             ))}
           </Box>
         </Box>
@@ -148,17 +133,6 @@ export function Menu() {
         currency={menu?.items[0]?.currency}
       />
 
-      <Snackbar
-        open={snack != null}
-        autoHideDuration={2500}
-        onClose={() => setSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{ bottom: 120 }}
-      >
-        <Alert severity="success" variant="filled" onClose={() => setSnack(null)} sx={{ width: '100%' }}>
-          {snack}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 }

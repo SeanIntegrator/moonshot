@@ -72,6 +72,7 @@ export function Home() {
   const activeOrder = active[0] ?? null;
   const greeting = timeGreeting();
   const name = isSignedIn ? firstName(user?.displayName, user?.email) : 'there';
+  const canShowLiveLoyalty = isSignedIn && summary?.loyaltyEnabled && membership;
 
   if (loading) {
     return (
@@ -121,13 +122,16 @@ export function Home() {
           )}
         </Box>
 
-        {isSignedIn && summary?.loyaltyEnabled && membership && (
+        {canShowLiveLoyalty ? (
           <LoyaltyStampCard
             variant="hero"
             filled={summary.stamps}
             total={summary.stampsPerReward}
+            rewardsAvailable={summary.rewardsAvailable}
             onShowQr={() => setQrOpen(true)}
           />
+        ) : (
+          <LoyaltyStampCard variant="hero" filled={0} total={10} />
         )}
 
         {activeOrder ? (
@@ -228,11 +232,11 @@ export function Home() {
           </Box>
         )}
 
-        {!ordersLoading && !activeOrder && !usualOrder && (
+        {/* {!ordersLoading && !activeOrder && !usualOrder && (
           <Link component={RouterLink} to={cafePath('/order')} underline="hover" fontWeight={600}>
             Browse menu
           </Link>
-        )}
+        )} */}
       </Box>
 
       {isSignedIn && membership && (

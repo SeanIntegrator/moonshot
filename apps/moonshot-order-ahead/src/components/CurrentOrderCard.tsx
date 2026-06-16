@@ -3,25 +3,17 @@ import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import type { NormalisedOrder } from '@moonshot/types';
 import { Box, Chip, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { formatMoney, formatTime, modifierSummary } from '../lib/format.js';
+import { formatTime, modifierSummary } from '../lib/format.js';
+import { getOrderStatusMeta } from '../lib/order-status.js';
 import { useCafePath } from '../hooks/useCafePath.js';
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Confirmed',
-  confirmed: 'Confirmed',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  completed: 'Done',
-};
 
 type Props = {
   order: NormalisedOrder;
-  compact?: boolean;
 };
 
-export function CurrentOrderCard({ order, compact = false }: Props) {
+export function CurrentOrderCard({ order }: Props) {
   const cafePath = useCafePath();
-  const statusLabel = STATUS_LABEL[order.status] ?? order.status;
+  const statusMeta = getOrderStatusMeta(order.status);
 
   return (
     <Box
@@ -33,7 +25,7 @@ export function CurrentOrderCard({ order, compact = false }: Props) {
         color: 'inherit',
         border: 1,
         borderColor: 'divider',
-        borderRadius: 1.5,
+        borderRadius: (theme) => `${theme.shape.borderRadius}px`,
         overflow: 'hidden',
         bgcolor: 'background.paper',
         mt: 2,
@@ -53,52 +45,51 @@ export function CurrentOrderCard({ order, compact = false }: Props) {
         <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
           Your order
         </Typography>
-        <Chip label={statusLabel} size="small" color="primary" />
+        <Chip label={statusMeta.label} size="small" color={statusMeta.chipColor} />
       </Box>
-      <Box sx={{ p: 1.5 }}>
-        {!compact &&
-          order.items.slice(0, 3).map((li) => (
-            <Box key={li.id} sx={{ display: 'flex', gap: 1.25, alignItems: 'center', mb: 1 }}>
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1,
-                  bgcolor: 'action.hover',
-                  flexShrink: 0,
-                }}
-              />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600}>
-                  {li.itemName}
-                </Typography>
-                {li.modifiers.length > 0 && (
-                  <Typography variant="caption" color="text.secondary">
-                    {modifierSummary(li.modifiers)}
+      <Box sx={{ p: 2 }}>
+        {order.items.slice(0, 3).map((li) => (
+          <Box key={li.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: 1,
+                bgcolor: 'action.hover',
+                flexShrink: 0,
+              }}
+            />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {li.itemName}
+                {li.quantity > 1 && (
+                  <Typography component="span" variant="caption" color="text.secondary">
+                    x{li.quantity}
                   </Typography>
                 )}
-              </Box>
+              </Typography>
+              {li.modifiers.length > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  {modifierSummary(li.modifiers)}
+                </Typography>
+              )}
             </Box>
-          ))}
+          </Box>
+        ))}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
           <Typography variant="body2" color="text.secondary">
             Pickup
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography variant="body2" fontWeight={600}>
+            <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatTime(order.pickup.pickupTime)}
             </Typography>
-            <Typography variant="body2" color="primary" fontWeight={600}>
-              View details <ChevronRightIcon sx={{ fontSize: 16, verticalAlign: 'middle' }} />
+            <Typography variant="body2" color="text.primary" fontWeight={600}>
+              View details
             </Typography>
+            <ChevronRightIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
           </Box>
         </Box>
-        {compact && (
-          <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
-            {formatMoney(order.totalMinor, order.currency)} · {order.items.length} item
-            {order.items.length !== 1 ? 's' : ''}
-          </Typography>
-        )}
       </Box>
     </Box>
   );
@@ -106,15 +97,16 @@ export function CurrentOrderCard({ order, compact = false }: Props) {
 
 type OrderNowProps = {
   onClick: () => void;
+  flush?: boolean;
 };
 
-export function OrderNowButton({ onClick }: OrderNowProps) {
+export function OrderNowButton({ onClick, flush = false }: OrderNowProps) {
   return (
     <Box
       component="button"
       onClick={onClick}
       sx={{
-        mt: 2,
+        mt: flush ? 0 : 2,
         width: '100%',
         display: 'flex',
         alignItems: 'center',
@@ -122,8 +114,9 @@ export function OrderNowButton({ onClick }: OrderNowProps) {
         gap: 1,
         py: 1.75,
         px: 2,
-        border: 'none',
-        borderRadius: 1.5,
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: (theme) => `${theme.shape.borderRadius}px`,
         bgcolor: 'background.paper',
         color: 'text.primary',
         fontWeight: 600,

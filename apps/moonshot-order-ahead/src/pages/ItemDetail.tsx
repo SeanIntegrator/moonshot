@@ -120,7 +120,7 @@ export function ItemDetail() {
       <Box sx={{ position: 'relative' }}>
         <Box
           sx={{
-            height: 160,
+            height: 190,
             bgcolor: 'action.hover',
             backgroundImage: item.imageUrl ? `url(${item.imageUrl})` : undefined,
             backgroundSize: 'cover',
