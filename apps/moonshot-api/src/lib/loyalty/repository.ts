@@ -57,14 +57,15 @@ export async function insertRewardRedeemed(params: {
   cafeId: string;
   userId: string;
   rewardId: string;
+  orderId?: string | null;
 }): Promise<{ id: string; createdAt: string }> {
-  const { client, cafeId, userId, rewardId } = params;
+  const { client, cafeId, userId, rewardId, orderId = null } = params;
   const ins = await client.query<{ id: string; created_at: Date }>(
     `INSERT INTO loyalty_transactions (
        cafe_id, user_id, order_id, transaction_type, stamps_delta, metadata
-     ) VALUES ($1, $2, NULL, 'reward_redeemed', 0, $3::jsonb)
+     ) VALUES ($1, $2, $3, 'reward_redeemed', 0, $4::jsonb)
      RETURNING id, created_at`,
-    [cafeId, userId, JSON.stringify({ rewardId })],
+    [cafeId, userId, orderId, JSON.stringify({ rewardId })],
   );
   const row = ins.rows[0]!;
   return { id: row.id, createdAt: row.created_at.toISOString() };

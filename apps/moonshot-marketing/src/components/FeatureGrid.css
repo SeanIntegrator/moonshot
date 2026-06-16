@@ -1,0 +1,23 @@
+.feature-grid__items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.feature-card {
+  border-left: 3px solid var(--accent);
+  padding: 0 0 0 1.25rem;
+}
+
+.feature-card h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.feature-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}

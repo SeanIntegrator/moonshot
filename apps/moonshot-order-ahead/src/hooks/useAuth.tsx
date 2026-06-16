@@ -27,6 +27,7 @@ type MeResponse = {
     onTimeCompletedOrders: number;
     reviewPromptState: string;
     firstVisit: string;
+    freeDrinksRedeemed: number;
   } | null;
 };
 

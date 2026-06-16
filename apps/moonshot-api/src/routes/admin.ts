@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import jwt from 'jsonwebtoken';
 import {
   ApiErrorCode,
   type AdminLoginResponse,
@@ -11,6 +10,7 @@ import {
   getAdminUserWithCafeById,
   touchAdminUserLogin,
 } from '../lib/admin-users-repository.js';
+import { buildAdminLoginResponse } from '../lib/admin-auth-tokens.js';
 import { findCafeById } from '../lib/cafes-repository.js';
 import { patchAdminCafeSettings } from '../lib/admin-settings-service.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
@@ -19,9 +19,12 @@ import {
   createAdminStripeOnboardingLink,
   syncAdminStripeAccountStatus,
 } from '../lib/admin-stripe-service.js';
+import { adminOnboardingRouter } from './admin-onboarding.js';
 import { stripeConnectCallbacksRouter } from './stripe-connect-callbacks.js';
 
 export const adminRouter: Router = Router();
+
+adminRouter.use('/onboarding', adminOnboardingRouter);
 
 adminRouter.post('/auth/login', async (req, res) => {
   const body = req.body as Record<string, unknown>;
@@ -33,15 +36,6 @@ adminRouter.post('/auth/login', async (req, res) => {
       ok: false,
       error: 'email and password are required',
       code: ApiErrorCode.VALIDATION,
-    });
-  }
-
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Server JWT configuration missing',
-      code: ApiErrorCode.CONFIG,
     });
   }
 
@@ -73,28 +67,14 @@ adminRouter.post('/auth/login', async (req, res) => {
 
   await touchAdminUserLogin(admin.id);
 
-  const token = jwt.sign(
-    {
-      sub: admin.id,
-      adminUserId: admin.id,
-      cafeId: cafe.cafeId,
-      cafeSlug: cafe.slug,
-      email: admin.email,
-      purpose: 'admin',
-    },
-    jwtSecret,
-    { expiresIn: '30d' },
-  );
-
-  const data: AdminLoginResponse = {
-    token,
-    cafe: { id: cafe.cafeId, slug: cafe.slug, name: cafe.name },
-    adminUser: {
-      id: admin.id,
-      email: admin.email,
-      displayName: admin.display_name,
-    },
-  };
+  const data: AdminLoginResponse = buildAdminLoginResponse({
+    adminUserId: admin.id,
+    cafeId: cafe.cafeId,
+    cafeSlug: cafe.slug,
+    cafeName: cafe.name,
+    email: admin.email,
+    displayName: admin.display_name,
+  });
   return res.json({ ok: true, data });
 });
 

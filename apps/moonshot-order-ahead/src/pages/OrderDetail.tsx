@@ -1,19 +1,33 @@
 import type { NormalisedOrder } from '@moonshot/types';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Box,
   Button,
   Chip,
   Container,
+  Divider,
   Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { OrderStatusStepper } from '../components/OrderStatusStepper.js';
+import { PageHeader } from '../components/PageHeader.js';
+import { useCafePath } from '../hooks/useCafePath.js';
 import { cancelCustomerOrder, fetchCustomerOrder } from '../api/orders-api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useOrderTracking } from '../hooks/useOrderTracking.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
+import { formatMoney, formatTime, modifierSummary } from '../lib/format.js';
 
-const PROGRESS_STEPS = ['Confirmed', 'Preparing', 'Ready', 'Done'] as const;
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Confirmed',
+  confirmed: 'Confirmed',
+  preparing: 'Preparing',
+  ready: 'Ready',
+  completed: 'Done',
+  cancelled: 'Cancelled',
+};
 
 const ACTIVE_FLOW = ['pending', 'confirmed', 'preparing', 'ready'] as const;
 
@@ -24,12 +38,12 @@ function isCancellable(status: string): boolean {
 export function OrderDetail() {
   const { orderId = '' } = useParams();
   const navigate = useNavigate();
+  const cafePath = useCafePath();
   const { isSignedIn } = useAuth();
   const [order, setOrder] = useState<NormalisedOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  /** Guest HTTP + socket: JWT lives in sessionStorage; do not wait for `GET /orders/:id` to read it. */
   const guestTracking = useMemo(() => {
     if (!orderId.trim() || isSignedIn) return undefined;
     return readOrderTracking(orderId.trim());
@@ -62,22 +76,8 @@ export function OrderDetail() {
     guestTracking ?? null,
   );
 
-  const chips = useMemo(() => {
-    return PROGRESS_STEPS.map((label, i) => {
-      const allDone = trackingStatus === 'completed';
-      const stepComplete = allDone || i < stepIndex;
-      const stepActive = !allDone && i === stepIndex;
-      return (
-        <Chip
-          key={label}
-          label={label}
-          size="small"
-          color={stepComplete || stepActive ? 'primary' : 'default'}
-          variant={stepActive ? 'filled' : stepComplete ? 'filled' : 'outlined'}
-        />
-      );
-    });
-  }, [stepIndex, trackingStatus]);
+  const pickupTime = lastPickupTime ?? order?.pickup.pickupTime;
+  const allDone = trackingStatus === 'completed' || order?.status === 'completed';
 
   async function onCancel(): Promise<void> {
     if (!order || !isCancellable(order.status)) return;
@@ -99,13 +99,13 @@ export function OrderDetail() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 12 }}>
-      <Button size="small" onClick={() => navigate('/')} sx={{ mb: 1 }}>
-        ← Home
-      </Button>
-      <Typography variant="h5" component="h1" fontWeight={700}>
-        Order
-      </Typography>
+    <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
+      <PageHeader
+        title="Your order"
+        onBack={() => navigate(cafePath('/'))}
+        right={<InfoOutlinedIcon fontSize="small" color="action" />}
+      />
+
       {error && (
         <Typography color="error" sx={{ mt: 1 }}>
           {error}
@@ -116,25 +116,86 @@ export function OrderDetail() {
           Loading…
         </Typography>
       )}
+
       {order && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1" fontWeight={600}>
-            {order.customerName} — {order.status}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Payment: {order.paymentStatus}
-          </Typography>
-          {lastPickupTime && (
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Pickup ETA: {new Date(lastPickupTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Typography>
-          )}
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-            Order id: {order.id}
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
+                Order #{order.id.slice(0, 8)}
+              </Typography>
+              <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+                {allDone ? 'Done' : 'In progress'}
+              </Typography>
+            </Box>
+            <Chip
+              label={STATUS_LABEL[order.status] ?? order.status}
+              size="small"
+              color={order.status === 'ready' ? 'success' : 'primary'}
+            />
+          </Box>
+
+          <OrderStatusStepper stepIndex={stepIndex} completed={allDone} />
+
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+            We&apos;ll update this when the kitchen marks your order ready.
           </Typography>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5, alignItems: 'center' }}>
-            {chips}
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.5,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1.25,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
+            <AccessTimeIcon color="action" />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Pickup time
+              </Typography>
+              <Typography variant="body1" fontWeight={700}>
+                {formatTime(pickupTime)}
+              </Typography>
+            </Box>
+            {/* Wireframe: reschedule not implemented */}
+            <Typography variant="body2" color="text.disabled">
+              Change ›
+            </Typography>
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 3, letterSpacing: 0.5, display: 'block' }}>
+            Items · {order.items.length}
+          </Typography>
+          {order.items.map((li) => (
+            <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>
+              <Box sx={{ width: 56, height: 56, borderRadius: 1, bgcolor: 'action.hover', flexShrink: 0 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={600}>
+                  {li.itemName}
+                </Typography>
+                {li.modifiers.length > 0 && (
+                  <Typography variant="caption" color="text.secondary">
+                    {modifierSummary(li.modifiers)}
+                  </Typography>
+                )}
+              </Box>
+              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                {formatMoney(li.unitPriceMinor * li.quantity, order.currency)}
+              </Typography>
+            </Box>
+          ))}
+
+          <Divider sx={{ my: 1 }} />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography fontWeight={700}>Total paid</Typography>
+            <Typography fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+              {formatMoney(order.totalMinor, order.currency)}
+            </Typography>
           </Box>
 
           {trackingStatus === 'connecting' && (
@@ -142,36 +203,34 @@ export function OrderDetail() {
               Connecting for live updates…
             </Typography>
           )}
-          {trackingStatus === 'tracking' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Poll this screen or stay online — we push ETAs when the queue changes.
-            </Typography>
-          )}
           {trackingStatus === 'error' && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Live tracking unavailable — status still refreshes every {15}s while the order is open.
+              Tracking unavailable — we&apos;ll call your name when it&apos;s ready.
             </Typography>
           )}
-          {trackingStatus === 'completed' && (
+          {allDone && (
             <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-              Done
-              {completedAt ? ` (${new Date(completedAt).toLocaleTimeString()})` : ''}
+              Your order is ready!
+              {completedAt ? ` (${formatTime(completedAt)})` : ''}
             </Typography>
           )}
-
-          <Typography variant="subtitle2" sx={{ mt: 2 }}>
-            Items
-          </Typography>
-          {order.items.map((li) => (
-            <Typography key={li.id} variant="body2" sx={{ mt: 0.5 }}>
-              {li.itemName} × {li.quantity} — £{((li.unitPriceMinor * li.quantity) / 100).toFixed(2)}
-            </Typography>
-          ))}
 
           {isCancellable(order.status) && (
-            <Button variant="outlined" color="warning" sx={{ mt: 2 }} disabled={busy} onClick={() => void onCancel()}>
-              Cancel order
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                color="error"
+                fullWidth
+                sx={{ mt: 3 }}
+                disabled={busy}
+                onClick={() => void onCancel()}
+              >
+                Cancel order
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+                You can cancel free of charge before the kitchen starts your order.
+              </Typography>
+            </>
           )}
         </Box>
       )}

@@ -31,24 +31,50 @@ export async function createStripeCheckoutSessionDirectCharge(params: {
   cafeId: string;
   successUrl: string;
   cancelUrl: string;
+  discountMinor?: number;
+  redeemRewardId?: string | null;
 }): Promise<{ sessionId: string; url: string | null; paymentIntentId: string | null }> {
   const stripe = requireStripe();
-  const { connectedAccountId, resolvedLines, currency, orderId, cafeId, successUrl, cancelUrl } =
-    params;
+  const {
+    connectedAccountId,
+    resolvedLines,
+    currency,
+    orderId,
+    cafeId,
+    successUrl,
+    cancelUrl,
+    discountMinor = 0,
+    redeemRewardId,
+  } = params;
 
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: 'payment',
-      line_items: buildLineItems(resolvedLines, currency),
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: {
-        moonshot_order_id: orderId,
-        moonshot_cafe_id: cafeId,
-      },
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'payment',
+    line_items: buildLineItems(resolvedLines, currency),
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: {
+      moonshot_order_id: orderId,
+      moonshot_cafe_id: cafeId,
+      ...(redeemRewardId ? { moonshot_redeem_reward_id: redeemRewardId } : {}),
     },
-    { stripeAccount: connectedAccountId },
-  );
+  };
+
+  if (discountMinor > 0) {
+    const coupon = await stripe.coupons.create(
+      {
+        amount_off: discountMinor,
+        currency: currency.toLowerCase(),
+        duration: 'once',
+        name: 'Loyalty reward',
+      },
+      { stripeAccount: connectedAccountId },
+    );
+    sessionParams.discounts = [{ coupon: coupon.id }];
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams, {
+    stripeAccount: connectedAccountId,
+  });
 
   const pi =
     typeof session.payment_intent === 'string'

@@ -1,5 +1,6 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import { pool } from '../../db.js';
+import { consumeRewardForOrder } from '../loyalty/consume-reward-for-order.js';
 import { ORDER_SELECT_COLUMNS } from './order-constants.js';
 import { fetchOrderWithItems } from './order-read.js';
 import type { OrderRowDb } from '../order-map.js';
@@ -78,8 +79,11 @@ export async function confirmOrderPaidFromStripeCheckout(params: {
   paymentIntentId: string | null;
   amountMinor: number;
   currency: string;
+  redeemRewardId?: string | null;
+  userId?: string | null;
 }): Promise<NormalisedOrder | null> {
-  const { orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency } = params;
+  const { orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency, redeemRewardId, userId } =
+    params;
 
   const client = await pool.connect();
   try {
@@ -129,6 +133,16 @@ export async function confirmOrderPaidFromStripeCheckout(params: {
       ON CONFLICT (session_id) DO NOTHING`,
       [orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency],
     );
+
+    if (redeemRewardId && userId) {
+      await consumeRewardForOrder({
+        client,
+        cafeId,
+        userId,
+        rewardId: redeemRewardId,
+        orderId,
+      });
+    }
 
     await client.query('COMMIT');
     return fetchOrderWithItems(pool, orderId, cafeId);

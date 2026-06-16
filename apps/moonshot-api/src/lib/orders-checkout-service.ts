@@ -10,6 +10,7 @@ import {
   recordStripeCheckoutSessionForOrder,
 } from './orders-repository.js';
 import { resolveOrderLinesWithModifiers } from './order-modifiers.js';
+import { applyRewardDiscountToTotal } from './loyalty/apply-checkout-reward-pricing.js';
 import { getStripeConnectAccountId, isStripeConnectReady } from './payments/cafe-payment-config.js';
 import { getStripeOrNull } from './payments/stripe-client.js';
 import { createStripeCheckoutSessionDirectCharge } from './payments/stripe-checkout.js';
@@ -18,6 +19,7 @@ import { checkoutUrlsFromEnv } from './order-checkout-env.js';
 /**
  * Single menu resolution snapshot → pending order → Stripe Checkout session → persist `payment_sessions`.
  * Rolls back the pending order if Stripe or DB recording fails.
+ * Loyalty rewards are consumed on webhook after payment (not at pending insert).
  */
 export async function createStripeCheckoutOrderResponse(params: {
   cafeId: string;
@@ -27,8 +29,18 @@ export async function createStripeCheckoutOrderResponse(params: {
   orderType: OrderType;
   lines: CreateOrderLineInput[];
   paymentConfig: Record<string, unknown>;
+  redeemRewardId?: string | null;
 }): Promise<CreateOrderResponse> {
-  const { cafeId, userId, customerName, notes, orderType, lines, paymentConfig } = params;
+  const { cafeId, userId, customerName, notes, orderType, lines, paymentConfig, redeemRewardId } =
+    params;
+
+  if (redeemRewardId && !userId) {
+    throw new ApiHttpError(
+      401,
+      ApiErrorCode.UNAUTHORIZED,
+      'Sign in to redeem a loyalty reward on this order',
+    );
+  }
 
   if (!getStripeOrNull()) {
     throw new ApiHttpError(
@@ -55,10 +67,16 @@ export async function createStripeCheckoutOrderResponse(params: {
     );
   }
 
-  const { lines: resolvedLines, currency, totalMinor } = await resolveOrderLinesWithModifiers({
+  const { lines: resolvedLines, currency, totalMinor: subtotalMinor } = await resolveOrderLinesWithModifiers({
     db: pool,
     cafeId,
     lines,
+  });
+
+  const { totalMinor, discountMinor } = applyRewardDiscountToTotal({
+    subtotalMinor,
+    lines: resolvedLines,
+    redeemRewardId,
   });
 
   const order = await insertPendingOrderWithResolvedLines({
@@ -70,6 +88,8 @@ export async function createStripeCheckoutOrderResponse(params: {
     resolvedLines,
     currency,
     totalMinor,
+    redeemRewardId: redeemRewardId ?? null,
+    consumeReward: false,
   });
 
   const { successUrl, cancelUrl } = checkoutUrlsFromEnv();
@@ -83,6 +103,8 @@ export async function createStripeCheckoutOrderResponse(params: {
       cafeId,
       successUrl,
       cancelUrl,
+      discountMinor,
+      redeemRewardId: redeemRewardId ?? null,
     });
 
     if (!session.url) {
@@ -103,20 +125,25 @@ export async function createStripeCheckoutOrderResponse(params: {
 
     const jwtSecret = process.env.JWT_SECRET;
 
-    const data: CreateOrderResponse =
-      userId != null || !jwtSecret
-        ? { order: orderOut, checkoutUrl: session.url }
-        : {
-            order: orderOut,
-            checkoutUrl: session.url,
-            trackingToken: signTrackOrderJwt({
-              orderId: orderOut.id,
-              cafeId,
-              secret: jwtSecret,
-            }),
-          };
+    const base: CreateOrderResponse = {
+      order: orderOut,
+      checkoutUrl: session.url,
+      discountMinor: discountMinor > 0 ? discountMinor : undefined,
+      redeemedRewardId: undefined,
+    };
 
-    return data;
+    if (userId != null || !jwtSecret) {
+      return base;
+    }
+
+    return {
+      ...base,
+      trackingToken: signTrackOrderJwt({
+        orderId: orderOut.id,
+        cafeId,
+        secret: jwtSecret,
+      }),
+    };
   } catch (e) {
     await deleteAbandonedPendingOrder(order.id, cafeId);
     throw e;

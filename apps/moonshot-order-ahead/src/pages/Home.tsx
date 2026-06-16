@@ -1,23 +1,77 @@
-import { API_VERSION_PREFIX } from '@moonshot/types';
-import { Box, Container, Link, List, ListItem, ListItemButton, ListItemText, Typography } from '@mui/material';
-import { useEffect } from 'react';
+import type { NormalisedMenu, NormalisedOrder } from '@moonshot/types';
+import {
+  Avatar,
+  Box,
+  Button,
+  Container,
+  Link,
+  Typography,
+} from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard.js';
+import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
+import { QrModal } from '../components/QrModal.js';
+import { SectionHead } from '../components/SectionHead.js';
+import { useCafePath } from '../hooks/useCafePath.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafe } from '../hooks/useCafe.js';
+import { apiFetch } from '../lib/api.js';
+import { firstName, formatMoney, formatTime, timeGreeting } from '../lib/format.js';
+import { featuredItems } from '../lib/menu-utils.js';
+import { useCart } from '../providers/CartProvider.js';
+
+function reorderFromOrder(order: NormalisedOrder, upsertLine: ReturnType<typeof useCart>['upsertLine']) {
+  for (const li of order.items) {
+    if (!li.menuItemId) continue;
+    upsertLine({
+      menuItemId: li.menuItemId,
+      quantity: li.quantity,
+      modifiers: li.modifiers.map((m) => ({ groupId: m.groupId, optionId: m.optionId })),
+      allergens: li.allergens,
+    });
+  }
+}
 
 export function Home() {
   const { loading, error, cafe } = useCafe();
-  const { active, loading: ordersLoading } = useActiveOrders();
+  const { user, membership, isSignedIn } = useAuth();
+  const { summary } = useLoyalty();
+  const { active, recent, loading: ordersLoading } = useActiveOrders();
   const navigate = useNavigate();
+  const cafePath = useCafePath();
+  const { upsertLine } = useCart();
+  const [qrOpen, setQrOpen] = useState(false);
+  const [menu, setMenu] = useState<NormalisedMenu | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('checkout_session_id')?.trim();
     if (!sessionId) return;
-    navigate(`/checkout/restore?checkout_session_id=${encodeURIComponent(sessionId)}`, {
-      replace: true,
-    });
-  }, [navigate]);
+    navigate(
+      `${cafePath('/checkout/restore')}?checkout_session_id=${encodeURIComponent(sessionId)}`,
+      { replace: true },
+    );
+  }, [navigate, cafePath]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const data = await apiFetch<NormalisedMenu>('/menu');
+        setMenu(data);
+      } catch {
+        setMenu(null);
+      }
+    })();
+  }, []);
+
+  const usualOrder = recent[0] ?? null;
+  const featured = useMemo(() => (menu ? featuredItems(menu) : []), [menu]);
+  const activeOrder = active[0] ?? null;
+  const greeting = timeGreeting();
+  const name = isSignedIn ? firstName(user?.displayName, user?.email) : 'there';
 
   if (loading) {
     return (
@@ -31,65 +85,166 @@ export function Home() {
     return (
       <Container maxWidth="sm" sx={{ py: 2, pb: 8 }}>
         <Typography color="error">{error ?? 'Café unavailable'}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Check VITE_API_URL and VITE_CAFE_SLUG. API: <code>{API_VERSION_PREFIX}</code>
-        </Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 8 }}>
+    <Container maxWidth="sm" sx={{ py: 0, pb: 10, px: 0 }}>
       <Box
         component="header"
         sx={(theme) => ({
           bgcolor: theme.palette.cafe.heroBg,
           color: theme.palette.cafe.heroText,
-          mx: -2,
           px: 2,
-          py: 3,
-          mb: 2,
+          pt: 2,
+          pb: 3,
         })}
       >
-        <Typography variant="h4" component="h1" sx={{ color: 'inherit', m: 0 }}>
-          {cafe.name}
-        </Typography>
-        <Typography sx={{ mt: 1, opacity: 0.9, color: 'inherit' }}>
-          Order ahead · {cafe.slug}
-        </Typography>
-      </Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Theme: <code>{cafe.themeId}</code> · POS: <code>{cafe.posProvider}</code>
-      </Typography>
-
-      {ordersLoading && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Loading your orders…
-        </Typography>
-      )}
-      {!ordersLoading && active.length > 0 && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-            In progress
-          </Typography>
-          <List dense disablePadding>
-            {active.map((o) => (
-              <ListItem key={o.id} disablePadding>
-                <ListItemButton component={RouterLink} to={`/orders/${o.id}`}>
-                  <ListItemText
-                    primary={`${o.customerName} · ${o.status}`}
-                    secondary={`£${(o.totalMinor / 100).toFixed(2)}`}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="caption" sx={{ opacity: 0.75, color: 'inherit' }}>
+              {cafe.name} · open
+            </Typography>
+            <Typography variant="h4" component="h1" sx={{ color: 'inherit', mt: 0.5, fontWeight: 700 }}>
+              {greeting}, {name}.
+            </Typography>
+          </Box>
+          {isSignedIn && user && (
+            <Avatar
+              src={user.avatarUrl ?? undefined}
+              alt=""
+              sx={{ width: 36, height: 36, border: '1.5px solid', borderColor: 'rgba(255,255,255,0.3)' }}
+            >
+              {name.charAt(0).toUpperCase()}
+            </Avatar>
+          )}
         </Box>
-      )}
 
-      <Link component={RouterLink} to="/order" underline="hover" fontWeight={600}>
-        Browse menu
-      </Link>
+        {isSignedIn && summary?.loyaltyEnabled && membership && (
+          <LoyaltyStampCard
+            variant="hero"
+            filled={summary.stamps}
+            total={summary.stampsPerReward}
+            onShowQr={() => setQrOpen(true)}
+          />
+        )}
+
+        {activeOrder ? (
+          <CurrentOrderCard order={activeOrder} />
+        ) : (
+          <OrderNowButton onClick={() => navigate(cafePath('/order'))} />
+        )}
+      </Box>
+
+      <Box sx={{ px: 2, pt: 2 }}>
+        {usualOrder && (
+          <Box sx={{ mb: 3 }}>
+            <SectionHead eyebrow="Reorder" title="Your usual" />
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
+              {usualOrder.items.map((li) => (
+                <Box key={li.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>
+                  <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: 'action.hover', flexShrink: 0 }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600}>
+                      {li.itemName}
+                    </Typography>
+                    {li.modifiers.length > 0 && (
+                      <Typography variant="caption" color="text.secondary">
+                        {li.modifiers.map((m) => m.optionName).join(' · ')}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Total
+                  </Typography>
+                  <Typography variant="body1" fontWeight={700}>
+                    {formatMoney(usualOrder.totalMinor, usualOrder.currency)}
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    reorderFromOrder(usualOrder, upsertLine);
+                    navigate(cafePath('/checkout'));
+                  }}
+                  sx={{ minWidth: 140 }}
+                >
+                  Order →
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        )}
+
+        {featured.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <SectionHead
+              eyebrow="Featured"
+              title="On the menu"
+              action={
+                <Link component={RouterLink} to={cafePath('/order')} underline="hover" variant="body2">
+                  See all →
+                </Link>
+              }
+            />
+            <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1, scrollbarWidth: 'none' }}>
+              {featured.map((item) => (
+                <Box
+                  key={item.id}
+                  component={RouterLink}
+                  to={cafePath(`/order/item/${item.id}`)}
+                  sx={{
+                    flexShrink: 0,
+                    width: 180,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 1.25,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box sx={{ height: 100, bgcolor: 'action.hover' }} />
+                  <Box sx={{ p: 1.25 }}>
+                    <Typography variant="body2" fontWeight={600}>
+                      {item.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatMoney(item.priceMinor, item.currency)}
+                    </Typography>
+                    {/* Wireframe: promo end-dates not in schema */}
+                    <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.25 }}>
+                      Limited time
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+
+        {!ordersLoading && !activeOrder && !usualOrder && (
+          <Link component={RouterLink} to={cafePath('/order')} underline="hover" fontWeight={600}>
+            Browse menu
+          </Link>
+        )}
+      </Box>
+
+      {isSignedIn && membership && (
+        <QrModal
+          open={qrOpen}
+          onClose={() => setQrOpen(false)}
+          displayId={membership.loyaltyDisplayId}
+          name={user?.displayName ?? undefined}
+          stamps={summary?.stamps}
+          stampsPerReward={summary?.stampsPerReward}
+        />
+      )}
     </Container>
   );
 }

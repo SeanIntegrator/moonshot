@@ -10,6 +10,7 @@ export type ParsedCreateOrderBody = {
   notes: string | null | undefined;
   orderType: OrderType;
   items: CreateOrderLineInput[];
+  redeemRewardId: string | null;
 };
 
 export function parseOrderAheadPaymentMode(
@@ -58,6 +59,10 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
   const notes =
     typeof body.notes === 'string' ? body.notes : body.notes === null ? null : undefined;
   const orderType = body.orderType as OrderType;
+  const redeemRewardId =
+    typeof body.redeemRewardId === 'string' && body.redeemRewardId.trim()
+      ? body.redeemRewardId.trim()
+      : null;
 
   if (!ORDER_TYPES.includes(orderType)) {
     return { ok: false, error: 'orderType must be takeaway or eat_in' };
@@ -108,6 +113,6 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
 
   return {
     ok: true,
-    value: { customerName, notes, orderType, items },
+    value: { customerName, notes, orderType, items, redeemRewardId },
   };
 }

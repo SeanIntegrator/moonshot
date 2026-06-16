@@ -1,5 +1,6 @@
 import type {
   CreateOrderLineInput,
+  MenuCategory,
   NormalisedMenuItem,
   NormalisedModifierGroup,
   NormalisedModifierOption,
@@ -14,6 +15,7 @@ import type { Pool } from 'pg';
 export type ResolvedOrderLine = {
   menuItemId: string;
   itemName: string;
+  category: MenuCategory;
   unitPriceMinor: number;
   quantity: number;
   notes: string | null;
@@ -79,6 +81,7 @@ export async function resolveOrderLinesWithModifiers(params: {
     resolved.push({
       menuItemId: line.menuItemId,
       itemName: row.name,
+      category: menuItem.category,
       unitPriceMinor,
       quantity: line.quantity,
       notes: line.notes ?? null,

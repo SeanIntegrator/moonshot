@@ -104,6 +104,8 @@ export interface CafeFeatures {
   review_nudge: ReviewNudgeFeatureConfig | null;
   saved_orders: SavedOrdersFeatureConfig | null;
   whatsapp_ordering: WhatsappOrderingFeatureConfig | null;
+  /** ISO timestamp set when owner completes post-signup wizard */
+  onboarding_completed_at?: string | null;
 }
 
 export interface MilkColorConfig {

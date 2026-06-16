@@ -1,0 +1,29 @@
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.site-footer__tag {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.5rem;
+}
+
+.site-footer__links {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+.site-footer__links a {
+  color: var(--accent);
+}
+
+.site-footer__copy {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}

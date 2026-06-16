@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from 'react';
 import type { CafeTheme } from '@moonshot/types';
-import { apiFetch, getCafeSlug } from '../lib/api.js';
+import { useCafeSlugFromRoute } from '../hooks/useCafePath.js';
+import { apiFetch, setRuntimeCafeSlug } from '../lib/api.js';
 import { createCafeMuiTheme } from '../theme/createCafeMuiTheme.js';
 import { getTheme } from '../themes/index.js';
 
@@ -24,6 +25,7 @@ export type CafeContextValue = {
 const CafeContext = createContext<CafeContextValue | null>(null);
 
 export function CafeProvider({ children }: { children: ReactNode }) {
+  const slug = useCafeSlugFromRoute();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cafe, setCafe] = useState<Cafe | null>(null);
@@ -31,7 +33,8 @@ export function CafeProvider({ children }: { children: ReactNode }) {
   const [activeFeatures, setActiveFeatures] = useState<FeatureFlagKey[]>([]);
 
   useEffect(() => {
-    const slug = getCafeSlug();
+    setRuntimeCafeSlug(slug);
+    setLoading(true);
 
     void (async () => {
       try {
@@ -45,11 +48,16 @@ export function CafeProvider({ children }: { children: ReactNode }) {
         setError(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Network error');
+        setCafe(null);
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+
+    return () => {
+      setRuntimeCafeSlug(null);
+    };
+  }, [slug]);
 
   const muiTheme = useMemo(() => createCafeMuiTheme(theme), [theme]);
 

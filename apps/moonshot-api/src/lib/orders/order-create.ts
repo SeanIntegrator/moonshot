@@ -3,6 +3,8 @@ import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../../db.js';
 import { ApiHttpError } from '../http-errors.js';
 import type { OrderRowDb } from '../order-map.js';
+import { consumeRewardForOrder } from '../loyalty/consume-reward-for-order.js';
+import { applyRewardDiscountToTotal } from '../loyalty/apply-checkout-reward-pricing.js';
 import { resolveOrderLinesWithModifiers, type ResolvedOrderLine } from '../order-modifiers.js';
 import {
   assertCustomerName,
@@ -23,20 +25,35 @@ export async function createGuestPayInStoreOrder(params: {
   notes: string | null;
   orderType: OrderType;
   lines: CreateOrderLineInput[];
-}): Promise<NormalisedOrder> {
-  const { cafeId, userId, customerName, notes, orderType, lines } = params;
+  redeemRewardId?: string | null;
+}): Promise<{ order: NormalisedOrder; discountMinor: number; redeemedRewardId?: string }> {
+  const { cafeId, userId, customerName, notes, orderType, lines, redeemRewardId } = params;
 
   assertValidOrderType(orderType);
   const trimmedName = assertCustomerName(customerName);
   validateOrderLines(lines);
 
-  const { lines: resolvedLines, currency, totalMinor } = await resolveOrderLinesWithModifiers({
+  if (redeemRewardId && !userId) {
+    throw new ApiHttpError(
+      401,
+      ApiErrorCode.UNAUTHORIZED,
+      'Sign in to redeem a loyalty reward on this order',
+    );
+  }
+
+  const { lines: resolvedLines, currency, totalMinor: subtotalMinor } = await resolveOrderLinesWithModifiers({
     db: pool,
     cafeId,
     lines,
   });
 
-  return insertOrderWithResolvedLines({
+  const { totalMinor, discountMinor } = applyRewardDiscountToTotal({
+    subtotalMinor,
+    lines: resolvedLines,
+    redeemRewardId,
+  });
+
+  const order = await insertOrderWithResolvedLines({
     cafeId,
     userId,
     customerName: trimmedName,
@@ -47,7 +64,15 @@ export async function createGuestPayInStoreOrder(params: {
     totalMinor,
     status: 'confirmed',
     paymentStatus: 'unpaid',
+    redeemRewardId: redeemRewardId ?? null,
+    consumeReward: true,
   });
+
+  return {
+    order,
+    discountMinor,
+    redeemedRewardId: redeemRewardId && discountMinor > 0 ? redeemRewardId : undefined,
+  };
 }
 
 /**
@@ -62,9 +87,21 @@ export async function insertPendingOrderWithResolvedLines(params: {
   resolvedLines: ResolvedOrderLine[];
   currency: string;
   totalMinor: number;
+  redeemRewardId?: string | null;
+  consumeReward?: boolean;
 }): Promise<NormalisedOrder> {
-  const { cafeId, userId, customerName, notes, orderType, resolvedLines, currency, totalMinor } =
-    params;
+  const {
+    cafeId,
+    userId,
+    customerName,
+    notes,
+    orderType,
+    resolvedLines,
+    currency,
+    totalMinor,
+    redeemRewardId = null,
+    consumeReward = true,
+  } = params;
 
   assertValidOrderType(orderType);
   const trimmedName = assertCustomerName(customerName);
@@ -80,6 +117,8 @@ export async function insertPendingOrderWithResolvedLines(params: {
     totalMinor,
     status: 'pending',
     paymentStatus: 'unpaid',
+    redeemRewardId,
+    consumeReward,
   });
 }
 
@@ -129,6 +168,9 @@ async function insertOrderWithResolvedLines(params: {
   totalMinor: number;
   status: 'pending' | 'confirmed';
   paymentStatus: 'unpaid';
+  redeemRewardId: string | null;
+  /** When false, reward is validated at checkout but consumed later (Stripe webhook). */
+  consumeReward?: boolean;
 }): Promise<NormalisedOrder> {
   const {
     cafeId,
@@ -141,6 +183,8 @@ async function insertOrderWithResolvedLines(params: {
     totalMinor,
     status,
     paymentStatus,
+    redeemRewardId,
+    consumeReward = true,
   } = params;
 
   const client = await pool.connect();
@@ -158,6 +202,16 @@ async function insertOrderWithResolvedLines(params: {
 
     const orderRow = requireInsertedOrderRow(insertOrder.rows[0]);
     await insertOrderItems(client, orderRow.id, resolvedLines);
+
+    if (redeemRewardId && userId && consumeReward) {
+      await consumeRewardForOrder({
+        client,
+        cafeId,
+        userId,
+        rewardId: redeemRewardId,
+        orderId: orderRow.id,
+      });
+    }
 
     await client.query('COMMIT');
 

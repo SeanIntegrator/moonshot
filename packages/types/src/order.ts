@@ -120,6 +120,8 @@ export interface CreateOrderRequest {
   notes?: string | null;
   orderType: OrderType;
   items: CreateOrderLineInput[];
+  /** Signed-in only: unredeemed loyalty reward to apply as a free-drink discount */
+  redeemRewardId?: string | null;
 }
 
 export interface CreateOrderResponse {
@@ -131,4 +133,8 @@ export interface CreateOrderResponse {
   trackingToken?: string;
   /** Stripe Checkout URL when order is `pending` awaiting payment */
   checkoutUrl?: string;
+  /** Minor units discounted when a loyalty reward was applied */
+  discountMinor?: number;
+  /** Reward row consumed for this order */
+  redeemedRewardId?: string;
 }

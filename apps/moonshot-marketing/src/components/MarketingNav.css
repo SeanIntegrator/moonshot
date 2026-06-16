@@ -1,0 +1,47 @@
+.marketing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  background: rgba(10, 10, 11, 0.8);
+  border-bottom: 1px solid var(--border);
+}
+
+.marketing-nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0;
+}
+
+.marketing-nav__logo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+
+.marketing-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.marketing-nav__links a:not(.btn) {
+  color: var(--muted);
+}
+
+.marketing-nav__links a:not(.btn):hover {
+  color: var(--text);
+}
+
+.marketing-nav__cta {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .marketing-nav__links a:not(.marketing-nav__cta):not(.btn) {
+    display: none;
+  }
+}

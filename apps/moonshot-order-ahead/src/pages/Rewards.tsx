@@ -1,22 +1,20 @@
-import {
-  Box,
-  Button,
-  Container,
-  LinearProgress,
-  List,
-  ListItem,
-  ListItemText,
-  Typography,
-} from '@mui/material';
-import { redeemLoyaltyReward } from '../api/loyalty-api.js';
-import { SignInButton } from '../components/auth/SignInButton.js';
+import { Box, Button, Container, LinearProgress, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
+import { QrCard } from '../components/QrCard.js';
+import { SectionHead } from '../components/SectionHead.js';
+import { SignedOutPanel } from '../components/SignedOutPanel.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
+import { useCafePath } from '../hooks/useCafePath.js';
+import { formatShortDate } from '../lib/format.js';
 
 export function Rewards() {
-  const { isSignedIn, loading: authLoading } = useAuth();
-  const { summary, transactions, rewards, loading, loadingMore, refresh, loadMore, nextCursor } =
-    useLoyalty();
+  const { isSignedIn, loading: authLoading, user } = useAuth();
+  const { summary, transactions, loading, loadMore, nextCursor, loadingMore } = useLoyalty();
+  const cafePath = useCafePath();
+
+  const redeemed = transactions.filter((t) => t.transactionType === 'reward_redeemed');
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
@@ -27,87 +25,94 @@ export function Rewards() {
       {authLoading && <Typography color="text.secondary">Checking session…</Typography>}
 
       {!authLoading && !isSignedIn && (
-        <Box sx={{ mt: 2 }}>
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            Sign in to see stamps and redeem free drinks.
-          </Typography>
-          <SignInButton />
-        </Box>
+        <SignedOutPanel onContinueGuest={() => {}} />
       )}
 
       {isSignedIn && loading && <LinearProgress sx={{ mt: 2 }} />}
 
-      {isSignedIn && !loading && summary && (
-        <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: 'action.hover' }}>
-          <Typography variant="h6">
-            {summary.loyaltyEnabled ? `${summary.stamps} / ${summary.stampsPerReward} stamps` : 'Loyalty off'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {summary.rewardDescription} · {summary.rewardsAvailable} reward(s) ready
-          </Typography>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-            Till code: <strong>{summary.displayId}</strong>
-          </Typography>
+      {isSignedIn && !loading && summary && summary.loyaltyEnabled && (
+        <Box sx={{ mt: 2 }}>
+          <QrCard
+            displayId={summary.displayId}
+            name={user?.displayName ?? undefined}
+            stamps={summary.stamps}
+            stampsPerReward={summary.stampsPerReward}
+            size={220}
+          />
+
+          <Box sx={{ mt: 2 }}>
+            <LoyaltyStampCard
+              filled={summary.stamps}
+              total={summary.stampsPerReward}
+            />
+          </Box>
+
+          {summary.rewardsAvailable > 0 && (
+            <Typography variant="body2" color="success.main" sx={{ mt: 1.5, textAlign: 'center' }}>
+              {summary.rewardsAvailable} reward{summary.rewardsAvailable !== 1 ? 's' : ''} ready to redeem at checkout
+            </Typography>
+          )}
         </Box>
       )}
 
-      {isSignedIn && !loading && rewards.length > 0 && (
-        <>
-          <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} fontWeight={700}>
-            Ready to redeem
+      {isSignedIn && !loading && summary && !summary.loyaltyEnabled && (
+        <Box sx={{ textAlign: 'center', py: 6 }}>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Loyalty off
           </Typography>
-          <List dense disablePadding>
-            {rewards.map((r) => (
-              <ListItem
-                key={r.id}
-                disableGutters
-                secondaryAction={
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={async () => {
-                      await redeemLoyaltyReward(r.id);
-                      await refresh();
-                    }}
-                  >
-                    Redeem
-                  </Button>
-                }
-              >
-                <ListItemText primary={r.rewardType.replace(/_/g, ' ')} secondary={`Issued ${new Date(r.createdAt).toLocaleString()}`} />
-              </ListItem>
-            ))}
-          </List>
-        </>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            This café hasn&apos;t enabled stamps yet.
+          </Typography>
+          <Button component={RouterLink} to={cafePath('/order')} variant="contained">
+            Browse menu →
+          </Button>
+        </Box>
       )}
 
-      {isSignedIn && !loading && (
-        <>
-          <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} fontWeight={700}>
-            History
+      {isSignedIn && !loading && summary?.loyaltyEnabled && summary.stamps === 0 && redeemed.length === 0 && (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            No stamps yet
           </Typography>
-          {transactions.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No ledger entries yet.
-            </Typography>
-          ) : (
-            <List dense disablePadding>
-              {transactions.map((t) => (
-                <ListItem key={t.id} disableGutters>
-                  <ListItemText
-                    primary={t.transactionType.replace(/_/g, ' ')}
-                    secondary={`${t.stampsDelta >= 0 ? '+' : ''}${t.stampsDelta} stamps · ${new Date(t.createdAt).toLocaleString()}`}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Order to start your loyalty card. Buy 9, get the 10th free.
+          </Typography>
+          <Button component={RouterLink} to={cafePath('/order')} variant="contained">
+            Browse menu →
+          </Button>
+        </Box>
+      )}
+
+      {isSignedIn && !loading && redeemed.length > 0 && (
+        <Box sx={{ mt: 3 }}>
+          <SectionHead eyebrow="History" title="Redeemed" />
+          {redeemed.map((t) => (
+            <Box
+              key={t.id}
+              sx={{
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1.25,
+                p: 1.5,
+                mb: 1,
+                display: 'flex',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Typography variant="body2" fontWeight={600}>
+                Free drink
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {formatShortDate(t.createdAt)}
+              </Typography>
+            </Box>
+          ))}
           {nextCursor && (
-            <Button size="small" sx={{ mt: 1 }} disabled={loadingMore} onClick={() => void loadMore()}>
+            <Button size="small" disabled={loadingMore} onClick={() => void loadMore()}>
               {loadingMore ? 'Loading…' : 'Load more'}
             </Button>
           )}
-        </>
+        </Box>
       )}
     </Container>
   );

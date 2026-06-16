@@ -1,6 +1,11 @@
 import {
   API_VERSION_PREFIX,
+  type AdminCreateKdsUserRequest,
+  type AdminCreateKdsUserResponse,
   type AdminLoginResponse,
+  type AdminOnboardingStatusResponse,
+  type AdminRegisterRequest,
+  type AdminRegisterResponse,
   type AdminSettingsPatchBody,
   type AdminSettingsResponse,
   type AdminStripeAccountLinkResponse,
@@ -10,6 +15,7 @@ import {
   type FeatureFlagKey,
   type NormalisedMenu,
   type NormalisedMenuItem,
+  type SlugAvailableResponse,
 } from '@moonshot/types';
 
 function normalizeApiBaseUrl(raw: string | undefined): string {
@@ -182,6 +188,106 @@ export async function adminStripeStatus(token: string): Promise<AdminStripeAccou
   const envelope = await parseEnvelope<AdminStripeAccountStatusResponse>(res);
   if (!envelope.ok) {
     throw new Error(envelope.error || `Stripe status failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function checkSlugAvailable(slug: string): Promise<SlugAvailableResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/onboarding/slug-available?slug=${encodeURIComponent(slug)}`;
+  const res = await fetch(url);
+  const envelope = await parseEnvelope<SlugAvailableResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Slug check failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function adminRegister(body: AdminRegisterRequest): Promise<AdminRegisterResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/onboarding/register`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<AdminRegisterResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Registration failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function adminOnboardingStatus(token: string): Promise<AdminOnboardingStatusResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/onboarding/status`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const envelope = await parseEnvelope<AdminOnboardingStatusResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Status failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function adminCompleteOnboarding(token: string): Promise<void> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/onboarding/complete`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const envelope = await parseEnvelope<{ completed: boolean }>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Complete failed (${res.status})`);
+  }
+}
+
+export async function adminCreateKdsUser(
+  token: string,
+  body: AdminCreateKdsUserRequest,
+): Promise<AdminCreateKdsUserResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/onboarding/kds-users`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<AdminCreateKdsUserResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `KDS user failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function createMenuItem(
+  token: string,
+  cafeSlug: string,
+  body: { name: string; category: string; priceMinor: number; description?: string },
+): Promise<NormalisedMenuItem> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/menu`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<NormalisedMenuItem>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Create menu item failed (${res.status})`);
   }
   return envelope.data;
 }

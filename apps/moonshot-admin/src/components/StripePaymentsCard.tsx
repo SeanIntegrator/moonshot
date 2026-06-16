@@ -4,9 +4,15 @@ import { adminStripeOnboardingLink, adminStripeStatus } from '../lib/admin-api.j
 
 type Props = {
   token: string;
+  /** Set by onboarding wizard after Stripe Connect return redirect */
+  stripeReturnNotice?: boolean;
 };
 
-export function StripePaymentsCard({ token }: Props) {
+function isStripeServerUnavailable(message: string): boolean {
+  return /not configured|STRIPE_/i.test(message);
+}
+
+export function StripePaymentsCard({ token, stripeReturnNotice = false }: Props) {
   const [status, setStatus] = useState<{
     accountId: string | null;
     chargesEnabled: boolean;
@@ -25,7 +31,10 @@ export function StripePaymentsCard({ token }: Props) {
     setError(null);
     adminStripeStatus(token)
       .then((s) => setStatus(s))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load Stripe status'))
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : 'Failed to load Stripe status';
+        setError(isStripeServerUnavailable(msg) ? 'unavailable' : msg);
+      })
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -34,6 +43,10 @@ export function StripePaymentsCard({ token }: Props) {
   }, [load]);
 
   useEffect(() => {
+    if (stripeReturnNotice) {
+      setNotice({ severity: 'success', text: 'Stripe setup updated. Status refreshed below.' });
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     const outcome = params.get('stripeConnect');
     if (!outcome) return;
@@ -50,7 +63,7 @@ export function StripePaymentsCard({ token }: Props) {
     const qs = params.toString();
     const next = `${window.location.pathname}${qs ? `?${qs}` : ''}`;
     window.history.replaceState(null, '', next);
-  }, [load]);
+  }, [load, stripeReturnNotice]);
 
   async function openOnboarding(): Promise<void> {
     setBusy(true);
@@ -59,11 +72,14 @@ export function StripePaymentsCard({ token }: Props) {
       const { url } = await adminStripeOnboardingLink(token);
       window.location.href = url;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not start onboarding');
+      const msg = e instanceof Error ? e.message : 'Could not start onboarding';
+      setError(isStripeServerUnavailable(msg) ? 'unavailable' : msg);
     } finally {
       setBusy(false);
     }
   }
+
+  const stripeUnavailable = error === 'unavailable' || (error !== null && isStripeServerUnavailable(error));
 
   return (
     <Paper sx={{ p: 2 }}>
@@ -79,12 +95,20 @@ export function StripePaymentsCard({ token }: Props) {
           {notice.text}
         </Alert>
       )}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
+      {stripeUnavailable ? (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Online card payments aren&apos;t available in this environment yet. Your café accepts{' '}
+          <strong>pay-in-store</strong> orders — skip this step to finish setup, or connect Stripe later
+          from the dashboard.
         </Alert>
+      ) : (
+        error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )
       )}
-      {loading || !status ? (
+      {stripeUnavailable ? null : loading || !status ? (
         <Typography color="text.secondary">Loading Stripe status…</Typography>
       ) : (
         <Stack spacing={1}>

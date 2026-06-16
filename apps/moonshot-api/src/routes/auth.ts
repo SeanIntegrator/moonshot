@@ -156,9 +156,12 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
   };
 
   const membership = await pool.query(
-    `SELECT loyalty_card_progress, loyalty_display_id, total_orders, on_time_completed_orders, review_prompt_state, first_visit
-     FROM cafe_users
-     WHERE cafe_id = $1 AND user_id = $2`,
+    `SELECT cu.loyalty_card_progress, cu.loyalty_display_id, cu.total_orders,
+            cu.on_time_completed_orders, cu.review_prompt_state, cu.first_visit,
+            (SELECT COUNT(*)::int FROM loyalty_rewards lr
+             WHERE lr.cafe_id = cu.cafe_id AND lr.user_id = cu.user_id AND lr.redeemed_at IS NOT NULL) AS free_drinks_redeemed
+     FROM cafe_users cu
+     WHERE cu.cafe_id = $1 AND cu.user_id = $2`,
     [cafeId, userId],
   );
 
@@ -194,6 +197,7 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
               onTimeCompletedOrders: membership.rows[0].on_time_completed_orders as number,
               reviewPromptState: membership.rows[0].review_prompt_state as string,
               firstVisit: membership.rows[0].first_visit as string,
+              freeDrinksRedeemed: membership.rows[0].free_drinks_redeemed as number,
             }
           : null,
     },

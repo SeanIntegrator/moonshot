@@ -1,6 +1,7 @@
 import { Box, Button, Container, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCafePath } from '../hooks/useCafePath.js';
 import { restoreOrderFromCheckoutSession } from '../api/orders-api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 
@@ -11,6 +12,7 @@ import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 export function CheckoutRestore() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const cafePath = useCafePath();
   const [error, setError] = useState<string | null>(null);
   const sessionId = params.get('checkout_session_id')?.trim();
   const ran = useRef(false);
@@ -27,12 +29,12 @@ export function CheckoutRestore() {
       try {
         const data = await restoreOrderFromCheckoutSession(sessionId);
         rememberOrderTracking(data.order.id, data.trackingToken);
-        navigate(`/orders/${data.order.id}`, { replace: true });
+        navigate(cafePath(`/orders/${data.order.id}/confirmed`), { replace: true });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Could not restore order');
       }
     })();
-  }, [navigate, sessionId]);
+  }, [navigate, sessionId, cafePath]);
 
   return (
     <Container maxWidth="sm" sx={{ py: 4, pb: 10 }}>
@@ -42,7 +44,7 @@ export function CheckoutRestore() {
       {error ? (
         <Box sx={{ mt: 2 }}>
           <Typography color="error">{error}</Typography>
-          <Button sx={{ mt: 2 }} onClick={() => navigate('/', { replace: true })}>
+          <Button sx={{ mt: 2 }} onClick={() => navigate(cafePath('/'), { replace: true })}>
             Home
           </Button>
         </Box>

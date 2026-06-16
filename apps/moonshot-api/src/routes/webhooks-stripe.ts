@@ -60,6 +60,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
         if (session.payment_status !== 'paid') break;
         const orderId = session.metadata?.moonshot_order_id;
         const cafeId = session.metadata?.moonshot_cafe_id;
+        const redeemRewardId = session.metadata?.moonshot_redeem_reward_id ?? null;
         if (!orderId || !cafeId || session.amount_total == null) break;
 
         const currency = (session.currency ?? 'gbp').toUpperCase();
@@ -70,6 +71,12 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
               ? (session.payment_intent as Stripe.PaymentIntent).id
               : null;
 
+        const orderBefore = await pool.query<{ user_id: string | null }>(
+          `SELECT user_id FROM orders WHERE id = $1 AND cafe_id = $2`,
+          [orderId, cafeId],
+        );
+        const userId = orderBefore.rows[0]?.user_id ?? null;
+
         const order = await confirmOrderPaidFromStripeCheckout({
           orderId,
           cafeId,
@@ -77,6 +84,8 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
           paymentIntentId: pi,
           amountMinor: session.amount_total,
           currency,
+          redeemRewardId,
+          userId,
         });
         if (!order) {
           throw new Error('confirmOrderPaidFromStripeCheckout returned null (order mismatch or not pending)');

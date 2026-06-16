@@ -3,25 +3,15 @@ import type {
   NormalisedMenuItem,
   OrderLineModifierSelectionInput,
 } from '@moonshot/types';
-import { UK_FSA_ALLERGENS } from '@moonshot/types';
-import {
-  Box,
-  Button,
-  Checkbox,
-  Container,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  FormGroup,
-  FormLabel,
-  Radio,
-  RadioGroup,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { ArrowBack } from '@mui/icons-material';
+import { Box, Button, Container, IconButton, Typography } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ModifierOptionGrid } from '../components/ModifierOptionGrid.js';
+import { QuantityStepper } from '../components/QuantityStepper.js';
+import { useCafePath } from '../hooks/useCafePath.js';
 import { apiFetch } from '../lib/api.js';
+import { formatMoney } from '../lib/format.js';
 import { useCart } from '../providers/CartProvider.js';
 
 function defaultModifiers(item: NormalisedMenuItem): OrderLineModifierSelectionInput[] {
@@ -49,34 +39,25 @@ function modifiersAreComplete(item: NormalisedMenuItem, mods: OrderLineModifierS
   return true;
 }
 
-function replaceSingleGroup(
-  mods: OrderLineModifierSelectionInput[],
-  groupId: string,
-  optionId: string,
-): OrderLineModifierSelectionInput[] {
-  return [...mods.filter((m) => m.groupId !== groupId), { groupId, optionId }];
-}
-
-function toggleMultiOption(
-  mods: OrderLineModifierSelectionInput[],
-  groupId: string,
-  optionId: string,
-  checked: boolean,
-): OrderLineModifierSelectionInput[] {
-  const rest = mods.filter((m) => !(m.groupId === groupId && m.optionId === optionId));
-  if (!checked) return rest;
-  return [...rest, { groupId, optionId }];
+function unitPriceMinor(item: NormalisedMenuItem, mods: OrderLineModifierSelectionInput[]): number {
+  let total = item.priceMinor;
+  for (const sel of mods) {
+    const g = item.modifierGroups.find((x) => x.id === sel.groupId);
+    const opt = g?.options.find((o) => o.id === sel.optionId);
+    if (opt) total += opt.priceMinor;
+  }
+  return total;
 }
 
 export function ItemDetail() {
   const { menuItemId = '' } = useParams();
   const navigate = useNavigate();
+  const cafePath = useCafePath();
   const { upsertLine } = useCart();
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [modifiers, setModifiers] = useState<OrderLineModifierSelectionInput[]>([]);
-  const [allergens, setAllergens] = useState<string[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -97,17 +78,31 @@ export function ItemDetail() {
   useEffect(() => {
     if (!item) return;
     setModifiers(defaultModifiers(item));
-    setAllergens([]);
     setQuantity(1);
   }, [item]);
+
+  const lineUnit = item ? unitPriceMinor(item, modifiers) : 0;
+  const ready = item ? modifiersAreComplete(item, modifiers) : false;
+
+  function handleSelect(
+    groupId: string,
+    optionId: string,
+    selectionType: 'single' | 'multi',
+    checked: boolean,
+  ) {
+    setModifiers((prev) => {
+      if (selectionType === 'single') {
+        return [...prev.filter((m) => m.groupId !== groupId), { groupId, optionId }];
+      }
+      const rest = prev.filter((m) => !(m.groupId === groupId && m.optionId === optionId));
+      return checked ? [...rest, { groupId, optionId }] : rest;
+    });
+  }
 
   if (error) {
     return (
       <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
         <Typography color="error">{error}</Typography>
-        <Button sx={{ mt: 2 }} onClick={() => navigate(-1)}>
-          Back
-        </Button>
       </Container>
     );
   }
@@ -120,126 +115,93 @@ export function ItemDetail() {
     );
   }
 
-  const ready = modifiersAreComplete(item, modifiers);
-
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
-      <Button size="small" onClick={() => navigate('/order')} sx={{ mb: 1 }}>
-        ← Menu
-      </Button>
-      <Typography variant="h5" component="h1" fontWeight={700}>
-        {item.name}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-        £{(item.priceMinor / 100).toFixed(2)} · {item.category.replace(/_/g, ' ')}
-      </Typography>
-      {item.description && (
-        <Typography variant="body2" sx={{ mt: 1 }}>
-          {item.description}
-        </Typography>
-      )}
+    <Box sx={{ pb: 14 }}>
+      <Box sx={{ position: 'relative' }}>
+        <Box
+          sx={{
+            height: 160,
+            bgcolor: 'action.hover',
+            backgroundImage: item.imageUrl ? `url(${item.imageUrl})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        <IconButton
+          onClick={() => navigate(cafePath('/order'))}
+          aria-label="Back to menu"
+          sx={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            bgcolor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
+          }}
+          size="small"
+        >
+          <ArrowBack fontSize="small" />
+        </IconButton>
+      </Box>
 
-      <TextField
-        label="Quantity"
-        type="number"
-        size="small"
-        sx={{ mt: 2, width: 120 }}
-        inputProps={{ min: 1, step: 1 }}
-        value={quantity}
-        onChange={(e) => setQuantity(Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
-      />
-
-      {item.modifierGroups.map((g) => (
-        <Box key={g.id} sx={{ mt: 3 }}>
-          <FormControl component="fieldset" variant="standard" fullWidth>
-            <FormLabel component="legend">
-              {g.name}
-              {g.required ? ' *' : ''}
-            </FormLabel>
-            {g.selectionType === 'single' ? (
-              <RadioGroup
-                value={modifiers.find((m) => m.groupId === g.id)?.optionId ?? ''}
-                onChange={(_, v) => setModifiers((prev) => replaceSingleGroup(prev, g.id, v))}
-              >
-                {g.options.map((o) => (
-                  <FormControlLabel
-                    key={o.id}
-                    value={o.id}
-                    control={<Radio size="small" />}
-                    label={`${o.name}${o.priceMinor ? ` (+£${(o.priceMinor / 100).toFixed(2)})` : ''}`}
-                  />
-                ))}
-              </RadioGroup>
-            ) : (
-              <FormGroup>
-                {g.options.map((o) => {
-                  const checked = modifiers.some((m) => m.groupId === g.id && m.optionId === o.id);
-                  return (
-                    <FormControlLabel
-                      key={o.id}
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={checked}
-                          onChange={(e) =>
-                            setModifiers((prev) =>
-                              toggleMultiOption(prev, g.id, o.id, e.target.checked),
-                            )
-                          }
-                        />
-                      }
-                      label={`${o.name}${o.priceMinor ? ` (+£${(o.priceMinor / 100).toFixed(2)})` : ''}`}
-                    />
-                  );
-                })}
-              </FormGroup>
-            )}
-          </FormControl>
-          <Divider sx={{ mt: 2 }} />
+      <Container maxWidth="sm" sx={{ py: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 2 }}>
+          <Typography variant="h5" component="h1" fontWeight={700}>
+            {item.name}
+          </Typography>
+          <Typography variant="body1" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+            {formatMoney(item.priceMinor, item.currency)}
+          </Typography>
         </Box>
-      ))}
+        {item.description && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {item.description}
+          </Typography>
+        )}
 
-      <Typography variant="subtitle2" sx={{ mt: 3, mb: 1 }}>
-        Allergens you want flagged on this drink (UK FSA codes)
-      </Typography>
-      <FormGroup>
-        {UK_FSA_ALLERGENS.map((code) => (
-          <Fragment key={code}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={allergens.includes(code)}
-                  onChange={(e) =>
-                    setAllergens((prev) =>
-                      e.target.checked ? [...prev, code] : prev.filter((x) => x !== code),
-                    )
-                  }
-                />
-              }
-              label={code.replace(/_/g, ' ')}
-            />
-          </Fragment>
+        {item.modifierGroups.map((g) => (
+          <ModifierOptionGrid
+            key={g.id}
+            group={g}
+            selections={modifiers}
+            onSelect={handleSelect}
+          />
         ))}
-      </FormGroup>
+      </Container>
 
-      <Button
-        variant="contained"
-        fullWidth
-        sx={{ mt: 3 }}
-        disabled={!ready}
-        onClick={() => {
-          upsertLine({
-            menuItemId: item.id,
-            quantity,
-            modifiers,
-            allergens,
-          });
-          navigate('/order');
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          maxWidth: 600,
+          mx: 'auto',
+          px: 2,
+          py: 1.5,
+          bgcolor: 'background.paper',
+          borderTop: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          gap: 1.5,
+          alignItems: 'center',
+          zIndex: (t) => t.zIndex.appBar,
         }}
       >
-        Add to basket
-      </Button>
-    </Container>
+        <QuantityStepper value={quantity} onChange={setQuantity} />
+        <Button
+          variant="contained"
+          fullWidth
+          disabled={!ready}
+          onClick={() => {
+            upsertLine({ menuItemId: item.id, quantity, modifiers, allergens: [] });
+            navigate(cafePath('/order'));
+          }}
+          sx={{ py: 1.25 }}
+        >
+          Add · {formatMoney(lineUnit * quantity, item.currency)}
+        </Button>
+      </Box>
+    </Box>
   );
 }

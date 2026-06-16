@@ -1,0 +1,21 @@
+.social-proof {
+  padding: 2rem 0;
+  border-block: 1px solid var(--border);
+  text-align: center;
+}
+
+.social-proof p {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.social-proof__logos {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  color: var(--border);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}

@@ -5,20 +5,29 @@ import type {
   OrderType,
   PickupEstimateResponse,
 } from '@moonshot/types';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   Box,
   Button,
   Container,
-  MenuItem,
-  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { AllergyChecklist } from '../components/AllergyChecklist.js';
+import { CheckoutLineRow } from '../components/CheckoutLineRow.js';
+import { PageHeader } from '../components/PageHeader.js';
+import { RewardRow } from '../components/RewardRow.js';
+import { useCafePath } from '../hooks/useCafePath.js';
 import { createCustomerOrder, fetchPickupEstimate } from '../api/orders-api.js';
 import { apiFetch } from '../lib/api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { useLoyalty } from '../hooks/useLoyalty.js';
+import { formatMoney, formatTime } from '../lib/format.js';
 
 function estimateLineMinor(
   item: NormalisedMenuItem,
@@ -33,20 +42,44 @@ function estimateLineMinor(
   return total;
 }
 
+function drinkDiscountMinor(
+  pricedLines: { item: NormalisedMenuItem | undefined; unit: number | null }[],
+): number {
+  let max = 0;
+  for (const row of pricedLines) {
+    if (!row.item || row.unit == null) continue;
+    if (row.item.category === 'hot_drinks' || row.item.category === 'cold_drinks') {
+      max = Math.max(max, row.unit);
+    }
+  }
+  return max;
+}
+
 export function Checkout() {
   const navigate = useNavigate();
-  const { lines, clear } = useCart();
+  const cafePath = useCafePath();
+  const { lines, clear, upsertLine, removeLine } = useCart();
+  const { isSignedIn, user } = useAuth();
+  const { summary, rewards } = useLoyalty();
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [customerName, setCustomerName] = useState('');
-  const [orderType, setOrderType] = useState<OrderType>('takeaway');
-  const [notes, setNotes] = useState('');
+  const [orderType] = useState<OrderType>('takeaway');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<PickupEstimateResponse | null>(null);
+  const [allergyMode, setAllergyMode] = useState<'none' | 'allergies'>('none');
+  const [checkoutAllergens, setCheckoutAllergens] = useState<string[]>([]);
+  const [applyReward, setApplyReward] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
-    if (lines.length === 0) navigate('/order', { replace: true });
-  }, [lines.length, navigate]);
+    if (lines.length === 0) navigate(cafePath('/order'), { replace: true });
+  }, [lines.length, navigate, cafePath]);
+
+  useEffect(() => {
+    if (user?.displayName) setCustomerName(user.displayName);
+    else if (user?.email) setCustomerName(user.email.split('@')[0] ?? '');
+  }, [user]);
 
   useEffect(() => {
     void (async () => {
@@ -79,7 +112,7 @@ export function Checkout() {
     });
   }, [menu, lines]);
 
-  const cartTotalMinor = useMemo(
+  const subtotalMinor = useMemo(
     () =>
       pricedLines.reduce((sum, row) => {
         if (row.unit == null) return sum;
@@ -88,29 +121,41 @@ export function Checkout() {
     [pricedLines],
   );
 
+  const discountMinor = applyReward && rewards.length > 0 ? drinkDiscountMinor(pricedLines) : 0;
+  const totalMinor = Math.max(0, subtotalMinor - discountMinor);
+  const itemCount = lines.reduce((s, l) => s + l.quantity, 0);
+
   async function placeOrder(): Promise<void> {
     if (lines.length === 0) return;
+    const name = customerName.trim() || user?.displayName?.trim() || user?.email?.split('@')[0] || 'Guest';
     setError(null);
     setSubmitting(true);
     try {
+      const allergensForLines =
+        allergyMode === 'allergies' && checkoutAllergens.length > 0 ? checkoutAllergens : [];
+
       const data = await createCustomerOrder({
-        customerName: customerName.trim(),
+        customerName: name,
         orderType,
-        notes: notes.trim() ? notes.trim() : null,
+        redeemRewardId: applyReward && rewards[0] ? rewards[0].id : undefined,
         items: lines.map((l) => ({
           menuItemId: l.menuItemId,
           quantity: l.quantity,
           modifiers: l.modifiers.length ? l.modifiers : undefined,
-          allergens: l.allergens.length ? l.allergens : undefined,
+          allergens: allergensForLines.length ? allergensForLines : l.allergens.length ? l.allergens : undefined,
         })),
       });
       rememberOrderTracking(data.order.id, data.trackingToken);
       if (data.checkoutUrl) {
+        setRedirecting(true);
         window.location.assign(data.checkoutUrl);
         return;
       }
       clear();
-      navigate(`/orders/${data.order.id}`, { replace: true });
+      navigate(cafePath(`/orders/${data.order.id}/confirmed`), {
+        replace: true,
+        state: { discountMinor: data.discountMinor ?? 0 },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Order failed');
     } finally {
@@ -118,40 +163,142 @@ export function Checkout() {
     }
   }
 
+  if (redirecting) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
+        <Typography variant="h6" fontWeight={700} gutterBottom>
+          Redirecting to checkout
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          One moment — opening secure payment via Stripe.
+        </Typography>
+        <Box
+          sx={{
+            mt: 4,
+            display: 'inline-flex',
+            px: 2,
+            py: 0.75,
+            borderRadius: 999,
+            bgcolor: 'action.hover',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            Encrypted · PCI-compliant
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 12 }}>
-      <Typography variant="h4" component="h1">
-        Checkout
-      </Typography>
-      <Button component={RouterLink} to="/order" size="small" sx={{ mt: 1 }}>
-        Edit basket
-      </Button>
+      <PageHeader title="Checkout" onBack={() => navigate(cafePath('/order'))} />
 
-      {estimate && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          Estimated pickup around{' '}
-          <strong>
-            {new Date(estimate.pickupTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </strong>{' '}
-          (~{estimate.minutesFromNow} min). Live ETA updates after you order.
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
+        <Typography variant="subtitle1" fontWeight={700}>
+          Your order
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {itemCount} items
+        </Typography>
+      </Box>
+
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, px: 1.5 }}>
+        {pricedLines.map(({ line, item, unit }) => (
+          <CheckoutLineRow
+            key={line.key}
+            line={line}
+            item={item}
+            unitMinor={unit}
+            onQtyChange={(qty) => {
+              if (qty <= 0) removeLine(line.key);
+              else upsertLine({ ...line, quantity: qty });
+            }}
+            onRemove={() => removeLine(line.key)}
+          />
+        ))}
+        {discountMinor > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1, color: 'success.main' }}>
+            <Typography variant="body2">Loyalty (−1 free)</Typography>
+            <Typography variant="body2">−{formatMoney(discountMinor)}</Typography>
+          </Box>
+        )}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5 }}>
+          <Typography fontWeight={700}>Total</Typography>
+          <Typography fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+            {formatMoney(totalMinor)}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+        Pickup time
+      </Typography>
+      <Box
+        sx={{
+          p: 1.5,
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1.25,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          opacity: 0.7,
+        }}
+      >
+        <AccessTimeIcon color="action" />
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="body1" fontWeight={700}>
+            {estimate ? `${formatTime(estimate.pickupTime)} am` : 'ASAP'}
+          </Typography>
+          {estimate && (
+            <Typography variant="caption" color="text.secondary">
+              in {estimate.minutesFromNow} min
+            </Typography>
+          )}
+        </Box>
+        <Typography variant="caption" color="text.disabled">
+          ⌄
+        </Typography>
+      </Box>
+      <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>
+        Scheduled pickup — coming soon
+      </Typography>
+
+      <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+        Allergy info
+      </Typography>
+      <ToggleButtonGroup
+        exclusive
+        fullWidth
+        value={allergyMode}
+        onChange={(_, v) => v && setAllergyMode(v)}
+        size="small"
+        sx={{ mb: 1 }}
+      >
+        <ToggleButton value="none">None</ToggleButton>
+        <ToggleButton value="allergies">I have allergies</ToggleButton>
+      </ToggleButtonGroup>
+      {allergyMode === 'allergies' && (
+        <AllergyChecklist selected={checkoutAllergens} onChange={setCheckoutAllergens} />
       )}
 
-      <Typography variant="subtitle2" sx={{ mt: 3 }}>
-        Order summary
+      <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+        Rewards
       </Typography>
-      {pricedLines.map(({ line, item, unit }) => (
-        <Typography key={line.key} variant="body2" sx={{ mt: 0.5 }}>
-          {item?.name ?? line.menuItemId} × {line.quantity}
-          {unit != null ? ` — £${((unit * line.quantity) / 100).toFixed(2)}` : ' — price from server'}
+      {isSignedIn && summary && rewards.length > 0 ? (
+        <RewardRow
+          description="1 free drink available"
+          applied={applyReward}
+          onToggle={setApplyReward}
+        />
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          {summary?.loyaltyEnabled
+            ? 'No vouchers or rewards available. Earn 1 stamp with this order.'
+            : 'Loyalty is not enabled for this café.'}
         </Typography>
-      ))}
-      <Typography variant="body1" fontWeight={700} sx={{ mt: 1 }}>
-        Estimated total £{(cartTotalMinor / 100).toFixed(2)}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" component="p">
-        Final total is confirmed server-side from the menu (modifiers included).
-      </Typography>
+      )}
 
       {error && (
         <Typography color="error" sx={{ mt: 2 }}>
@@ -159,46 +306,21 @@ export function Checkout() {
         </Typography>
       )}
 
-      <TextField
-        label="Your name"
+      <Button
+        variant="contained"
         fullWidth
-        size="small"
-        sx={{ mt: 2 }}
-        value={customerName}
-        onChange={(e) => setCustomerName(e.target.value)}
-        required
-      />
-      <TextField
-        select
-        label="Order type"
-        fullWidth
-        size="small"
-        sx={{ mt: 1.5 }}
-        value={orderType}
-        onChange={(e) => setOrderType(e.target.value as OrderType)}
+        sx={{ mt: 3, py: 1.5, display: 'flex', justifyContent: 'space-between' }}
+        disabled={submitting || pricedLines.length === 0}
+        onClick={() => void placeOrder()}
       >
-        <MenuItem value="takeaway">Takeaway</MenuItem>
-        <MenuItem value="eat_in">Eat in</MenuItem>
-      </TextField>
-      <TextField
-        label="Notes (optional)"
-        fullWidth
-        size="small"
-        sx={{ mt: 1.5 }}
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-      />
-
-      <Box sx={{ mt: 3 }}>
-        <Button
-          variant="contained"
-          fullWidth
-          disabled={submitting || !customerName.trim()}
-          onClick={() => void placeOrder()}
-        >
-          {submitting ? 'Placing…' : 'Place order'}
-        </Button>
-      </Box>
+        <span>{submitting ? 'Placing…' : 'Place order'}</span>
+        <span>{formatMoney(totalMinor)} →</span>
+      </Button>
+      {summary?.loyaltyEnabled && !applyReward && (
+        <Typography variant="caption" color="success.main" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+          Earn 1 stamp with this order
+        </Typography>
+      )}
     </Container>
   );
 }

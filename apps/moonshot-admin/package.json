@@ -15,7 +15,8 @@
     "@moonshot/types": "workspace:*",
     "@mui/material": "^6.4.7",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

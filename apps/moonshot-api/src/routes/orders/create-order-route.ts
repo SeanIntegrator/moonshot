@@ -26,23 +26,24 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
     });
   }
 
-  const { customerName, notes, orderType, items } = parsed.value;
+  const { customerName, notes, orderType, items, redeemRewardId } = parsed.value;
   const userId = req.customerUserId ?? null;
   const paymentMode = parseOrderAheadPaymentMode(req.cafe!.features.order_ahead);
 
   const jwtSecret = process.env.JWT_SECRET;
 
   if (paymentMode === 'pay_in_store') {
-    const order = await createGuestPayInStoreOrder({
+    const result = await createGuestPayInStoreOrder({
       cafeId,
       userId,
       customerName,
       notes: notes ?? null,
       orderType,
       lines: items,
+      redeemRewardId,
     });
 
-    emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
+    emitKdsServerToClient(cafeId, { type: 'kds:order:new', order: result.order });
     await recomputePickupEtasForCafe({
       db: pool,
       cafeId,
@@ -50,13 +51,17 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
     });
 
     const trackingToken = buildGuestTrackingTokenIfNeeded({
-      orderId: order.id,
+      orderId: result.order.id,
       cafeId,
       customerId: userId,
       jwtSecret,
     });
-    const data: CreateOrderResponse =
-      trackingToken == null ? { order } : { order, trackingToken };
+    const data: CreateOrderResponse = {
+      order: result.order,
+      discountMinor: result.discountMinor > 0 ? result.discountMinor : undefined,
+      redeemedRewardId: result.redeemedRewardId,
+      ...(trackingToken == null ? {} : { trackingToken }),
+    };
 
     return res.status(201).json({ ok: true, data });
   }
@@ -69,6 +74,7 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
     orderType,
     lines: items,
     paymentConfig: req.cafe!.paymentConfig,
+    redeemRewardId,
   });
 
   return res.status(201).json({ ok: true, data });

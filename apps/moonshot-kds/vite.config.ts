@@ -9,6 +9,10 @@ const previewPortConfig =
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
   preview: {
     host: true,
     allowedHosts: true,

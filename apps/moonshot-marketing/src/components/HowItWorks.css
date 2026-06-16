@@ -1,0 +1,39 @@
+.section {
+  padding: 6rem 0;
+}
+
+.section__title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin: 0 0 3rem;
+  text-align: center;
+}
+
+.how-it-works__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.how-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+}
+
+.how-card h3 {
+  font-size: 1.125rem;
+  margin: 0 0 0.75rem;
+}
+
+.how-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  .how-it-works__grid {
+    grid-template-columns: 1fr;
+  }
+}

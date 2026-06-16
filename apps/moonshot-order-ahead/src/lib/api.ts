@@ -36,7 +36,15 @@ async function parseApiEnvelope<T>(res: Response): Promise<ApiEnvelope<T>> {
 }
 
 export function getCafeSlug(): string {
+  if (runtimeCafeSlug) return runtimeCafeSlug;
   return import.meta.env.VITE_CAFE_SLUG ?? 'clay-and-bean';
+}
+
+let runtimeCafeSlug: string | null = null;
+
+/** Set by CafeProvider when routing under /:cafeSlug */
+export function setRuntimeCafeSlug(slug: string | null): void {
+  runtimeCafeSlug = slug;
 }
 
 export function getStoredToken(): string | null {

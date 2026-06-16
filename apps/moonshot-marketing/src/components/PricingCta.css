@@ -1,0 +1,13 @@
+.pricing-cta {
+  text-align: center;
+}
+
+.pricing-cta__inner {
+  max-width: 40rem;
+}
+
+.pricing-cta__copy {
+  color: var(--muted);
+  font-size: 1.125rem;
+  margin: 0 0 2rem;
+}

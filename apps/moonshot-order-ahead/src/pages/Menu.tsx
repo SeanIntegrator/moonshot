@@ -1,19 +1,14 @@
-import type { NormalisedMenu, NormalisedMenuItem } from '@moonshot/types';
-import {
-  Box,
-  Button,
-  Container,
-  Divider,
-  Link,
-  List,
-  ListItem,
-  ListItemText,
-  Typography,
-} from '@mui/material';
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import type { MenuCategory, NormalisedMenu, NormalisedMenuItem } from '@moonshot/types';
+import { Alert, Box, Container, Snackbar, Typography } from '@mui/material';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CategoryStrip } from '../components/CategoryStrip.js';
+import { FloatingCartBar } from '../components/FloatingCartBar.js';
+import { MenuItemCard } from '../components/MenuItemCard.js';
 import { apiFetch } from '../lib/api.js';
+import { groupMenuByCategory } from '../lib/menu-utils.js';
 import { useCart } from '../providers/CartProvider.js';
+import { fetchPickupEstimate } from '../api/orders-api.js';
+import { formatTime } from '../lib/format.js';
 
 function lineTotal(item: NormalisedMenuItem, qty: number): number {
   return item.priceMinor * qty;
@@ -24,42 +19,87 @@ function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: s
   return hit?.quantity ?? 0;
 }
 
+function totalCartQty(lines: ReturnType<typeof useCart>['lines']): number {
+  return lines.reduce((sum, l) => sum + l.quantity, 0);
+}
+
 export function Menu() {
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<MenuCategory>('hot_drinks');
+  const [snack, setSnack] = useState<string | null>(null);
+  const [pickupLabel, setPickupLabel] = useState<string | null>(null);
   const { lines, bumpSimpleQuantity } = useCart();
+  const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
 
   useEffect(() => {
     void (async () => {
       try {
         const data = await apiFetch<NormalisedMenu>('/menu');
         setMenu(data);
+        const sections = groupMenuByCategory(data);
+        if (sections[0]) setActiveCategory(sections[0].category);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load menu');
       }
     })();
   }, []);
 
-  const cartLines = useMemo(() => {
-    if (!menu) return [];
-    return menu.items
-      .map((item) => ({ item, qty: simpleLineQty(lines, item.id) }))
-      .filter((x) => x.qty > 0);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const est = await fetchPickupEstimate();
+        setPickupLabel(formatTime(est.pickupTime));
+      } catch {
+        setPickupLabel(null);
+      }
+    })();
+  }, []);
+
+  const sections = useMemo(() => (menu ? groupMenuByCategory(menu) : []), [menu]);
+
+  const cartTotalMinor = useMemo(() => {
+    if (!menu) return 0;
+    return lines.reduce((sum, line) => {
+      const item = menu.items.find((i) => i.id === line.menuItemId);
+      if (!item) return sum;
+      let unit = item.priceMinor;
+      for (const sel of line.modifiers) {
+        const g = item.modifierGroups.find((x) => x.id === sel.groupId);
+        const opt = g?.options.find((o) => o.id === sel.optionId);
+        if (opt) unit += opt.priceMinor;
+      }
+      return sum + unit * line.quantity;
+    }, 0);
   }, [menu, lines]);
 
-  const cartTotalMinor = useMemo(
-    () => cartLines.reduce((sum, { item, qty }) => sum + lineTotal(item, qty), 0),
-    [cartLines],
-  );
+  function scrollToCategory(cat: MenuCategory) {
+    setActiveCategory(cat);
+    sectionRefs.current[cat]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function quickAdd(item: NormalisedMenuItem) {
+    bumpSimpleQuantity(item.id, 1);
+    setSnack(`${item.name} added to basket`);
+  }
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
-      <Typography variant="h4" component="h1" sx={{ mt: 0 }}>
-        Order
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        Tap + for a quick add with defaults, or open an item title to choose modifiers and allergens.
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+        <Typography variant="h4" component="h1" sx={{ mt: 0 }}>
+          Order
+        </Typography>
+        {pickupLabel && (
+          <Typography variant="body2" color="text.secondary" sx={{ pt: 0.5 }}>
+            Pickup at {pickupLabel}
+          </Typography>
+        )}
+      </Box>
+
+      {sections.length > 0 && (
+        <CategoryStrip sections={sections} active={activeCategory} onSelect={scrollToCategory} />
+      )}
+
       {error && (
         <Typography color="error" sx={{ mt: 1 }}>
           {error}
@@ -70,83 +110,55 @@ export function Menu() {
           Loading…
         </Typography>
       )}
-      {menu && (
-        <List disablePadding sx={{ mt: 1 }}>
-          {menu.items.map((item) => (
-            <Fragment key={item.id}>
-              <ListItem alignItems="flex-start" disableGutters sx={{ py: 1.5, flexWrap: 'wrap', gap: 1 }}>
-                <ListItemText
-                  primary={
-                    <Link component={RouterLink} to={`/order/item/${item.id}`} underline="hover" fontWeight={600}>
-                      {item.name}
-                    </Link>
-                  }
-                  secondary={`${item.category.replace(/_/g, ' ')}${item.subcategory ? ` · ${item.subcategory}` : ''}`}
-                  secondaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                  sx={{ flex: '1 1 160px' }}
-                />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-                  <Typography variant="body1" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                    £{(item.priceMinor / 100).toFixed(2)}
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => bumpSimpleQuantity(item.id, -1)}
-                    disabled={simpleLineQty(lines, item.id) === 0}
-                  >
-                    −
-                  </Button>
-                  <Typography sx={{ minWidth: '1.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-                    {simpleLineQty(lines, item.id)}
-                  </Typography>
-                  <Button size="small" variant="contained" onClick={() => bumpSimpleQuantity(item.id, 1)}>
-                    +
-                  </Button>
-                </Box>
-              </ListItem>
-              <Divider component="li" />
-            </Fragment>
-          ))}
-        </List>
-      )}
 
-      <Box
-        component="footer"
-        sx={{
-          position: 'fixed',
-          bottom: 56,
-          left: 0,
-          right: 0,
-          p: 2,
-          bgcolor: 'background.paper',
-          borderTop: 1,
-          borderColor: 'divider',
-          maxWidth: 600,
-          mx: 'auto',
-        }}
-      >
-        <Typography variant="subtitle2" color="text.secondary">
-          Basket
-        </Typography>
-        {cartLines.length === 0 ? (
-          <Typography variant="body2" sx={{ mt: 0.5 }} color="text.secondary">
-            Add items, then continue to checkout.
+      {sections.map((section) => (
+        <Box
+          key={section.category}
+          ref={(el: HTMLDivElement | null) => {
+            sectionRefs.current[section.category] = el;
+          }}
+          sx={{ mb: 3, scrollMarginTop: 8 }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5, textTransform: 'uppercase' }}>
+            {section.label} · {section.items.length} items
           </Typography>
-        ) : (
-          <>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {cartLines.length} line(s) — £{(cartTotalMinor / 100).toFixed(2)}{' '}
-              <Typography component="span" variant="caption" color="text.secondary">
-                (detailed lines may include modifiers)
-              </Typography>
-            </Typography>
-            <Button component={RouterLink} to="/checkout" variant="contained" fullWidth sx={{ mt: 1.5 }}>
-              Checkout
-            </Button>
-          </>
-        )}
-      </Box>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 1.25,
+              mt: 1,
+            }}
+          >
+            {section.items.map((item) => (
+              <MenuItemCard
+                key={item.id}
+                item={item}
+                qty={simpleLineQty(lines, item.id)}
+                onQuickAdd={() => quickAdd(item)}
+              />
+            ))}
+          </Box>
+        </Box>
+      ))}
+
+      <FloatingCartBar
+        itemCount={totalCartQty(lines)}
+        totalMinor={cartTotalMinor}
+        currency={menu?.items[0]?.currency}
+      />
+
+      <Snackbar
+        open={snack != null}
+        autoHideDuration={2500}
+        onClose={() => setSnack(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ bottom: 120 }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setSnack(null)} sx={{ width: '100%' }}>
+          {snack}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

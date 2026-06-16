@@ -25,8 +25,8 @@ export const baseMuiThemeOptions: ThemeOptions = {
   },
   palette: {
     mode: 'light',
-    primary: { main: '#1976d2', contrastText: '#ffffff' },
-    secondary: { main: '#9c27b0', contrastText: '#ffffff' },
+    primary: { main: '#0a0a0b', contrastText: '#ffffff' },
+    secondary: { main: '#6b7280', contrastText: '#ffffff' },
     background: { default: '#fafafa', paper: '#ffffff' },
     text: { primary: '#111827', secondary: '#6b7280' },
     divider: '#e5e7eb',
@@ -39,7 +39,7 @@ export const baseMuiThemeOptions: ThemeOptions = {
       textMuted: '#6b7280',
       textOnDark: '#f9fafb',
       border: '#e5e7eb',
-      heroBg: '#111827',
+      heroBg: '#0a0a0b',
       heroText: '#f9fafb',
     },
   },
@@ -57,6 +57,9 @@ export const baseMuiThemeOptions: ThemeOptions = {
       styleOverrides: { root: { backgroundImage: 'none' } },
     },
     MuiLink: {
+      styleOverrides: { root: { fontWeight: 600 } },
+    },
+    MuiChip: {
       styleOverrides: { root: { fontWeight: 600 } },
     },
   },
