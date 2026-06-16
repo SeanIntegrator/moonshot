@@ -25,8 +25,6 @@ export function FloatingCartBar({ itemCount, totalMinor, currency = 'GBP' }: Pro
         zIndex: (t) => t.zIndex.appBar - 1,
         maxWidth: 600,
         mx: 'auto',
-        px: 2,
-        pb: 1,
       }}
     >
       <Button
@@ -38,7 +36,7 @@ export function FloatingCartBar({ itemCount, totalMinor, currency = 'GBP' }: Pro
           px: 2,
           bgcolor: 'primary.main',
           color: 'primary.contrastText',
-          borderRadius: 1.5,
+          borderRadius: 0,
           display: 'flex',
           justifyContent: 'space-between',
           '&:hover': { bgcolor: 'primary.dark' },

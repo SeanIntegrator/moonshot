@@ -195,7 +195,7 @@ export function ItemDetail() {
           disabled={!ready}
           onClick={() => {
             upsertLine({ menuItemId: item.id, quantity, modifiers, allergens: [] });
-            navigate(cafePath('/order'));
+            navigate(cafePath('/order'), { state: { addedItemName: item.name } });
           }}
           sx={{ py: 1.25 }}
         >

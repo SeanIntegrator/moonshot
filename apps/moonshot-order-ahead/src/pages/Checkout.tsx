@@ -191,7 +191,7 @@ export function Checkout() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 12 }}>
+    <Container maxWidth="sm" sx={{ py: 2, pb: 6 }}>
       <PageHeader title="Checkout" onBack={() => navigate(cafePath('/order'))} />
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
@@ -203,29 +203,63 @@ export function Checkout() {
         </Typography>
       </Box>
 
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, px: 1.5 }}>
-        {pricedLines.map(({ line, item, unit }) => (
+      <Box
+        sx={{
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1.25,
+          bgcolor: 'background.paper',
+          overflow: 'hidden',
+        }}
+      >
+        {pricedLines.map(({ line, item, unit }, index) => (
           <CheckoutLineRow
             key={line.key}
             line={line}
             item={item}
             unitMinor={unit}
+            isLast={index === pricedLines.length - 1 && discountMinor === 0}
             onQtyChange={(qty) => {
               if (qty <= 0) removeLine(line.key);
               else upsertLine({ ...line, quantity: qty });
             }}
-            onRemove={() => removeLine(line.key)}
           />
         ))}
         {discountMinor > 0 && (
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1, color: 'success.main' }}>
-            <Typography variant="body2">Loyalty (−1 free)</Typography>
-            <Typography variant="body2">−{formatMoney(discountMinor)}</Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              px: 1.5,
+              py: 1,
+              color: 'success.main',
+              borderTop: pricedLines.length > 0 ? 1 : 0,
+              borderColor: 'divider',
+            }}
+          >
+            <Typography variant="body2" fontWeight={600}>
+              Loyalty (−1 free)
+            </Typography>
+            <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+              −{formatMoney(discountMinor)}
+            </Typography>
           </Box>
         )}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5 }}>
-          <Typography fontWeight={700}>Total</Typography>
-          <Typography fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            px: 1.5,
+            py: 1.25,
+            borderTop: pricedLines.length > 0 || discountMinor > 0 ? 1 : 0,
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="body1" fontWeight={700}>
+            Total
+          </Typography>
+          <Typography variant="body1" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
             {formatMoney(totalMinor)}
           </Typography>
         </Box>
@@ -274,7 +308,38 @@ export function Checkout() {
         value={allergyMode}
         onChange={(_, v) => v && setAllergyMode(v)}
         size="small"
-        sx={{ mb: 1 }}
+        sx={{
+          mb: 1,
+          bgcolor: 'action.hover',
+          borderRadius: 999,
+          p: 0.5,
+          border: 0,
+          '& .MuiToggleButtonGroup-grouped': {
+            border: 0,
+            borderRadius: '999px !important',
+            mx: 0,
+            flex: 1,
+          },
+          '& .MuiToggleButton-root': {
+            border: 0,
+            borderRadius: 999,
+            py: 1,
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            color: 'text.secondary',
+            '&.Mui-selected': {
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+              boxShadow: 1,
+              '&:hover': { bgcolor: 'background.paper' },
+            },
+            '&:not(.Mui-selected)': {
+              bgcolor: 'transparent',
+              '&:hover': { bgcolor: 'transparent' },
+            },
+          },
+        }}
       >
         <ToggleButton value="none">None</ToggleButton>
         <ToggleButton value="allergies">I have allergies</ToggleButton>

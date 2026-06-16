@@ -12,7 +12,7 @@ type Props = {
   item: NormalisedMenuItem | undefined;
   unitMinor: number | null;
   onQtyChange: (qty: number) => void;
-  onRemove: () => void;
+  isLast?: boolean;
 };
 
 function modifierLabels(item: NormalisedMenuItem | undefined, line: CartLine): string {
@@ -27,7 +27,7 @@ function modifierLabels(item: NormalisedMenuItem | undefined, line: CartLine): s
     .join(', ');
 }
 
-export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, onRemove }: Props) {
+export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = false }: Props) {
   const cafePath = useCafePath();
   const mods = modifierLabels(item, line);
   const lineTotal = unitMinor != null ? unitMinor * line.quantity : null;
@@ -35,44 +35,87 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, onRemove }
   return (
     <Box
       sx={{
-        py: 1.5,
-        borderBottom: 1,
+        borderBottom: isLast ? 0 : 1,
         borderColor: 'divider',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 1.5,
       }}
     >
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body1" fontWeight={600}>
-            {item?.name ?? line.menuItemId}
-          </Typography>
-          <Link component={RouterLink} to={cafePath(`/order/item/${line.menuItemId}`)} variant="caption" underline="hover">
-            Edit
-          </Link>
+      <Box
+        sx={{
+          px: 1.5,
+          py: 1.25,
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 1,
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Typography variant="body2" fontWeight={700}>
+              {item?.name ?? line.menuItemId}
+            </Typography>
+            <Link
+              component={RouterLink}
+              to={cafePath(`/order/item/${line.menuItemId}`)}
+              variant="caption"
+              underline="hover"
+              color="primary"
+              sx={{ fontWeight: 600 }}
+            >
+              Edit
+            </Link>
+          </Box>
+          {mods && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+              {mods}
+            </Typography>
+          )}
         </Box>
-        {mods && (
-          <Typography variant="caption" color="text.secondary">
-            {mods}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+          <IconButton
+            size="small"
+            onClick={() => onQtyChange(line.quantity - 1)}
+            aria-label="Decrease"
+            sx={{
+              width: 28,
+              height: 28,
+              bgcolor: 'action.hover',
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'action.selected' },
+            }}
+          >
+            <RemoveIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+          <Typography
+            variant="body2"
+            fontWeight={700}
+            sx={{ minWidth: 16, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}
+          >
+            {line.quantity}
           </Typography>
-        )}
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-        <IconButton size="small" onClick={() => onQtyChange(line.quantity - 1)} aria-label="Decrease">
-          <RemoveIcon fontSize="small" />
-        </IconButton>
-        <Typography sx={{ minWidth: 20, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-          {line.quantity}
-        </Typography>
-        <IconButton size="small" onClick={() => onQtyChange(line.quantity + 1)} aria-label="Increase">
-          <AddIcon fontSize="small" />
-        </IconButton>
-        {lineTotal != null && (
-          <Typography variant="body2" sx={{ minWidth: 48, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-            {formatMoney(lineTotal, item?.currency)}
-          </Typography>
-        )}
+          <IconButton
+            size="small"
+            onClick={() => onQtyChange(line.quantity + 1)}
+            aria-label="Increase"
+            sx={{
+              width: 28,
+              height: 28,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': { bgcolor: 'primary.dark' },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+          {lineTotal != null && (
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              sx={{ minWidth: 44, textAlign: 'right', fontVariantNumeric: 'tabular-nums', ml: 0.25 }}
+            >
+              {formatMoney(lineTotal, item?.currency)}
+            </Typography>
+          )}
+        </Box>
       </Box>
     </Box>
   );

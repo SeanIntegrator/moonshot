@@ -66,16 +66,21 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                     borderRadius: 999,
                     border: 1,
                     borderColor: selected ? 'primary.main' : 'divider',
-                    bgcolor: selected ? 'primary.main' : 'background.paper',
-                    color: selected ? 'primary.contrastText' : 'text.primary',
+                    bgcolor: selected ? 'action.selected' : 'background.paper',
+                    color: 'text.primary',
                     fontWeight: 600,
+                    WebkitTapHighlightColor: 'transparent',
+                    boxShadow: selected ? (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}` : 'none',
                     '& .MuiChip-icon': {
                       color: 'inherit',
                       fontSize: 16,
                       ml: 1,
                     },
                     '&:hover': {
-                      bgcolor: selected ? 'primary.main' : 'action.hover',
+                      bgcolor: selected ? 'action.selected' : 'action.hover',
+                    },
+                    '&:active': {
+                      bgcolor: selected ? 'action.selected' : 'background.paper',
                     },
                   }}
                 />
@@ -149,13 +154,25 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
               sx={{
                 textAlign: 'left',
                 p: 1.25,
-                border: selected ? 2 : 1,
+                border: 1,
                 borderColor: selected ? 'primary.main' : 'divider',
                 borderRadius: 1.25,
-                bgcolor: 'background.paper',
+                bgcolor: selected ? 'action.selected' : 'background.paper',
+                boxShadow: selected ? (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}` : 'none',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 color: 'text.primary',
+                WebkitTapHighlightColor: 'transparent',
+                appearance: 'none',
+                '&:hover': {
+                  bgcolor: selected ? 'action.selected' : 'action.hover',
+                },
+                '&:active': {
+                  bgcolor: selected ? 'action.selected' : 'background.paper',
+                },
+                '&:focus': {
+                  outline: 'none',
+                },
               }}
             >
               <Typography variant="body2" fontWeight={600}>

@@ -33,27 +33,44 @@ export function AllergyChecklist({ selected, onChange }: Props) {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
         Tap any that apply. We declare on the 14 UK allergens.
       </Typography>
-      <FormGroup>
-        {UK_FSA_ALLERGENS.map((code) => (
-          <FormControlLabel
-            key={code}
-            control={
-              <Checkbox
-                size="small"
-                checked={selected.includes(code)}
-                onChange={(e) => toggle(code, e.target.checked)}
-              />
-            }
-            label={LABELS[code] ?? code.replace(/_/g, ' ')}
-            sx={{
-              mx: 0,
-              borderBottom: 1,
-              borderColor: 'divider',
-              py: 0.5,
-            }}
-          />
-        ))}
-      </FormGroup>
+      <Box
+        sx={{
+          bgcolor: 'background.paper',
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1.25,
+          overflow: 'hidden',
+        }}
+      >
+        <FormGroup sx={{ m: 0 }}>
+          {UK_FSA_ALLERGENS.map((code, index) => (
+            <FormControlLabel
+              key={code}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={selected.includes(code)}
+                  onChange={(e) => toggle(code, e.target.checked)}
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                  {LABELS[code] ?? code.replace(/_/g, ' ')}
+                </Typography>
+              }
+              sx={{
+                mx: 0,
+                px: 1.5,
+                py: 0.75,
+                width: '100%',
+                borderBottom: index < UK_FSA_ALLERGENS.length - 1 ? 1 : 0,
+                borderColor: 'divider',
+                '& .MuiFormControlLabel-label': { flex: 1 },
+              }}
+            />
+          ))}
+        </FormGroup>
+      </Box>
     </Box>
   );
 }

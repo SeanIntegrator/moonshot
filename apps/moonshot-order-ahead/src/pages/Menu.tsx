@@ -1,6 +1,7 @@
 import type { MenuCategory, NormalisedMenu, PickupEstimateResponse } from '@moonshot/types';
-import { Box, Container, Typography } from '@mui/material';
+import { Alert, Box, Container, Snackbar, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CategoryStrip } from '../components/CategoryStrip.js';
 import { FloatingCartBar } from '../components/FloatingCartBar.js';
 import { MenuItemCard } from '../components/MenuItemCard.js';
@@ -19,13 +20,27 @@ function totalCartQty(lines: ReturnType<typeof useCart>['lines']): number {
   return lines.reduce((sum, l) => sum + l.quantity, 0);
 }
 
+type MenuLocationState = {
+  addedItemName?: string;
+};
+
 export function Menu() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as MenuLocationState | null;
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<MenuCategory>('hot_drinks');
   const [estimate, setEstimate] = useState<PickupEstimateResponse | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
+
+  useEffect(() => {
+    if (!locationState?.addedItemName) return;
+    setToastMessage(`${locationState.addedItemName} added to basket`);
+    navigate('.', { replace: true, state: null });
+  }, [locationState?.addedItemName, navigate]);
 
   useEffect(() => {
     void (async () => {
@@ -133,6 +148,34 @@ export function Menu() {
         currency={menu?.items[0]?.currency}
       />
 
+      <Snackbar
+        open={toastMessage != null}
+        autoHideDuration={2500}
+        onClose={() => setToastMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          bottom: totalCartQty(lines) > 0 ? 112 : 72,
+          width: '100%',
+          maxWidth: 600,
+          px: 2,
+        }}
+      >
+        <Alert
+          severity="success"
+          variant="outlined"
+          sx={{
+            width: '100%',
+            alignItems: 'center',
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            borderColor: 'divider',
+            boxShadow: 3,
+            '& .MuiAlert-icon': { color: 'success.main' },
+          }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
