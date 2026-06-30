@@ -9,9 +9,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ModifierOptionGrid } from '../components/ModifierOptionGrid.js';
 import { QuantityStepper } from '../components/QuantityStepper.js';
+import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { apiFetch } from '../lib/api.js';
-import { formatMoney } from '../lib/format.js';
+import { formatPriceTag } from '../lib/format.js';
+import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCart } from '../providers/CartProvider.js';
 
 function defaultModifiers(item: NormalisedMenuItem): OrderLineModifierSelectionInput[] {
@@ -39,14 +41,14 @@ function modifiersAreComplete(item: NormalisedMenuItem, mods: OrderLineModifierS
   return true;
 }
 
-function unitPriceMinor(item: NormalisedMenuItem, mods: OrderLineModifierSelectionInput[]): number {
-  let total = item.priceMinor;
+function modifierDeltaMinor(item: NormalisedMenuItem, mods: OrderLineModifierSelectionInput[]): number {
+  let delta = 0;
   for (const sel of mods) {
     const g = item.modifierGroups.find((x) => x.id === sel.groupId);
     const opt = g?.options.find((o) => o.id === sel.optionId);
-    if (opt) total += opt.priceMinor;
+    if (opt) delta += opt.priceMinor;
   }
-  return total;
+  return delta;
 }
 
 export function ItemDetail() {
@@ -57,6 +59,7 @@ export function ItemDetail() {
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [sizeId, setSizeId] = useState<string | null>(null);
   const [modifiers, setModifiers] = useState<OrderLineModifierSelectionInput[]>([]);
 
   useEffect(() => {
@@ -78,11 +81,21 @@ export function ItemDetail() {
   useEffect(() => {
     if (!item) return;
     setModifiers(defaultModifiers(item));
+    setSizeId(defaultSizeId(item.sizes ?? []));
     setQuantity(1);
   }, [item]);
 
-  const lineUnit = item ? unitPriceMinor(item, modifiers) : 0;
-  const ready = item ? modifiersAreComplete(item, modifiers) : false;
+  const lineUnit = item ? unitPriceForItem(item, sizeId, modifierDeltaMinor(item, modifiers)) : 0;
+  const hasSizes = (item?.sizes?.length ?? 0) > 0;
+  const ready = item
+    ? (!hasSizes || sizeId != null) && modifiersAreComplete(item, modifiers)
+    : false;
+
+  const headerPrice = item
+    ? hasSizes
+      ? formatPriceTag(lineUnit, item.currency)
+      : formatPriceTag(item.priceMinor, item.currency)
+    : '';
 
   function handleSelect(
     groupId: string,
@@ -149,14 +162,25 @@ export function ItemDetail() {
           <Typography variant="h5" component="h1" fontWeight={700}>
             {item.name}
           </Typography>
-          <Typography variant="body1" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-            {formatMoney(item.priceMinor, item.currency)}
-          </Typography>
+          {headerPrice ? (
+            <Typography variant="body1" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+              {headerPrice}
+            </Typography>
+          ) : null}
         </Box>
         {item.description && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             {item.description}
           </Typography>
+        )}
+
+        {hasSizes && item.sizes && (
+          <SizeOptionGrid
+            sizes={item.sizes}
+            currency={item.currency}
+            selectedId={sizeId}
+            onSelect={setSizeId}
+          />
         )}
 
         {item.modifierGroups.map((g) => (
@@ -194,12 +218,18 @@ export function ItemDetail() {
           fullWidth
           disabled={!ready}
           onClick={() => {
-            upsertLine({ menuItemId: item.id, quantity, modifiers, allergens: [] });
+            upsertLine({
+              menuItemId: item.id,
+              sizeId: hasSizes ? sizeId : null,
+              quantity,
+              modifiers,
+              allergens: [],
+            });
             navigate(cafePath('/order'), { state: { addedItemName: item.name } });
           }}
           sx={{ py: 1.25 }}
         >
-          Add · {formatMoney(lineUnit * quantity, item.currency)}
+          Add{formatPriceTag(lineUnit * quantity, item.currency) ? ` · ${formatPriceTag(lineUnit * quantity, item.currency)}` : ''}
         </Button>
       </Box>
     </Box>

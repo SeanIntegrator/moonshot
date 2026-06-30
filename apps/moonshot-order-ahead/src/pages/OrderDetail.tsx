@@ -16,6 +16,8 @@ import { PageHeader } from '../components/PageHeader.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { cancelCustomerOrder, fetchCustomerOrder } from '../api/orders-api.js';
 import { useAuth } from '../hooks/useAuth.js';
+import { useLoyalty } from '../hooks/useLoyalty.js';
+import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useOrderTracking } from '../hooks/useOrderTracking.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
 import { formatMoney, formatTime, modifierSummary } from '../lib/format.js';
@@ -27,11 +29,17 @@ function isCancellable(status: string): boolean {
   return (ACTIVE_FLOW as readonly string[]).includes(status);
 }
 
+function totalItemQuantity(items: NormalisedOrder['items']): number {
+  return items.reduce((sum, li) => sum + li.quantity, 0);
+}
+
 export function OrderDetail() {
   const { orderId = '' } = useParams();
   const navigate = useNavigate();
   const cafePath = useCafePath();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, refresh: refreshAuth } = useAuth();
+  const { summary, refresh: refreshLoyalty } = useLoyalty();
+  const { refresh: refreshActiveOrders } = useActiveOrders();
   const [order, setOrder] = useState<NormalisedOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,15 +70,27 @@ export function OrderDetail() {
     return () => window.clearInterval(id);
   }, [order?.id, order?.status, reload]);
 
+  const handleOrderCompleted = useCallback(() => {
+    if (!isSignedIn) return;
+    void refreshLoyalty();
+    void refreshAuth();
+    void refreshActiveOrders();
+  }, [isSignedIn, refreshLoyalty, refreshAuth, refreshActiveOrders]);
+
   const { trackingStatus, completedAt, stepIndex, lastPickupTime } = useOrderTracking(
     order?.id ?? null,
     order?.status,
     guestTracking ?? null,
+    { onOrderCompleted: handleOrderCompleted },
   );
 
   const pickupTime = lastPickupTime ?? order?.pickup.pickupTime;
   const allDone = trackingStatus === 'completed' || order?.status === 'completed';
   const statusMeta = order ? getOrderStatusMeta(order.status) : null;
+  const loyaltyEnabled = summary?.loyaltyEnabled === true;
+  const showStampEarned = isSignedIn && loyaltyEnabled && allDone;
+  const showStampPending =
+    isSignedIn && loyaltyEnabled && order != null && !allDone && order.status !== 'cancelled';
 
   async function onCancel(): Promise<void> {
     if (!order || !isCancellable(order.status)) return;
@@ -162,14 +182,14 @@ export function OrderDetail() {
           </Box>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 3, letterSpacing: 0.5, display: 'block' }}>
-            Items · {order.items.length}
+            Items · {totalItemQuantity(order.items)}
           </Typography>
           {order.items.map((li) => (
             <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>
               <Box sx={{ width: 56, height: 56, borderRadius: 1, bgcolor: 'action.hover', flexShrink: 0 }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="body2" fontWeight={600}>
-                  {li.itemName}
+                  {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
                 </Typography>
                 {li.modifiers.length > 0 && (
                   <Typography variant="caption" color="text.secondary">
@@ -206,6 +226,40 @@ export function OrderDetail() {
               Your order is ready!
               {completedAt ? ` (${formatTime(completedAt)})` : ''}
             </Typography>
+          )}
+
+          {showStampPending && (
+            <Box
+              sx={{
+                mt: 2,
+                p: 1.5,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1.25,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                ★ You&apos;ll earn <strong>1 stamp</strong> when the kitchen marks this order complete.
+              </Typography>
+            </Box>
+          )}
+
+          {showStampEarned && (
+            <Box
+              sx={{
+                mt: 2,
+                p: 1.5,
+                border: 1,
+                borderColor: 'success.light',
+                borderRadius: 1.25,
+                bgcolor: 'success.50',
+              }}
+            >
+              <Typography variant="body2" color="success.main" fontWeight={600}>
+                ★ Stamp earned — your loyalty card has been updated.
+              </Typography>
+            </Box>
           )}
 
           {isCancellable(order.status) && (

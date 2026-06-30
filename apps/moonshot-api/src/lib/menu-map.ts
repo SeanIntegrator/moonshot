@@ -1,6 +1,13 @@
-import type { MenuCategory, NormalisedMenuItem, NormalisedModifierGroup } from '@moonshot/types';
+import type {
+  MenuCategory,
+  NormalisedItemSize,
+  NormalisedMenuItem,
+  NormalisedModifierGroup,
+} from '@moonshot/types';
 
-type MenuItemRow = {
+export const SIZE_MODIFIER_GROUP_ID = '__item_size__';
+
+export type MenuItemRow = {
   id: string;
   pos_item_id: string | null;
   name: string;
@@ -14,12 +21,114 @@ type MenuItemRow = {
   is_available: boolean;
   tags: string[];
   modifier_groups: unknown;
+  sizes: unknown;
 };
 
-export function mapMenuItemRow(row: MenuItemRow): NormalisedMenuItem {
-  const groups = Array.isArray(row.modifier_groups)
-    ? (row.modifier_groups as NormalisedModifierGroup[])
+export type ModifierGroupRow = {
+  id: string;
+  name: string;
+  selection_type: string;
+  required: boolean;
+  max_select: number | null;
+  options: unknown;
+  sort_order: number;
+};
+
+function parseSizes(raw: unknown): NormalisedItemSize[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((s): s is Record<string, unknown> => s != null && typeof s === 'object')
+    .map((s) => ({
+      id: String(s.id ?? ''),
+      name: String(s.name ?? ''),
+      priceMinor: typeof s.priceMinor === 'number' ? s.priceMinor : Number(s.price_minor) || 0,
+      isDefault: s.isDefault === true,
+      colorHex: typeof s.colorHex === 'string' ? s.colorHex : null,
+      chipLabel: typeof s.chipLabel === 'string' ? s.chipLabel : null,
+    }))
+    .filter((s) => s.id && s.name);
+}
+
+function parseModifierGroupFromJson(g: Record<string, unknown>): NormalisedModifierGroup | null {
+  const id = typeof g.id === 'string' ? g.id : '';
+  const name = typeof g.name === 'string' ? g.name : '';
+  if (!id || !name) return null;
+  const selectionType = g.selectionType === 'multi' ? 'multi' : 'single';
+  const options = Array.isArray(g.options)
+    ? g.options
+        .filter((o): o is Record<string, unknown> => o != null && typeof o === 'object')
+        .map((o) => ({
+          id: String(o.id ?? ''),
+          posOptionId: typeof o.posOptionId === 'string' ? o.posOptionId : null,
+          name: String(o.name ?? ''),
+          priceMinor: typeof o.priceMinor === 'number' ? o.priceMinor : 0,
+          isDefault: o.isDefault === true,
+          colorHex: typeof o.colorHex === 'string' ? o.colorHex : null,
+          chipLabel: typeof o.chipLabel === 'string' ? o.chipLabel : null,
+        }))
+        .filter((o) => o.id && o.name)
     : [];
+  return {
+    id,
+    name,
+    selectionType,
+    required: g.required === true,
+    maxSelect: typeof g.maxSelect === 'number' ? g.maxSelect : null,
+    options,
+  };
+}
+
+export function mapModifierGroupRow(row: ModifierGroupRow): NormalisedModifierGroup {
+  const fromJson = parseModifierGroupFromJson({
+    id: row.id,
+    name: row.name,
+    selectionType: row.selection_type,
+    required: row.required,
+    maxSelect: row.max_select,
+    options: row.options,
+  });
+  return (
+    fromJson ?? {
+      id: row.id,
+      name: row.name,
+      selectionType: 'single',
+      required: false,
+      options: [],
+    }
+  );
+}
+
+function parseEmbeddedGroups(raw: unknown): NormalisedModifierGroup[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((g): g is Record<string, unknown> => g != null && typeof g === 'object')
+    .map(parseModifierGroupFromJson)
+    .filter((g): g is NormalisedModifierGroup => g != null);
+}
+
+/** Merge library groups (ordered) with legacy embedded groups; library wins on id collision. */
+export function mergeModifierGroups(
+  library: NormalisedModifierGroup[],
+  embedded: NormalisedModifierGroup[],
+): NormalisedModifierGroup[] {
+  const byId = new Map<string, NormalisedModifierGroup>();
+  for (const g of embedded) byId.set(g.id, g);
+  for (const g of library) byId.set(g.id, g);
+  const orderedIds = [
+    ...library.map((g) => g.id),
+    ...embedded.map((g) => g.id).filter((id) => !library.some((l) => l.id === id)),
+  ];
+  return orderedIds
+    .map((id) => byId.get(id))
+    .filter((g): g is NormalisedModifierGroup => g != null);
+}
+
+export function mapMenuItemRow(
+  row: MenuItemRow,
+  attachedGroups: NormalisedModifierGroup[] = [],
+): NormalisedMenuItem {
+  const embedded = parseEmbeddedGroups(row.modifier_groups);
+  const groups = mergeModifierGroups(attachedGroups, embedded);
 
   return {
     id: row.id,
@@ -33,7 +142,13 @@ export function mapMenuItemRow(row: MenuItemRow): NormalisedMenuItem {
     imageUrl: row.image_url,
     emoji: row.emoji,
     isAvailable: row.is_available,
+    sizes: parseSizes(row.sizes),
     modifierGroups: groups,
     tags: row.tags ?? [],
   };
+}
+
+export function minSizePriceMinor(sizes: NormalisedItemSize[]): number | null {
+  if (sizes.length === 0) return null;
+  return Math.min(...sizes.map((s) => s.priceMinor));
 }

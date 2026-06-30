@@ -90,6 +90,16 @@ export async function createStripeCheckoutSessionDirectCharge(params: {
   };
 }
 
+export async function retrieveStripeCheckoutSession(params: {
+  sessionId: string;
+  connectedAccountId: string;
+}): Promise<Stripe.Checkout.Session> {
+  const stripe = requireStripe();
+  return stripe.checkout.sessions.retrieve(params.sessionId, {
+    stripeAccount: params.connectedAccountId,
+  });
+}
+
 export async function createStripeExpressConnectedAccount(): Promise<{ accountId: string }> {
   const stripe = requireStripe();
   const account = await stripe.accounts.create({

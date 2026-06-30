@@ -3,7 +3,25 @@ import CheckIcon from '@mui/icons-material/Check';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Box, Chip, IconButton, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
-import { formatMoney } from '../lib/format.js';
+import { formatModifierDelta } from '../lib/format.js';
+
+function colorDot(hex: string | null | undefined) {
+  if (!hex) return null;
+  return (
+    <Box
+      component="span"
+      sx={{
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        bgcolor: hex,
+        border: 1,
+        borderColor: 'divider',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
 
 type Props = {
   group: NormalisedModifierGroup;
@@ -54,12 +72,18 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
           >
             {group.options.map((opt) => {
               const selected = picked.has(opt.id);
-              const price = opt.priceMinor > 0 ? ` +${formatMoney(opt.priceMinor)}` : '';
+              const price = formatModifierDelta(opt.priceMinor);
               return (
                 <Chip
                   key={opt.id}
                   clickable
-                  label={`${opt.name}${price}`}
+                  label={
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                      {colorDot(opt.colorHex)}
+                      {opt.name}
+                      {price}
+                    </Box>
+                  }
                   icon={selected ? <CheckIcon /> : undefined}
                   onClick={() => onSelect(group.id, opt.id, 'multi', !selected)}
                   sx={{
@@ -139,6 +163,8 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
       >
         {group.options.map((opt) => {
           const selected = picked.has(opt.id);
+          const delta = formatModifierDelta(opt.priceMinor);
+          const sublabel = delta || (opt.isDefault ? 'Standard' : '');
           return (
             <Box
               key={opt.id}
@@ -175,16 +201,17 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 },
               }}
             >
-              <Typography variant="body2" fontWeight={600}>
-                {opt.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {opt.priceMinor > 0
-                  ? `+${formatMoney(opt.priceMinor)}`
-                  : opt.isDefault
-                    ? 'Standard'
-                    : ''}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                {colorDot(opt.colorHex)}
+                <Typography variant="body2" fontWeight={600}>
+                  {opt.name}
+                </Typography>
+              </Box>
+              {sublabel ? (
+                <Typography variant="caption" color="text.secondary">
+                  {sublabel}
+                </Typography>
+              ) : null}
             </Box>
           );
         })}

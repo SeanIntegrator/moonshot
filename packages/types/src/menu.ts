@@ -7,7 +7,13 @@ export type MenuCategory = 'hot_drinks' | 'cold_drinks' | 'food' | 'extras';
 
 export type ModifierSelectionType = 'single' | 'multi';
 
-export interface NormalisedModifierOption {
+/** Optional KDS chip styling — baristas map colours to brands (e.g. pink = almond). */
+export interface ModifierDisplayMeta {
+  colorHex?: string | null;
+  chipLabel?: string | null;
+}
+
+export interface NormalisedModifierOption extends ModifierDisplayMeta {
   /** Internal UUID */
   id: string;
   posOptionId: string | null;
@@ -22,7 +28,17 @@ export interface NormalisedModifierGroup {
   name: string;
   selectionType: ModifierSelectionType;
   required: boolean;
+  /** Max selections when `selectionType` is `multi`; omit for unlimited */
+  maxSelect?: number | null;
   options: NormalisedModifierOption[];
+}
+
+/** Per-item size with absolute price — empty `sizes` means single-price item uses `priceMinor`. */
+export interface NormalisedItemSize extends ModifierDisplayMeta {
+  id: string;
+  name: string;
+  priceMinor: number;
+  isDefault: boolean;
 }
 
 export interface NormalisedMenuItem {
@@ -38,8 +54,15 @@ export interface NormalisedMenuItem {
   imageUrl: string | null;
   emoji: string | null;
   isAvailable: boolean;
+  /** Ordered sizes; when non-empty, customer must pick one and `priceMinor` is the fallback/list anchor */
+  sizes: NormalisedItemSize[];
   modifierGroups: NormalisedModifierGroup[];
   tags: string[];
+}
+
+/** Café-scoped reusable modifier section (Milks, Syrups, Toppings) — admin library shape */
+export interface CafeModifierGroup extends NormalisedModifierGroup {
+  sortOrder: number;
 }
 
 export interface NormalisedMenu {

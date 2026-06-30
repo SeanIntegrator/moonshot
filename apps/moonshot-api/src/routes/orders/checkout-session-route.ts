@@ -3,7 +3,7 @@ import { ApiErrorCode } from '@moonshot/types';
 import type { IRouter } from 'express';
 import { Router } from 'express';
 import { buildGuestTrackingTokenIfNeeded } from '../../lib/customer-socket-token.js';
-import { findOrderByStripeCheckoutSessionForCafe } from '../../lib/orders-repository.js';
+import { recoverOrderFromStripeCheckoutSession } from '../../lib/orders/checkout-session-recovery.js';
 import { isStripeCheckoutSessionIdWellFormed } from '../../lib/stripe-checkout-session-id.js';
 
 export const checkoutSessionRouter: IRouter = Router();
@@ -20,7 +20,7 @@ checkoutSessionRouter.get('/checkout-session/:sessionId', async (req, res) => {
   }
 
   const cafeId = req.cafe!.cafeId;
-  const order = await findOrderByStripeCheckoutSessionForCafe(sessionId, cafeId);
+  const order = await recoverOrderFromStripeCheckoutSession({ sessionId, cafeId });
   if (!order) {
     return res.status(404).json({
       ok: false,

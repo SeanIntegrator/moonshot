@@ -1,7 +1,8 @@
 import type { NormalisedMenuItem } from '@moonshot/types';
 import { Box, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { formatMoney } from '../lib/format.js';
+import { formatFromPrice, formatPriceTag } from '../lib/format.js';
+import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 
 type Props = {
@@ -11,6 +12,11 @@ type Props = {
 
 export function MenuItemCard({ item, qty = 0 }: Props) {
   const cafePath = useCafePath();
+  const hasSizes = (item.sizes?.length ?? 0) > 0;
+  const listMinor = menuItemListPriceMinor(item);
+  const priceLabel = hasSizes
+    ? formatFromPrice(listMinor, item.currency)
+    : formatPriceTag(listMinor, item.currency);
 
   return (
     <Box sx={{ position: 'relative' }}>
@@ -41,9 +47,11 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           <Typography variant="body2" fontWeight={600} sx={{ minWidth: 0 }}>
             {item.name}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-            {formatMoney(item.priceMinor, item.currency)}
-          </Typography>
+          {priceLabel ? (
+            <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+              {priceLabel}
+            </Typography>
+          ) : null}
         </Box>
       </Box>
       <Box

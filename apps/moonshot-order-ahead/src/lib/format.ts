@@ -4,6 +4,23 @@ export function formatMoney(minor: number, currency = 'GBP'): string {
   return `${symbol}${(minor / 100).toFixed(2)}`;
 }
 
+/** Customer-facing price tag — empty string when free (never show £0.00). */
+export function formatPriceTag(minor: number, currency = 'GBP'): string {
+  if (minor <= 0) return '';
+  return formatMoney(minor, currency);
+}
+
+/** Optional + prefix for modifier deltas */
+export function formatModifierDelta(minor: number, currency = 'GBP'): string {
+  const tag = formatPriceTag(minor, currency);
+  return tag ? `+${tag}` : '';
+}
+
+export function formatFromPrice(minor: number, currency = 'GBP'): string {
+  const tag = formatPriceTag(minor, currency);
+  return tag ? `from ${tag}` : '';
+}
+
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

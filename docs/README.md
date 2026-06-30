@@ -16,6 +16,7 @@ Historical narrative files ([dataflow-high-level.md](dataflow-high-level.md), [d
 ## Quick links
 
 - [Realtime / Socket auth](architecture/realtime.md) — `/kds` vs `/customer`, JWT rules
+- [Stripe checkout return](stripe-checkout-return.md) — `ORDER_AHEAD_BASE_URL`, recovery endpoint, KDS confirm path
 - [API module layout](architecture/api-modules.md) — where order/loyalty/admin logic lives in `@moonshot/api`
 - [HTTP routes & CORS](current/http-surface.md)
 - [POS → normalised menu/order mapping (future providers)](pos-normalisation.md)

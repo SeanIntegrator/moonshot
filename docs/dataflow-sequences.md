@@ -10,7 +10,7 @@ Implemented today:
 - Pre-seeded admin login plus settings updates for order-ahead and KDS configuration; **Stripe Connect onboarding** via admin routes + **`payment_config.stripe`** cache.
 - Menu admin writes through API routes; the admin UI currently exposes item price, availability, and modifier option price edits.
 - **Pay-in-store** order creation when `features.order_ahead.paymentProvider === 'pay_in_store'`: `POST /api/v1/orders` persists **`confirmed` / `unpaid`**, validates **modifiers** from `menu_items.modifier_groups`, emits **`kds:order:new`**, FIFO **pickup ETA** recalculation + **`kds:eta:updated`** / **`customerEtaUpdated`**.
-- **Stripe Checkout** when `paymentProvider === 'stripe'`: same `POST /orders` creates **`pending` / `unpaid`**, returns **`checkoutUrl`**; **`checkout.session.completed`** webhook marks **`paid` / `confirmed`**, then **`kds:order:new`** + ETA recompute. Cafés without **Connect + charges enabled** are rejected at order time.
+- **Stripe Checkout** when `paymentProvider === 'stripe'`: same `POST /orders` creates **`pending` / `unpaid`**, returns **`checkoutUrl`**; confirmation via **`checkout.session.completed`** webhook **or** browser return (`GET /orders/checkout-session/:id` recovery). Then **`paid` / `confirmed`**, **`kds:order:new`** + ETA recompute. Platform **`ORDER_AHEAD_BASE_URL`** builds per-slug return URLs. Cafés without **Connect + charges enabled** are rejected at order time.
 - Café-scoped **KDS login** (JWT **90d**), **open orders**, **complete order**, and **`/kds`** Socket.io.
 - **Customer** **`/customer`** tracking: completion, **ETA pushes**, optional **`customerReviewEligible`** after simple loyalty counters on KDS complete.
 
@@ -130,6 +130,44 @@ Request body uses `CreateOrderRequest` from `@moonshot/types`: `customerName`, o
 
 ---
 
+## S4 — Stripe Checkout + browser return recovery
+
+Implemented path when `paymentProvider === 'stripe'`. See [stripe-checkout-return.md](stripe-checkout-return.md).
+
+```mermaid
+sequenceDiagram
+  participant PWA as moonshotOrderAhead
+  participant API as moonshotApi
+  participant DB as Postgres
+  participant St as Stripe_Connect
+  participant WH as Stripe_webhook
+  participant IO as Socket_io
+  participant KDS as moonshotKDS
+
+  PWA->>API: POST_api_v1_orders_X_Cafe_Slug
+  API->>DB: INSERT_pending_unpaid_payment_sessions
+  API->>St: createCheckoutSession
+  St-->>PWA: redirect_url
+  PWA->>St: customer_pays
+  par Webhook
+    St->>WH: checkout_session_completed
+    WH->>DB: UPDATE_confirmed_paid
+    WH->>IO: emit_kds_order_new
+    IO->>KDS: kds_order_new
+  and Browser_return
+    St-->>PWA: success_url_with_session_id
+    Note over PWA: CafeProvider sets slug before CheckoutRestore effect
+    PWA->>API: GET_checkout_session_cs_id
+    API->>St: retrieveSession_if_pending
+    API->>DB: confirm_paid_idempotent
+    API->>IO: emit_kds_order_new_if_newly_paid
+    IO->>KDS: kds_order_new
+    API-->>PWA: order_trackingToken
+  end
+```
+
+---
+
 ## F1 — Planned POS walk-in order (Square)
 
 Square does not reliably emit `order.created` for register-originated orders; the intended resilient pattern is `payment.created` / `payment.updated` → fetch order by id → normalise → upsert Postgres → emit to KDS room.
@@ -160,7 +198,9 @@ Polling fallback remains planned as a safety net. Dedupe should be DB-level on `
 
 ---
 
-## F2 — Planned order-ahead checkout
+## F2 — Planned order-ahead checkout (superseded by S4)
+
+Historical diagram; live behaviour is **S4** above. F3 merge flow still planned.
 
 ```mermaid
 sequenceDiagram

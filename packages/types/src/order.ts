@@ -39,9 +39,14 @@ export interface NormalisedOrderLineModifier {
   /** Selected option id (from `NormalisedModifierOption.id`) */
   optionId: string;
   optionName: string;
-  /** Minor units — delta added to base item price for this option */
+  /** Minor units — delta added to base item price for this option; size rows use absolute size price */
   priceMinor: number;
   posOptionId?: string | null;
+  /** KDS chip colour/label snapshot at order time */
+  colorHex?: string | null;
+  chipLabel?: string | null;
+  /** True when this row is the selected item size (not a library modifier) */
+  isSize?: boolean;
 }
 
 
@@ -101,6 +106,8 @@ export interface NormalisedOrder {
 export interface CreateOrderLineInput {
   menuItemId: string;
   quantity: number;
+  /** Required when the menu item has `sizes` */
+  sizeId?: string | null;
   /** Selected options keyed by modifier group */
   modifiers?: OrderLineModifierSelectionInput[];
   notes?: string | null;

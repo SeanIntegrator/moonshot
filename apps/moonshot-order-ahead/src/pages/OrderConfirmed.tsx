@@ -10,6 +10,10 @@ import { useCafePath } from '../hooks/useCafePath.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
 import { firstName, formatMoney, formatTime } from '../lib/format.js';
 
+function totalItemQuantity(items: NormalisedOrder['items']): number {
+  return items.reduce((sum, li) => sum + li.quantity, 0);
+}
+
 export function OrderConfirmed() {
   const { orderId = '' } = useParams();
   const navigate = useNavigate();
@@ -55,8 +59,8 @@ export function OrderConfirmed() {
             <Chip label="Confirmed" size="small" color="primary" />
           </Box>
           <Typography variant="body1" fontWeight={700}>
-            {formatMoney(order.totalMinor, order.currency)} · {order.items.length} item
-            {order.items.length !== 1 ? 's' : ''}
+            {formatMoney(order.totalMinor, order.currency)} · {totalItemQuantity(order.items)} item
+            {totalItemQuantity(order.items) !== 1 ? 's' : ''}
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>

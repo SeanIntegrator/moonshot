@@ -8,7 +8,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard.js';
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
 import { QrModal } from '../components/QrModal.js';
@@ -38,9 +38,10 @@ function reorderFromOrder(order: NormalisedOrder, upsertLine: ReturnType<typeof 
 export function Home() {
   const { loading, error, cafe } = useCafe();
   const { user, membership, isSignedIn } = useAuth();
-  const { summary } = useLoyalty();
+  const { summary, refresh: refreshLoyalty } = useLoyalty();
   const { active, recent, loading: ordersLoading } = useActiveOrders();
   const navigate = useNavigate();
+  const location = useLocation();
   const cafePath = useCafePath();
   const { upsertLine } = useCart();
   const [qrOpen, setQrOpen] = useState(false);
@@ -66,6 +67,10 @@ export function Home() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (isSignedIn) void refreshLoyalty();
+  }, [location.pathname, isSignedIn, refreshLoyalty]);
 
   const usualOrder = recent[0] ?? null;
   const featured = useMemo(() => (menu ? featuredItems(menu) : []), [menu]);

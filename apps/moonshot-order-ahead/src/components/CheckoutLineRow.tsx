@@ -3,7 +3,8 @@ import AddIcon from '@mui/icons-material/Add';
 import type { NormalisedMenuItem } from '@moonshot/types';
 import { Box, IconButton, Link, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { formatMoney } from '../lib/format.js';
+import { formatPriceTag } from '../lib/format.js';
+import { sizeById } from '../lib/menu-price-utils.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import type { CartLine } from '../providers/CartProvider.js';
 
@@ -15,22 +16,29 @@ type Props = {
   isLast?: boolean;
 };
 
-function modifierLabels(item: NormalisedMenuItem | undefined, line: CartLine): string {
-  if (!item || line.modifiers.length === 0) return '';
-  return line.modifiers
-    .map((sel) => {
-      const g = item.modifierGroups.find((x) => x.id === sel.groupId);
-      const o = g?.options.find((x) => x.id === sel.optionId);
-      return o?.name.toLowerCase() ?? '';
-    })
-    .filter(Boolean)
-    .join(', ');
+function lineDetailLabels(item: NormalisedMenuItem | undefined, line: CartLine): string {
+  if (!item) return '';
+  const parts: string[] = [];
+  const size = sizeById(item.sizes ?? [], line.sizeId);
+  if (size) parts.push(size.name.toLowerCase());
+  if (line.modifiers.length > 0) {
+    const mods = line.modifiers
+      .map((sel) => {
+        const g = item.modifierGroups.find((x) => x.id === sel.groupId);
+        const o = g?.options.find((x) => x.id === sel.optionId);
+        return o?.name.toLowerCase() ?? '';
+      })
+      .filter(Boolean);
+    parts.push(...mods);
+  }
+  return parts.join(', ');
 }
 
 export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = false }: Props) {
   const cafePath = useCafePath();
-  const mods = modifierLabels(item, line);
+  const mods = lineDetailLabels(item, line);
   const lineTotal = unitMinor != null ? unitMinor * line.quantity : null;
+  const lineTotalLabel = lineTotal != null ? formatPriceTag(lineTotal, item?.currency) : null;
 
   return (
     <Box
@@ -106,15 +114,15 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
           >
             <AddIcon sx={{ fontSize: 16 }} />
           </IconButton>
-          {lineTotal != null && (
+          {lineTotalLabel ? (
             <Typography
               variant="body2"
               fontWeight={700}
               sx={{ minWidth: 44, textAlign: 'right', fontVariantNumeric: 'tabular-nums', ml: 0.25 }}
             >
-              {formatMoney(lineTotal, item?.currency)}
+              {lineTotalLabel}
             </Typography>
-          )}
+          ) : null}
         </Box>
       </Box>
     </Box>

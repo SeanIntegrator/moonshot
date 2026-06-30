@@ -4,11 +4,17 @@ import { pool } from '../db.js';
 import { hashKdsPassword } from './kds-password.js';
 import { validateCafeSlug } from './cafe-slug.js';
 import { findCafeBySlug } from './cafes-repository.js';
+import { seedDefaultModifierLibrary } from './menu-seed-library.js';
 
 /** Default `cafes.features` for self-service signups — pay-in-store until Stripe Connect. */
 export function defaultNewCafeFeatures(): CafeFeatures {
   return {
-    loyalty: null,
+    loyalty: {
+      enabled: true,
+      stampsPerReward: 10,
+      rewardDescription: 'Free drink',
+      doubleStampDays: [],
+    },
     events: null,
     promotions: null,
     order_ahead: {
@@ -111,6 +117,8 @@ async function insertCafeWithAdmin(
     [name, slug, JSON.stringify(features), JSON.stringify(kdsConfig), timezone],
   );
   const cafeId = cafeInsert.rows[0]!.id;
+
+  await seedDefaultModifierLibrary(client, cafeId);
 
   await client.query(
     `UPDATE cafes SET kds_config = jsonb_set(kds_config, '{cafeId}', to_jsonb($1::text), TRUE) WHERE id = $2`,

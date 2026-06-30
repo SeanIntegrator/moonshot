@@ -1,6 +1,7 @@
 import type {
   AdminStripeAccountLinkResponse,
   AdminStripeAccountStatusResponse,
+  CafeFeatures,
 } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../db.js';
@@ -96,6 +97,16 @@ export async function handleStripeConnectRefresh(state: string): Promise<{ redir
   return { redirectUrl: url };
 }
 
+/** Self-service cafés start pay-in-store; flip to Stripe checkout once Connect can charge. */
+function paymentProviderForStripeReady(features: CafeFeatures): CafeFeatures {
+  const oa = features.order_ahead;
+  if (!oa || oa.paymentProvider !== 'pay_in_store') return features;
+  return {
+    ...features,
+    order_ahead: { ...oa, paymentProvider: 'stripe' },
+  };
+}
+
 export async function syncAdminStripeAccountStatus(cafeId: string): Promise<AdminStripeAccountStatusResponse> {
   requireStripeForRead();
 
@@ -115,6 +126,16 @@ export async function syncAdminStripeAccountStatus(cafeId: string): Promise<Admi
     ...live,
   });
   await updateCafePaymentConfig({ client: pool, cafeId, paymentConfig: next });
+
+  if (live.chargesEnabled && cafe.features.order_ahead?.paymentProvider === 'pay_in_store') {
+    const nextFeatures = paymentProviderForStripeReady(cafe.features);
+    await pool.query(`UPDATE cafes SET features = $1::jsonb WHERE id = $2`, [
+      JSON.stringify(nextFeatures),
+      cafeId,
+    ]);
+    console.info('[stripe.sync] switched order_ahead.paymentProvider to stripe', { cafeId });
+  }
+
   return {
     accountId,
     ...live,

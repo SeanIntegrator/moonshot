@@ -3,7 +3,7 @@ import type {
   IsoDateTime,
   OrderStatus,
 } from '@moonshot/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getStoredToken } from '../lib/api.js';
 import { createCustomerSocket } from '../lib/socket.js';
 
@@ -42,6 +42,10 @@ export function useOrderTracking(
   initialOrderStatus?: OrderStatus,
   /** Present for guest checkout only — JWT for `/customer` subscribe */
   orderTrackingToken?: string | null,
+  options?: {
+    /** Fired when the kitchen marks the order complete (socket or initial status). */
+    onOrderCompleted?: (params: { orderId: string; completedAt: IsoDateTime | null }) => void;
+  },
 ): {
   trackingStatus: OrderTrackingStatus;
   completedAt: IsoDateTime | null;
@@ -53,6 +57,8 @@ export function useOrderTracking(
   const [completedAt, setCompletedAt] = useState<IsoDateTime | null>(null);
   const [liveOrderStatus, setLiveOrderStatus] = useState<OrderStatus | undefined>(initialOrderStatus);
   const [lastPickupTime, setLastPickupTime] = useState<IsoDateTime | null>(null);
+  const onOrderCompletedRef = useRef(options?.onOrderCompleted);
+  onOrderCompletedRef.current = options?.onOrderCompleted;
 
   useEffect(() => {
     setLiveOrderStatus(initialOrderStatus);
@@ -82,6 +88,7 @@ export function useOrderTracking(
         setCompletedAt(ev.completedAt);
         setTrackingStatus('completed');
         setLiveOrderStatus('completed');
+        onOrderCompletedRef.current?.({ orderId: ev.orderId, completedAt: ev.completedAt });
       }
       if (ev.type === 'customerEtaUpdated') {
         const u = ev.updates.find((x) => x.orderId === orderId);

@@ -26,6 +26,8 @@ const CafeContext = createContext<CafeContextValue | null>(null);
 
 export function CafeProvider({ children }: { children: ReactNode }) {
   const slug = useCafeSlugFromRoute();
+  // Sync before child effects (e.g. CheckoutRestore) so X-Cafe-Slug matches the URL slug.
+  setRuntimeCafeSlug(slug);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cafe, setCafe] = useState<Cafe | null>(null);
@@ -33,7 +35,6 @@ export function CafeProvider({ children }: { children: ReactNode }) {
   const [activeFeatures, setActiveFeatures] = useState<FeatureFlagKey[]>([]);
 
   useEffect(() => {
-    setRuntimeCafeSlug(slug);
     setLoading(true);
 
     void (async () => {

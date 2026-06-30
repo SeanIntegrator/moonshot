@@ -7,11 +7,13 @@ import { ensureGoogleInitialized, exchangeGoogleCredential, promptGoogleOneTap }
  * Requires `VITE_GOOGLE_CLIENT_ID`.
  */
 export function GoogleOneTap() {
-  const { refresh } = useAuth();
+  const { refresh, isSignedIn, loading } = useAuth();
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     if (!clientId || clientId.includes('your-google-oauth')) return;
+    if (loading || isSignedIn) return;
+
     let cancelled = false;
     let timeoutId = 0;
     void (async () => {
@@ -33,7 +35,7 @@ export function GoogleOneTap() {
       cancelled = true;
       if (timeoutId) window.clearTimeout(timeoutId);
     };
-  }, [clientId, refresh]);
+  }, [clientId, refresh, loading, isSignedIn]);
 
   return null;
 }

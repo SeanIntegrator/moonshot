@@ -7,7 +7,16 @@ Thin path in production today:
 3. **KDS:** device login → `GET /kds/orders` + Socket namespace **`/kds`** (`kds:order:new` / `kds:order:removed`).
 4. **Customer tracking:** order-ahead opens **`/customer`**, emits `customer:subscribe` with `orderId` + `authToken` (tracking JWT or session JWT); KDS completion emits **`customerOrderCompleted`** to that room. **Loyalty + ETA recompute** run after the order row is `completed`; failures there are logged and **do not** fail the KDS **Done** HTTP response.
 5. **Admin:** pre-seeded admin login → dashboard updates order-ahead feature settings, KDS config, and existing menu item price/availability/modifier option prices.
-6. **Track order:** order-ahead **`/orders/:id`** polls while the order is open and opens **`/customer`** socket tracking where possible (`useOrderTracking`). **`checkout_session_id`** redirects via **`/checkout/restore`** (or Home forwards there).
+6. **Track order:** order-ahead **`/orders/:id`** polls while the order is open and opens **`/customer`** socket tracking where possible (`useOrderTracking`). Stripe success URLs land on **`/:cafeSlug/checkout/restore?checkout_session_id=…`** (or Home forwards there). Recovery calls **`GET /orders/checkout-session/:sessionId`** with the route slug as **`X-Cafe-Slug`** — see [stripe-checkout-return.md](../stripe-checkout-return.md).
+
+### Stripe vs pay-in-store (customer-visible)
+
+| Mode | Initial DB status | KDS sees order when |
+|------|-------------------|---------------------|
+| `pay_in_store` | `confirmed` / `unpaid` | Immediately on `POST /orders` |
+| `stripe` | `pending` / `unpaid` | After webhook **or** checkout return recovery confirms `paid` / `confirmed` |
+
+Home **`GET /orders/me`** includes **`pending`** in active orders; KDS open queue does **not** — a paid Stripe order stuck as `pending` looks like "order on Home, nothing on KDS".
 
 ### Order status stepper (v1)
 

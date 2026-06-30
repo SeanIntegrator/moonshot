@@ -23,6 +23,8 @@ export {
   recordStripeCheckoutSessionForOrder,
 } from './orders/order-checkout.js';
 
+export { recoverOrderFromStripeCheckoutSession } from './orders/checkout-session-recovery.js';
+
 export { completeOrderForKds, listOpenOrdersForKds } from './orders/order-kds.js';
 
 export {

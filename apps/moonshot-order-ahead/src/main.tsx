@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { getCafeSlug } from './lib/api.js';
 import { CafeProvider } from './config/CafeProvider.js';
 import { AuthProvider } from './hooks/useAuth.js';
+import { LoyaltyProvider } from './providers/LoyaltyProvider.js';
 import { ActiveOrdersProvider } from './providers/ActiveOrdersProvider.js';
 import { CartProvider } from './providers/CartProvider.js';
 import { App } from './App.js';
@@ -13,11 +14,13 @@ function CafeAppTree() {
   return (
     <CafeProvider>
       <AuthProvider>
-        <CartProvider>
-          <ActiveOrdersProvider>
-            <App />
-          </ActiveOrdersProvider>
-        </CartProvider>
+        <LoyaltyProvider>
+          <CartProvider>
+            <ActiveOrdersProvider>
+              <App />
+            </ActiveOrdersProvider>
+          </CartProvider>
+        </LoyaltyProvider>
       </AuthProvider>
     </CafeProvider>
   );

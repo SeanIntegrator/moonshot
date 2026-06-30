@@ -4,18 +4,32 @@ import type { MenuCategory, NormalisedModifierGroup } from '@moonshot/types';
 import type { PosProvider } from '@moonshot/types';
 import { pool } from '../db.js';
 import { getPosAdapter } from '../lib/pos-adapters/index.js';
-import { mapMenuItemRow } from '../lib/menu-map.js';
+import { fetchMenuForCafe, fetchMenuItemsByIds } from '../lib/menu-fetch.js';
+import { normalizeSizes, setMenuItemModifierGroups } from '../lib/menu-modifier-library.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
+import { modifierGroupsRouter } from './modifier-groups.js';
 
 const MENU_CATEGORIES: MenuCategory[] = ['hot_drinks', 'cold_drinks', 'food', 'extras'];
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function parseModifierGroupIds(body: Record<string, unknown>): string[] | undefined {
+  if (!('modifierGroupIds' in body)) return undefined;
+  if (!Array.isArray(body.modifierGroupIds)) return [];
+  return body.modifierGroupIds.filter((id): id is string => typeof id === 'string' && UUID_RE.test(id));
+}
+
+async function loadMergedItem(cafeId: string, itemId: string) {
+  const map = await fetchMenuItemsByIds(pool, cafeId, [itemId]);
+  return map.get(itemId) ?? null;
+}
+
 export const menuRouter: Router = Router();
 
 menuRouter.use(requireCafeContext);
+menuRouter.use('/modifier-groups', modifierGroupsRouter);
 
 menuRouter.post('/', requireMenuMutationAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
@@ -42,16 +56,16 @@ menuRouter.post('/', requireMenuMutationAuth, async (req, res) => {
   const modifierGroups = Array.isArray(body.modifierGroups)
     ? (body.modifierGroups as NormalisedModifierGroup[])
     : [];
+  const sizes = normalizeSizes(body.sizes);
   const sortOrder = typeof body.sortOrder === 'number' ? body.sortOrder : 0;
+  const modifierGroupIds = parseModifierGroupIds(body) ?? [];
 
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<{ id: string }>(
     `INSERT INTO menu_items (
       cafe_id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-      image_url, emoji, is_available, tags, modifier_groups, sort_order
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13)
-    RETURNING
-      id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-      image_url, emoji, is_available, tags, modifier_groups`,
+      image_url, emoji, is_available, tags, modifier_groups, sizes, sort_order
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13::jsonb, $14)
+    RETURNING id`,
     [
       cafeId,
       posItemId,
@@ -65,14 +79,18 @@ menuRouter.post('/', requireMenuMutationAuth, async (req, res) => {
       emoji,
       tags,
       JSON.stringify(modifierGroups),
+      JSON.stringify(sizes),
       sortOrder,
     ],
   );
 
-  return res.status(201).json({
-    ok: true,
-    data: mapMenuItemRow(rows[0] as Parameters<typeof mapMenuItemRow>[0]),
-  });
+  const itemId = rows[0]!.id;
+  if (modifierGroupIds.length > 0) {
+    await setMenuItemModifierGroups(pool, itemId, modifierGroupIds);
+  }
+
+  const item = await loadMergedItem(cafeId, itemId);
+  return res.status(201).json({ ok: true, data: item });
 });
 
 menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
@@ -91,6 +109,7 @@ menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const sets: string[] = [];
   const values: unknown[] = [];
   let i = 1;
+  const modifierGroupIds = parseModifierGroupIds(body);
 
   const optionalString = (key: string, col: string) => {
     if (key in body) {
@@ -135,12 +154,16 @@ menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
     sets.push(`modifier_groups = $${i++}::jsonb`);
     values.push(JSON.stringify(body.modifierGroups));
   }
+  if ('sizes' in body) {
+    sets.push(`sizes = $${i++}::jsonb`);
+    values.push(JSON.stringify(normalizeSizes(body.sizes)));
+  }
   if ('sortOrder' in body && typeof body.sortOrder === 'number') {
     sets.push(`sort_order = $${i++}`);
     values.push(body.sortOrder);
   }
 
-  if (sets.length === 0) {
+  if (sets.length === 0 && modifierGroupIds === undefined) {
     return res.status(400).json({
       ok: false,
       error: 'No fields to update',
@@ -148,29 +171,40 @@ menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
     });
   }
 
-  values.push(itemId, cafeId);
-
-  const { rows } = await pool.query(
-    `UPDATE menu_items SET ${sets.join(', ')}
-     WHERE id = $${i++} AND cafe_id = $${i++}
-     RETURNING
-       id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-       image_url, emoji, is_available, tags, modifier_groups`,
-    values,
-  );
-
-  if (rows.length === 0) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Menu item not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+  if (sets.length > 0) {
+    values.push(itemId, cafeId);
+    const { rowCount } = await pool.query(
+      `UPDATE menu_items SET ${sets.join(', ')}
+       WHERE id = $${i++} AND cafe_id = $${i++}`,
+      values,
+    );
+    if (rowCount === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Menu item not found',
+        code: ApiErrorCode.NOT_FOUND,
+      });
+    }
+  } else {
+    const exists = await pool.query(`SELECT 1 FROM menu_items WHERE id = $1 AND cafe_id = $2`, [
+      itemId,
+      cafeId,
+    ]);
+    if (exists.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Menu item not found',
+        code: ApiErrorCode.NOT_FOUND,
+      });
+    }
   }
 
-  return res.json({
-    ok: true,
-    data: mapMenuItemRow(rows[0] as Parameters<typeof mapMenuItemRow>[0]),
-  });
+  if (modifierGroupIds !== undefined) {
+    await setMenuItemModifierGroups(pool, itemId, modifierGroupIds);
+  }
+
+  const item = await loadMergedItem(cafeId, itemId);
+  return res.json({ ok: true, data: item });
 });
 
 menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
@@ -198,6 +232,11 @@ menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
     });
   }
   return res.json({ ok: true, data: { removed: true } });
+});
+
+menuRouter.get('/manage', requireMenuMutationAuth, async (req, res) => {
+  const menu = await fetchMenuForCafe(pool, req.cafe!.cafeId, false);
+  return res.json({ ok: true, data: menu });
 });
 
 menuRouter.get('/', async (req, res) => {

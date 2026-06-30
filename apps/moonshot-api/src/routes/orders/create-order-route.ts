@@ -2,6 +2,7 @@ import type { CreateOrderResponse } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import type { IRouter } from 'express';
 import { Router } from 'express';
+import { ensureCafeMembership } from '../../lib/cafe-membership.js';
 import { buildGuestTrackingTokenIfNeeded } from '../../lib/customer-socket-token.js';
 import { createGuestPayInStoreOrder } from '../../lib/orders-repository.js';
 import { emitKdsServerToClient } from '../../realtime/kds-events.js';
@@ -31,6 +32,21 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
   const paymentMode = parseOrderAheadPaymentMode(req.cafe!.features.order_ahead);
 
   const jwtSecret = process.env.JWT_SECRET;
+
+  if (userId) {
+    // Loyalty and order history need a cafe_users row; Google sign-in alone may not create one.
+    await ensureCafeMembership({ db: pool, cafeId, userId });
+  }
+
+  console.info('[orders.create] mode selected', {
+    cafeId,
+    cafeSlug: req.cafe!.slug,
+    paymentMode,
+    signedIn: userId != null,
+    userId: userId ?? undefined,
+    itemCount: items.length,
+    redeemRewardId: redeemRewardId ?? undefined,
+  });
 
   if (paymentMode === 'pay_in_store') {
     const result = await createGuestPayInStoreOrder({
@@ -68,6 +84,7 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
 
   const data = await createStripeCheckoutOrderResponse({
     cafeId,
+    cafeSlug: req.cafe!.slug,
     userId,
     customerName,
     notes,

@@ -11,8 +11,12 @@ import { groupMenuByCategory } from '../lib/menu-utils.js';
 import { useCart } from '../providers/CartProvider.js';
 import { fetchPickupEstimate } from '../api/orders-api.js';
 
+import { unitPriceForItem } from '../lib/menu-price-utils.js';
+
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
-  const hit = lines.find((l) => l.menuItemId === menuItemId && l.modifiers.length === 0);
+  const hit = lines.find(
+    (l) => l.menuItemId === menuItemId && l.modifiers.length === 0 && !l.sizeId,
+  );
   return hit?.quantity ?? 0;
 }
 
@@ -73,12 +77,13 @@ export function Menu() {
     return lines.reduce((sum, line) => {
       const item = menu.items.find((i) => i.id === line.menuItemId);
       if (!item) return sum;
-      let unit = item.priceMinor;
+      let delta = 0;
       for (const sel of line.modifiers) {
         const g = item.modifierGroups.find((x) => x.id === sel.groupId);
         const opt = g?.options.find((o) => o.id === sel.optionId);
-        if (opt) unit += opt.priceMinor;
+        if (opt) delta += opt.priceMinor;
       }
+      const unit = unitPriceForItem(item, line.sizeId, delta);
       return sum + unit * line.quantity;
     }, 0);
   }, [menu, lines]);

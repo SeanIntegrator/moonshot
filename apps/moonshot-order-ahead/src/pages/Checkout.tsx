@@ -25,21 +25,24 @@ import { createCustomerOrder, fetchPickupEstimate } from '../api/orders-api.js';
 import { apiFetch } from '../lib/api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
+import { useCafe } from '../hooks/useCafe.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
-import { formatMoney, formatTime } from '../lib/format.js';
+import { formatMoney, formatPriceTag, formatTime } from '../lib/format.js';
+import { unitPriceForItem } from '../lib/menu-price-utils.js';
 
 function estimateLineMinor(
   item: NormalisedMenuItem,
   modifiers: OrderLineModifierSelectionInput[],
+  sizeId: string | null,
 ): number {
-  let total = item.priceMinor;
+  let delta = 0;
   for (const sel of modifiers) {
     const g = item.modifierGroups.find((x) => x.id === sel.groupId);
     const opt = g?.options.find((o) => o.id === sel.optionId);
-    if (opt) total += opt.priceMinor;
+    if (opt) delta += opt.priceMinor;
   }
-  return total;
+  return unitPriceForItem(item, sizeId, delta);
 }
 
 function drinkDiscountMinor(
@@ -59,8 +62,9 @@ export function Checkout() {
   const navigate = useNavigate();
   const cafePath = useCafePath();
   const { lines, clear, upsertLine, removeLine } = useCart();
+  const { cafe } = useCafe();
   const { isSignedIn, user } = useAuth();
-  const { summary, rewards } = useLoyalty();
+  const { summary, rewards, refresh: refreshLoyalty } = useLoyalty();
   const [menu, setMenu] = useState<NormalisedMenu | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [orderType] = useState<OrderType>('takeaway');
@@ -71,6 +75,13 @@ export function Checkout() {
   const [checkoutAllergens, setCheckoutAllergens] = useState<string[]>([]);
   const [applyReward, setApplyReward] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+
+  const loyaltyEnabled =
+    summary?.loyaltyEnabled ?? cafe?.features.loyalty?.enabled === true;
+
+  useEffect(() => {
+    if (isSignedIn) void refreshLoyalty();
+  }, [isSignedIn, refreshLoyalty]);
 
   useEffect(() => {
     if (lines.length === 0) navigate(cafePath('/order'), { replace: true });
@@ -107,7 +118,7 @@ export function Checkout() {
     if (!menu) return [];
     return lines.map((line) => {
       const item = menu.items.find((i) => i.id === line.menuItemId);
-      const unit = item ? estimateLineMinor(item, line.modifiers) : null;
+      const unit = item ? estimateLineMinor(item, line.modifiers, line.sizeId) : null;
       return { line, item, unit };
     });
   }, [menu, lines]);
@@ -140,6 +151,7 @@ export function Checkout() {
         redeemRewardId: applyReward && rewards[0] ? rewards[0].id : undefined,
         items: lines.map((l) => ({
           menuItemId: l.menuItemId,
+          sizeId: l.sizeId ?? undefined,
           quantity: l.quantity,
           modifiers: l.modifiers.length ? l.modifiers : undefined,
           allergens: allergensForLines.length ? allergensForLines : l.allergens.length ? l.allergens : undefined,
@@ -191,201 +203,223 @@ export function Checkout() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 6 }}>
-      <PageHeader title="Checkout" onBack={() => navigate(cafePath('/order'))} />
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
-        <Typography variant="subtitle1" fontWeight={700}>
-          Your order
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {itemCount} items
-        </Typography>
-      </Box>
-
-      <Box
+    <Box
+      sx={{
+        minHeight: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Container
+        maxWidth="sm"
         sx={{
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1.25,
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          py: 2,
         }}
       >
-        {pricedLines.map(({ line, item, unit }, index) => (
-          <CheckoutLineRow
-            key={line.key}
-            line={line}
-            item={item}
-            unitMinor={unit}
-            isLast={index === pricedLines.length - 1 && discountMinor === 0}
-            onQtyChange={(qty) => {
-              if (qty <= 0) removeLine(line.key);
-              else upsertLine({ ...line, quantity: qty });
-            }}
-          />
-        ))}
-        {discountMinor > 0 && (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              px: 1.5,
-              py: 1,
-              color: 'success.main',
-              borderTop: pricedLines.length > 0 ? 1 : 0,
-              borderColor: 'divider',
-            }}
-          >
-            <Typography variant="body2" fontWeight={600}>
-              Loyalty (−1 free)
+        <Box sx={{ flex: 1 }}>
+          <PageHeader title="Checkout" onBack={() => navigate(cafePath('/order'))} />
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Your order
             </Typography>
-            <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              −{formatMoney(discountMinor)}
+            <Typography variant="body2" color="text.secondary">
+              {itemCount} items
             </Typography>
           </Box>
-        )}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            px: 1.5,
-            py: 1.25,
-            borderTop: pricedLines.length > 0 || discountMinor > 0 ? 1 : 0,
-            borderColor: 'divider',
-          }}
-        >
-          <Typography variant="body1" fontWeight={700}>
-            Total
-          </Typography>
-          <Typography variant="body1" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-            {formatMoney(totalMinor)}
-          </Typography>
-        </Box>
-      </Box>
 
-      <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
-        Pickup time
-      </Typography>
-      <Box
-        sx={{
-          p: 1.5,
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1.25,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          opacity: 0.7,
-        }}
-      >
-        <AccessTimeIcon color="action" />
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="body1" fontWeight={700}>
-            {estimate ? `${formatTime(estimate.pickupTime)} am` : 'ASAP'}
+          <Box
+            sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1.25,
+              bgcolor: 'background.paper',
+              overflow: 'hidden',
+            }}
+          >
+            {pricedLines.map(({ line, item, unit }, index) => (
+              <CheckoutLineRow
+                key={line.key}
+                line={line}
+                item={item}
+                unitMinor={unit}
+                isLast={index === pricedLines.length - 1 && discountMinor === 0}
+                onQtyChange={(qty) => {
+                  if (qty <= 0) removeLine(line.key);
+                  else upsertLine({ ...line, quantity: qty });
+                }}
+              />
+            ))}
+            {discountMinor > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  px: 1.5,
+                  py: 1,
+                  color: 'success.main',
+                  borderTop: pricedLines.length > 0 ? 1 : 0,
+                  borderColor: 'divider',
+                }}
+              >
+                <Typography variant="body2" fontWeight={600}>
+                  Loyalty (−1 free)
+                </Typography>
+                <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                  −{formatMoney(discountMinor)}
+                </Typography>
+              </Box>
+            )}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                px: 1.5,
+                py: 1.25,
+                borderTop: pricedLines.length > 0 || discountMinor > 0 ? 1 : 0,
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="body1" fontWeight={700}>
+                Total
+              </Typography>
+              <Typography variant="body1" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                {formatMoney(totalMinor)}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+            Pickup time
           </Typography>
-          {estimate && (
-            <Typography variant="caption" color="text.secondary">
-              in {estimate.minutesFromNow} min
+          <Box
+            sx={{
+              p: 1.5,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1.25,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              opacity: 0.7,
+            }}
+          >
+            <AccessTimeIcon color="action" />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body1" fontWeight={700}>
+                {estimate ? `${formatTime(estimate.pickupTime)} am` : 'ASAP'}
+              </Typography>
+              {estimate && (
+                <Typography variant="caption" color="text.secondary">
+                  in {estimate.minutesFromNow} min
+                </Typography>
+              )}
+            </Box>
+            <Typography variant="caption" color="text.disabled">
+              ⌄
+            </Typography>
+          </Box>
+          <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>
+            Scheduled pickup — coming soon
+          </Typography>
+
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+            Allergy info
+          </Typography>
+          <ToggleButtonGroup
+            exclusive
+            fullWidth
+            value={allergyMode}
+            onChange={(_, v) => v && setAllergyMode(v)}
+            size="small"
+            sx={{
+              mb: 1,
+              bgcolor: 'action.hover',
+              borderRadius: 999,
+              p: 0.5,
+              border: 0,
+              '& .MuiToggleButtonGroup-grouped': {
+                border: 0,
+                borderRadius: '999px !important',
+                mx: 0,
+                flex: 1,
+              },
+              '& .MuiToggleButton-root': {
+                border: 0,
+                borderRadius: 999,
+                py: 1,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                color: 'text.secondary',
+                '&.Mui-selected': {
+                  bgcolor: 'background.paper',
+                  color: 'text.primary',
+                  boxShadow: 1,
+                  '&:hover': { bgcolor: 'background.paper' },
+                },
+                '&:not(.Mui-selected)': {
+                  bgcolor: 'transparent',
+                  '&:hover': { bgcolor: 'transparent' },
+                },
+              },
+            }}
+          >
+            <ToggleButton value="none">None</ToggleButton>
+            <ToggleButton value="allergies">I have allergies</ToggleButton>
+          </ToggleButtonGroup>
+          {allergyMode === 'allergies' && (
+            <AllergyChecklist selected={checkoutAllergens} onChange={setCheckoutAllergens} />
+          )}
+
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+            Rewards
+          </Typography>
+          {isSignedIn && summary && rewards.length > 0 ? (
+            <RewardRow
+              description="1 free drink available"
+              applied={applyReward}
+              onToggle={setApplyReward}
+            />
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              {!loyaltyEnabled
+                ? 'Loyalty is not enabled for this café.'
+                : !isSignedIn
+                  ? 'Sign in to earn stamps and redeem rewards.'
+                  : 'No vouchers or rewards available. Earn 1 stamp with this order.'}
             </Typography>
           )}
         </Box>
-        <Typography variant="caption" color="text.disabled">
-          ⌄
-        </Typography>
-      </Box>
-      <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>
-        Scheduled pickup — coming soon
-      </Typography>
 
-      <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
-        Allergy info
-      </Typography>
-      <ToggleButtonGroup
-        exclusive
-        fullWidth
-        value={allergyMode}
-        onChange={(_, v) => v && setAllergyMode(v)}
-        size="small"
-        sx={{
-          mb: 1,
-          bgcolor: 'action.hover',
-          borderRadius: 999,
-          p: 0.5,
-          border: 0,
-          '& .MuiToggleButtonGroup-grouped': {
-            border: 0,
-            borderRadius: '999px !important',
-            mx: 0,
-            flex: 1,
-          },
-          '& .MuiToggleButton-root': {
-            border: 0,
-            borderRadius: 999,
-            py: 1,
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.875rem',
-            color: 'text.secondary',
-            '&.Mui-selected': {
-              bgcolor: 'background.paper',
-              color: 'text.primary',
-              boxShadow: 1,
-              '&:hover': { bgcolor: 'background.paper' },
-            },
-            '&:not(.Mui-selected)': {
-              bgcolor: 'transparent',
-              '&:hover': { bgcolor: 'transparent' },
-            },
-          },
-        }}
-      >
-        <ToggleButton value="none">None</ToggleButton>
-        <ToggleButton value="allergies">I have allergies</ToggleButton>
-      </ToggleButtonGroup>
-      {allergyMode === 'allergies' && (
-        <AllergyChecklist selected={checkoutAllergens} onChange={setCheckoutAllergens} />
-      )}
+        <Box sx={{ pt: 2, flexShrink: 0 }}>
+          {error && (
+            <Typography color="error" sx={{ mb: 1.5 }}>
+              {error}
+            </Typography>
+          )}
 
-      <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
-        Rewards
-      </Typography>
-      {isSignedIn && summary && rewards.length > 0 ? (
-        <RewardRow
-          description="1 free drink available"
-          applied={applyReward}
-          onToggle={setApplyReward}
-        />
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          {summary?.loyaltyEnabled
-            ? 'No vouchers or rewards available. Earn 1 stamp with this order.'
-            : 'Loyalty is not enabled for this café.'}
-        </Typography>
-      )}
-
-      {error && (
-        <Typography color="error" sx={{ mt: 2 }}>
-          {error}
-        </Typography>
-      )}
-
-      <Button
-        variant="contained"
-        fullWidth
-        sx={{ mt: 3, py: 1.5, display: 'flex', justifyContent: 'space-between' }}
-        disabled={submitting || pricedLines.length === 0}
-        onClick={() => void placeOrder()}
-      >
-        <span>{submitting ? 'Placing…' : 'Place order'}</span>
-        <span>{formatMoney(totalMinor)} →</span>
-      </Button>
-      {summary?.loyaltyEnabled && !applyReward && (
-        <Typography variant="caption" color="success.main" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-          Earn 1 stamp with this order
-        </Typography>
-      )}
-    </Container>
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{ py: 1.5, display: 'flex', justifyContent: 'space-between' }}
+            disabled={submitting || pricedLines.length === 0}
+            onClick={() => void placeOrder()}
+          >
+            <span>{submitting ? 'Placing…' : 'Place order'}</span>
+            <span>{formatMoney(totalMinor)} →</span>
+          </Button>
+          {loyaltyEnabled && isSignedIn && !applyReward && (
+            <Typography variant="caption" color="success.main" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+              Earn 1 stamp with this order
+            </Typography>
+          )}
+        </Box>
+      </Container>
+    </Box>
   );
 }

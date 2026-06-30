@@ -146,6 +146,8 @@ kdsRouter.post('/orders/:orderId/complete', requireKdsAuth, async (req, res) => 
     console.error('[kds.complete] loyalty post-success failure (swallowed)', {
       cafeId,
       orderId,
+      customerId: order.customerId,
+      paymentStatus: order.paymentStatus,
       err: e,
     });
   }

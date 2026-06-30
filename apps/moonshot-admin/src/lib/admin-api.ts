@@ -12,6 +12,7 @@ import {
   type AdminStripeAccountStatusResponse,
   type ApiEnvelope,
   type Cafe,
+  type CafeModifierGroup,
   type FeatureFlagKey,
   type NormalisedMenu,
   type NormalisedMenuItem,
@@ -132,6 +133,25 @@ export async function fetchMenuForCafe(slug: string): Promise<NormalisedMenu> {
 
   const url = `${base}${API_VERSION_PREFIX}/menu`;
   const res = await fetch(url, { headers: { 'X-Cafe-Slug': slug } });
+  const envelope = await parseEnvelope<NormalisedMenu>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Failed to load menu (${res.status})`);
+  }
+  return envelope.data;
+}
+
+/** Admin menu — includes hidden/unavailable items */
+export async function fetchMenuForAdmin(token: string, cafeSlug: string): Promise<NormalisedMenu> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+
+  const url = `${base}${API_VERSION_PREFIX}/menu/manage`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+  });
   const envelope = await parseEnvelope<NormalisedMenu>(res);
   if (!envelope.ok) {
     throw new Error(envelope.error || `Failed to load menu (${res.status})`);
@@ -271,7 +291,7 @@ export async function adminCreateKdsUser(
 export async function createMenuItem(
   token: string,
   cafeSlug: string,
-  body: { name: string; category: string; priceMinor: number; description?: string },
+  body: Record<string, unknown>,
 ): Promise<NormalisedMenuItem> {
   const base = getApiBaseUrl();
   if (!base) throw new Error('VITE_API_URL is not set');
@@ -290,5 +310,116 @@ export async function createMenuItem(
     throw new Error(envelope.error || `Create menu item failed (${res.status})`);
   }
   return envelope.data;
+}
+
+export async function deleteMenuItem(
+  token: string,
+  cafeSlug: string,
+  itemId: string,
+): Promise<void> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/menu/${encodeURIComponent(itemId)}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+  });
+  const envelope = await parseEnvelope<{ removed: boolean }>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Delete failed (${res.status})`);
+  }
+}
+
+export async function fetchModifierGroups(
+  token: string,
+  cafeSlug: string,
+): Promise<CafeModifierGroup[]> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/menu/modifier-groups`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+  });
+  const envelope = await parseEnvelope<CafeModifierGroup[]>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Failed to load sections (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function createModifierGroup(
+  token: string,
+  cafeSlug: string,
+  body: Record<string, unknown>,
+): Promise<CafeModifierGroup> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/menu/modifier-groups`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<CafeModifierGroup>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Create section failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function updateModifierGroup(
+  token: string,
+  cafeSlug: string,
+  groupId: string,
+  body: Record<string, unknown>,
+): Promise<CafeModifierGroup> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/menu/modifier-groups/${encodeURIComponent(groupId)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<CafeModifierGroup>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Update section failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function deleteModifierGroup(
+  token: string,
+  cafeSlug: string,
+  groupId: string,
+): Promise<void> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/menu/modifier-groups/${encodeURIComponent(groupId)}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+  });
+  const envelope = await parseEnvelope<{ removed: boolean }>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Delete section failed (${res.status})`);
+  }
 }
 

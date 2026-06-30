@@ -41,9 +41,9 @@ vi.mock('./payments/cafe-payment-config.js', () => ({
 }));
 
 vi.mock('./order-checkout-env.js', () => ({
-  checkoutUrlsFromEnv: () => ({
-    successUrl: 'https://order-ahead.test/success',
-    cancelUrl: 'https://order-ahead.test/cancel',
+  checkoutUrlsForCafe: (slug: string) => ({
+    successUrl: `https://order-ahead.test/${slug}/checkout/restore?checkout_session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `https://order-ahead.test/${slug}/checkout`,
   }),
 }));
 
@@ -120,6 +120,7 @@ describe('createStripeCheckoutOrderResponse', () => {
     await expect(
       createStripeCheckoutOrderResponse({
         cafeId: mockOrder().cafeId,
+        cafeSlug: 'test-cafe',
         userId: null,
         customerName: 'Sam',
         notes: null,
@@ -141,6 +142,7 @@ describe('createStripeCheckoutOrderResponse', () => {
 
     const result = await createStripeCheckoutOrderResponse({
       cafeId: refreshed.cafeId,
+      cafeSlug: 'test-cafe',
       userId: null,
       customerName: 'Sam Guest',
       notes: null,
@@ -174,6 +176,7 @@ describe('createStripeCheckoutOrderResponse', () => {
     await expect(
       createStripeCheckoutOrderResponse({
         cafeId: mockOrder().cafeId,
+        cafeSlug: 'test-cafe',
         userId: null,
         customerName: 'Sam Guest',
         notes: null,
@@ -196,6 +199,7 @@ describe('createStripeCheckoutOrderResponse', () => {
     await expect(
       createStripeCheckoutOrderResponse({
         cafeId: mockOrder().cafeId,
+        cafeSlug: 'test-cafe',
         userId: null,
         customerName: 'Sam Guest',
         notes: null,
@@ -213,6 +217,7 @@ describe('createStripeCheckoutOrderResponse', () => {
 
     const result = await createStripeCheckoutOrderResponse({
       cafeId: mockOrder().cafeId,
+      cafeSlug: 'test-cafe',
       userId: 'user-uuid',
       customerName: 'Sam Member',
       notes: null,
@@ -235,6 +240,7 @@ describe('createStripeCheckoutOrderResponse', () => {
     await expect(
       createStripeCheckoutOrderResponse({
         cafeId: mockOrder().cafeId,
+        cafeSlug: 'test-cafe',
         userId: null,
         customerName: 'Sam Guest',
         notes: null,

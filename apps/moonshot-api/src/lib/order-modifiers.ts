@@ -1,13 +1,15 @@
 import type {
   CreateOrderLineInput,
   MenuCategory,
+  NormalisedItemSize,
   NormalisedMenuItem,
   NormalisedModifierGroup,
   NormalisedModifierOption,
   NormalisedOrderLineModifier,
 } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
-import { mapMenuItemRow } from './menu-map.js';
+import { fetchMenuItemsByIds } from './menu-fetch.js';
+import { SIZE_MODIFIER_GROUP_ID } from './menu-map.js';
 import { ApiHttpError } from './http-errors.js';
 import { parseDeclaredAllergens } from './declared-allergens.js';
 import type { Pool } from 'pg';
@@ -25,7 +27,7 @@ export type ResolvedOrderLine = {
 };
 
 /**
- * Load menu rows (price + modifier_groups JSON) and resolve selections + totals per line.
+ * Load menu rows (price + sizes + modifier groups) and resolve selections + totals per line.
  */
 export async function resolveOrderLinesWithModifiers(params: {
   db: Pool;
@@ -35,15 +37,7 @@ export async function resolveOrderLinesWithModifiers(params: {
   const { db, cafeId, lines } = params;
   const ids = [...new Set(lines.map((l) => l.menuItemId))];
 
-  const menuRes = await db.query<Parameters<typeof mapMenuItemRow>[0]>(
-    `SELECT id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-            image_url, emoji, is_available, tags, modifier_groups
-     FROM menu_items
-     WHERE cafe_id = $1 AND id = ANY($2::uuid[]) AND is_available = TRUE`,
-    [cafeId, ids],
-  );
-
-  const byId = new Map(menuRes.rows.map((r) => [r.id, r]));
+  const byId = await fetchMenuItemsByIds(db, cafeId, ids);
   if (byId.size !== ids.length) {
     throw new ApiHttpError(
       404,
@@ -57,9 +51,10 @@ export async function resolveOrderLinesWithModifiers(params: {
   const resolved: ResolvedOrderLine[] = [];
 
   for (const line of lines) {
-    const row = byId.get(line.menuItemId)!;
-    if (currency == null) currency = row.currency;
-    if (row.currency !== currency) {
+    const menuItem = byId.get(line.menuItemId)!;
+
+    if (currency == null) currency = menuItem.currency;
+    if (menuItem.currency !== currency) {
       throw new ApiHttpError(
         400,
         ApiErrorCode.VALIDATION,
@@ -67,7 +62,6 @@ export async function resolveOrderLinesWithModifiers(params: {
       );
     }
 
-    const menuItem = mapMenuItemRow(row);
     const { unitPriceMinor, modifiers } = resolveModifiersForLine(menuItem, line);
 
     const allergensParsed = parseDeclaredAllergens(line.allergens);
@@ -80,12 +74,12 @@ export async function resolveOrderLinesWithModifiers(params: {
 
     resolved.push({
       menuItemId: line.menuItemId,
-      itemName: row.name,
+      itemName: menuItem.name,
       category: menuItem.category,
       unitPriceMinor,
       quantity: line.quantity,
       notes: line.notes ?? null,
-      currency: row.currency,
+      currency: menuItem.currency,
       modifiers,
       allergens: allergensParsed.allergens,
     });
@@ -94,11 +88,59 @@ export async function resolveOrderLinesWithModifiers(params: {
   return { lines: resolved, currency: currency!, totalMinor };
 }
 
+function resolveBasePriceAndSize(
+  menuItem: NormalisedMenuItem,
+  line: CreateOrderLineInput,
+): { base: number; sizeModifier: NormalisedOrderLineModifier | null } {
+  const sizes = menuItem.sizes ?? [];
+  if (sizes.length === 0) {
+    return { base: menuItem.priceMinor, sizeModifier: null };
+  }
+
+  const sizeId = line.sizeId?.trim();
+  let size: NormalisedItemSize | undefined;
+
+  if (sizeId) {
+    size = sizes.find((s) => s.id === sizeId);
+    if (!size) {
+      throw new ApiHttpError(
+        400,
+        ApiErrorCode.VALIDATION,
+        `Unknown size ${sizeId} for "${menuItem.name}"`,
+      );
+    }
+  } else {
+    const defaults = sizes.filter((s) => s.isDefault);
+    size = defaults[0] ?? sizes[0];
+    if (!size) {
+      throw new ApiHttpError(
+        400,
+        ApiErrorCode.VALIDATION,
+        `Size is required for "${menuItem.name}"`,
+      );
+    }
+  }
+
+  return {
+    base: size.priceMinor,
+    sizeModifier: {
+      groupId: SIZE_MODIFIER_GROUP_ID,
+      groupName: 'Size',
+      optionId: size.id,
+      optionName: size.name,
+      priceMinor: size.priceMinor,
+      isSize: true,
+      colorHex: size.colorHex ?? null,
+      chipLabel: size.chipLabel ?? null,
+    },
+  };
+}
+
 export function resolveModifiersForLine(
   menuItem: NormalisedMenuItem,
   line: CreateOrderLineInput,
 ): { unitPriceMinor: number; modifiers: NormalisedOrderLineModifier[] } {
-  const base = menuItem.priceMinor;
+  const { base, sizeModifier } = resolveBasePriceAndSize(menuItem, line);
   const selections = line.modifiers ?? [];
   const groups = menuItem.modifierGroups;
 
@@ -121,7 +163,7 @@ export function resolveModifiersForLine(
     set.add(oid);
   }
 
-  const resolved: NormalisedOrderLineModifier[] = [];
+  const resolved: NormalisedOrderLineModifier[] = sizeModifier ? [sizeModifier] : [];
   let delta = 0;
 
   for (const g of groups) {
@@ -153,6 +195,14 @@ export function resolveModifiersForLine(
       );
     }
 
+    if (!isSingle && g.maxSelect != null && picked.size > g.maxSelect) {
+      throw new ApiHttpError(
+        400,
+        ApiErrorCode.VALIDATION,
+        `Modifier group "${g.name}" allows at most ${g.maxSelect} selections`,
+      );
+    }
+
     for (const optionId of picked) {
       const opt = g.options.find((o) => o.id === optionId);
       if (!opt) {
@@ -167,7 +217,6 @@ export function resolveModifiersForLine(
     }
   }
 
-  /* Unknown group ids in payload */
   for (const gid of selectedByGroup.keys()) {
     if (!groups.some((g) => g.id === gid)) {
       throw new ApiHttpError(
@@ -181,7 +230,10 @@ export function resolveModifiersForLine(
   return { unitPriceMinor: base + delta, modifiers: resolved };
 }
 
-function modifierSnapshot(g: NormalisedModifierGroup, opt: NormalisedModifierOption): NormalisedOrderLineModifier {
+function modifierSnapshot(
+  g: NormalisedModifierGroup,
+  opt: NormalisedModifierOption,
+): NormalisedOrderLineModifier {
   return {
     groupId: g.id,
     groupName: g.name,
@@ -189,5 +241,8 @@ function modifierSnapshot(g: NormalisedModifierGroup, opt: NormalisedModifierOpt
     optionName: opt.name,
     priceMinor: opt.priceMinor,
     posOptionId: opt.posOptionId,
+    colorHex: opt.colorHex ?? null,
+    chipLabel: opt.chipLabel ?? null,
+    isSize: false,
   };
 }

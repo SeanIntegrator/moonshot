@@ -94,7 +94,7 @@ Implemented in Phase 1 with counters; Phase 7 adds **`loyalty_display_id`** and 
 
 Synced from POS adapter or edited via manual adapter / admin.
 
-Implemented in Phase 1. Current runtime uses the manual POS adapter, which reads available rows from this table. Admin menu writes exist in the API and are gated by either admin JWT or Google/session JWT plus `MENU_ADMIN_EMAILS`. The admin UI currently edits existing item price, availability, and modifier option prices; full create/delete menu UI remains planned.
+Implemented in Phase 1; **Phase 12** (`012_menu_modifier_library.sql`) adds `sizes`, `modifier_groups`, and `menu_item_modifier_groups`. Runtime uses the manual POS adapter with library merge. Admin dashboard provides full item + section CRUD — see `docs/menu-management.md`.
 
 | Column           | Type        | Notes |
 | ---------------- | ----------- | ----- |
@@ -103,20 +103,52 @@ Implemented in Phase 1. Current runtime uses the manual POS adapter, which reads
 | pos_item_id      | TEXT        | nullable for manual-only lines |
 | name             | TEXT        | |
 | description      | TEXT        | |
-| price_minor      | INTEGER     | |
+| price_minor      | INTEGER     | base / single-size anchor |
 | currency         | TEXT        | default `GBP` |
 | category         | TEXT        | hot_drinks, cold_drinks, food, extras |
-| subcategory      | TEXT        | nullable |
+| subcategory      | TEXT        | nullable (coffee, matcha, …) |
 | image_url        | TEXT        | |
 | emoji            | TEXT        | |
 | is_available      | BOOLEAN     | |
 | tags             | TEXT[]      | |
-| modifier_groups  | JSONB       | `NormalisedModifierGroup[]` |
+| sizes            | JSONB       | **Phase 12** — `NormalisedItemSize[]` absolute per-size prices |
+| modifier_groups  | JSONB       | legacy embedded `NormalisedModifierGroup[]` (merged with library) |
 | sort_order       | INTEGER     | |
 | synced_at        | TIMESTAMPTZ | |
 | created_at       | TIMESTAMPTZ | |
 
 **Unique:** `(cafe_id, pos_item_id)` where `pos_item_id IS NOT NULL` (partial unique index)
+
+---
+
+## `modifier_groups` (Phase 12)
+
+Café-scoped reusable modifier library (Milks, Syrups, Toppings).
+
+| Column          | Type    | Notes |
+| --------------- | ------- | ----- |
+| id              | UUID    | PK |
+| cafe_id         | UUID    | FK |
+| name            | TEXT    | |
+| selection_type  | TEXT    | `single` \| `multi` |
+| required        | BOOLEAN | |
+| max_select      | INTEGER | nullable cap for multi |
+| options         | JSONB   | includes `colorHex`, `chipLabel` for KDS |
+| sort_order      | INTEGER | |
+
+---
+
+## `menu_item_modifier_groups` (Phase 12)
+
+Join table — which library sections attach to which items, ordered.
+
+| Column            | Type | Notes |
+| ----------------- | ---- | ----- |
+| menu_item_id      | UUID | FK → menu_items |
+| modifier_group_id | UUID | FK → modifier_groups |
+| sort_order        | INT  | |
+
+**PK:** `(menu_item_id, modifier_group_id)`
 
 ---
 

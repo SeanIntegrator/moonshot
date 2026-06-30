@@ -1,4 +1,4 @@
-import { Box, Button, Container, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCafePath } from '../hooks/useCafePath.js';
@@ -8,6 +8,8 @@ import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 /**
  * Stripe success URLs should point here (or redirect home with `checkout_session_id`,
  * which forwards from {@link Home}). Reads `checkout_session_id` from the query string.
+ *
+ * Depends on CafeProvider setting X-Cafe-Slug synchronously — see docs/stripe-checkout-return.md.
  */
 export function CheckoutRestore() {
   const [params] = useSearchParams();
@@ -36,23 +38,41 @@ export function CheckoutRestore() {
     })();
   }, [navigate, sessionId, cafePath]);
 
-  return (
-    <Container maxWidth="sm" sx={{ py: 4, pb: 10 }}>
-      <Typography variant="h5" component="h1">
-        Restoring order…
-      </Typography>
-      {error ? (
-        <Box sx={{ mt: 2 }}>
-          <Typography color="error">{error}</Typography>
-          <Button sx={{ mt: 2 }} onClick={() => navigate(cafePath('/'), { replace: true })}>
-            Home
-          </Button>
-        </Box>
-      ) : (
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Hang tight — fetching your order from Stripe checkout.
+  if (error) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          px: 2,
+        }}
+      >
+        <Typography color="error" sx={{ mb: 2, textAlign: 'center' }}>
+          {error}
         </Typography>
-      )}
-    </Container>
+        <Button onClick={() => navigate(cafePath('/'), { replace: true })}>Home</Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+      }}
+    >
+      <CircularProgress size={32} />
+      <Typography variant="body2" color="text.secondary">
+        Redirecting…
+      </Typography>
+    </Box>
   );
 }

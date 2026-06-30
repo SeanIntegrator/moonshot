@@ -1,7 +1,9 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import { pool } from '../db.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
+import { ensureCafeMembership } from './cafe-membership.js';
 import { findCafeById } from './cafes-repository.js';
+import { fetchOrderWithItems } from './orders/order-read.js';
 import { applyLedgerStampAndRewards } from './loyalty/apply-ledger-on-complete.js';
 import { onTimeForReviewPrompt, stampsEarnedForCompletedOrder } from './loyalty/loyalty-rules.js';
 
@@ -27,7 +29,15 @@ export async function applyLoyaltyAfterKdsComplete(params: {
 }): Promise<void> {
   const { cafeId, order } = params;
   const userId = order.customerId;
-  if (!userId || order.source !== 'app') return;
+  if (!userId || order.source !== 'app') {
+    console.info('[loyalty.kdsComplete] skipped — guest or non-app order', {
+      cafeId,
+      orderId: order.id,
+      source: order.source,
+      hasCustomerId: Boolean(userId),
+    });
+    return;
+  }
 
   const cafe = await findCafeById(cafeId);
   if (!cafe) return;
@@ -58,6 +68,8 @@ export async function applyLoyaltyAfterKdsComplete(params: {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    await ensureCafeMembership({ db: client, cafeId, userId });
 
     /**
      * The stamp ledger has a unique index that makes `stamp_earned` idempotent
@@ -96,6 +108,11 @@ export async function applyLoyaltyAfterKdsComplete(params: {
 
     const row = upd.rows[0];
     if (!row) {
+      console.error('[loyalty.kdsComplete] cafe_users row missing after ensure', {
+        cafeId,
+        orderId: order.id,
+        userId,
+      });
       await client.query('COMMIT');
       return;
     }
@@ -130,4 +147,15 @@ export async function applyLoyaltyAfterKdsComplete(params: {
   } finally {
     client.release();
   }
+}
+
+/** Idempotent replay for ops/backfill when KDS loyalty side-effects were swallowed. */
+export async function replayLoyaltyForCompletedOrder(params: {
+  cafeId: string;
+  orderId: string;
+}): Promise<boolean> {
+  const order = await fetchOrderWithItems(pool, params.orderId, params.cafeId);
+  if (!order || order.status !== 'completed') return false;
+  await applyLoyaltyAfterKdsComplete({ cafeId: params.cafeId, order });
+  return true;
 }

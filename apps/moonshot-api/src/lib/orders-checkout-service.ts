@@ -14,7 +14,7 @@ import { applyRewardDiscountToTotal } from './loyalty/apply-checkout-reward-pric
 import { getStripeConnectAccountId, isStripeConnectReady } from './payments/cafe-payment-config.js';
 import { getStripeOrNull } from './payments/stripe-client.js';
 import { createStripeCheckoutSessionDirectCharge } from './payments/stripe-checkout.js';
-import { checkoutUrlsFromEnv } from './order-checkout-env.js';
+import { checkoutUrlsForCafe } from './order-checkout-env.js';
 
 /**
  * Single menu resolution snapshot → pending order → Stripe Checkout session → persist `payment_sessions`.
@@ -23,6 +23,7 @@ import { checkoutUrlsFromEnv } from './order-checkout-env.js';
  */
 export async function createStripeCheckoutOrderResponse(params: {
   cafeId: string;
+  cafeSlug: string;
   userId: string | null;
   customerName: string;
   notes: string | null | undefined;
@@ -31,7 +32,7 @@ export async function createStripeCheckoutOrderResponse(params: {
   paymentConfig: Record<string, unknown>;
   redeemRewardId?: string | null;
 }): Promise<CreateOrderResponse> {
-  const { cafeId, userId, customerName, notes, orderType, lines, paymentConfig, redeemRewardId } =
+  const { cafeId, cafeSlug, userId, customerName, notes, orderType, lines, paymentConfig, redeemRewardId } =
     params;
 
   if (redeemRewardId && !userId) {
@@ -92,7 +93,7 @@ export async function createStripeCheckoutOrderResponse(params: {
     consumeReward: false,
   });
 
-  const { successUrl, cancelUrl } = checkoutUrlsFromEnv();
+  const { successUrl, cancelUrl } = checkoutUrlsForCafe(cafeSlug);
 
   try {
     const session = await createStripeCheckoutSessionDirectCharge({

@@ -25,12 +25,19 @@ Implementation is split under `src/lib/orders/`; **`orders-repository.ts`** re-e
 | `orders/order-constants.ts` | Status sets, `ORDER_SELECT_COLUMNS`, line validation |
 | `orders/order-read.ts` | `fetchOrderWithItems`, `findOrderByIdAndCafe`, batch item load |
 | `orders/order-create.ts` | Pay-in-store + pending checkout order insert |
-| `orders/order-checkout.ts` | Stripe session record, checkout recovery, webhook confirm |
+| `orders/order-checkout.ts` | Stripe session record, webhook confirm (`confirmOrderPaidFromStripeCheckout`) |
+| `orders/checkout-session-recovery.ts` | Browser return: lookup by session, retrieve from Stripe if pending, confirm + **`kds:order:new`** |
 | `orders/order-kds.ts` | `listOpenOrdersForKds`, `completeOrderForKds`; exports **`KDS_OPEN_ORDER_STATUSES`** |
 | `orders/order-customer.ts` | `listCustomerOrdersForUser`, `cancelOrderAtCafe` |
 | `orders/order-write-helpers.ts` | Shared line-item insert inside transactions |
 
-Checkout orchestration (Stripe session creation) remains in `orders-checkout-service.ts`.
+Checkout orchestration (Stripe session creation) remains in `orders-checkout-service.ts`. Return URL building: **`order-checkout-env.ts`** (`checkoutUrlsForCafe`, **`ORDER_AHEAD_BASE_URL`**).
+
+## Café membership
+
+| Path | Role |
+|------|------|
+| `src/lib/cafe-membership.ts` | `ensureCafeMembership` — idempotent `cafe_users` insert; called on signed-in **`POST /orders`** and inside loyalty post-complete transaction |
 
 ## Loyalty
 
@@ -41,7 +48,15 @@ Checkout orchestration (Stripe session creation) remains in `orders-checkout-ser
 | `src/lib/loyalty/apply-ledger-on-complete.ts` | Punch-card rollover inside caller transaction; returns **`inserted`** for idempotency |
 | `src/lib/loyalty-after-kds-complete.ts` | Post-KDS transaction: ledger → counters (only if new stamp row) → review socket |
 
-KDS route wraps `applyLoyaltyAfterKdsComplete` in try/catch so **Done** never 500s after the order is already `completed`.
+KDS route wraps `applyLoyaltyAfterKdsComplete` in try/catch so **Done** never 500s after the order is already `completed`. Ops replay: **`scripts/replay-order-loyalty.ts`** (`pnpm replay:order-loyalty`).
+
+## Order-ahead (frontend)
+
+| Path | Role |
+|------|------|
+| `src/providers/LoyaltyProvider.tsx` | Shared loyalty fetch state; pages call **`refresh()`** after auth, navigation, or order completion |
+| `src/config/CafeProvider.tsx` | Sets runtime café slug for **`X-Cafe-Slug`** before child effects (Stripe return) |
+| `src/pages/CheckoutRestore.tsx` | Stripe success redirect handler |
 
 ## Admin services
 

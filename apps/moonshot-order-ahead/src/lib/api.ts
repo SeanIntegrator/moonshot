@@ -42,26 +42,50 @@ export function getCafeSlug(): string {
 
 let runtimeCafeSlug: string | null = null;
 
-/** Set by CafeProvider when routing under /:cafeSlug */
+/**
+ * Module-level slug for `X-Cafe-Slug` on `apiFetch`. Set synchronously from
+ * `CafeProvider` render (not only in useEffect) so child effects such as
+ * `CheckoutRestore` hit the API with the URL slug on first paint.
+ */
 export function setRuntimeCafeSlug(slug: string | null): void {
   runtimeCafeSlug = slug;
 }
 
-export function getStoredToken(): string | null {
+function readTokenFrom(storage: Storage): string | null {
   try {
-    return sessionStorage.getItem(TOKEN_KEY);
+    return storage.getItem(TOKEN_KEY);
   } catch {
     return null;
   }
 }
 
-export function setStoredToken(token: string | null): void {
+function writeTokenTo(storage: Storage, token: string | null): void {
   try {
-    if (token) sessionStorage.setItem(TOKEN_KEY, token);
-    else sessionStorage.removeItem(TOKEN_KEY);
+    if (token) storage.setItem(TOKEN_KEY, token);
+    else storage.removeItem(TOKEN_KEY);
   } catch {
     /* ignore */
   }
+}
+
+/** Customer JWT — localStorage survives Stripe-hosted checkout redirects; sessionStorage is legacy fallback. */
+export function getStoredToken(): string | null {
+  const persistent = readTokenFrom(localStorage);
+  if (persistent) return persistent;
+
+  const legacy = readTokenFrom(sessionStorage);
+  if (legacy) {
+    writeTokenTo(localStorage, legacy);
+    writeTokenTo(sessionStorage, null);
+    return legacy;
+  }
+
+  return null;
+}
+
+export function setStoredToken(token: string | null): void {
+  writeTokenTo(localStorage, token);
+  writeTokenTo(sessionStorage, null);
 }
 
 export function clearToken(): void {

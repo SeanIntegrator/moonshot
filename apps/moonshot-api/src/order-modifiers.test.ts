@@ -16,6 +16,7 @@ function flatWhiteItem(): NormalisedMenuItem {
     imageUrl: null,
     emoji: null,
     isAvailable: true,
+    sizes: [],
     modifierGroups: [
       {
         id: 'g-milk',
@@ -41,6 +42,19 @@ function flatWhiteItem(): NormalisedMenuItem {
   };
 }
 
+function latteWithSizes(): NormalisedMenuItem {
+  return {
+    ...flatWhiteItem(),
+    name: 'Latte',
+    priceMinor: 300,
+    sizes: [
+      { id: 'sz-s', name: 'Small', priceMinor: 280, isDefault: false },
+      { id: 'sz-m', name: 'Medium', priceMinor: 320, isDefault: true },
+      { id: 'sz-l', name: 'Large', priceMinor: 360, isDefault: false },
+    ],
+  };
+}
+
 describe('resolveModifiersForLine', () => {
   it('applies default for required single group when no selection', () => {
     const line: CreateOrderLineInput = { menuItemId: 'mi-1', quantity: 1 };
@@ -50,7 +64,7 @@ describe('resolveModifiersForLine', () => {
     expect(modifiers[0]!.optionId).toBe('o-whole');
   });
 
-  it('adds modifier delta and stores group context', () => {
+  it('adds modifier delta and stores group context with colour snapshot', () => {
     const line: CreateOrderLineInput = {
       menuItemId: 'mi-1',
       quantity: 1,
@@ -63,6 +77,24 @@ describe('resolveModifiersForLine', () => {
     expect(unitPriceMinor).toBe(350 + 50 + 40);
     expect(modifiers.map((m) => m.groupId).sort()).toEqual(['g-milk', 'g-syrup']);
     expect(modifiers.find((m) => m.optionId === 'o-oat')?.priceMinor).toBe(50);
+  });
+
+  it('uses absolute size price as base and snapshots size row', () => {
+    const line: CreateOrderLineInput = {
+      menuItemId: 'mi-1',
+      quantity: 1,
+      sizeId: 'sz-l',
+      modifiers: [{ groupId: 'g-milk', optionId: 'o-whole' }],
+    };
+    const { unitPriceMinor, modifiers } = resolveModifiersForLine(latteWithSizes(), line);
+    expect(unitPriceMinor).toBe(360);
+    expect(modifiers.some((m) => m.isSize && m.optionId === 'sz-l')).toBe(true);
+  });
+
+  it('defaults to default size when sizes exist but sizeId omitted', () => {
+    const line: CreateOrderLineInput = { menuItemId: 'mi-1', quantity: 1 };
+    const { unitPriceMinor } = resolveModifiersForLine(latteWithSizes(), line);
+    expect(unitPriceMinor).toBe(320);
   });
 
   it('rejects unknown option', () => {
