@@ -1,7 +1,7 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import type { NormalisedOrder } from '@moonshot/types';
-import { Box, Chip, Typography } from '@mui/material';
+import { Box, Chip, Divider, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { formatTime, modifierSummary } from '../lib/format.js';
 import { getOrderStatusMeta } from '../lib/order-status.js';
@@ -14,6 +14,10 @@ type Props = {
 export function CurrentOrderCard({ order }: Props) {
   const cafePath = useCafePath();
   const statusMeta = getOrderStatusMeta(order.status);
+  const chipLabel =
+    order.status === 'pending' || order.status === 'confirmed'
+      ? 'Order confirmed'
+      : statusMeta.label;
 
   return (
     <Box
@@ -22,7 +26,7 @@ export function CurrentOrderCard({ order }: Props) {
       sx={{
         display: 'block',
         textDecoration: 'none',
-        color: 'inherit',
+        color: 'text.primary',
         border: 1,
         borderColor: 'divider',
         borderRadius: (theme) => `${theme.shape.borderRadius}px`,
@@ -42,10 +46,15 @@ export function CurrentOrderCard({ order }: Props) {
           borderColor: 'divider',
         }}
       >
-        <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
-          Your order
-        </Typography>
-        <Chip label={statusMeta.label} size="small" color={statusMeta.chipColor} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <Typography variant="body2" color="text.secondary" fontWeight={600}>
+            Pickup
+          </Typography>
+          <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+            {formatTime(order.pickup.pickupTime)}
+          </Typography>
+        </Box>
+        <Chip label={chipLabel} size="small" color={statusMeta.chipColor} />
       </Box>
       <Box sx={{ p: 2 }}>
         {order.items.slice(0, 3).map((li) => (
@@ -60,7 +69,7 @@ export function CurrentOrderCard({ order }: Props) {
               }}
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 {li.itemName}
                 {li.quantity > 1 && (
                   <Typography component="span" variant="caption" color="text.secondary">
@@ -76,18 +85,13 @@ export function CurrentOrderCard({ order }: Props) {
             </Box>
           </Box>
         ))}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            Pickup
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              {formatTime(order.pickup.pickupTime)}
-            </Typography>
-            <Typography variant="body2" color="text.primary" fontWeight={600}>
+        <Divider sx={{ my: 1.25 }} />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            <Typography variant="body2" color="primary" fontWeight={600}>
               View details
             </Typography>
-            <ChevronRightIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <ChevronRightIcon sx={{ fontSize: 18, color: 'primary.main' }} />
           </Box>
         </Box>
       </Box>

@@ -11,6 +11,7 @@ import {
 import type { CafeTheme } from '@moonshot/types';
 import { useCafeSlugFromRoute } from '../hooks/useCafePath.js';
 import { apiFetch, setRuntimeCafeSlug } from '../lib/api.js';
+import { ConnectivityError, isNetworkError, toUserFacingError } from '../lib/network-error.js';
 import { createCafeMuiTheme } from '../theme/createCafeMuiTheme.js';
 import { getTheme } from '../themes/index.js';
 
@@ -48,7 +49,7 @@ export function CafeProvider({ children }: { children: ReactNode }) {
         setTheme(getTheme(c.themeId, c.themeOverrides));
         setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Network error');
+        setError(toUserFacingError(e, 'Network error'));
         setCafe(null);
       } finally {
         setLoading(false);
@@ -61,6 +62,11 @@ export function CafeProvider({ children }: { children: ReactNode }) {
   }, [slug]);
 
   const muiTheme = useMemo(() => createCafeMuiTheme(theme), [theme]);
+
+  // Surface connectivity failures through the app error boundary instead of a bare inline message.
+  if (!loading && error && isNetworkError(new Error(error))) {
+    throw new ConnectivityError(error);
+  }
 
   const value = useMemo<CafeContextValue>(
     () => ({

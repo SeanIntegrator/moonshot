@@ -71,7 +71,7 @@ export function CheckoutRestore() {
     >
       <CircularProgress size={32} />
       <Typography variant="body2" color="text.secondary">
-        Redirecting…
+        Taking you to payment
       </Typography>
     </Box>
   );

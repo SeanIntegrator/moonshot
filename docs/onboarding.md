@@ -12,7 +12,7 @@ flowchart TD
   Register --> JWT[Admin JWT]
   JWT --> Wizard[/onboarding wizard]
   Wizard --> KDS[KDS credentials]
-  Wizard --> Menu[First menu item]
+  Wizard --> Menu[Starter menu template]
   Wizard --> Stripe[Stripe optional]
   Wizard --> Live[order.app/slug]
 ```
@@ -32,6 +32,7 @@ flowchart TD
 | `POST` | `/admin/onboarding/register` | Public, rate-limited | Create café + admin user, return JWT |
 | `GET` | `/admin/onboarding/status` | Admin JWT | `completed`, `hasKdsUser`, `hasMenuItem` |
 | `POST` | `/admin/onboarding/kds-users` | Admin JWT | Create/update KDS login for café |
+| `POST` | `/admin/onboarding/menu-template` | Admin JWT | Apply starter drink/milk/syrup template (transactional) |
 | `POST` | `/admin/onboarding/complete` | Admin JWT | Set `features.onboarding_completed_at` |
 
 ## Default policy for new cafés
@@ -44,6 +45,34 @@ Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe-provi
 - `order_ahead.paymentProvider`: `pay_in_store` (switch to Stripe after Connect onboarding)
 - All other features: `null` (disabled)
 - `kds_config`: seed template from migration `001_initial_schema.sql`, with `cafeId` set to row UUID
+- Modifier library (`Milks`, `Syrups`) seeded at signup; onboarding step 3 applies the owner’s template selections
+
+## Starter menu template (onboarding step 3)
+
+Owners choose **Edit template** or **Import from POS** (POS import UI is stubbed; API provisioner returns not-implemented).
+
+Template path: toggle categories (Hot drinks and Milks are always on), tick individual drinks/milks/syrups, and edit names, descriptions, and prices before save.
+
+### Menu provisioning layer
+
+Onboarding menu creation goes through **menu provisioners** (parallel to `PosAdapter` for runtime catalogue reads):
+
+| Source | Provisioner | Payload | Persistence |
+|--------|-------------|---------|-------------|
+| `template` | `templateMenuProvisioner` | `AdminSaveMenuTemplateRequest` | `applyMenuTemplate` today |
+| `pos` | `posImportMenuProvisioner` | `PosMenuProvisionPayload` | `PosAdapter.fetchMenu` → `persistNormalisedMenuCatalog` (planned) |
+
+`POST /admin/onboarding/menu-template` delegates to `getMenuProvisioner('template')`.
+
+`persistNormalisedMenuCatalog` in `menu-catalog-persistence.ts` is the shared write path both sources will use once POS import ships.
+
+`POST /admin/onboarding/menu-template` runs in a transaction:
+
+1. Updates `Milks` and `Syrups` modifier groups with enabled options
+2. Creates selected drink `menu_items` at £3.50 by default (non-dairy milks +50p, syrups +30p)
+3. Attaches Milks to every drink; attaches Syrups when that category is enabled
+
+Completion still requires `hasMenuItem` (at least one available drink).
 
 ## Order-ahead URLs
 

@@ -123,7 +123,7 @@ export function Home() {
       <Box sx={{ px: 2, pt: 2 }}>
         {usualOrder && (
           <Box sx={{ mb: 3 }}>
-            <SectionHead eyebrow="Reorder" title="Your usual" />
+            <SectionHead title="Your usual" />
             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
               {usualOrder.items.map((li) => (
                 <Box key={li.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>

@@ -8,6 +8,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   ToggleButton,
   ToggleButtonGroup,
@@ -166,28 +167,21 @@ export function Checkout() {
 
   if (redirecting) {
     return (
-      <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
-        <Typography variant="h6" fontWeight={700} gutterBottom>
-          Redirecting to checkout
-        </Typography>
+      <Box
+        sx={{
+          minHeight: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 2,
+        }}
+      >
+        <CircularProgress size={32} />
         <Typography variant="body2" color="text.secondary">
-          One moment — opening secure payment via Stripe.
+          Taking you to payment
         </Typography>
-        <Box
-          sx={{
-            mt: 4,
-            display: 'inline-flex',
-            px: 2,
-            py: 0.75,
-            borderRadius: 999,
-            bgcolor: 'action.hover',
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            Encrypted · PCI-compliant
-          </Typography>
-        </Box>
-      </Container>
+      </Box>
     );
   }
 
@@ -400,11 +394,25 @@ export function Checkout() {
           <Button
             variant="contained"
             fullWidth
-            sx={{ py: 1.5, display: 'flex', justifyContent: 'space-between' }}
+            sx={{
+              py: 1.5,
+              display: 'flex',
+              justifyContent: 'space-between',
+              '&.Mui-disabled': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                opacity: 0.85,
+              },
+            }}
             disabled={submitting || pricedLines.length === 0}
             onClick={() => void placeOrder()}
           >
-            <span>{submitting ? 'Placing…' : 'Place order'}</span>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {submitting && (
+                <CircularProgress size={18} color="inherit" sx={{ color: 'primary.contrastText' }} />
+              )}
+              {submitting ? 'Placing…' : 'Place order'}
+            </Box>
             <span>{formatMoney(totalMinor)} →</span>
           </Button>
           {loyaltyEnabled && isSignedIn && !applyReward && (

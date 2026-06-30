@@ -11,6 +11,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { OnboardingPosImportPage } from './pages/OnboardingPosImportPage.js';
 import { OnboardingWizard } from './pages/OnboardingWizard.js';
 import { SignupPage } from './pages/SignupPage.js';
 
@@ -70,6 +71,18 @@ function AppRoutes() {
       <Route
         path="/signup"
         element={session ? <Navigate to={needsOnboarding ? '/onboarding' : '/'} replace /> : <SignupPage />}
+      />
+      <Route
+        path="/onboarding/import-pos"
+        element={
+          !session ? (
+            <Navigate to="/login" replace />
+          ) : needsOnboarding ? (
+            <OnboardingPosImportPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
       />
       <Route
         path="/onboarding"

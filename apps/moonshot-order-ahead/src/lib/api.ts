@@ -1,4 +1,5 @@
 import { API_VERSION_PREFIX, type ApiEnvelope } from '@moonshot/types';
+import { ConnectivityError } from './network-error.js';
 
 const TOKEN_KEY = 'moonshot_jwt';
 
@@ -108,7 +109,12 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const slug = getCafeSlug();
   if (slug) headers.set('X-Cafe-Slug', slug);
 
-  const res = await fetch(url, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, headers });
+  } catch {
+    throw new ConnectivityError();
+  }
   const json = await parseApiEnvelope<T>(res);
   if (!json.ok) {
     throw new Error(json.error ?? 'Request failed');

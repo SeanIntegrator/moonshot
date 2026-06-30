@@ -6,6 +6,8 @@ import {
   type AdminOnboardingStatusResponse,
   type AdminRegisterRequest,
   type AdminRegisterResponse,
+  type AdminSaveMenuTemplateRequest,
+  type AdminSaveMenuTemplateResponse,
   type AdminSettingsPatchBody,
   type AdminSettingsResponse,
   type AdminStripeAccountLinkResponse,
@@ -284,6 +286,28 @@ export async function adminCreateKdsUser(
   const envelope = await parseEnvelope<AdminCreateKdsUserResponse>(res);
   if (!envelope.ok) {
     throw new Error(envelope.error || `KDS user failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function adminSaveMenuTemplate(
+  token: string,
+  body: AdminSaveMenuTemplateRequest,
+): Promise<AdminSaveMenuTemplateResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/admin/onboarding/menu-template`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<AdminSaveMenuTemplateResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Menu template failed (${res.status})`);
   }
   return envelope.data;
 }

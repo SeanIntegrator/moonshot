@@ -3,11 +3,7 @@ import {
   Box,
   Button,
   CircularProgress,
-  FormControl,
-  InputLabel,
   Link,
-  MenuItem,
-  Select,
   Step,
   StepLabel,
   Stepper,
@@ -16,13 +12,16 @@ import {
 } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MenuSetupChoice } from '../components/onboarding/MenuSetupChoice.js';
+import { MenuTemplateStep } from '../components/onboarding/MenuTemplateStep.js';
 import { StripePaymentsCard } from '../components/StripePaymentsCard.js';
 import { useAuth } from '../context/AuthContext.js';
 import {
   adminCompleteOnboarding,
   adminCreateKdsUser,
-  createMenuItem,
+  adminSaveMenuTemplate,
 } from '../lib/admin-api.js';
+import type { AdminSaveMenuTemplateRequest } from '@moonshot/types';
 import { getKdsBaseUrl, getOrderAheadBaseUrl } from '../lib/onboarding-utils.js';
 
 const STEPS = ['Welcome', 'Kitchen', 'Menu', 'Payments', 'Go live'];
@@ -56,9 +55,8 @@ export function OnboardingWizard() {
   );
   const [kdsUsername, setKdsUsername] = useState('barista');
   const [kdsPassword, setKdsPassword] = useState('');
-  const [menuName, setMenuName] = useState('Flat White');
-  const [menuPrice, setMenuPrice] = useState('3.50');
   const [busy, setBusy] = useState(false);
+  const [menuSetupView, setMenuSetupView] = useState<'choice' | 'template'>('choice');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -66,6 +64,10 @@ export function OnboardingWizard() {
     if (!session) return;
     sessionStorage.setItem(stepStorageKey(session.cafe.id), String(step));
   }, [step, session]);
+
+  useEffect(() => {
+    if (step !== 2) setMenuSetupView('choice');
+  }, [step]);
 
   // Full-page Stripe redirect remounts the wizard — restore payments/go-live step.
   useEffect(() => {
@@ -117,28 +119,22 @@ export function OnboardingWizard() {
     }
   }, [session, kdsUsername, kdsPassword, refreshOnboardingStatus]);
 
-  const saveMenu = useCallback(async () => {
-    setError(null);
-    setBusy(true);
-    try {
-      const price = Math.round(parseFloat(menuPrice) * 100);
-      if (!Number.isFinite(price) || price < 1) {
-        throw new Error('Enter a valid price');
+  const saveMenuTemplate = useCallback(
+    async (payload: AdminSaveMenuTemplateRequest) => {
+      setError(null);
+      setBusy(true);
+      try {
+        await adminSaveMenuTemplate(session!.token, payload);
+        await refreshOnboardingStatus();
+        setStep(3);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to save menu template');
+      } finally {
+        setBusy(false);
       }
-      await createMenuItem(session!.token, session!.cafe.slug, {
-        name: menuName.trim(),
-        category: 'hot_drinks',
-        priceMinor: price,
-        description: '',
-      });
-      await refreshOnboardingStatus();
-      setStep(3);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add menu item');
-    } finally {
-      setBusy(false);
-    }
-  }, [session, menuName, menuPrice, refreshOnboardingStatus]);
+    },
+    [session, refreshOnboardingStatus],
+  );
 
   const finish = useCallback(async () => {
     setError(null);
@@ -189,7 +185,7 @@ export function OnboardingWizard() {
               You&apos;re live.
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Your café workspace is ready. Next: kitchen login, your first menu item, and optional
+              Your café workspace is ready. Next: kitchen login, your starter menu, and optional
               online payments.
             </Typography>
             <Typography variant="subtitle2" gutterBottom>
@@ -250,52 +246,38 @@ export function OnboardingWizard() {
           </Box>
         )}
 
-        {step === 2 && (
-          <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
-            <Typography variant="h6" gutterBottom>
-              First menu item
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Add at least one item so customers can place an order. You can add more from the
-              dashboard later.
-            </Typography>
-            <TextField
-              fullWidth
-              label="Item name"
-              value={menuName}
-              onChange={(e) => setMenuName(e.target.value)}
-              margin="normal"
-              sx={fieldSx}
-            />
-            <TextField
-              fullWidth
-              label="Price (£)"
-              value={menuPrice}
-              onChange={(e) => setMenuPrice(e.target.value)}
-              margin="normal"
-              sx={fieldSx}
-            />
-            <FormControl fullWidth margin="normal" sx={fieldSx}>
-              <InputLabel>Category</InputLabel>
-              <Select value="hot_drinks" label="Category" disabled>
-                <MenuItem value="hot_drinks">Hot drinks</MenuItem>
-              </Select>
-            </FormControl>
-            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-              <Button variant="outlined" onClick={() => setStep(1)}>
-                Back
-              </Button>
-              <Button
-                variant="contained"
-                fullWidth
-                disabled={busy || !menuName.trim()}
-                onClick={() => void saveMenu()}
-              >
-                {busy ? <CircularProgress size={22} /> : 'Add item & continue'}
-              </Button>
+        {step === 2 &&
+          (onboardingStatus?.hasMenuItem ? (
+            <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
+              <Typography variant="h6" gutterBottom>
+                Starter menu saved
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Your menu is ready for customers. You can add specialty items from the dashboard
+                after setup.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button variant="outlined" onClick={() => setStep(1)}>
+                  Back
+                </Button>
+                <Button variant="contained" fullWidth onClick={() => setStep(3)}>
+                  Continue
+                </Button>
+              </Box>
             </Box>
-          </Box>
-        )}
+          ) : menuSetupView === 'choice' ? (
+            <MenuSetupChoice
+              onEditTemplate={() => setMenuSetupView('template')}
+              onImportPos={() => navigate('/onboarding/import-pos')}
+              onBack={() => setStep(1)}
+            />
+          ) : (
+            <MenuTemplateStep
+              busy={busy}
+              onBack={() => setMenuSetupView('choice')}
+              onSave={saveMenuTemplate}
+            />
+          ))}
 
         {step === 3 && (
           <Box>

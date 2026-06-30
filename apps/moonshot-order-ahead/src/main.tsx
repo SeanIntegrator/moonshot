@@ -9,6 +9,7 @@ import { MenuProvider } from './providers/MenuProvider.js';
 import { ActiveOrdersProvider } from './providers/ActiveOrdersProvider.js';
 import { CartProvider } from './providers/CartProvider.js';
 import { App } from './App.js';
+import { AppErrorBoundary } from './components/AppErrorBoundary.js';
 import './index.css';
 
 function CafeAppTree() {
@@ -32,11 +33,13 @@ function CafeAppTree() {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/:cafeSlug/*" element={<CafeAppTree />} />
-        <Route path="/" element={<Navigate to={`/${getCafeSlug()}`} replace />} />
-        <Route path="*" element={<Navigate to={`/${getCafeSlug()}`} replace />} />
-      </Routes>
+      <AppErrorBoundary>
+        <Routes>
+          <Route path="/:cafeSlug/*" element={<CafeAppTree />} />
+          <Route path="/" element={<Navigate to={`/${getCafeSlug()}`} replace />} />
+          <Route path="*" element={<Navigate to={`/${getCafeSlug()}`} replace />} />
+        </Routes>
+      </AppErrorBoundary>
     </BrowserRouter>
   </StrictMode>,
 );

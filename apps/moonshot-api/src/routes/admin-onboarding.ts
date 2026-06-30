@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import {
   ApiErrorCode,
+  MENU_PROVISION_SOURCES,
   type AdminCreateKdsUserResponse,
   type AdminOnboardingStatusResponse,
   type AdminRegisterResponse,
+  type AdminSaveMenuTemplateRequest,
+  type AdminSaveMenuTemplateResponse,
   type SlugAvailableResponse,
 } from '@moonshot/types';
 import { buildAdminLoginResponse } from '../lib/admin-auth-tokens.js';
@@ -11,6 +14,8 @@ import { normalizeCafeSlugInput, validateCafeSlug } from '../lib/cafe-slug.js';
 import { ProvisionCafeError, isCafeSlugAvailable, provisionCafe } from '../lib/cafe-provisioning.js';
 import { findCafeById } from '../lib/cafes-repository.js';
 import { hashKdsPassword } from '../lib/kds-password.js';
+import { applyMenuTemplate, MenuTemplateError } from '../lib/menu-template-onboarding.js';
+import { getMenuProvisioner, MenuProvisionError } from '../lib/menu-provisioners/index.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
 import { pool } from '../db.js';
@@ -92,6 +97,36 @@ adminOnboardingRouter.get('/status', requireAdminAuth, async (req, res) => {
     hasMenuItem: menuRes.rows.length > 0,
   };
   return res.json({ ok: true, data });
+});
+
+adminOnboardingRouter.post('/menu-template', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+  const body = req.body as AdminSaveMenuTemplateRequest;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const provisioner = getMenuProvisioner(MENU_PROVISION_SOURCES.template);
+    const data: AdminSaveMenuTemplateResponse = await provisioner.apply(client, cafeId, body);
+    await client.query('COMMIT');
+    return res.status(201).json({ ok: true, data });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    if (err instanceof MenuTemplateError || err instanceof MenuProvisionError) {
+      const code =
+        err instanceof MenuProvisionError && err.code === 'NOT_IMPLEMENTED'
+          ? ApiErrorCode.CONFIG
+          : err.code;
+      return res.status(err.status).json({
+        ok: false,
+        error: err.message,
+        code,
+      });
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 adminOnboardingRouter.post('/complete', requireAdminAuth, async (req, res) => {

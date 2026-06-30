@@ -8,5 +8,6 @@ When adding Square, SumUp, Lightspeed, or Epos adapters:
 2. **Map provider fields → `NormalisedMenuItem`** — internal UUIDs for rows you control; use `posItemId` / `posOptionId` when you need a stable external key for sync/dedupe.
 3. **Persist ingress separately** — use a small service that turns `NormalisedWebhookEvent` / fetched orders into `orders` + `order_items` rows with `(cafe_id, pos_order_id)` dedupe; avoid embedding SQL in provider SDK wrappers.
 4. **Modifiers** — map provider modifier sets into `NormalisedModifierGroup[]`; order lines still snapshot selections as `NormalisedOrderLineModifier[]` with `groupId` / `optionId` for KDS clarity.
+5. **Onboarding import** — POS catalogue ingress for new cafés should use `getMenuProvisioner('pos')` → `PosAdapter.fetchMenu` → `persistNormalisedMenuCatalog` (see `docs/onboarding.md`). Template onboarding uses `getMenuProvisioner('template')` until both paths share the same persistence helper.
 
 Until a live provider is enabled, `pos_provider = manual` remains the supported production path.
