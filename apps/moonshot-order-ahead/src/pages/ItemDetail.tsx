@@ -227,7 +227,13 @@ export function ItemDetail() {
             });
             navigate(cafePath('/order'), { state: { addedItemName: item.name } });
           }}
-          sx={{ py: 1.25 }}
+          sx={{
+            py: 1.25,
+            border: 0,
+            boxShadow: 'none',
+            backgroundImage: 'none',
+            '&::before, &::after': { display: 'none' },
+          }}
         >
           Add{formatPriceTag(lineUnit * quantity, item.currency) ? ` · ${formatPriceTag(lineUnit * quantity, item.currency)}` : ''}
         </Button>

@@ -1,6 +1,5 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import type { NormalisedOrder } from '@moonshot/types';
 import {
   Avatar,
   Box,
@@ -18,20 +17,9 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { formatMoney, formatShortDate } from '../lib/format.js';
+import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useNavigate } from 'react-router-dom';
-
-function reorderFromOrder(order: NormalisedOrder, upsertLine: ReturnType<typeof useCart>['upsertLine']) {
-  for (const li of order.items) {
-    if (!li.menuItemId) continue;
-    upsertLine({
-      menuItemId: li.menuItemId,
-      quantity: li.quantity,
-      modifiers: li.modifiers.map((m) => ({ groupId: m.groupId, optionId: m.optionId })),
-      allergens: li.allergens,
-    });
-  }
-}
 
 export function Profile() {
   const { user, membership, loading, signOut, isSignedIn } = useAuth();
@@ -42,12 +30,11 @@ export function Profile() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" component="h1" sx={{ m: 0 }}>
-          Profile
-        </Typography>
-        {isSignedIn && <SettingsOutlinedIcon color="action" />}
-      </Box>
+      {isSignedIn && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <SettingsOutlinedIcon color="action" />
+        </Box>
+      )}
 
       {loading && (
         <Typography color="text.secondary">Checking session…</Typography>
@@ -83,7 +70,16 @@ export function Profile() {
           </Box>
 
           <SectionHead eyebrow="Account" title="Your details" />
-          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, overflow: 'hidden', mb: 3 }}>
+          <Box
+            sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1.25,
+              overflow: 'hidden',
+              mb: 3,
+              bgcolor: 'background.paper',
+            }}
+          >
             {(
               [
                 ['Name', user.displayName ?? '—', false],

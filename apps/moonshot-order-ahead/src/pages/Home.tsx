@@ -1,4 +1,4 @@
-import type { NormalisedMenu, NormalisedOrder } from '@moonshot/types';
+import type { NormalisedMenu } from '@moonshot/types';
 import {
   Avatar,
   Box,
@@ -21,19 +21,8 @@ import { useCafe } from '../hooks/useCafe.js';
 import { apiFetch } from '../lib/api.js';
 import { firstName, formatMoney, formatTime, timeGreeting } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
+import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { useCart } from '../providers/CartProvider.js';
-
-function reorderFromOrder(order: NormalisedOrder, upsertLine: ReturnType<typeof useCart>['upsertLine']) {
-  for (const li of order.items) {
-    if (!li.menuItemId) continue;
-    upsertLine({
-      menuItemId: li.menuItemId,
-      quantity: li.quantity,
-      modifiers: li.modifiers.map((m) => ({ groupId: m.groupId, optionId: m.optionId })),
-      allergens: li.allergens,
-    });
-  }
-}
 
 export function Home() {
   const { loading, error, cafe } = useCafe();

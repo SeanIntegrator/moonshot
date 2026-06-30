@@ -18,10 +18,6 @@ export function Rewards() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
-      <Typography variant="h4" component="h1">
-        Rewards
-      </Typography>
-
       {authLoading && <Typography color="text.secondary">Checking session…</Typography>}
 
       {!authLoading && !isSignedIn && (
@@ -75,10 +71,10 @@ export function Rewards() {
           <Typography variant="h6" fontWeight={700} gutterBottom>
             No stamps yet
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {/* <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Order to start your loyalty card. Buy 9, get the 10th free.
-          </Typography>
-          <Button component={RouterLink} to={cafePath('/order')} variant="contained">
+          </Typography> */}
+          <Button component={RouterLink} sx={{ mt: 2 }} to={cafePath('/order')} variant="contained">
             Browse menu →
           </Button>
         </Box>
