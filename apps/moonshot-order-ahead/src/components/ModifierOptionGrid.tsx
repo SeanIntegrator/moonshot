@@ -68,6 +68,7 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
               maxHeight: expanded ? 'none' : COLLAPSED_CHIP_HEIGHT,
               overflow: 'hidden',
               pr: canExpand ? 4 : 0,
+              transition: 'max-height 220ms ease',
             }}
           >
             {group.options.map((opt) => {
@@ -94,17 +95,15 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                     color: 'text.primary',
                     fontWeight: 600,
                     WebkitTapHighlightColor: 'transparent',
+                    transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
                     boxShadow: selected ? (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}` : 'none',
                     '& .MuiChip-icon': {
                       color: 'inherit',
                       fontSize: 16,
                       ml: 1,
                     },
-                    '&:hover': {
-                      bgcolor: selected ? 'action.selected' : 'action.hover',
-                    },
                     '&:active': {
-                      bgcolor: selected ? 'action.selected' : 'background.paper',
+                      transform: 'scale(0.96)',
                     },
                   }}
                 />
@@ -138,7 +137,8 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 border: 1,
                 borderColor: 'divider',
                 transform: expanded ? 'rotate(180deg)' : 'none',
-                '&:hover': { bgcolor: 'background.paper' },
+                transition: 'transform 220ms ease',
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
               <ExpandMoreIcon fontSize="small" />
@@ -190,11 +190,9 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 color: 'text.primary',
                 WebkitTapHighlightColor: 'transparent',
                 appearance: 'none',
-                '&:hover': {
-                  bgcolor: selected ? 'action.selected' : 'action.hover',
-                },
+                transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
                 '&:active': {
-                  bgcolor: selected ? 'action.selected' : 'background.paper',
+                  transform: 'scale(0.97)',
                 },
                 '&:focus': {
                   outline: 'none',

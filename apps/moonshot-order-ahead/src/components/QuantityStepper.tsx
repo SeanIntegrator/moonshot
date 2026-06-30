@@ -8,6 +8,8 @@ type Props = {
   min?: number;
 };
 
+const tapTransition = 'background-color 180ms ease, transform 180ms ease, opacity 180ms ease';
+
 export function QuantityStepper({ value, onChange, min = 1 }: Props) {
   return (
     <Box
@@ -27,10 +29,23 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         aria-label="Decrease quantity"
+        sx={{
+          transition: tapTransition,
+          WebkitTapHighlightColor: 'transparent',
+          '&:active:not(:disabled)': { transform: 'scale(0.9)' },
+        }}
       >
         <RemoveIcon fontSize="small" />
       </IconButton>
-      <Typography fontWeight={600} sx={{ minWidth: 20, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+      <Typography
+        fontWeight={600}
+        sx={{
+          minWidth: 20,
+          textAlign: 'center',
+          fontVariantNumeric: 'tabular-nums',
+          transition: 'opacity 120ms ease',
+        }}
+      >
         {value}
       </Typography>
       <IconButton
@@ -40,7 +55,9 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
         sx={{
           bgcolor: 'primary.main',
           color: 'primary.contrastText',
-          '&:hover': { bgcolor: 'secondary.main' },
+          transition: tapTransition,
+          WebkitTapHighlightColor: 'transparent',
+          '&:active': { transform: 'scale(0.9)' },
         }}
       >
         <AddIcon fontSize="small" />

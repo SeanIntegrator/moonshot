@@ -20,3 +20,33 @@ svg {
   display: block;
   max-width: 100%;
 }
+
+:root {
+  --motion-duration: 180ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile tap feedback — no hover dependency */
+.pressable-card {
+  transition: transform var(--motion-duration) var(--motion-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pressable-card:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .pressable-card:active {
+    transform: none;
+  }
+}

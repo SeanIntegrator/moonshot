@@ -1,4 +1,3 @@
-import type { NormalisedMenu } from '@moonshot/types';
 import {
   Avatar,
   Box,
@@ -13,28 +12,29 @@ import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
 import { QrModal } from '../components/QrModal.js';
 import { SectionHead } from '../components/SectionHead.js';
+import { HomePageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafe } from '../hooks/useCafe.js';
-import { apiFetch } from '../lib/api.js';
-import { firstName, formatMoney, formatTime, timeGreeting } from '../lib/format.js';
+import { firstName, formatMoney, timeGreeting } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { useCart } from '../providers/CartProvider.js';
+import { useMenu } from '../providers/MenuProvider.js';
 
 export function Home() {
   const { loading, error, cafe } = useCafe();
   const { user, membership, isSignedIn } = useAuth();
   const { summary, refresh: refreshLoyalty } = useLoyalty();
-  const { active, recent, loading: ordersLoading } = useActiveOrders();
+  const { active, recent } = useActiveOrders();
+  const { menu } = useMenu();
   const navigate = useNavigate();
   const location = useLocation();
   const cafePath = useCafePath();
   const { upsertLine } = useCart();
   const [qrOpen, setQrOpen] = useState(false);
-  const [menu, setMenu] = useState<NormalisedMenu | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -45,17 +45,6 @@ export function Home() {
       { replace: true },
     );
   }, [navigate, cafePath]);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const data = await apiFetch<NormalisedMenu>('/menu');
-        setMenu(data);
-      } catch {
-        setMenu(null);
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     if (isSignedIn) void refreshLoyalty();
@@ -69,11 +58,7 @@ export function Home() {
   const canShowLiveLoyalty = isSignedIn && summary?.loyaltyEnabled && membership;
 
   if (loading) {
-    return (
-      <Container maxWidth="sm" sx={{ py: 2, pb: 8 }}>
-        <Typography color="text.secondary">Loading café…</Typography>
-      </Container>
-    );
+    return <HomePageSkeleton />;
   }
 
   if (error || !cafe) {
@@ -180,7 +165,7 @@ export function Home() {
         )}
 
         {featured.length > 0 && (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, minHeight: 200 }}>
             <SectionHead
               eyebrow="Featured"
               title="On the menu"
@@ -196,6 +181,7 @@ export function Home() {
                   key={item.id}
                   component={RouterLink}
                   to={cafePath(`/order/item/${item.id}`)}
+                  className="pressable-card"
                   sx={{
                     flexShrink: 0,
                     width: 180,
@@ -215,7 +201,6 @@ export function Home() {
                     <Typography variant="caption" color="text.secondary">
                       {formatMoney(item.priceMinor, item.currency)}
                     </Typography>
-                    {/* Wireframe: promo end-dates not in schema */}
                     <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.25 }}>
                       Limited time
                     </Typography>
@@ -225,12 +210,6 @@ export function Home() {
             </Box>
           </Box>
         )}
-
-        {/* {!ordersLoading && !activeOrder && !usualOrder && (
-          <Link component={RouterLink} to={cafePath('/order')} underline="hover" fontWeight={600}>
-            Browse menu
-          </Link>
-        )} */}
       </Box>
 
       {isSignedIn && membership && (

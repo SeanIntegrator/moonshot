@@ -23,6 +23,7 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
       <Box
         component={RouterLink}
         to={cafePath(`/order/item/${item.id}`)}
+        className="pressable-card"
         sx={{
           display: 'block',
           textDecoration: 'none',
@@ -32,6 +33,7 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           borderRadius: 1.25,
           overflow: 'hidden',
           bgcolor: 'background.paper',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
         <Box
@@ -70,7 +72,9 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           justifyContent: 'center',
           fontSize: 13,
           fontWeight: 700,
-          visibility: qty > 0 ? 'visible' : 'hidden',
+          opacity: qty > 0 ? 1 : 0,
+          transform: qty > 0 ? 'scale(1)' : 'scale(0.6)',
+          transition: 'opacity 180ms ease, transform 180ms ease, background-color 180ms ease',
           pointerEvents: 'none',
         }}
       >

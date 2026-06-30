@@ -1,5 +1,4 @@
 import type {
-  NormalisedMenu,
   NormalisedMenuItem,
   OrderLineModifierSelectionInput,
 } from '@moonshot/types';
@@ -10,11 +9,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ModifierOptionGrid } from '../components/ModifierOptionGrid.js';
 import { QuantityStepper } from '../components/QuantityStepper.js';
 import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
+import { ItemDetailSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
-import { apiFetch } from '../lib/api.js';
 import { formatPriceTag } from '../lib/format.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCart } from '../providers/CartProvider.js';
+import { useMenu } from '../providers/MenuProvider.js';
 
 function defaultModifiers(item: NormalisedMenuItem): OrderLineModifierSelectionInput[] {
   const out: OrderLineModifierSelectionInput[] = [];
@@ -56,22 +56,10 @@ export function ItemDetail() {
   const navigate = useNavigate();
   const cafePath = useCafePath();
   const { upsertLine } = useCart();
-  const [menu, setMenu] = useState<NormalisedMenu | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { menu, loading, error } = useMenu();
   const [quantity, setQuantity] = useState(1);
   const [sizeId, setSizeId] = useState<string | null>(null);
   const [modifiers, setModifiers] = useState<OrderLineModifierSelectionInput[]>([]);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const data = await apiFetch<NormalisedMenu>('/menu');
-        setMenu(data);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load menu');
-      }
-    })();
-  }, []);
 
   const item = useMemo(() => {
     if (!menu || !menuItemId.trim()) return null;
@@ -120,9 +108,13 @@ export function ItemDetail() {
     );
   }
 
+  if (loading && !menu) {
+    return <ItemDetailSkeleton />;
+  }
+
   if (!menu || !item) {
     return (
-      <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
+      <Container maxWidth="sm" sx={{ py: 2, pb: 10, minHeight: 200 }}>
         <Typography color="text.secondary">{menu ? 'Item not found.' : 'Loading…'}</Typography>
       </Container>
     );

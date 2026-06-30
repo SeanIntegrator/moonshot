@@ -1,4 +1,4 @@
-import type { MenuCategory, NormalisedMenu, PickupEstimateResponse } from '@moonshot/types';
+import type { MenuCategory, PickupEstimateResponse } from '@moonshot/types';
 import { Alert, Box, Container, Snackbar, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -6,11 +6,11 @@ import { CategoryStrip } from '../components/CategoryStrip.js';
 import { FloatingCartBar } from '../components/FloatingCartBar.js';
 import { MenuItemCard } from '../components/MenuItemCard.js';
 import { PickupTimeChip } from '../components/PickupTimeChip.js';
-import { apiFetch } from '../lib/api.js';
+import { MenuPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { groupMenuByCategory } from '../lib/menu-utils.js';
 import { useCart } from '../providers/CartProvider.js';
+import { useMenu } from '../providers/MenuProvider.js';
 import { fetchPickupEstimate } from '../api/orders-api.js';
-
 import { unitPriceForItem } from '../lib/menu-price-utils.js';
 
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
@@ -32,13 +32,13 @@ export function Menu() {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = location.state as MenuLocationState | null;
-  const [menu, setMenu] = useState<NormalisedMenu | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { menu, loading, error } = useMenu();
   const [activeCategory, setActiveCategory] = useState<MenuCategory>('hot_drinks');
   const [estimate, setEstimate] = useState<PickupEstimateResponse | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
+  const categoryInitialized = useRef(false);
 
   useEffect(() => {
     if (!locationState?.addedItemName) return;
@@ -47,17 +47,13 @@ export function Menu() {
   }, [locationState?.addedItemName, navigate]);
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const data = await apiFetch<NormalisedMenu>('/menu');
-        setMenu(data);
-        const sections = groupMenuByCategory(data);
-        if (sections[0]) setActiveCategory(sections[0].category);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load menu');
-      }
-    })();
-  }, []);
+    if (!menu || categoryInitialized.current) return;
+    const sections = groupMenuByCategory(menu);
+    if (sections[0]) {
+      setActiveCategory(sections[0].category);
+      categoryInitialized.current = true;
+    }
+  }, [menu]);
 
   useEffect(() => {
     void (async () => {
@@ -93,6 +89,10 @@ export function Menu() {
     sectionRefs.current[cat]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  if (loading && !menu) {
+    return <MenuPageSkeleton />;
+  }
+
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, gap: 1 }}>
@@ -113,11 +113,6 @@ export function Menu() {
       {error && (
         <Typography color="error" sx={{ mt: 1 }}>
           {error}
-        </Typography>
-      )}
-      {!menu && !error && (
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Loading…
         </Typography>
       )}
 

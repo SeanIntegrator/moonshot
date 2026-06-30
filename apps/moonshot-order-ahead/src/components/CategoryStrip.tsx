@@ -27,7 +27,14 @@ export function CategoryStrip({ sections, active, onSelect }: Props) {
           onClick={() => onSelect(s.category)}
           variant={active === s.category ? 'filled' : 'outlined'}
           color={active === s.category ? 'primary' : 'default'}
-          sx={{ flexShrink: 0 }}
+          sx={{
+            flexShrink: 0,
+            transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease',
+            WebkitTapHighlightColor: 'transparent',
+            '&:active': {
+              transform: 'scale(0.96)',
+            },
+          }}
         />
       ))}
     </Box>

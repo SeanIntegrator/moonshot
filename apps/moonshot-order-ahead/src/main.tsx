@@ -5,6 +5,7 @@ import { getCafeSlug } from './lib/api.js';
 import { CafeProvider } from './config/CafeProvider.js';
 import { AuthProvider } from './hooks/useAuth.js';
 import { LoyaltyProvider } from './providers/LoyaltyProvider.js';
+import { MenuProvider } from './providers/MenuProvider.js';
 import { ActiveOrdersProvider } from './providers/ActiveOrdersProvider.js';
 import { CartProvider } from './providers/CartProvider.js';
 import { App } from './App.js';
@@ -15,11 +16,13 @@ function CafeAppTree() {
     <CafeProvider>
       <AuthProvider>
         <LoyaltyProvider>
-          <CartProvider>
-            <ActiveOrdersProvider>
-              <App />
-            </ActiveOrdersProvider>
-          </CartProvider>
+          <MenuProvider>
+            <CartProvider>
+              <ActiveOrdersProvider>
+                <App />
+              </ActiveOrdersProvider>
+            </CartProvider>
+          </MenuProvider>
         </LoyaltyProvider>
       </AuthProvider>
     </CafeProvider>

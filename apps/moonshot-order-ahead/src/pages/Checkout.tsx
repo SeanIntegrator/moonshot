@@ -1,5 +1,4 @@
 import type {
-  NormalisedMenu,
   NormalisedMenuItem,
   OrderLineModifierSelectionInput,
   OrderType,
@@ -20,15 +19,16 @@ import { AllergyChecklist } from '../components/AllergyChecklist.js';
 import { CheckoutLineRow } from '../components/CheckoutLineRow.js';
 import { PageHeader } from '../components/PageHeader.js';
 import { RewardRow } from '../components/RewardRow.js';
+import { CheckoutPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { createCustomerOrder, fetchPickupEstimate } from '../api/orders-api.js';
-import { apiFetch } from '../lib/api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useCafe } from '../hooks/useCafe.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
-import { formatMoney, formatPriceTag, formatTime } from '../lib/format.js';
+import { useMenu } from '../providers/MenuProvider.js';
+import { formatMoney, formatTime } from '../lib/format.js';
 import { unitPriceForItem } from '../lib/menu-price-utils.js';
 
 function estimateLineMinor(
@@ -65,7 +65,7 @@ export function Checkout() {
   const { cafe } = useCafe();
   const { isSignedIn, user } = useAuth();
   const { summary, rewards, refresh: refreshLoyalty } = useLoyalty();
-  const [menu, setMenu] = useState<NormalisedMenu | null>(null);
+  const { menu, loading: menuLoading } = useMenu();
   const [customerName, setCustomerName] = useState('');
   const [orderType] = useState<OrderType>('takeaway');
   const [submitting, setSubmitting] = useState(false);
@@ -91,17 +91,6 @@ export function Checkout() {
     if (user?.displayName) setCustomerName(user.displayName);
     else if (user?.email) setCustomerName(user.email.split('@')[0] ?? '');
   }, [user]);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const data = await apiFetch<NormalisedMenu>('/menu');
-        setMenu(data);
-      } catch {
-        setMenu(null);
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -202,6 +191,10 @@ export function Checkout() {
     );
   }
 
+  if (menuLoading && !menu) {
+    return <CheckoutPageSkeleton />;
+  }
+
   return (
     <Box
       sx={{
@@ -238,6 +231,7 @@ export function Checkout() {
               borderRadius: 1.25,
               bgcolor: 'background.paper',
               overflow: 'hidden',
+              minHeight: pricedLines.length > 0 ? undefined : 120,
             }}
           >
             {pricedLines.map(({ line, item, unit }, index) => (
@@ -306,6 +300,7 @@ export function Checkout() {
               alignItems: 'center',
               gap: 1.5,
               opacity: 0.7,
+              minHeight: 72,
             }}
           >
             <AccessTimeIcon color="action" />
@@ -356,15 +351,14 @@ export function Checkout() {
                 fontWeight: 600,
                 fontSize: '0.875rem',
                 color: 'text.secondary',
+                transition: 'background-color 180ms ease, color 180ms ease, box-shadow 180ms ease',
                 '&.Mui-selected': {
                   bgcolor: 'background.paper',
                   color: 'text.primary',
                   boxShadow: 1,
-                  '&:hover': { bgcolor: 'background.paper' },
                 },
                 '&:not(.Mui-selected)': {
                   bgcolor: 'transparent',
-                  '&:hover': { bgcolor: 'transparent' },
                 },
               },
             }}

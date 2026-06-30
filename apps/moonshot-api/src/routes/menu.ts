@@ -15,6 +15,9 @@ const MENU_CATEGORIES: MenuCategory[] = ['hot_drinks', 'cold_drinks', 'food', 'e
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Literal path segments that must not be handled by GET /:segment */
+const RESERVED_MENU_SEGMENTS = new Set(['manage']);
+
 function parseModifierGroupIds(body: Record<string, unknown>): string[] | undefined {
   if (!('modifierGroupIds' in body)) return undefined;
   if (!Array.isArray(body.modifierGroupIds)) return [];
@@ -30,6 +33,19 @@ export const menuRouter: Router = Router();
 
 menuRouter.use(requireCafeContext);
 menuRouter.use('/modifier-groups', modifierGroupsRouter);
+
+// Static GET routes before parameterized handlers (Express matches in registration order).
+menuRouter.get('/manage', requireMenuMutationAuth, async (req, res) => {
+  const menu = await fetchMenuForCafe(pool, req.cafe!.cafeId, false);
+  return res.json({ ok: true, data: menu });
+});
+
+menuRouter.get('/', async (req, res) => {
+  const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
+  const menu = await adapter.fetchMenu(req.cafe!.cafeId);
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.json({ ok: true, data: menu });
+});
 
 menuRouter.post('/', requireMenuMutationAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
@@ -234,18 +250,6 @@ menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
   return res.json({ ok: true, data: { removed: true } });
 });
 
-menuRouter.get('/manage', requireMenuMutationAuth, async (req, res) => {
-  const menu = await fetchMenuForCafe(pool, req.cafe!.cafeId, false);
-  return res.json({ ok: true, data: menu });
-});
-
-menuRouter.get('/', async (req, res) => {
-  const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
-  const menu = await adapter.fetchMenu(req.cafe!.cafeId);
-  res.set('Cache-Control', 'public, max-age=300');
-  return res.json({ ok: true, data: menu });
-});
-
 menuRouter.get('/:segment', async (req, res) => {
   const rawSeg = req.params.segment;
   const segment = Array.isArray(rawSeg) ? rawSeg[0] : rawSeg;
@@ -256,7 +260,7 @@ menuRouter.get('/:segment', async (req, res) => {
       code: ApiErrorCode.VALIDATION,
     });
   }
-  if (UUID_RE.test(segment)) {
+  if (RESERVED_MENU_SEGMENTS.has(segment) || UUID_RE.test(segment)) {
     return res.status(404).json({
       ok: false,
       error: 'Not found',
