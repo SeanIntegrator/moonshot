@@ -10,6 +10,7 @@ import { ModifierOptionGrid } from '../components/ModifierOptionGrid.js';
 import { QuantityStepper } from '../components/QuantityStepper.js';
 import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
 import { ItemDetailSkeleton } from '../components/skeletons/PageSkeletons.js';
+import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { formatPriceTag } from '../lib/format.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
@@ -123,14 +124,13 @@ export function ItemDetail() {
   return (
     <Box sx={{ pb: 14 }}>
       <Box sx={{ position: 'relative' }}>
-        <Box
-          sx={{
-            height: 190,
-            bgcolor: 'action.hover',
-            backgroundImage: item.imageUrl ? `url(${item.imageUrl})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
+        <MenuItemImage
+          src={item.imageUrl}
+          alt={item.name}
+          height={190}
+          borderRadius={0}
+          loading="eager"
+          fetchPriority="high"
         />
         <IconButton
           onClick={() => navigate(cafePath('/order'))}

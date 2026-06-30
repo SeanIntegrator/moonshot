@@ -25,6 +25,7 @@ import {
   patchMenuItem,
 } from '../../lib/admin-api.js';
 import { formatGbpMinor } from '../../lib/format.js';
+import { MenuItemImageField } from './MenuItemImageField.js';
 import { SizeEditor } from './SizeEditor.js';
 
 const CATEGORIES: { value: MenuCategory; label: string }[] = [
@@ -204,6 +205,23 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
           minRows={2}
           value={draft.description ?? ''}
           onChange={(e) => update({ description: e.target.value || null })}
+        />
+
+        <MenuItemImageField
+          cafeSlug={cafeSlug}
+          token={token}
+          itemId={itemId}
+          imageUrl={draft.imageUrl}
+          itemName={draft.name || 'Menu item'}
+          disabled={savingId === (itemId ?? 'new')}
+          onUploaded={(updated) => {
+            if (itemId) {
+              setDraft(itemId, toDraft(updated, library));
+            } else {
+              setNewItem(toDraft(updated, library));
+            }
+            onItemsChanged();
+          }}
         />
 
         {draft.sizes.length === 0 && (

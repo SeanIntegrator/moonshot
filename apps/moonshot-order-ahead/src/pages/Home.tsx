@@ -21,6 +21,7 @@ import { useCafe } from '../hooks/useCafe.js';
 import { firstName, formatMoney, timeGreeting } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
+import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 
@@ -125,9 +126,20 @@ export function Home() {
           <Box sx={{ mb: 3 }}>
             <SectionHead title="Your usual" />
             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
-              {usualOrder.items.map((li) => (
+              {usualOrder.items.map((li) => {
+                const menuItem = li.menuItemId
+                  ? menu?.items.find((i) => i.id === li.menuItemId)
+                  : undefined;
+                return (
                 <Box key={li.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>
-                  <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: 'action.hover', flexShrink: 0 }} />
+                  <MenuItemImage
+                    src={menuItem?.imageUrl}
+                    alt={li.itemName}
+                    width={48}
+                    height={48}
+                    borderRadius={1}
+                    loading="lazy"
+                  />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body2" fontWeight={600}>
                       {li.itemName}
@@ -139,7 +151,8 @@ export function Home() {
                     )}
                   </Box>
                 </Box>
-              ))}
+                );
+              })}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">
@@ -193,7 +206,14 @@ export function Home() {
                     overflow: 'hidden',
                   }}
                 >
-                  <Box sx={{ height: 100, bgcolor: 'action.hover' }} />
+                  <MenuItemImage
+                    src={item.imageUrl}
+                    alt={item.name}
+                    height={100}
+                    borderRadius={0}
+                    loading={featured.indexOf(item) === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={featured.indexOf(item) === 0 ? 'high' : 'auto'}
+                  />
                   <Box sx={{ p: 1.25 }}>
                     <Typography variant="body2" fontWeight={600}>
                       {item.name}

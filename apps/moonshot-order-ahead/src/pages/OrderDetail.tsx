@@ -13,11 +13,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { OrderStatusStepper } from '../components/OrderStatusStepper.js';
 import { PageHeader } from '../components/PageHeader.js';
+import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { cancelCustomerOrder, fetchCustomerOrder } from '../api/orders-api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
+import { useMenu } from '../providers/MenuProvider.js';
 import { useOrderTracking } from '../hooks/useOrderTracking.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
 import { formatMoney, formatTime, modifierSummary } from '../lib/format.js';
@@ -40,6 +42,7 @@ export function OrderDetail() {
   const { isSignedIn, refresh: refreshAuth } = useAuth();
   const { summary, refresh: refreshLoyalty } = useLoyalty();
   const { refresh: refreshActiveOrders } = useActiveOrders();
+  const { menu } = useMenu();
   const [order, setOrder] = useState<NormalisedOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -184,9 +187,20 @@ export function OrderDetail() {
           <Typography variant="caption" color="text.secondary" sx={{ mt: 3, letterSpacing: 0.5, display: 'block' }}>
             Items · {totalItemQuantity(order.items)}
           </Typography>
-          {order.items.map((li) => (
+          {order.items.map((li) => {
+            const menuItem = li.menuItemId
+              ? menu?.items.find((i) => i.id === li.menuItemId)
+              : undefined;
+            return (
             <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>
-              <Box sx={{ width: 56, height: 56, borderRadius: 1, bgcolor: 'action.hover', flexShrink: 0 }} />
+              <MenuItemImage
+                src={menuItem?.imageUrl}
+                alt={li.itemName}
+                width={56}
+                height={56}
+                borderRadius={1}
+                loading="lazy"
+              />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="body2" fontWeight={600}>
                   {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
@@ -201,7 +215,8 @@ export function OrderDetail() {
                 {formatMoney(li.unitPriceMinor * li.quantity, order.currency)}
               </Typography>
             </Box>
-          ))}
+            );
+          })}
 
           <Divider sx={{ my: 1 }} />
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

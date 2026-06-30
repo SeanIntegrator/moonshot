@@ -1,5 +1,6 @@
 export * from './admin-auth.js';
 export * from './menu-template.js';
+export * from './menu-images.js';
 export * from './menu-provisioning.js';
 export * from './admin-settings.js';
 export * from './allergens.js';

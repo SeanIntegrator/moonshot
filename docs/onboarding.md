@@ -74,6 +74,10 @@ Onboarding menu creation goes through **menu provisioners** (parallel to `PosAda
 
 Completion still requires `hasMenuItem` (at least one available drink).
 
+### Default drink images
+
+When Railway Object Storage is configured (`MENU_IMAGE_*` env vars), template drinks get `image_url` pointing at canonical thumbnails under `template/drinks/{key}.webp`. See **[menu-images.md](./menu-images.md)** for bucket setup, upload API, and the `pnpm sync:menu-template-images` bootstrap script.
+
 ## Order-ahead URLs
 
 Multi-tenant routing: `https://order.example.com/{slug}/order`

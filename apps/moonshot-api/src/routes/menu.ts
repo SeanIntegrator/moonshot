@@ -6,7 +6,12 @@ import { pool } from '../db.js';
 import { getPosAdapter } from '../lib/pos-adapters/index.js';
 import { fetchMenuForCafe, fetchMenuItemsByIds } from '../lib/menu-fetch.js';
 import { normalizeSizes, setMenuItemModifierGroups } from '../lib/menu-modifier-library.js';
+import {
+  MenuImageValidationError,
+  uploadMenuItemThumbnail,
+} from '../lib/menu-image-storage.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
+import { menuItemImageUpload } from '../middleware/menu-item-image-upload.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
 import { modifierGroupsRouter } from './modifier-groups.js';
 
@@ -222,6 +227,71 @@ menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const item = await loadMergedItem(cafeId, itemId);
   return res.json({ ok: true, data: item });
 });
+
+menuRouter.post(
+  '/:itemId/image',
+  requireMenuMutationAuth,
+  menuItemImageUpload,
+  async (req, res) => {
+    const rawId = req.params.itemId;
+    const itemId = Array.isArray(rawId) ? rawId[0] : rawId;
+    if (!itemId || !UUID_RE.test(itemId)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Invalid item id',
+        code: ApiErrorCode.VALIDATION,
+      });
+    }
+
+    const cafeId = req.cafe!.cafeId;
+    const file = req.file;
+    if (!file?.buffer?.length) {
+      return res.status(400).json({
+        ok: false,
+        error: 'image file is required',
+        code: ApiErrorCode.VALIDATION,
+      });
+    }
+
+    const exists = await pool.query(`SELECT 1 FROM menu_items WHERE id = $1 AND cafe_id = $2`, [
+      itemId,
+      cafeId,
+    ]);
+    if (exists.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Menu item not found',
+        code: ApiErrorCode.NOT_FOUND,
+      });
+    }
+
+    try {
+      const imageUrl = await uploadMenuItemThumbnail({
+        cafeId,
+        itemId,
+        fileBuffer: file.buffer,
+      });
+
+      await pool.query(`UPDATE menu_items SET image_url = $1 WHERE id = $2 AND cafe_id = $3`, [
+        imageUrl,
+        itemId,
+        cafeId,
+      ]);
+
+      const item = await loadMergedItem(cafeId, itemId);
+      return res.json({ ok: true, data: item });
+    } catch (e) {
+      if (e instanceof MenuImageValidationError) {
+        return res.status(e.status).json({
+          ok: false,
+          error: e.message,
+          code: ApiErrorCode.VALIDATION,
+        });
+      }
+      throw e;
+    }
+  },
+);
 
 menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const rawDel = req.params.itemId;

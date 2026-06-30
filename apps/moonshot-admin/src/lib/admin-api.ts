@@ -187,6 +187,34 @@ export async function patchMenuItem(
   return envelope.data;
 }
 
+export async function uploadMenuItemImage(
+  token: string,
+  cafeSlug: string,
+  itemId: string,
+  file: File,
+): Promise<NormalisedMenuItem> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+
+  const form = new FormData();
+  form.append('image', file);
+
+  const url = `${base}${API_VERSION_PREFIX}/menu/${encodeURIComponent(itemId)}/image`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: form,
+  });
+  const envelope = await parseEnvelope<NormalisedMenuItem>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Image upload failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
 export async function adminStripeOnboardingLink(token: string): Promise<AdminStripeAccountLinkResponse> {
   const base = getApiBaseUrl();
   if (!base) throw new Error('VITE_API_URL is not set');

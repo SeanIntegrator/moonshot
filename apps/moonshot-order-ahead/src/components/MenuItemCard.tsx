@@ -4,6 +4,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { formatFromPrice, formatPriceTag } from '../lib/format.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { MenuItemImage } from './MenuItemImage.js';
 
 type Props = {
   item: NormalisedMenuItem;
@@ -36,14 +37,12 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           WebkitTapHighlightColor: 'transparent',
         }}
       >
-        <Box
-          sx={{
-            aspectRatio: '1',
-            bgcolor: 'action.hover',
-            backgroundImage: item.imageUrl ? `url(${item.imageUrl})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
+        <MenuItemImage
+          src={item.imageUrl}
+          alt={item.name}
+          aspectRatio="1"
+          borderRadius={0}
+          loading="lazy"
         />
         <Box sx={{ p: 1.25, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 0.5 }}>
           <Typography variant="body2" fontWeight={600} sx={{ minWidth: 0 }}>

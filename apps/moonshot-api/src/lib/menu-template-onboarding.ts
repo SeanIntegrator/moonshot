@@ -11,6 +11,7 @@ import {
   type MenuTemplateModifierKey,
 } from '@moonshot/types';
 import { setMenuItemModifierGroups } from './menu-modifier-library.js';
+import { resolveMenuTemplateDrinkImageUrl } from './menu-template-images.js';
 
 export class MenuTemplateError extends Error {
   constructor(
@@ -261,11 +262,13 @@ export async function applyMenuTemplate(
         ? Math.round(drink.priceMinor)
         : MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR;
 
+      const imageUrl = resolveMenuTemplateDrinkImageUrl(drink.templateKey);
+
       const { rows } = await client.query<{ id: string }>(
         `INSERT INTO menu_items (
           cafe_id, name, description, price_minor, currency, category, subcategory,
-          is_available, tags, modifier_groups, sizes, sort_order
-        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, TRUE, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $7)
+          image_url, is_available, tags, modifier_groups, sizes, sort_order
+        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, $7, TRUE, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $8)
         RETURNING id`,
         [
           cafeId,
@@ -274,6 +277,7 @@ export async function applyMenuTemplate(
           priceMinor,
           def.category,
           def.subcategory ?? null,
+          imageUrl,
           sortOrder++,
         ],
       );
