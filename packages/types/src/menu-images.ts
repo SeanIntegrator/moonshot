@@ -19,8 +19,17 @@ export function menuTemplateDrinkImageKey(drinkKey: MenuTemplateDrinkKey): strin
   return `${MENU_TEMPLATE_IMAGE_PREFIX}/${drinkKey}.webp`;
 }
 
-export function cafeMenuItemImageKey(cafeId: string, itemId: string): string {
-  return `cafes/${cafeId}/menu-items/${itemId}/thumbnail.webp`;
+/** Short cache-busting segment for café uploads (base36 timestamp). */
+export function newMenuItemImageVersion(): string {
+  return Date.now().toString(36);
+}
+
+/**
+ * Per-café upload object key. `version` must be unique per replace so browsers
+ * with long-lived immutable caches fetch the new bytes immediately.
+ */
+export function cafeMenuItemImageKey(cafeId: string, itemId: string, version: string): string {
+  return `cafes/${cafeId}/menu-items/${itemId}/${version}.webp`;
 }
 
 /** Build a public CDN URL from bucket base + object key. */
@@ -28,6 +37,21 @@ export function publicMenuImageUrl(publicBaseUrl: string, objectKey: string): st
   const base = publicBaseUrl.replace(/\/$/, '');
   const key = objectKey.replace(/^\//, '');
   return `${base}/${key}`;
+}
+
+/**
+ * Extract the object key suffix from a stored public media URL, or null if the
+ * URL does not sit under `publicBaseUrl`.
+ */
+export function menuImageObjectKeyFromPublicUrl(
+  publicUrl: string,
+  publicBaseUrl: string,
+): string | null {
+  const base = publicBaseUrl.replace(/\/$/, '');
+  if (!publicUrl.startsWith(`${base}/`)) return null;
+  const key = publicUrl.slice(base.length + 1).split('?')[0] ?? '';
+  if (!key || key.includes('..')) return null;
+  return key;
 }
 
 export function menuTemplateDrinkImageUrl(

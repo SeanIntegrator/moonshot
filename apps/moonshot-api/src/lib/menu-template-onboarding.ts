@@ -10,8 +10,8 @@ import {
   type MenuTemplateDrinkKey,
   type MenuTemplateModifierKey,
 } from '@moonshot/types';
+import { copyTemplateDrinkImageToCafeItem } from './menu-image-storage.js';
 import { setMenuItemModifierGroups } from './menu-modifier-library.js';
-import { resolveMenuTemplateDrinkImageUrl } from './menu-template-images.js';
 
 export class MenuTemplateError extends Error {
   constructor(
@@ -262,14 +262,13 @@ export async function applyMenuTemplate(
         ? Math.round(drink.priceMinor)
         : MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR;
 
-      const imageUrl = resolveMenuTemplateDrinkImageUrl(drink.templateKey);
-
-      // tags is TEXT[]; modifier_groups/sizes are JSONB — mixing these casts caused prod 500s.
+      // Insert first so we have an item id, then copy the canonical template into
+      // café-scoped storage. Café replaces never mutate template/drinks/*.
       const { rows } = await client.query<{ id: string }>(
         `INSERT INTO menu_items (
           cafe_id, name, description, price_minor, currency, category, subcategory,
           image_url, is_available, tags, modifier_groups, sizes, sort_order
-        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, $7, TRUE, $8::text[], $9::jsonb, $10::jsonb, $11)
+        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, NULL, TRUE, $7::text[], $8::jsonb, $9::jsonb, $10)
         RETURNING id`,
         [
           cafeId,
@@ -278,7 +277,6 @@ export async function applyMenuTemplate(
           priceMinor,
           def.category,
           def.subcategory ?? null,
-          imageUrl,
           [],
           '[]',
           '[]',
@@ -286,6 +284,20 @@ export async function applyMenuTemplate(
         ],
       );
       const itemId = rows[0]!.id;
+
+      const imageUrl = await copyTemplateDrinkImageToCafeItem({
+        cafeId,
+        itemId,
+        templateKey: drink.templateKey,
+      });
+      if (imageUrl) {
+        await client.query(`UPDATE menu_items SET image_url = $1 WHERE id = $2 AND cafe_id = $3`, [
+          imageUrl,
+          itemId,
+          cafeId,
+        ]);
+      }
+
       await setMenuItemModifierGroups(client, itemId, modifierGroupIds);
       itemCount++;
     }

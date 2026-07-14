@@ -17,6 +17,9 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
 - **Menu**
   - `GET /api/v1/menu`, `GET /api/v1/menu/:segment` — public reads (`X-Cafe-Slug`)
   - `POST/PATCH/DELETE /api/v1/menu` — café-scoped **`purpose: admin`** JWT, or Google customer JWT when email is in **`MENU_ADMIN_EMAILS`** (`X-Cafe-Slug` + `Authorization`)
+  - `POST /api/v1/menu/:itemId/image` — multipart field **`image`** (JPEG/PNG/WebP); admin JWT + `X-Cafe-Slug`; resizes to WebP thumbnail in Railway Object Storage. See [menu-images.md](../menu-images.md).
+- **Media**
+  - `GET /api/v1/media/*` — public catalogue thumbnails streamed from the private bucket (allowlisted object keys only). See [menu-images.md](../menu-images.md).
 - **Orders**
   - `POST /api/v1/orders` — guest or **optional** `Authorization: Bearer` session JWT; sets `orders.user_id` when signed in. **`X-Cafe-Slug`** required. Behaviour depends on `features.order_ahead.paymentProvider`:
     - **`pay_in_store`** — persists **`confirmed` / `unpaid`**, emits **`kds:order:new`** immediately, validates **modifiers** against menu JSON.

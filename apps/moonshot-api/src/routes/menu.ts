@@ -253,11 +253,11 @@ menuRouter.post(
       });
     }
 
-    const exists = await pool.query(`SELECT 1 FROM menu_items WHERE id = $1 AND cafe_id = $2`, [
-      itemId,
-      cafeId,
-    ]);
-    if (exists.rows.length === 0) {
+    const existing = await pool.query<{ image_url: string | null }>(
+      `SELECT image_url FROM menu_items WHERE id = $1 AND cafe_id = $2`,
+      [itemId, cafeId],
+    );
+    if (existing.rows.length === 0) {
       return res.status(404).json({
         ok: false,
         error: 'Menu item not found',
@@ -270,6 +270,7 @@ menuRouter.post(
         cafeId,
         itemId,
         fileBuffer: file.buffer,
+        previousImageUrl: existing.rows[0]!.image_url,
       });
 
       await pool.query(`UPDATE menu_items SET image_url = $1 WHERE id = $2 AND cafe_id = $3`, [

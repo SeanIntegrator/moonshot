@@ -104,9 +104,9 @@ describe('menu-template-onboarding validation', () => {
           return { rows: [{ id: params?.[0] }] };
         }
         if (sql.includes('INSERT INTO menu_items')) {
-          expect(sql).toMatch(/\$8::text\[\]/);
-          expect(sql).not.toMatch(/TRUE, \$8::jsonb/);
-          expect(params?.[7]).toEqual([]);
+          expect(sql).toMatch(/\$7::text\[\]/);
+          expect(sql).not.toMatch(/TRUE, \$7::jsonb/);
+          expect(params?.[6]).toEqual([]);
           return { rows: [{ id: 'item-1' }] };
         }
         if (sql.includes('menu_item_modifier_groups')) return { rows: [] };

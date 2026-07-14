@@ -11,9 +11,15 @@ describe('parseAllowedMenuImageObjectKey', () => {
     );
   });
 
-  it('accepts cafe menu item thumbnail keys', () => {
+  it('accepts legacy cafe menu item thumbnail keys', () => {
     const key =
       'cafes/11111111-1111-1111-1111-111111111111/menu-items/22222222-2222-2222-2222-222222222222/thumbnail.webp';
+    expect(parseAllowedMenuImageObjectKey(key)).toBe(key);
+  });
+
+  it('accepts versioned cafe menu item thumbnail keys', () => {
+    const key =
+      'cafes/11111111-1111-1111-1111-111111111111/menu-items/22222222-2222-2222-2222-222222222222/m1abc2.webp';
     expect(parseAllowedMenuImageObjectKey(key)).toBe(key);
   });
 
@@ -22,5 +28,10 @@ describe('parseAllowedMenuImageObjectKey', () => {
     expect(parseAllowedMenuImageObjectKey('cafes/not-a-uuid/menu-items/also-bad/thumbnail.webp')).toBeNull();
     expect(parseAllowedMenuImageObjectKey('other/path.webp')).toBeNull();
     expect(parseAllowedMenuImageObjectKey('')).toBeNull();
+    expect(
+      parseAllowedMenuImageObjectKey(
+        'cafes/11111111-1111-1111-1111-111111111111/menu-items/22222222-2222-2222-2222-222222222222/bad.file.webp',
+      ),
+    ).toBeNull();
   });
 });
