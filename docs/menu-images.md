@@ -1,34 +1,41 @@
 # Menu images (Railway Object Storage)
 
-Menu item thumbnails are stored in **Railway Object Storage** (S3-compatible). The API validates uploads, resizes to a small WebP thumbnail, uploads to the bucket, and persists the public URL in `menu_items.image_url`. The order-ahead app loads those URLs with lazy `img` tags.
+Menu item thumbnails are stored in **Railway Object Storage** (S3-compatible). The bucket stays **private**. The API validates uploads, resizes to a small WebP thumbnail, uploads to the bucket, and persists a stable URL in `menu_items.image_url`. Browsers load images via a public **API media route** that streams from the bucket.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   AdminUpload["Admin picks image"] --> ApiUpload["API validates and resizes"]
-  ApiUpload --> RailwayBucket["Railway Object Storage"]
-  RailwayBucket --> PublicUrl["Public thumbnail URL"]
-  PublicUrl --> MenuItem["menu_items.image_url"]
-  MenuItem --> OrderAhead["Order-ahead lazy image cards"]
+  ApiUpload --> RailwayBucket["Private Railway bucket"]
+  ApiUpload --> MenuItem["menu_items.image_url"]
+  MenuItem --> OrderAhead["Order-ahead lazy img tags"]
+  OrderAhead --> ApiMedia["GET /api/v1/media/*"]
+  ApiMedia --> RailwayBucket
   TemplateSeed["Default template images"] --> RailwayBucket
 ```
 
 ## Railway setup
 
 1. In your Railway project, create an **Object Storage** bucket (e.g. `moonshot-menu-images`).
-2. Note the S3-compatible credentials (`railway bucket credentials --bucket <name> --json`).
-3. Configure a **public base URL** for browser access (Railway bucket public URL or custom domain).
+2. Connect credentials to the **API service** using `MENU_IMAGE_*` names (not the dialog’s default `AWS_*`).
+3. Railway buckets have **no public URL** — set `MENU_IMAGE_PUBLIC_BASE_URL` to your API media prefix instead.
 4. Set these variables on the **API service**:
 
 | Variable | Description |
 |----------|-------------|
 | `MENU_IMAGE_BUCKET` | Bucket name |
-| `MENU_IMAGE_ENDPOINT` | S3 endpoint URL |
+| `MENU_IMAGE_ENDPOINT` | S3 endpoint URL (API access only — not for `<img src>`) |
 | `MENU_IMAGE_REGION` | Region (`auto` is fine for Railway) |
 | `MENU_IMAGE_ACCESS_KEY_ID` | Access key |
 | `MENU_IMAGE_SECRET_ACCESS_KEY` | Secret key |
-| `MENU_IMAGE_PUBLIC_BASE_URL` | Public CDN/base URL (no trailing slash) |
+| `MENU_IMAGE_PUBLIC_BASE_URL` | `https://<your-api-host>/api/v1/media` (no trailing slash) |
+
+Example:
+
+```
+MENU_IMAGE_PUBLIC_BASE_URL=https://your-api.up.railway.app/api/v1/media
+```
 
 The order-ahead and admin frontends **do not** need bucket credentials.
 
@@ -39,7 +46,18 @@ The order-ahead and admin frontends **do not** need bucket credentials.
 | `template/drinks/{drink-key}.webp` | Canonical starter template thumbnails |
 | `cafes/{cafeId}/menu-items/{itemId}/thumbnail.webp` | Per-café item uploads |
 
-## Upload API
+Public browser URLs are `{MENU_IMAGE_PUBLIC_BASE_URL}/{objectKey}`.
+
+## Media API (read)
+
+`GET /api/v1/media/*`
+
+- Auth: none (catalogue thumbnails are public)
+- Allowlisted keys only (template drinks + café item thumbnails)
+- Streams the object from the private bucket
+- Headers: `Content-Type`, `Cache-Control: public, max-age=31536000, immutable`, `Cross-Origin-Resource-Policy: cross-origin`
+
+## Upload API (write)
 
 `POST /api/v1/menu/:itemId/image`
 
@@ -67,6 +85,10 @@ The script reads optional sources from `assets/menu-template/drinks/{key}.webp` 
 
 Run this once per environment after creating the bucket, and again when you add new template drink keys.
 
+After sync + deploy, verify in a browser:
+
+`https://<your-api-host>/api/v1/media/template/drinks/flat-white.webp`
+
 ## Performance
 
 - One thumbnail variant per item (card size ~360×240 WebP, quality ~80).
@@ -84,6 +106,11 @@ Without `MENU_IMAGE_*` configured:
 
 - Template onboarding sets `image_url` to `null`.
 - Image upload returns `503` with a clear error.
+- Media GET returns `503`.
 - Order-ahead shows neutral placeholders.
 
-For full local testing, create a dev bucket on Railway and point env vars at it.
+For full local testing, create a dev bucket on Railway and point env vars at it, with:
+
+```
+MENU_IMAGE_PUBLIC_BASE_URL=http://localhost:<api-port>/api/v1/media
+```

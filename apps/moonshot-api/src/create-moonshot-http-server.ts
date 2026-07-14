@@ -14,6 +14,7 @@ import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
 import { cafeRouter } from './routes/cafe.js';
 import { kdsRouter } from './routes/kds.js';
+import { mediaRouter } from './routes/media.js';
 import { menuRouter } from './routes/menu.js';
 import { ordersRouter } from './routes/orders.js';
 import { loyaltyRouter } from './routes/loyalty.js';
@@ -85,6 +86,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   app.use(`${API_VERSION_PREFIX}/auth`, authRouter);
   app.use(`${API_VERSION_PREFIX}/admin`, adminRouter);
   app.use(`${API_VERSION_PREFIX}/cafe`, cafeRouter);
+  app.use(`${API_VERSION_PREFIX}/media`, mediaRouter);
   app.use(`${API_VERSION_PREFIX}/menu`, menuRouter);
   app.use(`${API_VERSION_PREFIX}/orders`, ordersRouter);
   app.use(`${API_VERSION_PREFIX}/loyalty`, loyaltyRouter);

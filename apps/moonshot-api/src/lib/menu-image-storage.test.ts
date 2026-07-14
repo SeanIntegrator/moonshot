@@ -12,6 +12,7 @@ const sendMock = vi.fn();
 vi.mock('@aws-sdk/client-s3', () => ({
   S3Client: vi.fn(() => ({ send: sendMock })),
   PutObjectCommand: vi.fn((input: unknown) => input),
+  GetObjectCommand: vi.fn((input: unknown) => input),
 }));
 
 describe('menu-image-storage', () => {

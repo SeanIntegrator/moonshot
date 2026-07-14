@@ -1,4 +1,5 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import type { Readable } from 'node:stream';
 import {
   cafeMenuItemImageKey,
   publicMenuImageUrl,
@@ -10,6 +11,22 @@ import {
 } from './menu-image-process.js';
 
 export { MenuImageValidationError } from './menu-image-process.js';
+
+export class MenuImageNotFoundError extends Error {
+  readonly status = 404;
+
+  constructor(message = 'Image not found') {
+    super(message);
+    this.name = 'MenuImageNotFoundError';
+  }
+}
+
+export type MenuImageObject = {
+  body: Readable;
+  contentType: string;
+  contentLength?: number;
+  cacheControl: string;
+};
 
 export type MenuImageStorageConfig = {
   bucket: string;
@@ -115,6 +132,48 @@ export async function uploadRawWebpObject(params: {
     body: params.body,
     contentType: 'image/webp',
   });
+}
+
+/** Fetch a stored menu image for the public media proxy. */
+export async function getMenuImageObject(objectKey: string): Promise<MenuImageObject> {
+  const config = readMenuImageStorageConfig();
+  if (!config) {
+    throw new MenuImageValidationError('Menu image storage is not configured', 503);
+  }
+
+  const client = getS3Client(config);
+  try {
+    const out = await client.send(
+      new GetObjectCommand({
+        Bucket: config.bucket,
+        Key: objectKey,
+      }),
+    );
+
+    if (!out.Body) {
+      throw new MenuImageNotFoundError();
+    }
+
+    return {
+      body: out.Body as Readable,
+      contentType: out.ContentType ?? 'image/webp',
+      contentLength: out.ContentLength,
+      cacheControl: out.CacheControl ?? 'public, max-age=31536000, immutable',
+    };
+  } catch (e) {
+    if (e instanceof MenuImageNotFoundError || e instanceof MenuImageValidationError) {
+      throw e;
+    }
+    const name = e && typeof e === 'object' && 'name' in e ? String((e as { name: unknown }).name) : '';
+    const httpStatus =
+      e && typeof e === 'object' && '$metadata' in e
+        ? (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+        : undefined;
+    if (name === 'NoSuchKey' || name === 'NotFound' || httpStatus === 404) {
+      throw new MenuImageNotFoundError();
+    }
+    throw e;
+  }
 }
 
 /** Test hook — reset cached S3 client between tests. */

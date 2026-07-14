@@ -1,0 +1,42 @@
+import { Router } from 'express';
+import { parseAllowedMenuImageObjectKey } from '../lib/menu-image-object-key.js';
+import {
+  getMenuImageObject,
+  MenuImageNotFoundError,
+  MenuImageValidationError,
+} from '../lib/menu-image-storage.js';
+
+export const mediaRouter: Router = Router();
+
+/**
+ * Public catalogue thumbnails: private Railway bucket → stable browser URLs.
+ * No auth — security is allowlisted object-key shapes (no listing endpoint).
+ */
+mediaRouter.get('/*objectKey', async (req, res, next) => {
+  const rawParam = req.params.objectKey;
+  const raw = Array.isArray(rawParam) ? rawParam.join('/') : String(rawParam ?? '');
+  const objectKey = parseAllowedMenuImageObjectKey(raw);
+  if (!objectKey) {
+    return res.status(400).json({ ok: false, error: 'Invalid media path' });
+  }
+
+  try {
+    const image = await getMenuImageObject(objectKey);
+    // Helmet defaults CORP to same-origin; <img> loads from order-ahead need cross-origin.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cache-Control', image.cacheControl);
+    res.setHeader('Content-Type', image.contentType);
+    if (image.contentLength != null) {
+      res.setHeader('Content-Length', String(image.contentLength));
+    }
+    image.body.pipe(res);
+  } catch (e) {
+    if (e instanceof MenuImageNotFoundError) {
+      return res.status(404).json({ ok: false, error: e.message });
+    }
+    if (e instanceof MenuImageValidationError) {
+      return res.status(e.status).json({ ok: false, error: e.message });
+    }
+    next(e);
+  }
+});
