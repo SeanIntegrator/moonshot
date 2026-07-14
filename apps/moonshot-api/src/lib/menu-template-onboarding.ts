@@ -268,7 +268,7 @@ export async function applyMenuTemplate(
         `INSERT INTO menu_items (
           cafe_id, name, description, price_minor, currency, category, subcategory,
           image_url, is_available, tags, modifier_groups, sizes, sort_order
-        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, $7, TRUE, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $8)
+        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, $7, TRUE, $8::jsonb, $9::jsonb, $10::jsonb, $11)
         RETURNING id`,
         [
           cafeId,
@@ -278,6 +278,9 @@ export async function applyMenuTemplate(
           def.category,
           def.subcategory ?? null,
           imageUrl,
+          '[]',
+          '[]',
+          '[]',
           sortOrder++,
         ],
       );

@@ -189,7 +189,7 @@ export function OrderDetail() {
           </Typography>
           {order.items.map((li) => {
             const menuItem = li.menuItemId
-              ? menu?.items.find((i) => i.id === li.menuItemId)
+              ? menu?.items?.find((i) => i.id === li.menuItemId)
               : undefined;
             return (
             <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>

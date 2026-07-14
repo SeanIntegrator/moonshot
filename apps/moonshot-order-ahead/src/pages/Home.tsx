@@ -128,7 +128,7 @@ export function Home() {
             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
               {usualOrder.items.map((li) => {
                 const menuItem = li.menuItemId
-                  ? menu?.items.find((i) => i.id === li.menuItemId)
+                  ? menu?.items?.find((i) => i.id === li.menuItemId)
                   : undefined;
                 return (
                 <Box key={li.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>
