@@ -70,5 +70,6 @@ describe('mediaRouter', () => {
       `${API_VERSION_PREFIX}/media/template/drinks/flat-white.webp`,
     );
     expect(res.status).toBe(404);
+    expect(res.headers['cross-origin-resource-policy']).toBe('cross-origin');
   });
 });

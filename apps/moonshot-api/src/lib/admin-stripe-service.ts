@@ -50,12 +50,6 @@ function requireStripeConnectUrls(): { refreshUrl: string; returnUrl: string } {
   return { refreshUrl, returnUrl };
 }
 
-function requireStripeForRead(): void {
-  if (!getStripeOrNull()) {
-    throw new ApiHttpError(503, ApiErrorCode.CONFIG, 'Stripe is not configured (STRIPE_API_KEY)');
-  }
-}
-
 export async function createAdminStripeOnboardingLink(cafeId: string): Promise<AdminStripeAccountLinkResponse> {
   const { refreshUrl, returnUrl } = requireStripeConnectUrls();
 
@@ -108,12 +102,23 @@ function paymentProviderForStripeReady(features: CafeFeatures): CafeFeatures {
 }
 
 export async function syncAdminStripeAccountStatus(cafeId: string): Promise<AdminStripeAccountStatusResponse> {
-  requireStripeForRead();
+  // Status is polled on every payments UI load — return a soft "not configured" payload
+  // instead of 503 so pay-in-store cafés don't hit console network errors.
+  if (!getStripeOrNull()) {
+    return {
+      configured: false,
+      accountId: null,
+      chargesEnabled: false,
+      detailsSubmitted: false,
+      payoutsEnabled: false,
+    };
+  }
 
   const cafe = await loadCafeOrThrow(cafeId);
   const accountId = getStripeConnectAccountId(cafe.paymentConfig);
   if (!accountId) {
     return {
+      configured: true,
       accountId: null,
       chargesEnabled: false,
       detailsSubmitted: false,
@@ -137,6 +142,7 @@ export async function syncAdminStripeAccountStatus(cafeId: string): Promise<Admi
   }
 
   return {
+    configured: true,
     accountId,
     ...live,
   };

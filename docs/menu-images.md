@@ -74,7 +74,9 @@ On onboarding template save, each drink row gets `image_url` pointing at:
 
 `{MENU_IMAGE_PUBLIC_BASE_URL}/template/drinks/{templateKey}.webp`
 
-Sync default images to the bucket:
+**Required after creating the bucket:** onboarding writes those URLs into `menu_items.image_url`, but the WebP objects are not uploaded automatically. Until you sync, admin/order-ahead will 404 every template thumbnail.
+
+Sync default images to the bucket (needs the API service’s `MENU_IMAGE_*` env — e.g. `railway run` from the API service, or copy vars into a local `.env`):
 
 ```bash
 cd apps/moonshot-api

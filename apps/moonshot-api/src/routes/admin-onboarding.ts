@@ -109,44 +109,9 @@ adminOnboardingRouter.post('/menu-template', requireAdminAuth, async (req, res) 
     const provisioner = getMenuProvisioner(MENU_PROVISION_SOURCES.template);
     const data: AdminSaveMenuTemplateResponse = await provisioner.apply(client, cafeId, body);
     await client.query('COMMIT');
-    // #region agent log
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'bb966d' },
-      body: JSON.stringify({
-        sessionId: 'bb966d',
-        runId: 'post-fix',
-        hypothesisId: 'H6',
-        location: 'admin-onboarding.ts:menu-template',
-        message: 'menu-template succeeded',
-        data: { cafeId, itemCount: data.itemCount },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return res.status(201).json({ ok: true, data });
   } catch (err) {
     await client.query('ROLLBACK');
-    // #region agent log
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'bb966d' },
-      body: JSON.stringify({
-        sessionId: 'bb966d',
-        runId: 'post-fix',
-        hypothesisId: 'H6',
-        location: 'admin-onboarding.ts:menu-template',
-        message: 'menu-template failed',
-        data: {
-          cafeId,
-          errName: err instanceof Error ? err.name : typeof err,
-          errMessage: err instanceof Error ? err.message : String(err),
-          pgCode: (err as { code?: string })?.code ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     if (err instanceof MenuTemplateError || err instanceof MenuProvisionError) {
       const code =
         err instanceof MenuProvisionError && err.code === 'NOT_IMPLEMENTED'

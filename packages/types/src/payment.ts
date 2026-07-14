@@ -39,6 +39,8 @@ export interface AdminStripeAccountLinkResponse {
 }
 
 export interface AdminStripeAccountStatusResponse {
+  /** False when `STRIPE_API_KEY` is not set on the API — pay-in-store still works. */
+  configured: boolean;
   accountId: string | null;
   chargesEnabled: boolean;
   detailsSubmitted: boolean;

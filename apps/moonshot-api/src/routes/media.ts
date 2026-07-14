@@ -16,14 +16,15 @@ mediaRouter.get('/*objectKey', async (req, res, next) => {
   const rawParam = req.params.objectKey;
   const raw = Array.isArray(rawParam) ? rawParam.join('/') : String(rawParam ?? '');
   const objectKey = parseAllowedMenuImageObjectKey(raw);
+  // Helmet defaults CORP to same-origin; set on every response (incl. 404) so cross-origin
+  // <img> failures are not reported as NotSameOrigin / ERR_BLOCKED_BY_RESPONSE.
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   if (!objectKey) {
     return res.status(400).json({ ok: false, error: 'Invalid media path' });
   }
 
   try {
     const image = await getMenuImageObject(objectKey);
-    // Helmet defaults CORP to same-origin; <img> loads from order-ahead need cross-origin.
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Cache-Control', image.cacheControl);
     res.setHeader('Content-Type', image.contentType);
     if (image.contentLength != null) {

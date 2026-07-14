@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
+import type { AdminStripeAccountStatusResponse } from '@moonshot/types';
 import { useCallback, useEffect, useState } from 'react';
 import { adminStripeOnboardingLink, adminStripeStatus } from '../lib/admin-api.js';
 
@@ -13,12 +14,7 @@ function isStripeServerUnavailable(message: string): boolean {
 }
 
 export function StripePaymentsCard({ token, stripeReturnNotice = false }: Props) {
-  const [status, setStatus] = useState<{
-    accountId: string | null;
-    chargesEnabled: boolean;
-    detailsSubmitted: boolean;
-    payoutsEnabled: boolean;
-  } | null>(null);
+  const [status, setStatus] = useState<AdminStripeAccountStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,7 +75,10 @@ export function StripePaymentsCard({ token, stripeReturnNotice = false }: Props)
     }
   }
 
-  const stripeUnavailable = error === 'unavailable' || (error !== null && isStripeServerUnavailable(error));
+  const stripeUnavailable =
+    status?.configured === false ||
+    error === 'unavailable' ||
+    (error !== null && isStripeServerUnavailable(error));
 
   return (
     <Paper sx={{ p: 2 }}>
