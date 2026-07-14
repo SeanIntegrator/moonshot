@@ -69,7 +69,11 @@ export function OnboardingWizard() {
     if (step !== 2) setMenuSetupView('choice');
   }, [step]);
 
-  // Full-page Stripe redirect remounts the wizard — restore payments/go-live step.
+  const goToGoLive = useCallback(() => {
+    setStep(4);
+  }, []);
+
+  // Full-page Stripe redirect remounts the wizard — land on payments (or go-live when ready).
   useEffect(() => {
     if (!stripeReturnNotice) return;
     const params = new URLSearchParams(window.location.search);
@@ -82,10 +86,9 @@ export function OnboardingWizard() {
         `${window.location.pathname}${qs ? `?${qs}` : ''}`,
       );
     }
-    const targetStep =
-      onboardingStatus?.hasKdsUser && onboardingStatus?.hasMenuItem ? 4 : 3;
-    setStep((prev) => Math.max(prev, targetStep));
-  }, [stripeReturnNotice, onboardingStatus]);
+    // Stay on payments until Stripe status confirms charges; card calls goToGoLive when ready.
+    setStep((prev) => Math.max(prev, 3));
+  }, [stripeReturnNotice]);
 
   if (!session) return null;
 
@@ -281,13 +284,17 @@ export function OnboardingWizard() {
 
         {step === 3 && (
           <Box>
-            <StripePaymentsCard token={session.token} stripeReturnNotice={stripeReturnNotice} />
+            <StripePaymentsCard
+              token={session.token}
+              stripeReturnNotice={stripeReturnNotice}
+              onChargesEnabled={goToGoLive}
+            />
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Link
                 component="button"
                 type="button"
                 variant="body2"
-                onClick={() => setStep(4)}
+                onClick={goToGoLive}
                 sx={{ cursor: 'pointer' }}
               >
                 {stripeReturnNotice ? 'Continue to go live' : 'Skip — pay in store for now'}

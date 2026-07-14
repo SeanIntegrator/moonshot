@@ -7,13 +7,19 @@ type Props = {
   token: string;
   /** Set by onboarding wizard after Stripe Connect return redirect */
   stripeReturnNotice?: boolean;
+  /** Called when the connected account can charge (onboarding can leave this step). */
+  onChargesEnabled?: () => void;
 };
 
 function isStripeServerUnavailable(message: string): boolean {
   return /not configured|STRIPE_/i.test(message);
 }
 
-export function StripePaymentsCard({ token, stripeReturnNotice = false }: Props) {
+export function StripePaymentsCard({
+  token,
+  stripeReturnNotice = false,
+  onChargesEnabled,
+}: Props) {
   const [status, setStatus] = useState<AdminStripeAccountStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,8 +45,15 @@ export function StripePaymentsCard({ token, stripeReturnNotice = false }: Props)
   }, [load]);
 
   useEffect(() => {
+    if (status?.chargesEnabled) {
+      onChargesEnabled?.();
+    }
+  }, [status?.chargesEnabled, onChargesEnabled]);
+
+  useEffect(() => {
     if (stripeReturnNotice) {
       setNotice({ severity: 'success', text: 'Stripe setup updated. Status refreshed below.' });
+      load();
       return;
     }
     const params = new URLSearchParams(window.location.search);
@@ -118,9 +131,15 @@ export function StripePaymentsCard({ token, stripeReturnNotice = false }: Props)
           <Typography variant="body2">Details submitted: {status.detailsSubmitted ? 'yes' : 'no'}</Typography>
           <Typography variant="body2">Payouts enabled: {status.payoutsEnabled ? 'yes' : 'no'}</Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-            <Button variant="contained" disabled={busy} onClick={() => void openOnboarding()}>
-              {status.accountId ? 'Continue Stripe setup' : 'Connect with Stripe'}
-            </Button>
+            {status.chargesEnabled ? (
+              <Button variant="contained" onClick={() => onChargesEnabled?.()}>
+                Continue to go live
+              </Button>
+            ) : (
+              <Button variant="contained" disabled={busy} onClick={() => void openOnboarding()}>
+                {status.accountId ? 'Continue Stripe setup' : 'Connect with Stripe'}
+              </Button>
+            )}
             <Button variant="outlined" disabled={busy} onClick={() => load()}>
               Refresh status
             </Button>

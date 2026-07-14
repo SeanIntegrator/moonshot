@@ -60,7 +60,12 @@ export function adminRedirectWithStripeQuery(
   outcome: 'return' | 'refresh' | 'error',
 ): string {
   const base = resolveStripeConnectAdminRedirectUrl();
-  const url = new URL(base.endsWith('/') ? base : `${base}/`);
+  const url = new URL(base);
+  // Origin-only redirect URLs would land on `/`, and the admin SPA then navigates to
+  // `/onboarding` — which used to drop `?stripeConnect=…`. Always target the wizard.
+  if (url.pathname === '/' || url.pathname === '') {
+    url.pathname = '/onboarding';
+  }
   url.searchParams.set('stripeConnect', outcome);
   return url.toString();
 }

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  adminRedirectWithStripeQuery,
   buildStripeConnectCallbackUrl,
   signStripeConnectState,
   verifyStripeConnectState,
@@ -7,10 +8,13 @@ import {
 
 describe('admin-stripe-connect-urls', () => {
   const prevJwt = process.env.JWT_SECRET;
+  const prevRedirect = process.env.STRIPE_CONNECT_ADMIN_REDIRECT_URL;
 
   afterEach(() => {
     if (prevJwt === undefined) delete process.env.JWT_SECRET;
     else process.env.JWT_SECRET = prevJwt;
+    if (prevRedirect === undefined) delete process.env.STRIPE_CONNECT_ADMIN_REDIRECT_URL;
+    else process.env.STRIPE_CONNECT_ADMIN_REDIRECT_URL = prevRedirect;
   });
 
   it('round-trips café id in signed state', () => {
@@ -30,5 +34,12 @@ describe('admin-stripe-connect-urls', () => {
     expect(parsed.origin).toBe('https://api.example.com');
     expect(parsed.pathname).toBe('/api/v1/admin/payments/stripe/return');
     expect(verifyStripeConnectState(parsed.searchParams.get('state') ?? '')).toBe('cafe-uuid-1');
+  });
+
+  it('normalises origin-only admin redirect to /onboarding', () => {
+    process.env.STRIPE_CONNECT_ADMIN_REDIRECT_URL = 'https://moonshotadmin-production.up.railway.app';
+    const url = new URL(adminRedirectWithStripeQuery('return'));
+    expect(url.pathname).toBe('/onboarding');
+    expect(url.searchParams.get('stripeConnect')).toBe('return');
   });
 });

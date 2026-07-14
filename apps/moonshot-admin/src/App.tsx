@@ -7,13 +7,19 @@ import {
   Toolbar,
   Typography,
 } from '@mui/material';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { OnboardingPosImportPage } from './pages/OnboardingPosImportPage.js';
 import { OnboardingWizard } from './pages/OnboardingWizard.js';
 import { SignupPage } from './pages/SignupPage.js';
+
+/** Keep query string (e.g. `?stripeConnect=return`) across onboarding redirects. */
+function OnboardingRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/onboarding', search }} replace />;
+}
 
 function ProtectedDashboard() {
   const { session, logout } = useAuth();
@@ -66,11 +72,11 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/login"
-        element={session ? <Navigate to={needsOnboarding ? '/onboarding' : '/'} replace /> : <LoginPage />}
+        element={session ? (needsOnboarding ? <OnboardingRedirect /> : <Navigate to="/" replace />) : <LoginPage />}
       />
       <Route
         path="/signup"
-        element={session ? <Navigate to={needsOnboarding ? '/onboarding' : '/'} replace /> : <SignupPage />}
+        element={session ? (needsOnboarding ? <OnboardingRedirect /> : <Navigate to="/" replace />) : <SignupPage />}
       />
       <Route
         path="/onboarding/import-pos"
@@ -102,7 +108,7 @@ function AppRoutes() {
           !session ? (
             <Navigate to="/login" replace />
           ) : needsOnboarding ? (
-            <Navigate to="/onboarding" replace />
+            <OnboardingRedirect />
           ) : (
             <ProtectedDashboard />
           )
