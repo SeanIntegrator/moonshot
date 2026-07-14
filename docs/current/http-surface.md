@@ -67,3 +67,5 @@ See [apps/moonshot-api/.env.example](../../apps/moonshot-api/.env.example).
 ## Front-end env
 
 **Order-ahead / KDS / Admin:** `VITE_API_URL` = API origin **only** (no `/api/v1` suffix), plus `VITE_CAFE_SLUG`, `VITE_GOOGLE_CLIENT_ID` where applicable.
+
+Vite frontends also load **`/runtime-config.js`** at startup (written from `VITE_API_URL` when the container starts via `pnpm start`). That lets Railway shared variables apply **without rebuilding** the JS bundle. Use the literal working API host (`https://moonshotapi-production.up.railway.app`), not a stale `${{service.RAILWAY_PUBLIC_DOMAIN}}` reference if that domain points at a broken duplicate deploy.

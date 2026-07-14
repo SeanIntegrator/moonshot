@@ -6,16 +6,9 @@ import {
   type KdsLoginResponse,
   type KdsOrdersResponse,
 } from '@moonshot/types';
+import { getApiBaseUrl } from './runtime-config.js';
 
-function normalizeApiBaseUrl(raw: string | undefined): string {
-  const s = (raw ?? '').trim();
-  if (!s) return '';
-  return s.replace(/\/+$/, '');
-}
-
-export function getApiBaseUrl(): string {
-  return normalizeApiBaseUrl(import.meta.env.VITE_API_URL);
-}
+export { getApiBaseUrl };
 
 async function parseEnvelope<T>(res: Response): Promise<ApiEnvelope<T>> {
   const contentType = res.headers.get('content-type') ?? '';
