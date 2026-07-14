@@ -48,13 +48,13 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
 
 ## CORS & Socket.io origin allowlist
 
-Production uses **`CORS_ORIGINS`**: comma-separated full origins (scheme + host, no trailing slash), e.g.:
+Production uses **`CORS_ORIGINS`**: comma-separated full origins (scheme + host, no trailing slash). Values must match each frontend’s **exact** public origin (copy from the browser address bar). Railway service names often differ from guessed hyphenation — e.g. live order-ahead is currently:
 
-- `https://moonshot-order-ahead-production.up.railway.app`
-- `https://moonshot-kds-production.up.railway.app`
-- `https://moonshot-admin-production.up.railway.app`
+- `https://moonshotorder-ahead-production.up.railway.app`
 
-When **`NODE_ENV === 'production'`** and `CORS_ORIGINS` is empty, browser **`Origin`** requests are **denied** (clients that omit `Origin` still succeed).
+Also include admin and KDS origins the same way. A near-miss hostname (extra hyphen, trailing slash, `http` vs `https`) is treated as denied.
+
+When **`NODE_ENV === 'production'`** and `CORS_ORIGINS` is empty, browser **`Origin`** requests are **denied** (clients that omit `Origin` still succeed). Denied origins are logged as `[cors] denied origin …` on the API.
 
 Development without `CORS_ORIGINS` stays permissive and allows common localhost Vite ports (`localhost:5173`, …). Implemented in `@moonshot/api` [`cors-origins.ts`](../../apps/moonshot-api/src/lib/cors-origins.ts).
 

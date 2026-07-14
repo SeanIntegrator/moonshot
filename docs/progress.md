@@ -69,9 +69,9 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 
 | Service | URL |
 |---|---|
-| `moonshot-api` | `moonshot-api-production.up.railway.app` |
+| `moonshot-api` | `moonshotapi-production.up.railway.app` |
 | `moonshot-kds` | `moonshot-kds-production.up.railway.app` |
-| `moonshot-order-ahead` | `moonshot-order-ahead-production.up.railway.app` |
+| `moonshot-order-ahead` | `moonshotorder-ahead-production.up.railway.app` |
 | `moonshot-admin` | `moonshot-admin-production.up.railway.app` |
 
 Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). Add Stripe keys + webhook URL to **`moonshot-api`**. Replace with custom domains by updating env vars only.

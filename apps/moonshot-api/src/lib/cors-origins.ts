@@ -68,6 +68,12 @@ export function createCorsOriginValidator(
       callback(null, origin);
       return;
     }
-    callback(new Error('Not allowed by CORS'));
+    // Deny with `false` — do not pass an Error. The `cors` package turns Errors into
+    // Express 500s with no ACAO header, which browsers report as opaque CORS failures
+    // and masks a simple allowlist miss.
+    if (isProduction) {
+      console.warn('[cors] denied origin', origin);
+    }
+    callback(null, false);
   };
 }

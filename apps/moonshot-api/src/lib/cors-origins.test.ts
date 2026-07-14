@@ -19,7 +19,8 @@ describe('parseAllowedOrigins', () => {
 });
 
 describe('resolveCorsOriginDecision', () => {
-  const list = ['https://moonshot-order-ahead-production.up.railway.app'];
+  // Must match the live Railway public hostname exactly (no guessed hyphens).
+  const list = ['https://moonshotorder-ahead-production.up.railway.app'];
 
   it('allows requests with no Origin', () => {
     expect(resolveCorsOriginDecision(undefined, [], { isProduction: false })).toBe(true);
@@ -29,11 +30,18 @@ describe('resolveCorsOriginDecision', () => {
   it('production: allow only listed origins (+ localhost when not prod)', () => {
     expect(
       resolveCorsOriginDecision(
-        'https://moonshot-order-ahead-production.up.railway.app',
+        'https://moonshotorder-ahead-production.up.railway.app',
         list,
         { isProduction: true },
       ),
     ).toBe(true);
+    expect(
+      resolveCorsOriginDecision(
+        'https://moonshot-order-ahead-production.up.railway.app',
+        list,
+        { isProduction: true },
+      ),
+    ).toBe(false);
     expect(
       resolveCorsOriginDecision('https://evil.example', list, { isProduction: true }),
     ).toBe(false);
