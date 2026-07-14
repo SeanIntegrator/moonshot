@@ -31,7 +31,7 @@ function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }
             <ErrorOutlineOutlinedIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
           )}
           <Typography variant="h6" fontWeight={700} gutterBottom>
-            {offline ? 'No connection' : 'Something went wrong'}
+            {offline ? 'Connection problem' : 'Something went wrong'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             {message}

@@ -112,7 +112,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   let res: Response;
   try {
     res = await fetch(url, { ...init, headers });
-  } catch {
+  } catch (e) {
+    // Aborts are intentional (slug change / StrictMode remount) — not connectivity.
+    if (e instanceof DOMException && e.name === 'AbortError') throw e;
+    if (e instanceof Error && e.name === 'AbortError') throw e;
     throw new ConnectivityError();
   }
   const json = await parseApiEnvelope<T>(res);

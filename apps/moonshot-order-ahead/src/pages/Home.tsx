@@ -63,6 +63,7 @@ export function Home() {
   }
 
   if (error || !cafe) {
+    // CafeProvider normally handles bootstrap failures; this is a safety net.
     return (
       <Container maxWidth="sm" sx={{ py: 2, pb: 8 }}>
         <Typography color="error">{error ?? 'Café unavailable'}</Typography>
