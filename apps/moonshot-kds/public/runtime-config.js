@@ -1,2 +1,2 @@
-/** Dev fallback — production overwrites dist/runtime-config.js at container start. */
+/** Overwritten after `pnpm build` / container start — see scripts/write-runtime-config.mjs */
 window.__MOONSHOT_RUNTIME__ = { apiUrl: '' };

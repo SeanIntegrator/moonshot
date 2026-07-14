@@ -264,11 +264,12 @@ export async function applyMenuTemplate(
 
       const imageUrl = resolveMenuTemplateDrinkImageUrl(drink.templateKey);
 
+      // tags is TEXT[]; modifier_groups/sizes are JSONB — mixing these casts caused prod 500s.
       const { rows } = await client.query<{ id: string }>(
         `INSERT INTO menu_items (
           cafe_id, name, description, price_minor, currency, category, subcategory,
           image_url, is_available, tags, modifier_groups, sizes, sort_order
-        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, $7, TRUE, $8::jsonb, $9::jsonb, $10::jsonb, $11)
+        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, $7, TRUE, $8::text[], $9::jsonb, $10::jsonb, $11)
         RETURNING id`,
         [
           cafeId,
@@ -278,7 +279,7 @@ export async function applyMenuTemplate(
           def.category,
           def.subcategory ?? null,
           imageUrl,
-          '[]',
+          [],
           '[]',
           '[]',
           sortOrder++,

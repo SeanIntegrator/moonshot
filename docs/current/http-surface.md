@@ -48,11 +48,17 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
 
 ## CORS & Socket.io origin allowlist
 
-Production uses **`CORS_ORIGINS`**: comma-separated full origins (scheme + host, no trailing slash). Values must match each frontend’s **exact** public origin (copy from the browser address bar). Railway service names often differ from guessed hyphenation — e.g. live order-ahead is currently:
+Production uses **`CORS_ORIGINS`**: comma-separated full origins (scheme + host, no trailing slash). Values must match each frontend’s **exact** public origin (copy from the browser address bar).
 
-- `https://moonshotorder-ahead-production.up.railway.app`
+Railway often exposes **two** public hostnames per service (hyphenated vs compacted). Both must be listed if both are used. Live matrix (as of debugging):
 
-Also include admin and KDS origins the same way. A near-miss hostname (extra hyphen, trailing slash, `http` vs `https`) is treated as denied.
+| Role | Origins to allow |
+|------|------------------|
+| Order-ahead | `https://moonshotorder-ahead-production.up.railway.app` |
+| KDS | `https://moonshot-kds-production.up.railway.app` **and** `https://moonshotkds-production.up.railway.app` |
+| Admin | `https://moonshot-admin-production.up.railway.app` **and** `https://moonshotadmin-production.up.railway.app` |
+
+API: use **`https://moonshotapi-production.up.railway.app`** only. `moonshot-api-production` (extra hyphen) is a separate broken deploy (login returns 500). A near-miss hostname, trailing slash, or `http` vs `https` is treated as denied.
 
 When **`NODE_ENV === 'production'`** and `CORS_ORIGINS` is empty, browser **`Origin`** requests are **denied** (clients that omit `Origin` still succeed). Denied origins are logged as `[cors] denied origin …` on the API.
 
@@ -68,4 +74,9 @@ See [apps/moonshot-api/.env.example](../../apps/moonshot-api/.env.example).
 
 **Order-ahead / KDS / Admin:** `VITE_API_URL` = API origin **only** (no `/api/v1` suffix), plus `VITE_CAFE_SLUG`, `VITE_GOOGLE_CLIENT_ID` where applicable.
 
-Vite frontends also load **`/runtime-config.js`** at startup (written from `VITE_API_URL` when the container starts via `pnpm start`). That lets Railway shared variables apply **without rebuilding** the JS bundle. Use the literal working API host (`https://moonshotapi-production.up.railway.app`), not a stale `${{service.RAILWAY_PUBLIC_DOMAIN}}` reference if that domain points at a broken duplicate deploy.
+Vite frontends load **`/runtime-config.js`** at startup. It is written from `VITE_API_URL` by `scripts/write-runtime-config.mjs`:
+
+- **`postbuild`** — runs automatically after `pnpm build` (Railway build phase; needs `VITE_API_URL` in build env)
+- **`pnpm start`** — runs again at container start (pick this as the Railway **start command** for admin/KDS/order-ahead instead of bare `vite preview`)
+
+Use the literal working API host (`https://moonshotapi-production.up.railway.app`). If `/runtime-config.js` still shows `apiUrl: ''`, the write script did not run — check build logs for `[runtime-config]` and fix the start command.
