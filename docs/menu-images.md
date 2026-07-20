@@ -75,7 +75,7 @@ Public browser URLs are `{MENU_IMAGE_PUBLIC_BASE_URL}/{objectKey}`.
 - Body: `multipart/form-data` with field `image`
 - Accepts: JPEG, PNG, WebP (validated from file bytes)
 - Max upload: 5MB
-- Output: 360×240 WebP thumbnail under **that café’s** object prefix only
+- Output: 480×320 WebP thumbnail (`fit: contain`, white letterbox, quality 90) under **that café’s** object prefix only
 - Object key is **versioned** on every upload so browsers with long-lived immutable caches see the new image as soon as menu data refreshes
 - Previous **café-scoped** object is deleted best-effort; shared `template/` objects are never deleted
 - Response: updated `NormalisedMenuItem` with `imageUrl`
@@ -111,7 +111,7 @@ Do not commit large binary drink photos unless the team explicitly wants them in
 
 ## Performance
 
-- One thumbnail variant per item (card size ~360×240 WebP, quality ~80).
+- One thumbnail variant per item (card size ~480×320 WebP, quality 90, full drink visible via contain + white letterbox).
 - Objects use `Cache-Control: public, max-age=31536000, immutable`.
 - Café uploads use versioned keys so each replace gets a new URL (menu JSON is still cached ~5 minutes on public GET).
 - Order-ahead uses `loading="lazy"` and `decoding="async"` except the first featured / item-detail hero image.

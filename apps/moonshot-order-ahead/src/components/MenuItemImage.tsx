@@ -26,7 +26,7 @@ export function MenuItemImage({
   borderRadius = 1.25,
   loading = 'lazy',
   fetchPriority,
-  objectFit = 'cover',
+  objectFit = 'contain',
 }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);

@@ -12,6 +12,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  MENU_IMAGE_THUMBNAIL_HEIGHT,
+  MENU_IMAGE_THUMBNAIL_WIDTH,
+  MENU_IMAGE_WEBP_QUALITY,
   MENU_TEMPLATE_CATEGORIES,
   menuTemplateDrinkImageKey,
   type MenuTemplateDrinkKey,
@@ -55,11 +58,13 @@ async function ensureTemplateDrinkWebp(
   }
 
   const color = placeholderColor(subcategory);
-  const svg = `<svg width="360" height="240" xmlns="http://www.w3.org/2000/svg">
-      <rect width="360" height="240" fill="${color}"/>
-      <text x="180" y="125" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" fill="#ffffff" opacity="0.92">${label}</text>
+  const w = MENU_IMAGE_THUMBNAIL_WIDTH;
+  const h = MENU_IMAGE_THUMBNAIL_HEIGHT;
+  const svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="${w}" height="${h}" fill="${color}"/>
+      <text x="${w / 2}" y="${Math.round(h / 2) + 5}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" fill="#ffffff" opacity="0.92">${label}</text>
     </svg>`;
-  const webp = await sharp(Buffer.from(svg)).webp({ quality: 82 }).toBuffer();
+  const webp = await sharp(Buffer.from(svg)).webp({ quality: MENU_IMAGE_WEBP_QUALITY }).toBuffer();
   await mkdir(ASSETS_DIR, { recursive: true });
   const placeholderPath = path.join(ASSETS_DIR, `${drinkKey}.webp`);
   await writeFile(placeholderPath, webp);

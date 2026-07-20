@@ -3,8 +3,10 @@ import type { MenuTemplateDrinkKey } from './menu-template.js';
 /** Object key prefix for canonical starter drink thumbnails in Railway storage. */
 export const MENU_TEMPLATE_IMAGE_PREFIX = 'template/drinks';
 
-export const MENU_IMAGE_THUMBNAIL_WIDTH = 360;
-export const MENU_IMAGE_THUMBNAIL_HEIGHT = 240;
+export const MENU_IMAGE_THUMBNAIL_WIDTH = 480;
+export const MENU_IMAGE_THUMBNAIL_HEIGHT = 320;
+/** WebP encode quality — high enough to avoid banding on studio drink photos. */
+export const MENU_IMAGE_WEBP_QUALITY = 90;
 export const MENU_IMAGE_MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 export const MENU_IMAGE_ALLOWED_MIME_TYPES = [

@@ -57,7 +57,8 @@ export function MenuItemImageField({
             overflow: 'hidden',
             bgcolor: 'action.hover',
             backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-            backgroundSize: 'cover',
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             flexShrink: 0,
           }}
