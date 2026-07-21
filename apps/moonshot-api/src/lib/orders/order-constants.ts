@@ -1,9 +1,9 @@
 import type { CreateOrderLineInput, OrderType } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { ApiHttpError } from '../http-errors.js';
+import { UUID_RE } from '../uuid.js';
 
-export const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export { UUID_RE };
 
 export const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
 

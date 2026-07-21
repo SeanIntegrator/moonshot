@@ -1,15 +1,16 @@
 import { Router } from 'express';
 import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../db.js';
+import { ApiHttpError } from '../lib/http-errors.js';
 import {
   createModifierGroup,
   deleteModifierGroup,
   listModifierGroupsForCafe,
   updateModifierGroup,
 } from '../lib/menu-modifier-library.js';
+import { UUID_RE } from '../lib/uuid.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
-import { UUID_RE } from '../lib/orders/order-constants.js';
 
 export const modifierGroupsRouter: Router = Router();
 
@@ -28,7 +29,7 @@ modifierGroupsRouter.post('/', requireMenuMutationAuth, async (req, res) => {
     return res.status(201).json({ ok: true, data: group });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Create failed';
-    return res.status(400).json({ ok: false, error: msg, code: ApiErrorCode.VALIDATION });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, msg);
   }
 });
 
@@ -36,11 +37,7 @@ modifierGroupsRouter.patch('/:groupId', requireMenuMutationAuth, async (req, res
   const rawId = req.params.groupId;
   const groupId = Array.isArray(rawId) ? rawId[0] : rawId;
   if (!groupId || !UUID_RE.test(groupId)) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Invalid group id',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid group id');
   }
 
   const updated = await updateModifierGroup(
@@ -50,11 +47,7 @@ modifierGroupsRouter.patch('/:groupId', requireMenuMutationAuth, async (req, res
     req.body as Record<string, unknown>,
   );
   if (!updated) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Modifier group not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Modifier group not found');
   }
   return res.json({ ok: true, data: updated });
 });
@@ -63,20 +56,12 @@ modifierGroupsRouter.delete('/:groupId', requireMenuMutationAuth, async (req, re
   const rawId = req.params.groupId;
   const groupId = Array.isArray(rawId) ? rawId[0] : rawId;
   if (!groupId || !UUID_RE.test(groupId)) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Invalid group id',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid group id');
   }
 
   const removed = await deleteModifierGroup(pool, req.cafe!.cafeId, groupId);
   if (!removed) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Modifier group not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Modifier group not found');
   }
   return res.json({ ok: true, data: { removed: true } });
 });

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../db.js';
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
+import { ApiHttpError } from '../lib/http-errors.js';
 import { isMenuAdminEmail, requireAuth } from '../middleware/auth.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 
@@ -16,21 +17,13 @@ authRouter.post('/google', async (req, res) => {
   const cafeSlug = typeof req.body?.cafeSlug === 'string' ? req.body.cafeSlug : undefined;
 
   if (!credential || !cafeSlug?.trim()) {
-    return res.status(400).json({
-      ok: false,
-      error: 'credential and cafeSlug are required',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'credential and cafeSlug are required');
   }
 
   const audience = process.env.GOOGLE_CLIENT_ID;
   const jwtSecret = process.env.JWT_SECRET;
   if (!audience || !jwtSecret) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Server auth configuration missing',
-      code: ApiErrorCode.CONFIG,
-    });
+    throw new ApiHttpError(500, ApiErrorCode.CONFIG, 'Server auth configuration missing');
   }
 
   let payload: import('google-auth-library').TokenPayload | undefined;
@@ -41,19 +34,11 @@ authRouter.post('/google', async (req, res) => {
     });
     payload = ticket.getPayload() ?? undefined;
   } catch {
-    return res.status(401).json({
-      ok: false,
-      error: 'Invalid Google credential',
-      code: ApiErrorCode.UNAUTHORIZED,
-    });
+    throw new ApiHttpError(401, ApiErrorCode.UNAUTHORIZED, 'Invalid Google credential');
   }
 
   if (!payload?.email) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Google account has no email',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Google account has no email');
   }
 
   const email = payload.email;
@@ -63,11 +48,7 @@ authRouter.post('/google', async (req, res) => {
 
   const cafe = await findCafeBySlug(cafeSlug);
   if (!cafe) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Café not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Café not found');
   }
 
   const userResult = await pool.query(
@@ -129,11 +110,7 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
   const userId = req.user?.userId;
   const cafeId = req.cafe?.cafeId;
   if (!userId || !cafeId) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Missing user or café context',
-      code: ApiErrorCode.INTERNAL,
-    });
+    throw new ApiHttpError(500, ApiErrorCode.INTERNAL, 'Missing user or café context');
   }
 
   const userResult = await pool.query(
@@ -141,11 +118,7 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
     [userId],
   );
   if (userResult.rows.length === 0) {
-    return res.status(404).json({
-      ok: false,
-      error: 'User not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'User not found');
   }
 
   const u = userResult.rows[0] as {
@@ -167,11 +140,7 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
 
   const cafe = await findCafeById(cafeId);
   if (!cafe) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Café not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Café not found');
   }
 
   return res.json({

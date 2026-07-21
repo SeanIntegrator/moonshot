@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { ApiErrorCode } from '@moonshot/types';
+import { ApiHttpError } from '../lib/http-errors.js';
 import { parseAllowedMenuImageObjectKey } from '../lib/menu-image-object-key.js';
 import {
   getMenuImageObject,
@@ -20,7 +22,7 @@ mediaRouter.get('/*objectKey', async (req, res, next) => {
   // <img> failures are not reported as NotSameOrigin / ERR_BLOCKED_BY_RESPONSE.
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   if (!objectKey) {
-    return res.status(400).json({ ok: false, error: 'Invalid media path' });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid media path');
   }
 
   try {
@@ -33,10 +35,10 @@ mediaRouter.get('/*objectKey', async (req, res, next) => {
     image.body.pipe(res);
   } catch (e) {
     if (e instanceof MenuImageNotFoundError) {
-      return res.status(404).json({ ok: false, error: e.message });
+      throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, e.message);
     }
     if (e instanceof MenuImageValidationError) {
-      return res.status(e.status).json({ ok: false, error: e.message });
+      throw new ApiHttpError(e.status, ApiErrorCode.VALIDATION, e.message);
     }
     next(e);
   }

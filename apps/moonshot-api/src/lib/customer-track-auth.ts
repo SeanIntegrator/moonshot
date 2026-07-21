@@ -1,6 +1,6 @@
 import type { Pool } from 'pg';
 import { classifyCustomerSocketToken } from './customer-socket-token.js';
-import { UUID_RE } from './orders/order-constants.js';
+import { UUID_RE } from './uuid.js';
 
 export type SubscribeAuthorizeResult = { ok: true } | { ok: false; message: string };
 

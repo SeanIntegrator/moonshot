@@ -1,54 +1,13 @@
 import './index.css';
-import {
-  KDS_SOCKET_NAMESPACE,
-  type KdsServerToClientEvent,
-  type NormalisedOrder,
-} from '@moonshot/types';
 import type { FormEvent } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { type Socket, io } from 'socket.io-client';
-import { getApiBaseUrl, kdsCompleteOrder, kdsFetchOrders, kdsLogin } from './lib/kds-api.js';
-
-const SESSION_KEY = 'moonshot_kds_session';
-
-type Session = {
-  token: string;
-  cafeName: string;
-  cafeSlug: string;
-  username: string;
-};
-
-function sortOrders(orders: NormalisedOrder[]): NormalisedOrder[] {
-  return [...orders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-}
-
-function loadSession(): Session | null {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const p = JSON.parse(raw) as Session;
-    if (
-      typeof p.token !== 'string' ||
-      typeof p.cafeName !== 'string' ||
-      typeof p.cafeSlug !== 'string' ||
-      typeof p.username !== 'string'
-    ) {
-      return null;
-    }
-    return p;
-  } catch {
-    return null;
-  }
-}
-
-function saveSession(s: Session | null): void {
-  try {
-    if (!s) sessionStorage.removeItem(SESSION_KEY);
-    else sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
-  } catch {
-    /* ignore */
-  }
-}
+import { useCallback, useState } from 'react';
+import { useKdsOrders } from './hooks/useKdsOrders.js';
+import { kdsLogin } from './lib/kds-api.js';
+import {
+  loadKdsSession,
+  saveKdsSession,
+  type KdsSession,
+} from './lib/kds-session.js';
 
 function formatMoney(minor: number, currency: string): string {
   const sym = currency === 'GBP' ? '£' : `${currency} `;
@@ -56,123 +15,29 @@ function formatMoney(minor: number, currency: string): string {
 }
 
 export function App() {
-  const [session, setSession] = useState<Session | null>(() => loadSession());
-  const [orders, setOrders] = useState<NormalisedOrder[]>([]);
+  const [session, setSession] = useState<KdsSession | null>(() => loadKdsSession());
   const [loginForm, setLoginForm] = useState({ cafeSlug: '', username: '', password: '' });
-  const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  const clearExpiredSession = useCallback((current: Session | null): void => {
-    if (current) {
-      setLoginForm((f) => ({
-        ...f,
-        cafeSlug: current.cafeSlug,
-        username: current.username,
-        password: '',
-      }));
-    }
-    saveSession(null);
+  const clearExpiredSession = useCallback((current: KdsSession): void => {
+    setLoginForm((f) => ({
+      ...f,
+      cafeSlug: current.cafeSlug,
+      username: current.username,
+      password: '',
+    }));
+    saveKdsSession(null);
     setSession(null);
   }, []);
 
-  const applyEvent = useCallback((ev: KdsServerToClientEvent) => {
-    setOrders((prev) => {
-      switch (ev.type) {
-        case 'kds:order:new':
-          return sortOrders([...prev.filter((o) => o.id !== ev.order.id), ev.order]);
-        case 'kds:order:removed':
-          return prev.filter((o) => o.id !== ev.orderId);
-        case 'kds:order:updated':
-          return sortOrders([...prev.filter((o) => o.id !== ev.order.id), ev.order]);
-        case 'kds:eta:updated':
-          return prev.map((o) => {
-            const u = ev.updates.find((x) => x.orderId === o.id);
-            if (!u) return o;
-            return {
-              ...o,
-              pickup: { ...o.pickup, pickupTime: u.pickupTime },
-            };
-          });
-        default:
-          return prev;
-      }
-    });
-  }, []);
-
-  const refreshOrders = useCallback(async (token: string) => {
-    const data = await kdsFetchOrders(token);
-    setOrders(sortOrders(data.orders));
-  }, []);
-
-  useEffect(() => {
-    if (!session) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      setOrders([]);
-      return;
-    }
-
-    const base = getApiBaseUrl();
-    if (!base) {
-      setError('VITE_API_URL is not set');
-      return;
-    }
-
-    setError(null);
-    void refreshOrders(session.token).catch((e) => {
-      if (e instanceof Error && e.message === 'SESSION_EXPIRED') {
-        clearExpiredSession(session);
-        setError('Session expired — please sign in again.');
-        return;
-      }
-      setError(e instanceof Error ? e.message : 'Failed to load orders');
-    });
-
-    const socket = io(`${base}${KDS_SOCKET_NAMESPACE}`, {
-      auth: { token: session.token },
-      transports: ['websocket', 'polling'],
-    });
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      setError(null);
-      void refreshOrders(session.token).catch((e) => {
-        if (e instanceof Error && e.message === 'SESSION_EXPIRED') {
-          clearExpiredSession(session);
-          setError('Session expired — please sign in again.');
-        }
-      });
-    });
-
-    socket.on('kds:event', (ev: KdsServerToClientEvent) => {
-      applyEvent(ev);
-    });
-
-    socket.on('disconnect', () => {
-      setError((prev) => prev ?? 'Socket disconnected — reconciling periodically');
-    });
-
-    const interval = window.setInterval(() => {
-      void refreshOrders(session.token).catch((e) => {
-        if (e instanceof Error && e.message === 'SESSION_EXPIRED') {
-          clearExpiredSession(session);
-          setError('Session expired — please sign in again.');
-        }
-      });
-    }, 90_000);
-
-    return () => {
-      window.clearInterval(interval);
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [session, applyEvent, refreshOrders, clearExpiredSession]);
+  const { orders, error, setError, busyId, complete } = useKdsOrders({
+    session,
+    onSessionExpired: clearExpiredSession,
+  });
 
   async function handleLogin(e: FormEvent): Promise<void> {
     e.preventDefault();
+    setLoginError(null);
     setError(null);
     try {
       const data = await kdsLogin({
@@ -180,52 +45,34 @@ export function App() {
         username: loginForm.username.trim(),
         password: loginForm.password,
       });
-      const s: Session = {
+      const s: KdsSession = {
         token: data.token,
         cafeName: data.cafe.name,
         cafeSlug: data.cafe.slug,
         username: data.kdsUser.username,
       };
-      saveSession(s);
+      saveKdsSession(s);
       setSession(s);
       setLoginForm((f) => ({ ...f, password: '' }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setLoginError(err instanceof Error ? err.message : 'Login failed');
     }
   }
 
   function logout(): void {
-    saveSession(null);
+    saveKdsSession(null);
     setSession(null);
     setError(null);
-  }
-
-  async function complete(orderId: string): Promise<void> {
-    if (!session) return;
-    setBusyId(orderId);
-    setError(null);
-    try {
-      await kdsCompleteOrder(session.token, orderId);
-      setOrders((prev) => prev.filter((o) => o.id !== orderId));
-    } catch (err) {
-      if (err instanceof Error && err.message === 'SESSION_EXPIRED') {
-        clearExpiredSession(session);
-        setError('Session expired — please sign in again.');
-      } else {
-        setError(err instanceof Error ? err.message : 'Complete failed');
-      }
-    } finally {
-      setBusyId(null);
-    }
+    setLoginError(null);
   }
 
   if (!session) {
     return (
       <div className="kds-shell">
         <header className="kds-title">Moonshot KDS — Sign in</header>
-        {error && (
+        {loginError && (
           <p className="kds-error" role="alert">
-            {error}
+            {loginError}
           </p>
         )}
         <form className="kds-form" onSubmit={(e) => void handleLogin(e)}>

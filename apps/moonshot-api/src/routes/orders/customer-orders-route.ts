@@ -13,7 +13,7 @@ import {
   cancelOrderAtCafe,
   listCustomerOrdersForUser,
 } from '../../lib/orders/order-customer.js';
-import { UUID_RE } from '../../lib/orders/order-constants.js';
+import { UUID_RE } from '../../lib/uuid.js';
 import { recomputePickupEtasForCafe } from '../../lib/pickup-eta.js';
 import { emitKdsServerToClient } from '../../realtime/kds-events.js';
 import { optionalCustomerAuth } from '../../middleware/optional-customer-auth.js';

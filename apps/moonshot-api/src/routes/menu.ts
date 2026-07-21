@@ -12,7 +12,7 @@ import {
   uploadMenuItemImage,
 } from '../lib/menu-admin-service.js';
 import { fetchMenuForCafe } from '../lib/menu-fetch.js';
-import { UUID_RE } from '../lib/orders/order-constants.js';
+import { UUID_RE } from '../lib/uuid.js';
 import { getPosAdapter } from '../lib/pos-adapters/index.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { menuItemImageUpload } from '../middleware/menu-item-image-upload.js';

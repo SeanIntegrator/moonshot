@@ -67,12 +67,6 @@ export function OrderDetail() {
     void reload();
   }, [reload]);
 
-  useEffect(() => {
-    if (!order || !(ACTIVE_FLOW as readonly string[]).includes(order.status)) return;
-    const id = window.setInterval(() => void reload(), 15_000);
-    return () => window.clearInterval(id);
-  }, [order?.id, order?.status, reload]);
-
   const handleOrderCompleted = useCallback(() => {
     if (!isSignedIn) return;
     void refreshLoyalty();
@@ -86,6 +80,14 @@ export function OrderDetail() {
     guestTracking ?? null,
     { onOrderCompleted: handleOrderCompleted },
   );
+
+  // Poll only when the customer socket is not live — ActiveOrders already covers list freshness.
+  useEffect(() => {
+    if (!order || !(ACTIVE_FLOW as readonly string[]).includes(order.status)) return;
+    if (trackingStatus !== 'error') return;
+    const id = window.setInterval(() => void reload(), 15_000);
+    return () => window.clearInterval(id);
+  }, [order?.id, order?.status, trackingStatus, reload]);
 
   const pickupTime = lastPickupTime ?? order?.pickup.pickupTime;
   const allDone = trackingStatus === 'completed' || order?.status === 'completed';

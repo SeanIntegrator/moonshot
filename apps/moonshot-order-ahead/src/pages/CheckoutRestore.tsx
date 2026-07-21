@@ -1,3 +1,4 @@
+import type { CreateOrderResponse } from '@moonshot/types';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -6,8 +7,11 @@ import { restoreOrderFromCheckoutSession } from '../api/orders-api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
 
-/** StrictMode remounts effects — share in-flight restores across mounts. */
-const restoreInFlight = new Set<string>();
+/**
+ * StrictMode remounts share one in-flight promise per sessionId.
+ * Cleared in `finally` so a later visit to the same success URL can retry.
+ */
+const restoreBySession = new Map<string, Promise<CreateOrderResponse>>();
 
 /**
  * Stripe success URLs should point here (or redirect home with `checkout_session_id`,
@@ -28,20 +32,24 @@ export function CheckoutRestore() {
       setError('Missing checkout_session_id');
       return;
     }
-    if (restoreInFlight.has(sessionId)) return;
-    restoreInFlight.add(sessionId);
 
-    void (async () => {
-      try {
-        const data = await restoreOrderFromCheckoutSession(sessionId);
+    let pending = restoreBySession.get(sessionId);
+    if (!pending) {
+      pending = restoreOrderFromCheckoutSession(sessionId).finally(() => {
+        restoreBySession.delete(sessionId);
+      });
+      restoreBySession.set(sessionId, pending);
+    }
+
+    void pending
+      .then((data) => {
         rememberOrderTracking(data.order.id, data.trackingToken);
         clear();
         navigate(cafePath(`/orders/${data.order.id}/confirmed`), { replace: true });
-      } catch (e) {
-        restoreInFlight.delete(sessionId);
+      })
+      .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Could not restore order');
-      }
-    })();
+      });
   }, [navigate, sessionId, cafePath, clear]);
 
   if (error) {

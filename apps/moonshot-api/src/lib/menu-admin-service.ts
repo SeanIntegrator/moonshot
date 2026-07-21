@@ -8,7 +8,7 @@ import {
   uploadMenuItemThumbnail,
 } from './menu-image-storage.js';
 import { normalizeSizes, setMenuItemModifierGroups } from './menu-modifier-library.js';
-import { UUID_RE } from './orders/order-constants.js';
+import { UUID_RE } from './uuid.js';
 
 export const MENU_CATEGORIES: MenuCategory[] = ['hot_drinks', 'cold_drinks', 'food', 'extras'];
 

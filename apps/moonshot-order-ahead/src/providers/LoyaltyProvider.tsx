@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -24,6 +25,8 @@ type LoyaltyContextValue = {
   loading: boolean;
   loadingMore: boolean;
   refresh: () => Promise<void>;
+  /** First page of ledger — call from Rewards; no-op if already loaded this session. */
+  ensureTransactions: () => Promise<void>;
   loadMore: () => Promise<void>;
 };
 
@@ -31,8 +34,7 @@ const LoyaltyContext = createContext<LoyaltyContextValue | null>(null);
 
 /**
  * Single loyalty fetch/cache for Home, Checkout, Rewards, and Order detail.
- * Exposes `refresh()` so completion sockets and navigation can resync stamps
- * without each page owning duplicate useEffect chains.
+ * `refresh()` loads summary + rewards only; ledger is lazy via `ensureTransactions`.
  */
 export function LoyaltyProvider({ children }: { children: ReactNode }) {
   const { isSignedIn, loading: authLoading } = useAuth();
@@ -43,6 +45,7 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const transactionsLoadedRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!isSignedIn || !loyaltyEnabled) {
@@ -50,26 +53,35 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
       setTransactions([]);
       setRewards([]);
       setNextCursor(null);
+      transactionsLoadedRef.current = false;
       return;
     }
     setLoading(true);
     try {
-      const [me, tx, rw] = await Promise.all([
-        fetchLoyaltySummary(),
-        fetchLoyaltyTransactions(20),
-        fetchUnredeemedRewards(),
-      ]);
+      const [me, rw] = await Promise.all([fetchLoyaltySummary(), fetchUnredeemedRewards()]);
       setSummary(me);
-      setTransactions(tx.transactions);
-      setNextCursor(tx.nextCursor);
       setRewards(rw.rewards);
     } catch {
       setSummary(null);
-      setTransactions([]);
       setRewards([]);
-      setNextCursor(null);
     } finally {
       setLoading(false);
+    }
+  }, [isSignedIn, loyaltyEnabled]);
+
+  const ensureTransactions = useCallback(async () => {
+    if (!isSignedIn || !loyaltyEnabled || transactionsLoadedRef.current) return;
+    setLoadingMore(true);
+    try {
+      const tx = await fetchLoyaltyTransactions(20);
+      setTransactions(tx.transactions);
+      setNextCursor(tx.nextCursor);
+      transactionsLoadedRef.current = true;
+    } catch {
+      setTransactions([]);
+      setNextCursor(null);
+    } finally {
+      setLoadingMore(false);
     }
   }, [isSignedIn, loyaltyEnabled]);
 
@@ -99,9 +111,20 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
       loading,
       loadingMore,
       refresh,
+      ensureTransactions,
       loadMore,
     }),
-    [summary, transactions, rewards, nextCursor, loading, loadingMore, refresh, loadMore],
+    [
+      summary,
+      transactions,
+      rewards,
+      nextCursor,
+      loading,
+      loadingMore,
+      refresh,
+      ensureTransactions,
+      loadMore,
+    ],
   );
 
   return <LoyaltyContext.Provider value={value}>{children}</LoyaltyContext.Provider>;

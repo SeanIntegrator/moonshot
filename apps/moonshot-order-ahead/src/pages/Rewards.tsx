@@ -1,4 +1,5 @@
 import { Box, Button, Container, LinearProgress, Typography } from '@mui/material';
+import { useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
 import { QrCard } from '../components/QrCard.js';
@@ -11,8 +12,21 @@ import { formatShortDate } from '../lib/format.js';
 
 export function Rewards() {
   const { isSignedIn, loading: authLoading, user } = useAuth();
-  const { summary, transactions, loading, loadMore, nextCursor, loadingMore } = useLoyalty();
+  const {
+    summary,
+    transactions,
+    loading,
+    loadMore,
+    nextCursor,
+    loadingMore,
+    ensureTransactions,
+  } = useLoyalty();
   const cafePath = useCafePath();
+
+  useEffect(() => {
+    if (!isSignedIn || authLoading) return;
+    void ensureTransactions();
+  }, [isSignedIn, authLoading, ensureTransactions]);
 
   const redeemed = transactions.filter((t) => t.transactionType === 'reward_redeemed');
 
