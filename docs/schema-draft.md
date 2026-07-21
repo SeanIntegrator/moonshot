@@ -1,6 +1,6 @@
 # Postgres schema (Phase 1 + planned v2)
 
-Migrations live under `apps/moonshot-api/migrations/` (node-pg-migrate wrappers + `sql/` sources). Through **013** (`orders.requested_pickup_not_before`) the live schema covers cafés, users/memberships, menu + modifier library, orders/items, KDS users, admin users, payment/webhook tables, and loyalty ledger. Self-service **admin onboarding** provisions café + admin + optional KDS user + template menu without a separate schema phase.
+Migrations live under `apps/moonshot-api/migrations/` (node-pg-migrate wrappers + `sql/` sources). Through **016** (`orders.eta_mode`; also `cafes.hours` in **014**, KDS modifier classification seed in **015**) the live schema covers cafés, users/memberships, menu + modifier library, orders/items, KDS users, admin users, payment/webhook tables, and loyalty ledger. Self-service **admin onboarding** provisions café + admin + optional KDS user + template menu without a separate schema phase.
 
 Sections below for **`feedback_responses`**, additional POS tables, etc. remain **planned v2** beyond what migrations create today.
 
