@@ -56,5 +56,27 @@ export function firstName(displayName: string | null | undefined, email?: string
 
 export function modifierSummary(modifiers: { optionName: string }[]): string {
   if (modifiers.length === 0) return '';
-  return modifiers.map((m) => m.optionName).join(' · ');
+  // Keep Title Case for display even if a snapshot was stored lowercase.
+  return modifiers.map((m) => titleCaseWords(m.optionName)).join(' · ');
+}
+
+/** "Flat white" / "whole" → "Flat White" / "Whole" */
+export function titleCaseWords(value: string): string {
+  return value
+    .trim()
+    .split(/\s+/)
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join(' ');
+}
+
+/** Whole minutes until an ISO timestamp (never negative). */
+export function minutesUntil(iso: string | null | undefined, nowMs = Date.now()): number | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - nowMs;
+  if (!Number.isFinite(ms)) return null;
+  return Math.max(0, Math.ceil(ms / 60_000));
+}
+
+export function formatMinutesLabel(minutes: number): string {
+  return minutes === 1 ? '1 min' : `${minutes} mins`;
 }

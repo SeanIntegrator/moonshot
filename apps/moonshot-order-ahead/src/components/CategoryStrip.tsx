@@ -27,7 +27,6 @@ export function CategoryStrip({ sections, active, onSelect }: Props) {
             key={s.category}
             label={s.label}
             clickable
-            disableRipple
             onClick={() => onSelect(s.category)}
             variant={selected ? 'filled' : 'outlined'}
             color={selected ? 'primary' : 'default'}
@@ -41,6 +40,7 @@ export function CategoryStrip({ sections, active, onSelect }: Props) {
               '&.MuiChip-clickable:active': selected
                 ? { bgcolor: 'primary.main' }
                 : { bgcolor: 'transparent' },
+              '& .MuiTouchRipple-root': { display: 'none' },
             }}
           />
         );

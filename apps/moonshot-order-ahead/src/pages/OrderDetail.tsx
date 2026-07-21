@@ -1,6 +1,5 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Box,
   Button,
@@ -22,7 +21,13 @@ import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { useOrderTracking } from '../hooks/useOrderTracking.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
-import { formatMoney, formatTime, modifierSummary } from '../lib/format.js';
+import {
+  formatMinutesLabel,
+  formatMoney,
+  formatTime,
+  minutesUntil,
+  modifierSummary,
+} from '../lib/format.js';
 import { getOrderStatusMeta } from '../lib/order-status.js';
 
 const ACTIVE_FLOW = ['pending', 'confirmed', 'preparing', 'ready'] as const;
@@ -46,6 +51,7 @@ export function OrderDetail() {
   const [order, setOrder] = useState<NormalisedOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const guestTracking = useMemo(() => {
     if (!orderId.trim() || isSignedIn) return undefined;
@@ -105,6 +111,19 @@ export function OrderDetail() {
   const showStampEarned = isSignedIn && loyaltyEnabled && allDone;
   const showStampPending =
     isSignedIn && loyaltyEnabled && order != null && !allDone && order.status !== 'cancelled';
+  const canCancel = order != null && isCancellable(order.status);
+
+  // Keep the "7 mins" label fresh while the order is still active.
+  useEffect(() => {
+    if (!pickupTime || allDone) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [pickupTime, allDone]);
+
+  const minsUntilPickup = useMemo(
+    () => (allDone ? null : minutesUntil(pickupTime, nowMs)),
+    [allDone, pickupTime, nowMs],
+  );
 
   async function onCancel(): Promise<void> {
     if (!order || !isCancellable(order.status)) return;
@@ -126,183 +145,200 @@ export function OrderDetail() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
-      <PageHeader
-        title="Your order"
-        onBack={() => navigate(cafePath('/'))}
-        right={<InfoOutlinedIcon fontSize="small" color="action" />}
-      />
+    <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <Container
+        maxWidth="sm"
+        sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2, pb: canCancel ? 2 : 10 }}
+      >
+        <PageHeader title="Your order" onBack={() => navigate(cafePath('/'))} />
 
-      {error && (
-        <Typography color="error" sx={{ mt: 1 }}>
-          {error}
-        </Typography>
-      )}
-      {!order && !error && (
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Loading…
-        </Typography>
-      )}
-
-      {order && (
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
-                Order #{order.id.slice(0, 8)}
-              </Typography>
-              <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
-                {allDone ? 'Done' : 'In progress'}
-              </Typography>
-            </Box>
-            <Chip
-              label={statusMeta?.label ?? order.status}
-              size="small"
-              color={statusMeta?.chipColor ?? 'default'}
-            />
-          </Box>
-
-          <OrderStatusStepper stepIndex={stepIndex} completed={allDone} />
-
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-            We&apos;ll update this when the kitchen marks your order ready.
+        {error && (
+          <Typography color="error" sx={{ mt: 1 }}>
+            {error}
           </Typography>
+        )}
+        {!order && !error && (
+          <Typography color="text.secondary" sx={{ mt: 1 }}>
+            Loading…
+          </Typography>
+        )}
 
-          <Box
-            sx={{
-              mt: 2,
-              p: 1.5,
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1.25,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-            }}
-          >
-            <AccessTimeIcon color="action" />
+        {order && (
+          <>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                Pickup time
-              </Typography>
-              <Typography variant="body1" fontWeight={700}>
-                {formatTime(pickupTime)}
-              </Typography>
-            </Box>
-          </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
+                    Order #{order.id.slice(0, 8)}
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+                    {allDone ? 'Done' : 'In progress'}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={statusMeta?.label ?? order.status}
+                  size="small"
+                  color={statusMeta?.chipColor ?? 'default'}
+                />
+              </Box>
 
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 3, letterSpacing: 0.5, display: 'block' }}>
-            Items · {totalItemQuantity(order.items)}
-          </Typography>
-          {order.items.map((li) => {
-            const menuItem = li.menuItemId
-              ? menu?.items?.find((i) => i.id === li.menuItemId)
-              : undefined;
-            return (
-            <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>
-              <MenuItemImage
-                src={menuItem?.imageUrl}
-                alt={li.itemName}
-                width={56}
-                height={56}
-                borderRadius={1}
-                loading="lazy"
-              />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600}>
-                  {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
-                </Typography>
-                {li.modifiers.length > 0 && (
+              <OrderStatusStepper stepIndex={stepIndex} completed={allDone} />
+
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 1.5,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 1.25,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                }}
+              >
+                <AccessTimeIcon color="action" />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="caption" color="text.secondary">
-                    {modifierSummary(li.modifiers)}
+                    Pickup time
+                  </Typography>
+                  <Typography variant="body1" fontWeight={700}>
+                    {formatTime(pickupTime)}
+                  </Typography>
+                </Box>
+                {minsUntilPickup != null && (
+                  <Typography
+                    variant="body1"
+                    fontWeight={700}
+                    color="text.secondary"
+                    sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {formatMinutesLabel(minsUntilPickup)}
                   </Typography>
                 )}
               </Box>
-              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                {formatMoney(li.unitPriceMinor * li.quantity, order.currency)}
-              </Typography>
-            </Box>
-            );
-          })}
 
-          <Divider sx={{ my: 1 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography fontWeight={700}>Total paid</Typography>
-            <Typography fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              {formatMoney(order.totalMinor, order.currency)}
-            </Typography>
-          </Box>
-
-          {trackingStatus === 'connecting' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Connecting for live updates…
-            </Typography>
-          )}
-          {trackingStatus === 'error' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Tracking unavailable — we&apos;ll call your name when it&apos;s ready.
-            </Typography>
-          )}
-          {allDone && (
-            <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-              Your order is ready!
-              {completedAt ? ` (${formatTime(completedAt)})` : ''}
-            </Typography>
-          )}
-
-          {showStampPending && (
-            <Box
-              sx={{
-                mt: 2,
-                p: 1.5,
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 1.25,
-                bgcolor: 'background.paper',
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                ★ You&apos;ll earn <strong>1 stamp</strong> when the kitchen marks this order complete.
-              </Typography>
-            </Box>
-          )}
-
-          {showStampEarned && (
-            <Box
-              sx={{
-                mt: 2,
-                p: 1.5,
-                border: 1,
-                borderColor: 'success.light',
-                borderRadius: 1.25,
-                bgcolor: 'success.50',
-              }}
-            >
-              <Typography variant="body2" color="success.main" fontWeight={600}>
-                ★ Stamp earned — your loyalty card has been updated.
-              </Typography>
-            </Box>
-          )}
-
-          {isCancellable(order.status) && (
-            <>
-              <Button
-                variant="outlined"
-                color="error"
-                fullWidth
-                sx={{ mt: 3 }}
-                disabled={busy}
-                onClick={() => void onCancel()}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 3, letterSpacing: 0.5, display: 'block' }}
               >
-                Cancel order
-              </Button>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
-                You can cancel free of charge before the kitchen starts your order.
+                Items · {totalItemQuantity(order.items)}
               </Typography>
-            </>
-          )}
-        </Box>
-      )}
-    </Container>
+              {order.items.map((li) => {
+                const menuItem = li.menuItemId
+                  ? menu?.items?.find((i) => i.id === li.menuItemId)
+                  : undefined;
+                return (
+                  <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>
+                    <MenuItemImage
+                      src={menuItem?.imageUrl}
+                      alt={li.itemName}
+                      width={56}
+                      height={56}
+                      borderRadius={1}
+                      loading="lazy"
+                    />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
+                      </Typography>
+                      {li.modifiers.length > 0 && (
+                        <Typography variant="caption" color="text.secondary">
+                          {modifierSummary(li.modifiers)}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {formatMoney(li.unitPriceMinor * li.quantity, order.currency)}
+                    </Typography>
+                  </Box>
+                );
+              })}
+
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography fontWeight={700}>Total paid</Typography>
+                <Typography fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {formatMoney(order.totalMinor, order.currency)}
+                </Typography>
+              </Box>
+
+              {trackingStatus === 'connecting' && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Connecting for live updates…
+                </Typography>
+              )}
+              {trackingStatus === 'error' && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Tracking unavailable — we&apos;ll call your name when it&apos;s ready.
+                </Typography>
+              )}
+              {allDone && (
+                <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
+                  Your order is ready!
+                  {completedAt ? ` (${formatTime(completedAt)})` : ''}
+                </Typography>
+              )}
+
+              {showStampPending && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 1.5,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 1.25,
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    ★ You&apos;ll earn <strong>1 stamp</strong> when the kitchen marks this order complete.
+                  </Typography>
+                </Box>
+              )}
+
+              {showStampEarned && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 1.5,
+                    border: 1,
+                    borderColor: 'success.light',
+                    borderRadius: 1.25,
+                    bgcolor: 'success.50',
+                  }}
+                >
+                  <Typography variant="body2" color="success.main" fontWeight={600}>
+                    ★ Stamp earned — your loyalty card has been updated.
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            {canCancel && (
+              <Box sx={{ pt: 2, flexShrink: 0 }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  fullWidth
+                  sx={{ py: 1.5, minHeight: 48 }}
+                  disabled={busy}
+                  onClick={() => void onCancel()}
+                >
+                  Cancel order
+                </Button>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mt: 1, textAlign: 'center' }}
+                >
+                  You can cancel free of charge before the kitchen starts your order.
+                </Typography>
+              </Box>
+            )}
+          </>
+        )}
+      </Container>
+    </Box>
   );
 }

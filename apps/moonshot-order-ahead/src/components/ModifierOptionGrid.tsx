@@ -102,7 +102,6 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 <Chip
                   key={opt.id}
                   clickable
-                  disableRipple
                   label={
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       {colorDot(opt.colorHex)}
@@ -121,6 +120,7 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                     '&.MuiChip-clickable:hover': surface,
                     '&.MuiChip-clickable:active': surface,
                     '&.Mui-focusVisible': surface,
+                    '& .MuiTouchRipple-root': { display: 'none' },
                   }}
                 />
               );
