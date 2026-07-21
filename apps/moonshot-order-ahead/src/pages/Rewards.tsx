@@ -1,5 +1,6 @@
 import { Box, Button, Container, LinearProgress, Typography } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
 import { QrCard } from '../components/QrCard.js';
 import { SectionHead } from '../components/SectionHead.js';
@@ -7,22 +8,33 @@ import { SignedOutPanel } from '../components/SignedOutPanel.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { formatShortDate } from '../lib/format.js';
 
 export function Rewards() {
+  const navigate = useNavigate();
   const { isSignedIn, loading: authLoading, user } = useAuth();
   const { summary, transactions, loading, loadMore, nextCursor, loadingMore } = useLoyalty();
   const cafePath = useCafePath();
+  const { loyaltyEnabled } = useCafeFeatures();
+
+  useEffect(() => {
+    if (!loyaltyEnabled) {
+      navigate(cafePath('/'), { replace: true });
+    }
+  }, [loyaltyEnabled, navigate, cafePath]);
 
   const redeemed = transactions.filter((t) => t.transactionType === 'reward_redeemed');
+
+  if (!loyaltyEnabled) {
+    return null;
+  }
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
       {authLoading && <Typography color="text.secondary">Checking session…</Typography>}
 
-      {!authLoading && !isSignedIn && (
-        <SignedOutPanel onContinueGuest={() => {}} />
-      )}
+      {!authLoading && !isSignedIn && <SignedOutPanel onContinueGuest={() => {}} />}
 
       {isSignedIn && loading && <LinearProgress sx={{ mt: 2 }} />}
 
@@ -46,7 +58,8 @@ export function Rewards() {
 
           {summary.rewardsAvailable > 0 && (
             <Typography variant="body2" color="success.main" sx={{ mt: 1.5, textAlign: 'center' }}>
-              {summary.rewardsAvailable} reward{summary.rewardsAvailable !== 1 ? 's' : ''} ready to redeem at checkout
+              {summary.rewardsAvailable} reward{summary.rewardsAvailable !== 1 ? 's' : ''} ready to
+              redeem at checkout
             </Typography>
           )}
         </Box>
@@ -66,19 +79,20 @@ export function Rewards() {
         </Box>
       )}
 
-      {isSignedIn && !loading && summary?.loyaltyEnabled && summary.stamps === 0 && redeemed.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="h6" fontWeight={700} gutterBottom>
-            No stamps yet
-          </Typography>
-          {/* <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Order to start your loyalty card. Buy 9, get the 10th free.
-          </Typography> */}
-          <Button component={RouterLink} sx={{ mt: 2 }} to={cafePath('/order')} variant="contained">
-            Browse menu →
-          </Button>
-        </Box>
-      )}
+      {isSignedIn &&
+        !loading &&
+        summary?.loyaltyEnabled &&
+        summary.stamps === 0 &&
+        redeemed.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              No stamps yet
+            </Typography>
+            <Button component={RouterLink} sx={{ mt: 2 }} to={cafePath('/order')} variant="contained">
+              Browse menu →
+            </Button>
+          </Box>
+        )}
 
       {isSignedIn && !loading && redeemed.length > 0 && (
         <Box sx={{ mt: 3 }}>

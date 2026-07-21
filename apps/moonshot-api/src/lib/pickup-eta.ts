@@ -2,14 +2,20 @@ import type { KdsConfig } from '@moonshot/types';
 import type { Pool, PoolClient } from 'pg';
 import { KDS_OPEN_ORDER_STATUSES } from './orders-repository.js';
 import { resolveEtaParams } from './pickup-eta-params.js';
+import { applyPickupNotBeforeFloor } from './requested-pickup.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
 
-type OpenOrderQtyRow = { id: string; items_qty: string };
+type OpenOrderQtyRow = {
+  id: string;
+  items_qty: string;
+  requested_pickup_not_before: Date | string | null;
+};
 
 /**
- * FIFO queue: open KDS orders by created_at ASC. For each order j, ETA = now + base + perItem * (sum of quantities in orders 0..j-1).
- * Sets `quoted_pickup_time` only on first assignment; `pickup_time` always reflects the live FIFO estimate.
+ * FIFO queue: open KDS orders by created_at ASC. For each order j,
+ * ETA = max(now + base + perItem * qtyAhead, requested_pickup_not_before).
+ * Sets `quoted_pickup_time` only on first assignment; `pickup_time` always reflects the live estimate.
  */
 export async function recomputePickupEtasForCafe(params: {
   db: Pool | PoolClient;
@@ -21,11 +27,12 @@ export async function recomputePickupEtasForCafe(params: {
 
   const ordersRes = await db.query<OpenOrderQtyRow>(
     `SELECT o.id,
+            o.requested_pickup_not_before,
             COALESCE(SUM(oi.quantity), 0)::text AS items_qty
      FROM orders o
      LEFT JOIN order_items oi ON oi.order_id = o.id
      WHERE o.cafe_id = $1 AND o.status = ANY($2::text[])
-     GROUP BY o.id, o.created_at
+     GROUP BY o.id, o.created_at, o.requested_pickup_not_before
      ORDER BY o.created_at ASC`,
     [cafeId, [...KDS_OPEN_ORDER_STATUSES]],
   );
@@ -37,7 +44,18 @@ export async function recomputePickupEtasForCafe(params: {
   for (const row of ordersRes.rows) {
     const qtyAhead = cumulativeQty;
     const minutes = base + perItem * qtyAhead;
-    const pickupMs = now + minutes * 60_000;
+    const fifoMs = now + minutes * 60_000;
+    const notBeforeRaw = row.requested_pickup_not_before;
+    const notBeforeMs =
+      notBeforeRaw == null
+        ? null
+        : typeof notBeforeRaw === 'string'
+          ? new Date(notBeforeRaw).getTime()
+          : notBeforeRaw.getTime();
+    const pickupMs = applyPickupNotBeforeFloor(
+      fifoMs,
+      notBeforeMs != null && Number.isFinite(notBeforeMs) ? notBeforeMs : null,
+    );
     const pickupIso = new Date(pickupMs).toISOString();
     updates.push({ orderId: row.id, pickupIso });
     cumulativeQty += Number.parseInt(row.items_qty || '0', 10) || 0;

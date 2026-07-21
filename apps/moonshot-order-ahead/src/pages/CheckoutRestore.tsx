@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { restoreOrderFromCheckoutSession } from '../api/orders-api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
+import { useCart } from '../providers/CartProvider.js';
 
 /**
  * Stripe success URLs should point here (or redirect home with `checkout_session_id`,
@@ -15,6 +16,7 @@ export function CheckoutRestore() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const cafePath = useCafePath();
+  const { clear } = useCart();
   const [error, setError] = useState<string | null>(null);
   const sessionId = params.get('checkout_session_id')?.trim();
   const ran = useRef(false);
@@ -31,12 +33,13 @@ export function CheckoutRestore() {
       try {
         const data = await restoreOrderFromCheckoutSession(sessionId);
         rememberOrderTracking(data.order.id, data.trackingToken);
+        clear();
         navigate(cafePath(`/orders/${data.order.id}/confirmed`), { replace: true });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Could not restore order');
       }
     })();
-  }, [navigate, sessionId, cafePath]);
+  }, [navigate, sessionId, cafePath, clear]);
 
   if (error) {
     return (
@@ -71,7 +74,7 @@ export function CheckoutRestore() {
     >
       <CircularProgress size={32} />
       <Typography variant="body2" color="text.secondary">
-        Taking you to payment
+        Confirming your payment…
       </Typography>
     </Box>
   );

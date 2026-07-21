@@ -11,6 +11,7 @@ import { recomputePickupEtasForCafe } from '../../lib/pickup-eta.js';
 import { pool } from '../../db.js';
 import { createStripeCheckoutOrderResponse } from '../../lib/orders-checkout-service.js';
 import { parseCreateOrderBody, parseOrderAheadPaymentMode } from '../../lib/order-checkout-env.js';
+import { resolveRequestedPickupNotBefore } from '../../lib/requested-pickup.js';
 
 export const createOrderRouter: IRouter = Router();
 
@@ -27,9 +28,13 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
     });
   }
 
-  const { customerName, notes, orderType, items, redeemRewardId } = parsed.value;
+  const { customerName, notes, orderType, items, redeemRewardId, pickupDelayMinutes } = parsed.value;
   const userId = req.customerUserId ?? null;
   const paymentMode = parseOrderAheadPaymentMode(req.cafe!.features.order_ahead);
+  const requestedPickupNotBefore = resolveRequestedPickupNotBefore({
+    pickupDelayMinutes,
+    orderAhead: req.cafe!.features.order_ahead,
+  });
 
   const jwtSecret = process.env.JWT_SECRET;
 
@@ -46,6 +51,7 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
     userId: userId ?? undefined,
     itemCount: items.length,
     redeemRewardId: redeemRewardId ?? undefined,
+    pickupDelayMinutes: pickupDelayMinutes ?? undefined,
   });
 
   if (paymentMode === 'pay_in_store') {
@@ -57,6 +63,7 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
       orderType,
       lines: items,
       redeemRewardId,
+      requestedPickupNotBefore,
     });
 
     emitKdsServerToClient(cafeId, { type: 'kds:order:new', order: result.order });
@@ -92,6 +99,7 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
     lines: items,
     paymentConfig: req.cafe!.paymentConfig,
     redeemRewardId,
+    requestedPickupNotBefore,
   });
 
   return res.status(201).json({ ok: true, data });

@@ -19,13 +19,14 @@ import { useNavigate } from 'react-router-dom';
 import { AllergyChecklist } from '../components/AllergyChecklist.js';
 import { CheckoutLineRow } from '../components/CheckoutLineRow.js';
 import { PageHeader } from '../components/PageHeader.js';
+import { PickupTimeChip } from '../components/PickupTimeChip.js';
 import { RewardRow } from '../components/RewardRow.js';
 import { CheckoutPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { createCustomerOrder, fetchPickupEstimate } from '../api/orders-api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
-import { useCafe } from '../hooks/useCafe.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useMenu } from '../providers/MenuProvider.js';
@@ -62,8 +63,10 @@ function drinkDiscountMinor(
 export function Checkout() {
   const navigate = useNavigate();
   const cafePath = useCafePath();
-  const { lines, clear, upsertLine, removeLine } = useCart();
-  const { cafe } = useCafe();
+  const { lines, clear, upsertLine, removeLine, pickupDelayMinutes, setPickupDelayMinutes } =
+    useCart();
+  const { orderAheadEnabled, loyaltyEnabled, pickupTimeEnabled, maxPickupMinutes } =
+    useCafeFeatures();
   const { isSignedIn, user } = useAuth();
   const { summary, rewards, refresh: refreshLoyalty } = useLoyalty();
   const { menu, loading: menuLoading } = useMenu();
@@ -77,12 +80,15 @@ export function Checkout() {
   const [applyReward, setApplyReward] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
-  const loyaltyEnabled =
-    summary?.loyaltyEnabled ?? cafe?.features.loyalty?.enabled === true;
+  useEffect(() => {
+    if (!orderAheadEnabled) {
+      navigate(cafePath('/'), { replace: true });
+    }
+  }, [orderAheadEnabled, navigate, cafePath]);
 
   useEffect(() => {
-    if (isSignedIn) void refreshLoyalty();
-  }, [isSignedIn, refreshLoyalty]);
+    if (isSignedIn && loyaltyEnabled) void refreshLoyalty();
+  }, [isSignedIn, loyaltyEnabled, refreshLoyalty]);
 
   useEffect(() => {
     if (lines.length === 0) navigate(cafePath('/order'), { replace: true });
@@ -128,7 +134,8 @@ export function Checkout() {
 
   async function placeOrder(): Promise<void> {
     if (lines.length === 0) return;
-    const name = customerName.trim() || user?.displayName?.trim() || user?.email?.split('@')[0] || 'Guest';
+    const name =
+      customerName.trim() || user?.displayName?.trim() || user?.email?.split('@')[0] || 'Guest';
     setError(null);
     setSubmitting(true);
     try {
@@ -139,12 +146,17 @@ export function Checkout() {
         customerName: name,
         orderType,
         redeemRewardId: applyReward && rewards[0] ? rewards[0].id : undefined,
+        pickupDelayMinutes: pickupTimeEnabled ? pickupDelayMinutes : undefined,
         items: lines.map((l) => ({
           menuItemId: l.menuItemId,
           sizeId: l.sizeId ?? undefined,
           quantity: l.quantity,
           modifiers: l.modifiers.length ? l.modifiers : undefined,
-          allergens: allergensForLines.length ? allergensForLines : l.allergens.length ? l.allergens : undefined,
+          allergens: allergensForLines.length
+            ? allergensForLines
+            : l.allergens.length
+              ? l.allergens
+              : undefined,
         })),
       });
       rememberOrderTracking(data.order.id, data.trackingToken);
@@ -284,37 +296,39 @@ export function Checkout() {
           <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
             Pickup time
           </Typography>
-          <Box
-            sx={{
-              p: 1.5,
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1.25,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              opacity: 0.7,
-              minHeight: 72,
-            }}
-          >
-            <AccessTimeIcon color="action" />
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body1" fontWeight={700}>
-                {estimate ? `${formatTime(estimate.pickupTime)} am` : 'ASAP'}
-              </Typography>
-              {estimate && (
-                <Typography variant="caption" color="text.secondary">
-                  in {estimate.minutesFromNow} min
+          {pickupTimeEnabled ? (
+            <PickupTimeChip
+              estimate={estimate}
+              value={pickupDelayMinutes}
+              onChange={setPickupDelayMinutes}
+              maxPickupMinutes={maxPickupMinutes}
+            />
+          ) : (
+            <Box
+              sx={{
+                p: 1.5,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1.25,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                minHeight: 72,
+              }}
+            >
+              <AccessTimeIcon color="action" />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body1" fontWeight={700}>
+                  {estimate ? formatTime(estimate.pickupTime) : 'ASAP'}
                 </Typography>
-              )}
+                {estimate && (
+                  <Typography variant="caption" color="text.secondary">
+                    in {estimate.minutesFromNow} min
+                  </Typography>
+                )}
+              </Box>
             </Box>
-            <Typography variant="caption" color="text.disabled">
-              ⌄
-            </Typography>
-          </Box>
-          <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>
-            Scheduled pickup — coming soon
-          </Typography>
+          )}
 
           <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
             Allergy info
@@ -367,7 +381,7 @@ export function Checkout() {
           <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
             Rewards
           </Typography>
-          {isSignedIn && summary && rewards.length > 0 ? (
+          {isSignedIn && loyaltyEnabled && summary && rewards.length > 0 ? (
             <RewardRow
               description="1 free drink available"
               applied={applyReward}
@@ -416,7 +430,11 @@ export function Checkout() {
             <span>{formatMoney(totalMinor)} →</span>
           </Button>
           {loyaltyEnabled && isSignedIn && !applyReward && (
-            <Typography variant="caption" color="success.main" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+            <Typography
+              variant="caption"
+              color="success.main"
+              sx={{ display: 'block', textAlign: 'center', mt: 1 }}
+            >
               Earn 1 stamp with this order
             </Typography>
           )}

@@ -14,6 +14,7 @@ import {
   fetchUnredeemedRewards,
 } from '../api/loyalty-api.js';
 import { useAuth } from '../hooks/useAuth.js';
+import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 
 type LoyaltyContextValue = {
   summary: LoyaltySummaryResponse | null;
@@ -35,6 +36,7 @@ const LoyaltyContext = createContext<LoyaltyContextValue | null>(null);
  */
 export function LoyaltyProvider({ children }: { children: ReactNode }) {
   const { isSignedIn, loading: authLoading } = useAuth();
+  const { loyaltyEnabled } = useCafeFeatures();
   const [summary, setSummary] = useState<LoyaltySummaryResponse | null>(null);
   const [transactions, setTransactions] = useState<LoyaltyTransaction[]>([]);
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
@@ -43,7 +45,7 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!isSignedIn) {
+    if (!isSignedIn || !loyaltyEnabled) {
       setSummary(null);
       setTransactions([]);
       setRewards([]);
@@ -69,10 +71,10 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, loyaltyEnabled]);
 
   const loadMore = useCallback(async () => {
-    if (!isSignedIn || !nextCursor || loadingMore) return;
+    if (!isSignedIn || !loyaltyEnabled || !nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
       const tx = await fetchLoyaltyTransactions(20, nextCursor);
@@ -81,7 +83,7 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingMore(false);
     }
-  }, [isSignedIn, nextCursor, loadingMore]);
+  }, [isSignedIn, loyaltyEnabled, nextCursor, loadingMore]);
 
   useEffect(() => {
     if (authLoading) return;

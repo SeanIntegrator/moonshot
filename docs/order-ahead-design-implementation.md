@@ -40,12 +40,16 @@ This document captures the substantial order-ahead work completed across the rec
 - Loyalty redemption through pay-in-store and Stripe checkout flows.
 - Reward discount application and reward consumption safeguards.
 - Primary customer ordering flow UI and navigation surfaces.
+- Cart persistence across Stripe redirect (`sessionStorage` per café slug) and clear on successful restore / pay-in-store.
+- Customer pickup delay (`pickupDelayMinutes`) → API `requested_pickup_not_before` floor on live FIFO ETA.
+- Client gating of Order / Rewards from café `activeFeatures` (`order_ahead`, `loyalty`).
 
 ### Wireframe/best-effort (intentionally non-final)
 
-- Pickup time selection and pickup-time change interactions.
+- Pickup-time **change after order placed** (reschedule).
 - Some profile management rows (phone/card/notification preferences).
 - Featured/menu merchandising details that require additional product data.
+- Café open/closed hours on Home (still hardcoded “open”).
 
 ## Notes
 

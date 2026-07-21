@@ -22,8 +22,8 @@ export const CUSTOMER_TERMINAL_STATUSES = ['completed', 'cancelled'] as const;
 export const ORDER_SELECT_COLUMNS = `
   id, cafe_id, user_id, pos_order_id, customer_name, notes, total_minor, currency,
   order_type, source, status, payment_status, quoted_pickup_time, pickup_time,
-  completed_at, edit_token, parent_order_id, stripe_checkout_session_id,
-  created_at, updated_at
+  requested_pickup_not_before, completed_at, edit_token, parent_order_id,
+  stripe_checkout_session_id, created_at, updated_at
 `;
 
 export const ORDER_ITEM_SELECT_COLUMNS = `

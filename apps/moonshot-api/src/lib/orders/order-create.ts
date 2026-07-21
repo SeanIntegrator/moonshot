@@ -26,8 +26,18 @@ export async function createGuestPayInStoreOrder(params: {
   orderType: OrderType;
   lines: CreateOrderLineInput[];
   redeemRewardId?: string | null;
+  requestedPickupNotBefore?: Date | null;
 }): Promise<{ order: NormalisedOrder; discountMinor: number; redeemedRewardId?: string }> {
-  const { cafeId, userId, customerName, notes, orderType, lines, redeemRewardId } = params;
+  const {
+    cafeId,
+    userId,
+    customerName,
+    notes,
+    orderType,
+    lines,
+    redeemRewardId,
+    requestedPickupNotBefore = null,
+  } = params;
 
   assertValidOrderType(orderType);
   const trimmedName = assertCustomerName(customerName);
@@ -66,6 +76,7 @@ export async function createGuestPayInStoreOrder(params: {
     paymentStatus: 'unpaid',
     redeemRewardId: redeemRewardId ?? null,
     consumeReward: true,
+    requestedPickupNotBefore,
   });
 
   return {
@@ -89,6 +100,7 @@ export async function insertPendingOrderWithResolvedLines(params: {
   totalMinor: number;
   redeemRewardId?: string | null;
   consumeReward?: boolean;
+  requestedPickupNotBefore?: Date | null;
 }): Promise<NormalisedOrder> {
   const {
     cafeId,
@@ -101,6 +113,7 @@ export async function insertPendingOrderWithResolvedLines(params: {
     totalMinor,
     redeemRewardId = null,
     consumeReward = true,
+    requestedPickupNotBefore = null,
   } = params;
 
   assertValidOrderType(orderType);
@@ -119,6 +132,7 @@ export async function insertPendingOrderWithResolvedLines(params: {
     paymentStatus: 'unpaid',
     redeemRewardId,
     consumeReward,
+    requestedPickupNotBefore,
   });
 }
 
@@ -171,6 +185,7 @@ async function insertOrderWithResolvedLines(params: {
   redeemRewardId: string | null;
   /** When false, reward is validated at checkout but consumed later (Stripe webhook). */
   consumeReward?: boolean;
+  requestedPickupNotBefore?: Date | null;
 }): Promise<NormalisedOrder> {
   const {
     cafeId,
@@ -185,6 +200,7 @@ async function insertOrderWithResolvedLines(params: {
     paymentStatus,
     redeemRewardId,
     consumeReward = true,
+    requestedPickupNotBefore = null,
   } = params;
 
   const client = await pool.connect();
@@ -194,10 +210,21 @@ async function insertOrderWithResolvedLines(params: {
     const insertOrder = await client.query<OrderRowDb>(
       `INSERT INTO orders (
         cafe_id, user_id, customer_name, notes, total_minor, currency,
-        order_type, source, status, payment_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'app', $8, $9)
+        order_type, source, status, payment_status, requested_pickup_not_before
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'app', $8, $9, $10)
       RETURNING ${ORDER_SELECT_COLUMNS}`,
-      [cafeId, userId, customerName, notes, totalMinor, currency, orderType, status, paymentStatus],
+      [
+        cafeId,
+        userId,
+        customerName,
+        notes,
+        totalMinor,
+        currency,
+        orderType,
+        status,
+        paymentStatus,
+        requestedPickupNotBefore,
+      ],
     );
 
     const orderRow = requireInsertedOrderRow(insertOrder.rows[0]);

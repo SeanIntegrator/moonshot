@@ -4,9 +4,13 @@ import type { PickupEstimateResponse } from '@moonshot/types';
 import { alpha, Box, Chip, Menu, MenuItem, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { formatTime } from '../lib/format.js';
+import {
+  pickupDelayOptions,
+  type PickupDelayMinutes,
+} from '../lib/pickup-delay-options.js';
 
-export const PICKUP_DELAY_OPTIONS = [0, 10, 20, 30, 40, 50, 60] as const;
-export type PickupDelayMinutes = (typeof PICKUP_DELAY_OPTIONS)[number];
+export type { PickupDelayMinutes } from '../lib/pickup-delay-options.js';
+export { pickupDelayOptions } from '../lib/pickup-delay-options.js';
 
 export function pickupTimeForDelay(
   estimate: PickupEstimateResponse | null,
@@ -24,20 +28,29 @@ type Props = {
   estimate: PickupEstimateResponse | null;
   value: PickupDelayMinutes;
   onChange: (minutes: PickupDelayMinutes) => void;
+  /** Café `order_ahead.maxPickupMinutes` (default 60). */
+  maxPickupMinutes?: number;
 };
 
-export function PickupTimeChip({ estimate, value, onChange }: Props) {
+export function PickupTimeChip({
+  estimate,
+  value,
+  onChange,
+  maxPickupMinutes = 60,
+}: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const displayTime = formatTime(pickupTimeForDelay(estimate, value).toISOString());
+  const options = useMemo(() => pickupDelayOptions(maxPickupMinutes), [maxPickupMinutes]);
+  const safeValue = options.includes(value) ? value : 0;
+  const displayTime = formatTime(pickupTimeForDelay(estimate, safeValue).toISOString());
 
   const menuItems = useMemo(
     () =>
-      PICKUP_DELAY_OPTIONS.map((minutes) => ({
+      options.map((minutes) => ({
         minutes,
         label: optionLabel(minutes),
         time: formatTime(pickupTimeForDelay(estimate, minutes).toISOString()),
       })),
-    [estimate],
+    [estimate, options],
   );
 
   return (
@@ -75,7 +88,7 @@ export function PickupTimeChip({ estimate, value, onChange }: Props) {
         {menuItems.map((item) => (
           <MenuItem
             key={item.minutes}
-            selected={value === item.minutes}
+            selected={safeValue === item.minutes}
             onClick={() => {
               onChange(item.minutes);
               setAnchorEl(null);

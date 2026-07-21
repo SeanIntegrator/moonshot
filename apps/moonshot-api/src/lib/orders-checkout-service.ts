@@ -31,9 +31,20 @@ export async function createStripeCheckoutOrderResponse(params: {
   lines: CreateOrderLineInput[];
   paymentConfig: Record<string, unknown>;
   redeemRewardId?: string | null;
+  requestedPickupNotBefore?: Date | null;
 }): Promise<CreateOrderResponse> {
-  const { cafeId, cafeSlug, userId, customerName, notes, orderType, lines, paymentConfig, redeemRewardId } =
-    params;
+  const {
+    cafeId,
+    cafeSlug,
+    userId,
+    customerName,
+    notes,
+    orderType,
+    lines,
+    paymentConfig,
+    redeemRewardId,
+    requestedPickupNotBefore = null,
+  } = params;
 
   if (redeemRewardId && !userId) {
     throw new ApiHttpError(
@@ -91,6 +102,7 @@ export async function createStripeCheckoutOrderResponse(params: {
     totalMinor,
     redeemRewardId: redeemRewardId ?? null,
     consumeReward: false,
+    requestedPickupNotBefore,
   });
 
   const { successUrl, cancelUrl } = checkoutUrlsForCafe(cafeSlug);

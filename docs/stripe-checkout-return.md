@@ -11,7 +11,7 @@ Café owners **do not** configure Stripe return URLs. Ops sets one base URL on *
 ORDER_AHEAD_BASE_URL=http://localhost:5176
 
 # Production
-ORDER_AHEAD_BASE_URL=https://moonshot-order-ahead-production.up.railway.app
+ORDER_AHEAD_BASE_URL=https://moonshotorder-ahead-production.up.railway.app
 ```
 
 `checkoutUrlsForCafe(slug)` in `apps/moonshot-api/src/lib/order-checkout-env.ts` builds per-café URLs:
@@ -59,7 +59,9 @@ sequenceDiagram
 3. **Confirmation** (either path, idempotent):
    - **`checkout.session.completed`** webhook → `confirmOrderPaidFromStripeCheckout` → **`kds:order:new`** + ETA recompute.
    - **Return URL** → `GET /api/v1/orders/checkout-session/:sessionId` → `recoverOrderFromStripeCheckoutSession` retrieves the session from Stripe when still pending and confirms the same way.
-4. Order-ahead **`CheckoutRestore`** navigates to **`/orders/:id/confirmed`**.
+4. Order-ahead **`CheckoutRestore`** confirms the session, **clears the cart** (sessionStorage), then navigates to **`/orders/:id/confirmed`**.
+
+The cart is persisted in **`sessionStorage`** keyed by café slug so a Stripe cancel return to `/checkout` keeps lines; success clears it to avoid duplicate orders.
 
 KDS only lists **`confirmed` / `preparing` / `ready`**. A **`pending`** order visible on Home but missing from KDS means payment was never confirmed.
 
@@ -99,8 +101,10 @@ Requires order **`status = completed`** and signed-in **`orders.user_id`**.
 |------|------|
 | `apps/moonshot-api/src/lib/orders/checkout-session-recovery.ts` | Return-path confirm + KDS emit |
 | `apps/moonshot-api/src/lib/orders/order-checkout.ts` | `payment_sessions`, webhook confirm |
-| `apps/moonshot-order-ahead/src/pages/CheckoutRestore.tsx` | Reads `checkout_session_id` query param |
+| `apps/moonshot-order-ahead/src/pages/CheckoutRestore.tsx` | Reads `checkout_session_id`; clears cart on success |
+| `apps/moonshot-order-ahead/src/lib/cart-storage.ts` | Per-slug sessionStorage cart |
 | `apps/moonshot-order-ahead/src/config/CafeProvider.tsx` | Sync slug for `X-Cafe-Slug` |
 | `apps/moonshot-api/src/lib/cafe-membership.ts` | `ensureCafeMembership` before orders / loyalty |
+| `apps/moonshot-api/src/lib/requested-pickup.ts` | Clamp delay → `requested_pickup_not_before` |
 
 See also [current/http-surface.md](current/http-surface.md), [architecture/realtime.md](architecture/realtime.md), [dataflow-sequences.md](dataflow-sequences.md) (S4).

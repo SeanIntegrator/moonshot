@@ -12,6 +12,7 @@ import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
 import { ItemDetailSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { formatPriceTag } from '../lib/format.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCart } from '../providers/CartProvider.js';
@@ -56,11 +57,18 @@ export function ItemDetail() {
   const { menuItemId = '' } = useParams();
   const navigate = useNavigate();
   const cafePath = useCafePath();
+  const { orderAheadEnabled } = useCafeFeatures();
   const { upsertLine } = useCart();
   const { menu, loading, error } = useMenu();
   const [quantity, setQuantity] = useState(1);
   const [sizeId, setSizeId] = useState<string | null>(null);
   const [modifiers, setModifiers] = useState<OrderLineModifierSelectionInput[]>([]);
+
+  useEffect(() => {
+    if (!orderAheadEnabled) {
+      navigate(cafePath('/'), { replace: true });
+    }
+  }, [orderAheadEnabled, navigate, cafePath]);
 
   const item = useMemo(() => {
     if (!menu || !menuItemId.trim()) return null;

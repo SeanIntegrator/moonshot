@@ -11,6 +11,8 @@ export type ParsedCreateOrderBody = {
   orderType: OrderType;
   items: CreateOrderLineInput[];
   redeemRewardId: string | null;
+  /** Omitted / null when client did not send a delay (ASAP). */
+  pickupDelayMinutes: number | null;
 };
 
 export function parseOrderAheadPaymentMode(
@@ -96,6 +98,17 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
       ? body.redeemRewardId.trim()
       : null;
 
+  let pickupDelayMinutes: number | null = null;
+  if (body.pickupDelayMinutes !== undefined && body.pickupDelayMinutes !== null) {
+    if (typeof body.pickupDelayMinutes !== 'number' || !Number.isInteger(body.pickupDelayMinutes)) {
+      return { ok: false, error: 'pickupDelayMinutes must be an integer' };
+    }
+    if (body.pickupDelayMinutes < 0) {
+      return { ok: false, error: 'pickupDelayMinutes must be non-negative' };
+    }
+    pickupDelayMinutes = body.pickupDelayMinutes;
+  }
+
   if (!ORDER_TYPES.includes(orderType)) {
     return { ok: false, error: 'orderType must be takeaway or eat_in' };
   }
@@ -129,9 +142,18 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
       return { ok: false, error: allergensParsed.error };
     }
 
+    const sizeRaw = row.sizeId;
+    const sizeId =
+      typeof sizeRaw === 'string' && sizeRaw.trim()
+        ? sizeRaw.trim()
+        : sizeRaw === null
+          ? null
+          : undefined;
+
     items.push({
       menuItemId: typeof row.menuItemId === 'string' ? row.menuItemId : '',
       quantity: typeof row.quantity === 'number' ? row.quantity : NaN,
+      sizeId,
       modifiers,
       notes:
         typeof row.notes === 'string'
@@ -145,6 +167,6 @@ export function parseCreateOrderBody(body: Record<string, unknown>):
 
   return {
     ok: true,
-    value: { customerName, notes, orderType, items, redeemRewardId },
+    value: { customerName, notes, orderType, items, redeemRewardId, pickupDelayMinutes },
   };
 }

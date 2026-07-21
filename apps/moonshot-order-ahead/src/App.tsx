@@ -6,6 +6,7 @@ import { BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
 import { useCafePath } from './hooks/useCafePath.js';
+import { useCafeFeatures } from './hooks/useCafeFeatures.js';
 import { Checkout } from './pages/Checkout.js';
 import { CheckoutRestore } from './pages/CheckoutRestore.js';
 import { Home } from './pages/Home.js';
@@ -35,6 +36,7 @@ export function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const cafePath = useCafePath();
+  const { orderAheadEnabled, loyaltyEnabled } = useCafeFeatures();
   const navValue = pathToNavValue(location.pathname);
 
   const hideNav =
@@ -79,14 +81,28 @@ export function App() {
             value={navValue}
             onChange={(_, v) => {
               if (v === 0) navigate(cafePath('/'));
-              else if (v === 1) navigate(cafePath('/order'));
-              else if (v === 2) navigate(cafePath('/rewards'));
-              else navigate(cafePath('/profile'));
+              else if (v === 1) {
+                if (!orderAheadEnabled) return;
+                navigate(cafePath('/order'));
+              } else if (v === 2) {
+                if (!loyaltyEnabled) return;
+                navigate(cafePath('/rewards'));
+              } else navigate(cafePath('/profile'));
             }}
           >
             <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
-            <BottomNavigationAction label="Order" icon={<LocalCafeOutlinedIcon />} />
-            <BottomNavigationAction label="Rewards" icon={<CardGiftcardOutlinedIcon />} />
+            <BottomNavigationAction
+              label="Order"
+              icon={<LocalCafeOutlinedIcon />}
+              disabled={!orderAheadEnabled}
+              sx={{ opacity: orderAheadEnabled ? 1 : 0.4 }}
+            />
+            <BottomNavigationAction
+              label="Rewards"
+              icon={<CardGiftcardOutlinedIcon />}
+              disabled={!loyaltyEnabled}
+              sx={{ opacity: loyaltyEnabled ? 1 : 0.4 }}
+            />
             <BottomNavigationAction label="You" icon={<PersonOutlinedIcon />} />
           </BottomNavigation>
         </Paper>

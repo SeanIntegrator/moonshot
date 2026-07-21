@@ -3,22 +3,22 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import type { PickupDelayMinutes } from '../components/PickupTimeChip.js';
+import type { PickupDelayMinutes } from '../lib/pickup-delay-options.js';
+import { useCafeSlugFromRoute } from '../hooks/useCafePath.js';
+import {
+  asPickupDelayMinutes,
+  clearCartStorage,
+  readCartFromStorage,
+  writeCartToStorage,
+  type StoredCartLine,
+} from '../lib/cart-storage.js';
 
-export type CartLine = {
-  /** Stable merge key */
-  key: string;
-  menuItemId: string;
-  /** Set when the menu item has sizes */
-  sizeId: string | null;
-  quantity: number;
-  modifiers: OrderLineModifierSelectionInput[];
-  allergens: string[];
-};
+export type CartLine = StoredCartLine;
 
 function modifierKey(modifiers: OrderLineModifierSelectionInput[]): string {
   if (modifiers.length === 0) return '';
@@ -61,8 +61,19 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [lines, setLines] = useState<CartLine[]>([]);
-  const [pickupDelayMinutes, setPickupDelayMinutes] = useState<PickupDelayMinutes>(0);
+  const cafeSlug = useCafeSlugFromRoute();
+  const [lines, setLines] = useState<CartLine[]>(() => readCartFromStorage(cafeSlug).lines);
+  const [pickupDelayMinutes, setPickupDelayMinutesState] = useState<PickupDelayMinutes>(() =>
+    asPickupDelayMinutes(readCartFromStorage(cafeSlug).pickupDelayMinutes),
+  );
+
+  useEffect(() => {
+    writeCartToStorage(cafeSlug, { lines, pickupDelayMinutes });
+  }, [cafeSlug, lines, pickupDelayMinutes]);
+
+  const setPickupDelayMinutes = useCallback((minutes: PickupDelayMinutes) => {
+    setPickupDelayMinutesState(minutes);
+  }, []);
 
   const bumpSimpleQuantity = useCallback((menuItemId: string, delta: number) => {
     const key = cartLineKey(menuItemId, [], null);
@@ -119,7 +130,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setLines((prev) => prev.filter((l) => l.key !== key));
   }, []);
 
-  const clear = useCallback(() => setLines([]), []);
+  const clear = useCallback(() => {
+    setLines([]);
+    setPickupDelayMinutesState(0);
+    clearCartStorage(cafeSlug);
+  }, [cafeSlug]);
 
   const value = useMemo(
     () => ({
@@ -131,7 +146,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeLine,
       clear,
     }),
-    [lines, pickupDelayMinutes, bumpSimpleQuantity, upsertLine, removeLine, clear],
+    [
+      lines,
+      pickupDelayMinutes,
+      setPickupDelayMinutes,
+      bumpSimpleQuantity,
+      upsertLine,
+      removeLine,
+      clear,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

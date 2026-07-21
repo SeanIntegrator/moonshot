@@ -219,6 +219,7 @@ Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store and Stripe 
 | payment_status       | TEXT        | unpaid, paid, refunded, … |
 | quoted_pickup_time   | TIMESTAMPTZ | what we promised at checkout / last ETA quote |
 | pickup_time          | TIMESTAMPTZ | **live** ETA (auto-updated) |
+| requested_pickup_not_before | TIMESTAMPTZ | optional customer delay floor (`pickupDelayMinutes`) |
 | completed_at         | TIMESTAMPTZ | set when KDS / flow completes |
 | edit_token           | UUID        | secret for `PATCH` merge flow |
 | parent_order_id      | UUID        | FK → orders nullable; **audit trail** for add-on checkouts linked to same basket |

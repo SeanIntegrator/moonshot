@@ -129,6 +129,11 @@ export interface CreateOrderRequest {
   items: CreateOrderLineInput[];
   /** Signed-in only: unredeemed loyalty reward to apply as a free-drink discount */
   redeemRewardId?: string | null;
+  /**
+   * Minutes from now until the customer wants pickup (0 / omitted = ASAP / FIFO only).
+   * Server clamps to café `order_ahead.maxPickupMinutes` and stores a not-before floor.
+   */
+  pickupDelayMinutes?: number;
 }
 
 export interface CreateOrderResponse {

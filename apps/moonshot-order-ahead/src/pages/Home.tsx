@@ -14,6 +14,7 @@ import { QrModal } from '../components/QrModal.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { HomePageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
@@ -27,6 +28,7 @@ import { useMenu } from '../providers/MenuProvider.js';
 
 export function Home() {
   const { loading, error, cafe } = useCafe();
+  const { orderAheadEnabled, loyaltyEnabled } = useCafeFeatures();
   const { user, membership, isSignedIn } = useAuth();
   const { summary, refresh: refreshLoyalty } = useLoyalty();
   const { active, recent } = useActiveOrders();
@@ -48,15 +50,15 @@ export function Home() {
   }, [navigate, cafePath]);
 
   useEffect(() => {
-    if (isSignedIn) void refreshLoyalty();
-  }, [location.pathname, isSignedIn, refreshLoyalty]);
+    if (isSignedIn && loyaltyEnabled) void refreshLoyalty();
+  }, [location.pathname, isSignedIn, loyaltyEnabled, refreshLoyalty]);
 
   const usualOrder = recent[0] ?? null;
   const featured = useMemo(() => (menu ? featuredItems(menu) : []), [menu]);
   const activeOrder = active[0] ?? null;
   const greeting = timeGreeting();
   const name = isSignedIn ? firstName(user?.displayName, user?.email) : 'there';
-  const canShowLiveLoyalty = isSignedIn && summary?.loyaltyEnabled && membership;
+  const canShowLiveLoyalty = isSignedIn && loyaltyEnabled && summary?.loyaltyEnabled && membership;
 
   if (loading) {
     return <HomePageSkeleton />;
@@ -111,19 +113,23 @@ export function Home() {
             rewardsAvailable={summary.rewardsAvailable}
             onShowQr={() => setQrOpen(true)}
           />
-        ) : (
+        ) : loyaltyEnabled ? (
           <LoyaltyStampCard variant="hero" filled={0} total={10} />
-        )}
+        ) : null}
 
         {activeOrder ? (
           <CurrentOrderCard order={activeOrder} />
-        ) : (
+        ) : orderAheadEnabled ? (
           <OrderNowButton onClick={() => navigate(cafePath('/order'))} />
+        ) : (
+          <Typography variant="body2" sx={{ mt: 2, opacity: 0.85 }}>
+            Online ordering is not available for this café right now.
+          </Typography>
         )}
       </Box>
 
       <Box sx={{ px: 2, pt: 2 }}>
-        {usualOrder && (
+        {usualOrder && orderAheadEnabled && (
           <Box sx={{ mb: 3 }}>
             <SectionHead title="Your usual" />
             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
@@ -165,7 +171,9 @@ export function Home() {
                 </Box>
                 <Button
                   variant="contained"
+                  disabled={!orderAheadEnabled}
                   onClick={() => {
+                    if (!orderAheadEnabled) return;
                     reorderFromOrder(usualOrder, upsertLine);
                     navigate(cafePath('/checkout'));
                   }}
@@ -178,7 +186,7 @@ export function Home() {
           </Box>
         )}
 
-        {featured.length > 0 && (
+        {featured.length > 0 && orderAheadEnabled && (
           <Box sx={{ mb: 2, minHeight: 200 }}>
             <SectionHead
               eyebrow="Featured"

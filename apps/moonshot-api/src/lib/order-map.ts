@@ -24,6 +24,7 @@ export type OrderRowDb = {
   payment_status: string;
   quoted_pickup_time: Date | string | null;
   pickup_time: Date | string | null;
+  requested_pickup_not_before?: Date | string | null;
   completed_at: Date | string | null;
   edit_token: string | null;
   parent_order_id: string | null;

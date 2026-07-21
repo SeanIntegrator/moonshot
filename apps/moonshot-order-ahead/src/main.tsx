@@ -10,15 +10,18 @@ import { ActiveOrdersProvider } from './providers/ActiveOrdersProvider.js';
 import { CartProvider } from './providers/CartProvider.js';
 import { App } from './App.js';
 import { AppErrorBoundary } from './components/AppErrorBoundary.js';
+import { useCafeSlugFromRoute } from './hooks/useCafePath.js';
 import './index.css';
 
 function CafeAppTree() {
+  const cafeSlug = useCafeSlugFromRoute();
   return (
     <CafeProvider>
       <AuthProvider>
         <LoyaltyProvider>
           <MenuProvider>
-            <CartProvider>
+            {/* Remount cart when café slug changes so sessionStorage keys never cross tenants */}
+            <CartProvider key={cafeSlug}>
               <ActiveOrdersProvider>
                 <App />
               </ActiveOrdersProvider>

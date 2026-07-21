@@ -12,6 +12,8 @@ import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { fetchPickupEstimate } from '../api/orders-api.js';
 import { unitPriceForItem } from '../lib/menu-price-utils.js';
+import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
+import { useCafePath } from '../hooks/useCafePath.js';
 
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
   const hit = lines.find(
@@ -31,6 +33,8 @@ type MenuLocationState = {
 export function Menu() {
   const navigate = useNavigate();
   const location = useLocation();
+  const cafePath = useCafePath();
+  const { orderAheadEnabled, pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
   const locationState = location.state as MenuLocationState | null;
   const { menu, loading, error } = useMenu();
   const [activeCategory, setActiveCategory] = useState<MenuCategory>('hot_drinks');
@@ -39,6 +43,12 @@ export function Menu() {
   const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
   const categoryInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!orderAheadEnabled) {
+      navigate(cafePath('/'), { replace: true });
+    }
+  }, [orderAheadEnabled, navigate, cafePath]);
 
   useEffect(() => {
     if (!locationState?.addedItemName) return;
@@ -99,11 +109,14 @@ export function Menu() {
         <Typography variant="h5" component="h1" fontWeight={700} sx={{ mt: 0 }}>
           Order
         </Typography>
-        <PickupTimeChip
-          estimate={estimate}
-          value={pickupDelayMinutes}
-          onChange={setPickupDelayMinutes}
-        />
+        {pickupTimeEnabled && (
+          <PickupTimeChip
+            estimate={estimate}
+            value={pickupDelayMinutes}
+            onChange={setPickupDelayMinutes}
+            maxPickupMinutes={maxPickupMinutes}
+          />
+        )}
       </Box>
 
       {sections.length > 0 && (

@@ -43,6 +43,7 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 - Review prompt: third **on-time** completed app order may emit **`customerReviewEligible`** when review nudge is enabled.
 - New memberships get a **6-digit numeric `loyalty_display_id`** per café (migration 010); existing hex IDs are preserved.
 - New self-service cafés provision with **loyalty enabled by default** (10 stamps, free drink).
+- **Pickup delay:** `POST /orders` accepts **`pickupDelayMinutes`**; stored as **`orders.requested_pickup_not_before`**; live ETA = max(FIFO, not-before).
 
 ### Backend refactor (Pass A + B, May 2026)
 
@@ -81,11 +82,12 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). A
 ## Known snags
 
 1. **Seed cafés default to `stripe`** — `POST /orders` fails with *payments not ready* until Stripe onboarding completes; switch to **`pay_in_store`** in admin for local pay-in-store-only dev (or complete Connect — sync auto-switches provider).
-2. **Order-ahead UI is routing-complete for production shells** — Home / Order / Checkout / Order detail / Rewards / Profile with **`CartProvider`**, **`ActiveOrdersProvider`**, **`LoyaltyProvider`**, and **`src/api/*`** wrappers; polish is ongoing.
+2. **Order-ahead UI is routing-complete for production shells** — Home / Order / Checkout / Order detail / Rewards / Profile with **`CartProvider`** (sessionStorage), **`ActiveOrdersProvider`**, **`LoyaltyProvider`**, feature gating, and **`src/api/*`** wrappers; polish is ongoing.
 3. **Stripe refunds on cancel** — customer cancel updates **`orders.status`** only; **`refundPending: true`** signals paid orders until Stripe refund work ships.
 4. **Stripe incremental / merge checkout (F3)** — not implemented; only initial **Checkout Session** per order.
-5. **Admin** — still no invite flow or full menu create/delete UI; Stripe card is minimal.
+5. **Admin** — still no invite flow or café theme editor; Stripe card is minimal; menu CRUD exists.
 6. **Bootstrap uses sync scrypt** — fine for CLI only.
+7. **Home open hours** — still hardcoded “open”; no hours API yet.
 
 ---
 
