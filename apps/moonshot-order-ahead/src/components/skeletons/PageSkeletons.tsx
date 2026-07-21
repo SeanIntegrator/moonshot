@@ -71,7 +71,7 @@ export function HomePageSkeleton() {
 export function ItemDetailSkeleton() {
   return (
     <Box sx={{ pb: 14, minHeight: '100dvh' }}>
-      <Skeleton variant="rectangular" height={190} />
+      <Skeleton variant="rectangular" height={220} />
       <Container maxWidth="sm" sx={{ py: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
           <Skeleton variant="text" width="55%" height={36} />

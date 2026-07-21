@@ -1,7 +1,9 @@
 import type { NormalisedMenuItem } from '@moonshot/types';
-import { Box, Typography } from '@mui/material';
+import { Box, Skeleton, Typography } from '@mui/material';
+import { useCallback, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { formatFromPrice, formatPriceTag } from '../lib/format.js';
+import { isMenuImageReady } from '../lib/menu-image-cache.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { MenuItemImage } from './MenuItemImage.js';
@@ -18,6 +20,8 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
   const priceLabel = hasSizes
     ? formatFromPrice(listMinor, item.currency)
     : formatPriceTag(listMinor, item.currency);
+  const [imageReady, setImageReady] = useState(() => isMenuImageReady(item.imageUrl));
+  const handleReady = useCallback((ready: boolean) => setImageReady(ready), []);
 
   return (
     <Box sx={{ position: 'relative' }}>
@@ -35,6 +39,7 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           overflow: 'hidden',
           bgcolor: 'background.paper',
           WebkitTapHighlightColor: 'transparent',
+          position: 'relative',
         }}
       >
         <MenuItemImage
@@ -42,7 +47,9 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           alt={item.name}
           aspectRatio="1"
           borderRadius={0}
-          loading="lazy"
+          loading="eager"
+          objectFit="cover"
+          onReadyChange={handleReady}
         />
         <Box sx={{ p: 1.25, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 0.5 }}>
           <Typography variant="body2" fontWeight={600} sx={{ minWidth: 0 }}>
@@ -54,6 +61,26 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
             </Typography>
           ) : null}
         </Box>
+
+        {/* Full-card skeleton until the thumbnail has decoded — avoids empty image → pop-in. */}
+        {!imageReady && (
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              bgcolor: 'background.paper',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Skeleton variant="rectangular" animation="wave" sx={{ aspectRatio: '1', width: '100%', flexShrink: 0 }} />
+            <Box sx={{ p: 1.25, display: 'flex', justifyContent: 'space-between', gap: 0.5 }}>
+              <Skeleton variant="text" animation="wave" width="60%" height={20} />
+              <Skeleton variant="text" animation="wave" width={40} height={16} />
+            </Box>
+          </Box>
+        )}
       </Box>
       <Box
         aria-hidden={qty === 0}
@@ -71,10 +98,11 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           justifyContent: 'center',
           fontSize: 13,
           fontWeight: 700,
-          opacity: qty > 0 ? 1 : 0,
-          transform: qty > 0 ? 'scale(1)' : 'scale(0.6)',
+          opacity: qty > 0 && imageReady ? 1 : 0,
+          transform: qty > 0 && imageReady ? 'scale(1)' : 'scale(0.6)',
           transition: 'opacity 180ms ease, transform 180ms ease, background-color 180ms ease',
           pointerEvents: 'none',
+          zIndex: 1,
         }}
       >
         {qty > 0 ? qty : null}

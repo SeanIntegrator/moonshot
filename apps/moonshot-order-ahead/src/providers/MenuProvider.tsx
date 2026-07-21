@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { useCafeSlugFromRoute } from '../hooks/useCafePath.js';
 import { apiFetch } from '../lib/api.js';
+import { prefetchMenuImages } from '../lib/menu-image-cache.js';
 
 type MenuContextValue = {
   menu: NormalisedMenu | null;
@@ -48,6 +49,8 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         try {
           const data = await apiFetch<NormalisedMenu>('/menu');
           if (slugRef.current === targetSlug) {
+            // Warm HTTP cache before menu cards mount so thumbs don't pop in late.
+            prefetchMenuImages(data.items.map((item) => item.imageUrl));
             setMenu(data);
             setError(null);
           }

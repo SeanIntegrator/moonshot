@@ -117,10 +117,11 @@ export function ItemDetail() {
         <MenuItemImage
           src={item.imageUrl}
           alt={item.name}
-          height={190}
+          height={220}
           borderRadius={0}
           loading="eager"
           fetchPriority="high"
+          objectFit="cover"
         />
         <IconButton
           onClick={() => navigate(cafePath('/order'))}
