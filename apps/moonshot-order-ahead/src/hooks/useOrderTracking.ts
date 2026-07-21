@@ -99,6 +99,10 @@ export function useOrderTracking(
         // Reload so order.status / payment fields match the socket completion.
         onSyncNeededRef.current?.();
       }
+      if (ev.type === 'customerOrderStatusUpdated' && ev.orderId === orderId) {
+        setLiveOrderStatus(ev.status);
+        onSyncNeededRef.current?.();
+      }
       if (ev.type === 'customerEtaUpdated') {
         const u = ev.updates.find((x) => x.orderId === orderId);
         if (u) setLastPickupTime(u.pickupTime);

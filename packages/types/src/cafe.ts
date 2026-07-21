@@ -116,8 +116,8 @@ export interface MilkColorConfig {
 }
 
 /**
- * Planned: KDS milk colour chips + bean badges — stored on cafés.kds_config today;
- * board rendering still uses NormalisedOrder directly (no KdsPrep view model yet).
+ * KDS milk colour chips + bean badges — stored on cafés.kds_config;
+ * board UI derives KdsPrep client-side via deriveLinePrep (see packages/types/kds.ts).
  */
 export interface BeanBadgeStyle {
   label: string;

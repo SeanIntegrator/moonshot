@@ -25,7 +25,7 @@ Each item has a short repro. Fix outside M1 unless marked launch-blocker.
 |------|-------|-------|
 | Menu item images null / placeholder | Template menu without synced images | Menu image pipeline docs |
 | Paid cancel → `refundPending` only | Cancel a paid Stripe order | Post-launch Stripe refunds |
-| Stepper Preparing / Ready aspirational | Tracker jumps Confirmed → Done | M2 preparing/ready KDS states |
+| Stepper Preparing / Ready aspirational | Tracker jumps Confirmed → Done until KDS UI calls status API | M2 API ready; board buttons in UI plan |
 | Occasional loyalty miss after KDS Done | Complete succeeds; stamps missing | M4 harden + `pnpm replay:order-loyalty` |
 
 ## How to use

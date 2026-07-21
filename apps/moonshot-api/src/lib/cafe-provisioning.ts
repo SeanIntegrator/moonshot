@@ -43,7 +43,10 @@ export function defaultNewCafeKdsConfig(): Omit<KdsConfig, 'cafeId'> {
       guest: { label: 'Gu', bg: '#1a4d3a', text: '#fff' },
       custom: [],
     },
-    modifierClassification: { coffeeModifiers: [], additions: [] },
+    modifierClassification: {
+      coffeeModifiers: ['Milks', 'Milk'],
+      additions: ['Syrups', 'Extras'],
+    },
     timerThresholds: { greenMax: 3, amberMax: 5 },
     layout: { columns: 3, groupBy: 'order_type' },
     audio: { newOrderSound: null, volume: 80 },

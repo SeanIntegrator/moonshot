@@ -10,6 +10,7 @@ type OpenOrderQtyRow = {
   id: string;
   items_qty: string;
   requested_pickup_not_before: Date | string | null;
+  eta_mode: string;
 };
 
 /**
@@ -19,6 +20,8 @@ type OpenOrderQtyRow = {
  * base FIFO minutes = basePrep + perItem × (sum of quantities in orders ahead).
  * Live ETA = max(FIFO ms, requested_pickup_not_before) so a customer delay
  * ("not before 30 min") is never overwritten by a shorter queue estimate.
+ * Orders with `eta_mode = manual_override` keep their barista-stretched
+ * pickup_time and are skipped for writes (still count toward queue depth).
  * `quoted_pickup_time` is set only on first assignment; `pickup_time` always
  * reflects the live estimate and is broadcast to KDS + customer sockets.
  */
@@ -33,11 +36,12 @@ export async function recomputePickupEtasForCafe(params: {
   const ordersRes = await db.query<OpenOrderQtyRow>(
     `SELECT o.id,
             o.requested_pickup_not_before,
+            o.eta_mode,
             COALESCE(SUM(oi.quantity), 0)::text AS items_qty
      FROM orders o
      LEFT JOIN order_items oi ON oi.order_id = o.id
      WHERE o.cafe_id = $1 AND o.status = ANY($2::text[])
-     GROUP BY o.id, o.created_at, o.requested_pickup_not_before
+     GROUP BY o.id, o.created_at, o.requested_pickup_not_before, o.eta_mode
      ORDER BY o.created_at ASC`,
     [cafeId, [...KDS_OPEN_ORDER_STATUSES]],
   );
@@ -48,6 +52,11 @@ export async function recomputePickupEtasForCafe(params: {
 
   for (const row of ordersRes.rows) {
     const qtyAhead = cumulativeQty;
+    cumulativeQty += Number.parseInt(row.items_qty || '0', 10) || 0;
+
+    // Barista stretch wins until complete — still occupies queue depth above.
+    if (row.eta_mode === 'manual_override') continue;
+
     const minutes = base + perItem * qtyAhead;
     const fifoMs = now + minutes * 60_000;
     const notBeforeRaw = row.requested_pickup_not_before;
@@ -63,7 +72,6 @@ export async function recomputePickupEtasForCafe(params: {
     );
     const pickupIso = new Date(pickupMs).toISOString();
     updates.push({ orderId: row.id, pickupIso });
-    cumulativeQty += Number.parseInt(row.items_qty || '0', 10) || 0;
   }
 
   if (updates.length === 0) return;
@@ -74,7 +82,7 @@ export async function recomputePickupEtasForCafe(params: {
        SET pickup_time = $1::timestamptz,
            quoted_pickup_time = COALESCE(quoted_pickup_time, $1::timestamptz),
            updated_at = NOW()
-       WHERE id = $2 AND cafe_id = $3`,
+       WHERE id = $2 AND cafe_id = $3 AND eta_mode = 'auto'`,
       [u.pickupIso, u.orderId, cafeId],
     );
   }

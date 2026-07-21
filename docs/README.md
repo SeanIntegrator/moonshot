@@ -13,6 +13,7 @@ Start here when onboarding or verifying behaviour against production.
 ## Quick links
 
 - [Realtime / Socket auth](architecture/realtime.md) — `/kds` vs `/customer`, JWT rules
+- [KDS board contracts](architecture/kds-board.md) — chips, status machine, ETA stretch (UI deferred)
 - [Current flows](current/flows.md) — shipped vs planned sequences
 - [Stripe checkout return](stripe-checkout-return.md) — `ORDER_AHEAD_BASE_URL`, recovery endpoint
 - [M1 bug triage](bugs/m1-triage.md) — discrete cards for remaining UI glitches

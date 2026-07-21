@@ -84,12 +84,17 @@ sequenceDiagram
 
 `POST /kds/orders/:id/complete` → mark completed → emit KDS removed + customer completed → loyalty ledger (idempotent) → optional `customerReviewEligible` after 3 on-time app orders.
 
-Auth details — [architecture/realtime.md](../architecture/realtime.md).
+`POST /kds/orders/:id/status` `{ status: preparing|ready }` → emit `kds:order:updated` + `customerOrderStatusUpdated`.
+
+`POST /kds/orders/:id/eta` `{ pickupTime }` → `eta_mode=manual_override`; FIFO skips those rows; emit ETA sockets.
+
+`GET /kds/config` → café `kdsConfig` for the board UI plan.
+
+Auth details — [architecture/realtime.md](../architecture/realtime.md). Prep contracts — [architecture/kds-board.md](../architecture/kds-board.md).
 
 ## Planned
 
 - POS webhooks / Square (etc.) ingress beyond the manual adapter — [pos-normalisation.md](../pos-normalisation.md)
 - Stripe incremental checkout / order merge (F3) and refunds on cancel
-- Explicit KDS **`preparing` / `ready`** transitions for a richer customer stepper
 - Feedback HTTP API + order-ahead review drawer (Phase B) — [feedback-prompt-flow.md](../feedback-prompt-flow.md)
-- KDS milk-colour / chip prep view models (config stored; board still shows `NormalisedOrder`)
+- KDS board UI (row layout / chips / allergy / timers) — API contracts ready; see [architecture/kds-board.md](../architecture/kds-board.md)

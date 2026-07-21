@@ -2,14 +2,22 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import {
   ApiErrorCode,
+  type KdsAdvanceStatusResponse,
   type KdsCompleteOrderResponse,
+  type KdsConfigResponse,
   type KdsLoginResponse,
   type KdsOrdersResponse,
+  type KdsStretchEtaResponse,
 } from '@moonshot/types';
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { findKdsUserForLogin, touchKdsUserLogin } from '../lib/kds-users-repository.js';
-import { completeOrderForKds, listOpenOrdersForKds } from '../lib/orders/order-kds.js';
+import {
+  advanceOrderStatusForKds,
+  completeOrderForKds,
+  listOpenOrdersForKds,
+  stretchOrderEtaForKds,
+} from '../lib/orders/order-kds.js';
 import { applyLoyaltyAfterKdsComplete } from '../lib/loyalty-after-kds-complete.js';
 import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
@@ -75,6 +83,86 @@ kdsRouter.get('/orders', requireKdsAuth, async (req, res) => {
   const cafeId = req.kdsUser!.cafeId;
   const orders = await listOpenOrdersForKds(cafeId);
   const data: KdsOrdersResponse = { orders };
+  return res.json({ ok: true, data });
+});
+
+kdsRouter.get('/config', requireKdsAuth, async (req, res) => {
+  const cafeId = req.kdsUser!.cafeId;
+  const cafe = await findCafeById(cafeId);
+  if (!cafe) {
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Café not found');
+  }
+  return res.json({
+    ok: true,
+    data: { kdsConfig: cafe.kdsConfig } satisfies KdsConfigResponse,
+  });
+});
+
+kdsRouter.post('/orders/:orderId/status', requireKdsAuth, async (req, res) => {
+  const cafeId = req.kdsUser!.cafeId;
+  const orderId = typeof req.params.orderId === 'string' ? req.params.orderId : '';
+  const body = req.body as Record<string, unknown>;
+  const nextStatus = body.status;
+
+  if (!orderId.trim()) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'orderId is required');
+  }
+  if (nextStatus !== 'preparing' && nextStatus !== 'ready') {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'status must be preparing or ready');
+  }
+
+  const order = await advanceOrderStatusForKds(orderId, cafeId, nextStatus);
+  if (!order) {
+    throw new ApiHttpError(
+      404,
+      ApiErrorCode.NOT_FOUND,
+      'Order not found or status transition not allowed',
+    );
+  }
+
+  emitKdsServerToClient(cafeId, { type: 'kds:order:updated', order });
+  emitCustomerServerToClient(orderId, {
+    type: 'customerOrderStatusUpdated',
+    orderId,
+    cafeId,
+    status: order.status,
+  });
+
+  const data: KdsAdvanceStatusResponse = { order };
+  return res.json({ ok: true, data });
+});
+
+kdsRouter.post('/orders/:orderId/eta', requireKdsAuth, async (req, res) => {
+  const cafeId = req.kdsUser!.cafeId;
+  const orderId = typeof req.params.orderId === 'string' ? req.params.orderId : '';
+  const body = req.body as Record<string, unknown>;
+  const pickupTime = typeof body.pickupTime === 'string' ? body.pickupTime.trim() : '';
+
+  if (!orderId.trim()) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'orderId is required');
+  }
+  if (!pickupTime || !Number.isFinite(Date.parse(pickupTime))) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'pickupTime must be a valid ISO datetime');
+  }
+
+  const order = await stretchOrderEtaForKds(orderId, cafeId, pickupTime);
+  if (!order) {
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found or not open');
+  }
+
+  const pickupIso = order.pickup.pickupTime;
+  if (pickupIso) {
+    emitKdsServerToClient(cafeId, {
+      type: 'kds:eta:updated',
+      updates: [{ orderId, pickupTime: pickupIso }],
+    });
+    emitCustomerServerToClient(orderId, {
+      type: 'customerEtaUpdated',
+      updates: [{ orderId, pickupTime: pickupIso }],
+    });
+  }
+
+  const data: KdsStretchEtaResponse = { order };
   return res.json({ ok: true, data });
 });
 

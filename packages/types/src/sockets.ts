@@ -2,7 +2,7 @@
  * Socket.io event contracts — server ↔ client payloads per namespace.
  */
 
-import type { IsoDateTime, NormalisedOrder } from './order.js';
+import type { IsoDateTime, NormalisedOrder, OrderStatus } from './order.js';
 
 // --- KDS room: server → client ---
 
@@ -45,6 +45,12 @@ export type CustomerServerToClientEvent =
       cafeId: string;
       completedAt: IsoDateTime;
       userId: string | null;
+    }
+  | {
+      type: 'customerOrderStatusUpdated';
+      orderId: string;
+      cafeId: string;
+      status: OrderStatus;
     }
   | {
       type: 'customerEtaUpdated';

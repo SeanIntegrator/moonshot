@@ -1,4 +1,5 @@
 import type {
+  EtaMode,
   NormalisedOrder,
   NormalisedOrderItem,
   NormalisedOrderLineModifier,
@@ -29,6 +30,7 @@ export type OrderRowDb = {
   edit_token: string | null;
   parent_order_id: string | null;
   stripe_checkout_session_id: string | null;
+  eta_mode?: string | null;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -66,6 +68,9 @@ function parseModifiers(raw: unknown): NormalisedOrderLineModifier[] {
         optionName: typeof o.optionName === 'string' ? o.optionName : '',
         priceMinor: typeof o.priceMinor === 'number' ? o.priceMinor : 0,
         posOptionId: typeof o.posOptionId === 'string' ? o.posOptionId : null,
+        colorHex: typeof o.colorHex === 'string' ? o.colorHex : null,
+        chipLabel: typeof o.chipLabel === 'string' ? o.chipLabel : null,
+        isSize: o.isSize === true,
       });
       continue;
     }
@@ -78,6 +83,9 @@ function parseModifiers(raw: unknown): NormalisedOrderLineModifier[] {
         optionName: o.name,
         priceMinor: typeof o.priceMinor === 'number' ? o.priceMinor : 0,
         posOptionId: typeof o.posOptionId === 'string' ? o.posOptionId : null,
+        colorHex: typeof o.colorHex === 'string' ? o.colorHex : null,
+        chipLabel: typeof o.chipLabel === 'string' ? o.chipLabel : null,
+        isSize: o.isSize === true,
       });
     }
   }
@@ -85,11 +93,12 @@ function parseModifiers(raw: unknown): NormalisedOrderLineModifier[] {
 }
 
 export function mapPickupWindow(row: OrderRowDb): PickupWindow {
+  const mode = row.eta_mode === 'manual_override' ? 'manual_override' : 'auto';
   return {
     quotedPickupTime: toIso(row.quoted_pickup_time),
     pickupTime: toIso(row.pickup_time),
     completedAt: toIso(row.completed_at),
-    etaMode: 'auto',
+    etaMode: mode as EtaMode,
   };
 }
 

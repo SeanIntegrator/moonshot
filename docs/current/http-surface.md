@@ -60,6 +60,9 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
 - **KDS**
   - `POST /api/v1/kds/auth/login`
   - `GET /api/v1/kds/orders`
+  - `GET /api/v1/kds/config`
+  - `POST /api/v1/kds/orders/:orderId/status`
+  - `POST /api/v1/kds/orders/:orderId/eta`
   - `POST /api/v1/kds/orders/:orderId/complete`
 
 ## CORS & Socket.io origin allowlist

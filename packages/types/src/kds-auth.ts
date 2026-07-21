@@ -3,6 +3,7 @@
  */
 
 import type { NormalisedOrder } from './order.js';
+import type { KdsConfig } from './cafe.js';
 
 /** JWT payload for KDS sessions (distinct from Google customer JWT). */
 export interface KdsJwtClaims {
@@ -33,5 +34,26 @@ export interface KdsOrdersResponse {
 }
 
 export interface KdsCompleteOrderResponse {
+  order: NormalisedOrder;
+}
+
+export interface KdsConfigResponse {
+  kdsConfig: KdsConfig;
+}
+
+export interface KdsAdvanceStatusRequest {
+  status: 'preparing' | 'ready';
+}
+
+export interface KdsAdvanceStatusResponse {
+  order: NormalisedOrder;
+}
+
+export interface KdsStretchEtaRequest {
+  /** ISO pickup time the barista set */
+  pickupTime: string;
+}
+
+export interface KdsStretchEtaResponse {
   order: NormalisedOrder;
 }
