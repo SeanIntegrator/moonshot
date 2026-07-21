@@ -1,4 +1,5 @@
 import type { BaseThemeId, CafeFeatures, CafeTheme, KdsConfig, RequestCafeContext } from '@moonshot/types';
+import type { CafeHours } from '@moonshot/types';
 
 /** `cafes` row mapped to API-facing camelCase + request context */
 export interface ResolvedCafe extends RequestCafeContext {
@@ -12,5 +13,6 @@ export interface ResolvedCafe extends RequestCafeContext {
   themeOverrides: Partial<CafeTheme>;
   kdsConfig: KdsConfig;
   timezone: string;
+  hours: CafeHours;
   ownerFeedbackEmail: string | null;
 }

@@ -12,7 +12,7 @@ type Executor = Pool | PoolClient;
  */
 export const CAFE_COLUMNS = `
   id, name, slug, pos_provider, pos_config, payment_provider, payment_config,
-  features, theme_id, theme_overrides, kds_config, timezone, owner_feedback_email
+  features, theme_id, theme_overrides, kds_config, timezone, hours, owner_feedback_email
 `;
 
 type CafeRowRaw = {
@@ -28,6 +28,7 @@ type CafeRowRaw = {
   theme_overrides: unknown;
   kds_config: unknown;
   timezone: string;
+  hours: unknown;
   owner_feedback_email: string | null;
 };
 

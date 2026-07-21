@@ -92,5 +92,4 @@ Auth details — [architecture/realtime.md](../architecture/realtime.md).
 - Stripe incremental checkout / order merge (F3) and refunds on cancel
 - Explicit KDS **`preparing` / `ready`** transitions for a richer customer stepper
 - Feedback HTTP API + order-ahead review drawer (Phase B) — [feedback-prompt-flow.md](../feedback-prompt-flow.md)
-- Café open-hours API (Home no longer hardcodes “open”)
 - KDS milk-colour / chip prep view models (config stored; board still shows `NormalisedOrder`)

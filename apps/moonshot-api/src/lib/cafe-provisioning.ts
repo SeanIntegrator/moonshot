@@ -1,4 +1,5 @@
 import type { CafeFeatures, KdsConfig } from '@moonshot/types';
+import { defaultWeekdayCafeHours } from '@moonshot/types';
 import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { hashKdsPassword } from './kds-password.js';
@@ -111,10 +112,17 @@ async function insertCafeWithAdmin(
   const kdsConfig = defaultNewCafeKdsConfig();
 
   const cafeInsert = await client.query<{ id: string }>(
-    `INSERT INTO cafes (name, slug, pos_provider, features, theme_id, kds_config, timezone)
-     VALUES ($1, $2, 'manual', $3::jsonb, 'heritage', $4::jsonb, $5)
+    `INSERT INTO cafes (name, slug, pos_provider, features, theme_id, kds_config, timezone, hours)
+     VALUES ($1, $2, 'manual', $3::jsonb, 'heritage', $4::jsonb, $5, $6::jsonb)
      RETURNING id`,
-    [name, slug, JSON.stringify(features), JSON.stringify(kdsConfig), timezone],
+    [
+      name,
+      slug,
+      JSON.stringify(features),
+      JSON.stringify(kdsConfig),
+      timezone,
+      JSON.stringify(defaultWeekdayCafeHours()),
+    ],
   );
   const cafeId = cafeInsert.rows[0]!.id;
 

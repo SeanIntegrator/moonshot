@@ -1,6 +1,6 @@
 import type { BaseThemeId, CafeFeatures, CafeTheme, KdsConfig } from '@moonshot/types';
 import type { FeatureFlagKey } from '@moonshot/types';
-import { FeatureFlagKeys } from '@moonshot/types';
+import { FeatureFlagKeys, normalizeCafeHours } from '@moonshot/types';
 import type { ResolvedCafe } from './resolved-cafe.js';
 
 type CafeRow = {
@@ -16,6 +16,7 @@ type CafeRow = {
   theme_overrides: unknown;
   kds_config: unknown;
   timezone: string;
+  hours: unknown;
   owner_feedback_email: string | null;
 };
 
@@ -59,6 +60,7 @@ export function mapCafeRow(row: CafeRow): ResolvedCafe {
     themeOverrides,
     kdsConfig,
     timezone: row.timezone,
+    hours: normalizeCafeHours(row.hours),
     ownerFeedbackEmail: row.owner_feedback_email,
     enabledFlags: activeFeatureKeys(features),
   };

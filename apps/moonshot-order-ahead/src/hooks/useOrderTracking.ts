@@ -45,6 +45,11 @@ export function useOrderTracking(
   options?: {
     /** Fired when the kitchen marks the order complete (socket or initial status). */
     onOrderCompleted?: (params: { orderId: string; completedAt: IsoDateTime | null }) => void;
+    /**
+     * HTTP catch-up: called after subscribe ack (missed-event race) and when the
+     * socket reports completion so local order state matches the server.
+     */
+    onSyncNeeded?: () => void;
   },
 ): {
   trackingStatus: OrderTrackingStatus;
@@ -59,6 +64,8 @@ export function useOrderTracking(
   const [lastPickupTime, setLastPickupTime] = useState<IsoDateTime | null>(null);
   const onOrderCompletedRef = useRef(options?.onOrderCompleted);
   onOrderCompletedRef.current = options?.onOrderCompleted;
+  const onSyncNeededRef = useRef(options?.onSyncNeeded);
+  onSyncNeededRef.current = options?.onSyncNeeded;
 
   useEffect(() => {
     setLiveOrderStatus(initialOrderStatus);
@@ -89,6 +96,8 @@ export function useOrderTracking(
         setTrackingStatus('completed');
         setLiveOrderStatus('completed');
         onOrderCompletedRef.current?.({ orderId: ev.orderId, completedAt: ev.completedAt });
+        // Reload so order.status / payment fields match the socket completion.
+        onSyncNeededRef.current?.();
       }
       if (ev.type === 'customerEtaUpdated') {
         const u = ev.updates.find((x) => x.orderId === orderId);
@@ -116,7 +125,10 @@ export function useOrderTracking(
         (err?: string) => {
           if (err) {
             setTrackingStatus('error');
+            return;
           }
+          // Catch-up if the kitchen completed before we joined the room.
+          onSyncNeededRef.current?.();
         },
       );
     });

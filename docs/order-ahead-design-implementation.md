@@ -49,7 +49,7 @@ This document captures the substantial order-ahead work completed across the rec
 - Pickup-time **change after order placed** (reschedule).
 - Some profile management rows (phone/card/notification preferences).
 - Featured/menu merchandising details that require additional product data.
-- Café open/closed hours on Home (still hardcoded “open”).
+- Café open/closed hours on Home (wired via `cafes.hours` + `cafeOpenStatus`).
 
 ## Notes
 

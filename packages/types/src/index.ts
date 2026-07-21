@@ -6,6 +6,7 @@ export * from './admin-settings.js';
 export * from './allergens.js';
 export * from './api.js';
 export * from './cafe.js';
+export * from './cafe-hours.js';
 export * from './customer-orders.js';
 export * from './dataflow.js';
 export * from './feature-flags.js';

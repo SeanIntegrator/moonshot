@@ -1,4 +1,4 @@
-import type { AdminSettingsResponse, Cafe, PosProvider } from '@moonshot/types';
+import type { AdminSettingsResponse } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../db.js';
 import { activeFeatureKeys, mapCafeRow } from './cafe-map.js';
@@ -7,8 +7,10 @@ import {
   mergeCafeFeatures,
   mergeKdsConfigSection,
   parseAdminSettingsPatchBody,
+  validateCafeHoursPatch,
 } from './admin-settings-merge.js';
 import { ApiHttpError } from './http-errors.js';
+import { toPublicCafe } from './to-public-cafe.js';
 
 export type AdminSettingsPatchInput = ReturnType<typeof parseAdminSettingsPatchBody>;
 
@@ -21,11 +23,11 @@ export async function patchAdminCafeSettings(
   body: unknown,
 ): Promise<AdminSettingsResponse> {
   const parsed = parseAdminSettingsPatchBody(body);
-  if (!parsed.featuresPatch && !parsed.kdsConfigPatch) {
+  if (!parsed.featuresPatch && !parsed.kdsConfigPatch && parsed.hours === undefined) {
     throw new ApiHttpError(
       400,
       ApiErrorCode.VALIDATION,
-      'featuresPatch or kdsConfigPatch is required',
+      'featuresPatch, kdsConfigPatch, or hours is required',
     );
   }
 
@@ -36,6 +38,7 @@ export async function patchAdminCafeSettings(
 
   let nextFeatures = resolved.features;
   let nextKds = resolved.kdsConfig;
+  let nextHours = resolved.hours;
 
   if (parsed.featuresPatch) {
     const merged = mergeCafeFeatures(resolved.features, parsed.featuresPatch);
@@ -53,31 +56,26 @@ export async function patchAdminCafeSettings(
     nextKds = merged.value;
   }
 
+  if (parsed.hours !== undefined) {
+    const validated = validateCafeHoursPatch(parsed.hours);
+    if (!validated.ok) {
+      throw new ApiHttpError(400, ApiErrorCode.VALIDATION, validated.error);
+    }
+    nextHours = validated.value;
+  }
+
   const { rows } = await pool.query(
     `UPDATE cafes
-     SET features = $1::jsonb, kds_config = $2::jsonb
-     WHERE id = $3
+     SET features = $1::jsonb, kds_config = $2::jsonb, hours = $3::jsonb
+     WHERE id = $4
      RETURNING ${CAFE_COLUMNS}`,
-    [JSON.stringify(nextFeatures), JSON.stringify(nextKds), cafeId],
+    [JSON.stringify(nextFeatures), JSON.stringify(nextKds), JSON.stringify(nextHours), cafeId],
   );
 
   const out = mapCafeRow(rows[0] as Parameters<typeof mapCafeRow>[0]);
-  const cafe: Cafe = {
-    id: out.cafeId,
-    name: out.name,
-    slug: out.slug,
-    posProvider: out.posProvider as PosProvider,
-    paymentProvider: out.paymentProvider,
-    features: out.features,
-    themeId: out.themeId,
-    themeOverrides: out.themeOverrides,
-    kdsConfig: out.kdsConfig,
-    timezone: out.timezone,
-    ownerFeedbackEmail: out.ownerFeedbackEmail,
-  };
 
   return {
-    cafe,
+    cafe: toPublicCafe(out),
     activeFeatures: activeFeatureKeys(out.features),
   };
 }

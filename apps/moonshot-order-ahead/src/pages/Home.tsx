@@ -26,6 +26,7 @@ import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
+import { cafeOpenStatus } from '@moonshot/types';
 
 export function Home() {
   const { loading, error, cafe } = useCafe();
@@ -60,6 +61,11 @@ export function Home() {
   const greeting = timeGreeting();
   const name = isSignedIn ? firstName(user?.displayName, user?.email) : 'there';
   const canShowLiveLoyalty = isSignedIn && loyaltyEnabled && summary?.loyaltyEnabled && membership;
+  const openStatus = useMemo(
+    () => cafeOpenStatus(cafe?.hours, cafe?.timezone ?? 'UTC'),
+    [cafe?.hours, cafe?.timezone],
+  );
+  const orderingAvailable = orderAheadEnabled && openStatus.isOpen;
 
   if (loading) {
     return <HomePageSkeleton />;
@@ -89,8 +95,7 @@ export function Home() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box>
             <Typography variant="caption" sx={{ opacity: 0.75, color: 'inherit' }}>
-              {/* Hours API not wired yet — avoid hardcoding "open". */}
-              {cafe.name}
+              {openStatus.caption}
             </Typography>
             <Typography variant="h4" component="h1" sx={{ color: 'inherit', mt: 0.5, fontWeight: 700 }}>
               {greeting}, {name}.
@@ -121,17 +126,19 @@ export function Home() {
 
         {activeOrder ? (
           <CurrentOrderCard order={activeOrder} />
-        ) : orderAheadEnabled ? (
+        ) : orderingAvailable ? (
           <OrderNowButton onClick={() => navigate(cafePath('/order'))} />
         ) : (
           <Typography variant="body2" sx={{ mt: 2, opacity: 0.85 }}>
-            Online ordering is not available for this café right now.
+            {!orderAheadEnabled
+              ? 'Online ordering is not available for this café right now.'
+              : `${openStatus.caption}. Online ordering will be back when the café is open.`}
           </Typography>
         )}
       </Box>
 
       <Box sx={{ px: 2, pt: 2 }}>
-        {usualOrder && orderAheadEnabled && (
+        {usualOrder && orderingAvailable && (
           <Box sx={{ mb: 3 }}>
             <SectionHead title="Your usual" />
             <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
@@ -173,9 +180,9 @@ export function Home() {
                 </Box>
                 <Button
                   variant="contained"
-                  disabled={!orderAheadEnabled}
+                  disabled={!orderingAvailable}
                   onClick={() => {
-                    if (!orderAheadEnabled) return;
+                    if (!orderingAvailable) return;
                     reorderFromOrder(usualOrder, upsertLine);
                     navigate(cafePath('/checkout'));
                   }}
@@ -188,7 +195,7 @@ export function Home() {
           </Box>
         )}
 
-        {featured.length > 0 && orderAheadEnabled && (
+        {featured.length > 0 && orderingAvailable && (
           <Box sx={{ mb: 2, minHeight: 200 }}>
             <SectionHead
               eyebrow="Featured"

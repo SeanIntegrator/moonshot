@@ -8,6 +8,7 @@ import type {
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
 } from './cafe.js';
+import type { CafeHours } from './cafe-hours.js';
 import type { FeatureFlagKey } from './feature-flags.js';
 
 /** Partial updates merged server-side into existing `features` (only loyalty + order_ahead). */
@@ -28,6 +29,8 @@ export interface AdminKdsConfigPatch {
 export interface AdminSettingsPatchBody {
   featuresPatch?: AdminFeaturesPatch;
   kdsConfigPatch?: AdminKdsConfigPatch;
+  /** Replace weekly hours when present (validated server-side). */
+  hours?: CafeHours;
 }
 
 export interface AdminSettingsResponse {

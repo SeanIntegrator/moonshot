@@ -3,6 +3,7 @@ import { Alert, Box, Button, CircularProgress, Stack } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
 import { KdsSettingsCard } from '../components/KdsSettingsCard.js';
 import { MenuEditorCard } from '../components/MenuEditorCard.js';
+import { CafeHoursSettingsCard } from '../components/CafeHoursSettingsCard.js';
 import { OrderAheadSettingsCard } from '../components/OrderAheadSettingsCard.js';
 import { StripePaymentsCard } from '../components/StripePaymentsCard.js';
 import type { AdminSession } from '../context/AuthContext.js';
@@ -71,6 +72,7 @@ export function DashboardPage({ session }: Props) {
         </Box>
       </Box>
       <MenuEditorCard cafeSlug={session.cafe.slug} token={session.token} />
+      <CafeHoursSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
       <KdsSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
     </Stack>
   );

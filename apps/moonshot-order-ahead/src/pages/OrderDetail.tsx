@@ -9,7 +9,7 @@ import {
   Divider,
   Typography,
 } from '@mui/material';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { OrderStatusStepper } from '../components/OrderStatusStepper.js';
 import { PageHeader } from '../components/PageHeader.js';
@@ -78,16 +78,25 @@ export function OrderDetail() {
     order?.id ?? null,
     order?.status,
     guestTracking ?? null,
-    { onOrderCompleted: handleOrderCompleted },
+    { onOrderCompleted: handleOrderCompleted, onSyncNeeded: reload },
   );
 
-  // Poll only when the customer socket is not live — ActiveOrders already covers list freshness.
+  // Always poll while active — socket is the fast path; HTTP catches missed events.
   useEffect(() => {
     if (!order || !(ACTIVE_FLOW as readonly string[]).includes(order.status)) return;
-    if (trackingStatus !== 'error') return;
-    const id = window.setInterval(() => void reload(), 15_000);
+    const id = window.setInterval(() => void reload(), 5_000);
     return () => window.clearInterval(id);
-  }, [order?.id, order?.status, trackingStatus, reload]);
+  }, [order?.id, order?.status, reload]);
+
+  // Poll catch-up: refresh loyalty when HTTP discovers completion without a socket event.
+  const prevStatusRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = order?.status;
+    if (order?.status === 'completed' && prev != null && prev !== 'completed') {
+      handleOrderCompleted();
+    }
+  }, [order?.status, handleOrderCompleted]);
 
   const pickupTime = lastPickupTime ?? order?.pickup.pickupTime;
   const allDone = trackingStatus === 'completed' || order?.status === 'completed';

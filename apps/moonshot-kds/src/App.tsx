@@ -148,7 +148,12 @@ export function App() {
               <div className="kds-card-meta">
                 <span>{order.orderType.replace('_', ' ')}</span>
                 <span>{order.paymentStatus}</span>
-                <span className="kds-card-time">{new Date(order.createdAt).toLocaleTimeString()}</span>
+                <span className="kds-card-time">
+                  Pickup{' '}
+                  {new Date(
+                    order.pickup.pickupTime ?? order.createdAt,
+                  ).toLocaleTimeString()}
+                </span>
               </div>
               {order.notes ? <p className="kds-card-notes">{order.notes}</p> : null}
               <ul className="kds-lines">

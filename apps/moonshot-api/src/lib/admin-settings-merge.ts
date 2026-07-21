@@ -3,10 +3,12 @@ import type {
   AdminKdsConfigPatch,
   AdminSettingsPatchBody,
   CafeFeatures,
+  CafeHours,
   KdsConfig,
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
 } from '@moonshot/types';
+import { hhMmToMinutes, normalizeCafeHours, toHhMm, WEEKDAY_KEYS } from '@moonshot/types';
 
 const DEFAULT_LOYALTY: LoyaltyFeatureConfig = {
   enabled: true,
@@ -210,6 +212,41 @@ export function mergeKdsConfigSection(
   return { ok: true, value: next };
 }
 
+export function validateCafeHoursPatch(raw: unknown): MergeResult<CafeHours> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, error: 'hours must be an object keyed by weekday' };
+  }
+  const rec = raw as Record<string, unknown>;
+  for (const day of WEEKDAY_KEYS) {
+    if (!(day in rec)) {
+      return { ok: false, error: `hours.${day} is required` };
+    }
+    const intervals = rec[day];
+    if (!Array.isArray(intervals)) {
+      return { ok: false, error: `hours.${day} must be an array` };
+    }
+    for (const item of intervals) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return { ok: false, error: `hours.${day} intervals must be objects` };
+      }
+      const open = (item as { open?: unknown }).open;
+      const close = (item as { close?: unknown }).close;
+      if (typeof open !== 'string' || typeof close !== 'string') {
+        return { ok: false, error: `hours.${day} intervals need open/close as HH:mm` };
+      }
+      const openNorm = toHhMm(open);
+      const closeNorm = toHhMm(close);
+      if (!openNorm || !closeNorm) {
+        return { ok: false, error: `hours.${day} intervals need open/close as HH:mm` };
+      }
+      if (hhMmToMinutes(openNorm)! >= hhMmToMinutes(closeNorm)!) {
+        return { ok: false, error: `hours.${day} open must be before close` };
+      }
+    }
+  }
+  return { ok: true, value: normalizeCafeHours(raw) };
+}
+
 /** Accept only whitelisted keys from the wire (ignore unknown fields). */
 export function parseAdminSettingsPatchBody(body: unknown): AdminSettingsPatchBody {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -267,6 +304,10 @@ export function parseAdminSettingsPatchBody(body: unknown): AdminSettingsPatchBo
     if (Object.keys(kdsConfigPatch).length > 0) {
       out.kdsConfigPatch = kdsConfigPatch;
     }
+  }
+
+  if (b.hours !== undefined) {
+    out.hours = b.hours as CafeHours;
   }
 
   return out;

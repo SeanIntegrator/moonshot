@@ -44,6 +44,8 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 - New memberships get a **6-digit numeric `loyalty_display_id`** per café (migration 010); existing hex IDs are preserved.
 - New self-service cafés provision with **loyalty enabled by default** (10 stamps, free drink).
 - **Pickup delay:** `POST /orders` accepts **`pickupDelayMinutes`**; stored as **`orders.requested_pickup_not_before`**; live ETA = max(FIFO, not-before).
+- **Opening hours:** `cafes.hours` weekly JSON; Admin editor; Home caption + Order Now gate via `cafeOpenStatus`.
+- **Tracker reliability:** order detail always polls while active; subscribe ack + completion reload catch missed sockets.
 
 ### Backend refactor (Pass A + B, May 2026)
 
@@ -56,7 +58,7 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 
 ### Operator tooling
 
-- **Admin** dashboard: order-ahead + KDS settings, menu PATCH edits, **Stripe onboarding card**.
+- **Admin** dashboard: order-ahead + KDS settings, **opening hours**, menu PATCH edits, **Stripe onboarding card**.
 
 ### CORS / origins
 
@@ -87,7 +89,7 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). A
 4. **Stripe incremental / merge checkout (F3)** — not implemented; only initial **Checkout Session** per order.
 5. **Admin** — still no invite flow or café theme editor; Stripe card is minimal; menu CRUD exists.
 6. **Bootstrap uses sync scrypt** — fine for CLI only.
-7. **Home open hours** — café name only on the hero; no hours API yet (do not hardcode “open”).
+7. **Home open hours** — `cafes.hours` + Admin editor; Home shows open/closed caption and blocks Order Now when closed.
 
 ---
 
@@ -100,7 +102,6 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). A
 | POS adapters (Square, etc.) | Manual adapter only — [pos-normalisation.md](pos-normalisation.md) |
 | Explicit preparing/ready on KDS | Customer stepper stays queue → done until then |
 | Feedback HTTP + drawer (Phase B) | Socket eligibility MVP shipped; [feedback-prompt-flow.md](feedback-prompt-flow.md) |
-| Café hours API | Home must not invent open/closed |
 | Admin invites / audit / theme editor | Self-service signup shipped; invites remain planned |
 | KDS milk/chip prep UI | Config on `kds_config`; board still uses `NormalisedOrder` |
 

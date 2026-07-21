@@ -15,6 +15,7 @@ Start here when onboarding or verifying behaviour against production.
 - [Realtime / Socket auth](architecture/realtime.md) — `/kds` vs `/customer`, JWT rules
 - [Current flows](current/flows.md) — shipped vs planned sequences
 - [Stripe checkout return](stripe-checkout-return.md) — `ORDER_AHEAD_BASE_URL`, recovery endpoint
+- [M1 bug triage](bugs/m1-triage.md) — discrete cards for remaining UI glitches
 - [API module layout](architecture/api-modules.md) — where order/loyalty/admin logic lives
 - [HTTP routes & CORS](current/http-surface.md)
 - [Self-service onboarding](onboarding.md)

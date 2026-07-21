@@ -4,6 +4,7 @@
 
 import type { FeatureFlagKey } from './feature-flags.js';
 import type { PosProvider } from './pos.js';
+import type { CafeHours } from './cafe-hours.js';
 
 export type BaseThemeId = 'heritage' | 'botanical' | 'minimal' | 'bold' | 'classic';
 
@@ -195,6 +196,8 @@ export interface Cafe {
   themeOverrides: Partial<CafeTheme>;
   kdsConfig: KdsConfig;
   timezone: string;
+  /** Weekly local hours; empty days / empty object → treated as closed. */
+  hours: CafeHours;
   ownerFeedbackEmail: string | null;
 }
 
