@@ -1,4 +1,4 @@
-import type { OrderType } from '@moonshot/types';
+import type { LoyaltySummaryResponse, OrderType } from '@moonshot/types';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   Box,
@@ -30,6 +30,12 @@ import { useMenu } from '../providers/MenuProvider.js';
 import { formatMoney, formatTime } from '../lib/format.js';
 
 const ORDER_TYPE: OrderType = 'takeaway';
+
+function stampsUntilRewardCopy(summary: LoyaltySummaryResponse): string {
+  const remaining = Math.max(0, summary.stampsPerReward - summary.stamps);
+  if (remaining === 1) return '1 more stamp until your next reward';
+  return `${remaining} more stamps until your next reward`;
+}
 
 export function Checkout() {
   const navigate = useNavigate();
@@ -160,6 +166,7 @@ export function Checkout() {
               value={pickupDelayMinutes}
               onChange={setPickupDelayMinutes}
               maxPickupMinutes={maxPickupMinutes}
+              variant="field"
             />
           ) : (
             <Box
@@ -247,7 +254,9 @@ export function Checkout() {
                 ? 'Loyalty is not enabled for this café.'
                 : !isSignedIn
                   ? 'Sign in to earn stamps and redeem rewards.'
-                  : 'No vouchers or rewards available. Earn 1 stamp with this order.'}
+                  : summary
+                    ? stampsUntilRewardCopy(summary)
+                    : 'Earn stamps with this order.'}
             </Typography>
           )}
         </Box>

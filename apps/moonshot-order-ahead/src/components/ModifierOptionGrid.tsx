@@ -1,5 +1,4 @@
 import type { NormalisedModifierGroup, OrderLineModifierSelectionInput } from '@moonshot/types';
-import CheckIcon from '@mui/icons-material/Check';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Box, Chip, IconButton, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
@@ -23,6 +22,25 @@ function colorDot(hex: string | null | undefined) {
   );
 }
 
+/** Shared price for a multi group when every option costs the same (e.g. syrups +30p). */
+function uniformGroupDelta(group: NormalisedModifierGroup): string {
+  if (group.options.length === 0) return '';
+  const first = group.options[0]!.priceMinor;
+  if (first <= 0) return '';
+  if (!group.options.every((o) => o.priceMinor === first)) return '';
+  return formatModifierDelta(first);
+}
+
+const selectedOptionSx = {
+  borderColor: 'divider',
+  bgcolor: 'action.selected',
+} as const;
+
+const idleOptionSx = {
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+} as const;
+
 type Props = {
   group: NormalisedModifierGroup;
   selections: OrderLineModifierSelectionInput[];
@@ -36,6 +54,7 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [canExpand, setCanExpand] = useState(false);
   const chipWrapRef = useRef<HTMLDivElement | null>(null);
+  const titleDelta = group.selectionType === 'multi' ? uniformGroupDelta(group) : '';
 
   useEffect(() => {
     if (group.selectionType !== 'multi') return;
@@ -57,6 +76,11 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
       <Box sx={{ mt: 2 }}>
         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
           {group.name}
+          {titleDelta ? (
+            <Typography component="span" variant="body2" color="text.secondary" fontWeight={600} sx={{ ml: 1 }}>
+              {titleDelta}
+            </Typography>
+          ) : null}
         </Typography>
         <Box sx={{ position: 'relative' }}>
           <Box
@@ -73,7 +97,6 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
           >
             {group.options.map((opt) => {
               const selected = picked.has(opt.id);
-              const price = formatModifierDelta(opt.priceMinor);
               return (
                 <Chip
                   key={opt.id}
@@ -82,26 +105,17 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       {colorDot(opt.colorHex)}
                       {opt.name}
-                      {price}
                     </Box>
                   }
-                  icon={selected ? <CheckIcon /> : undefined}
                   onClick={() => onSelect(group.id, opt.id, 'multi', !selected)}
                   sx={{
                     borderRadius: 999,
                     border: 1,
-                    borderColor: selected ? 'primary.main' : 'divider',
-                    bgcolor: selected ? 'action.selected' : 'background.paper',
+                    ...(selected ? selectedOptionSx : idleOptionSx),
                     color: 'text.primary',
                     fontWeight: 600,
                     WebkitTapHighlightColor: 'transparent',
-                    transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
-                    boxShadow: selected ? (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}` : 'none',
-                    '& .MuiChip-icon': {
-                      color: 'inherit',
-                      fontSize: 16,
-                      ml: 1,
-                    },
+                    transition: 'background-color 180ms ease, border-color 180ms ease, transform 180ms ease',
                     '&:active': {
                       transform: 'scale(0.96)',
                     },
@@ -181,16 +195,14 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 textAlign: 'left',
                 p: 1.25,
                 border: 1,
-                borderColor: selected ? 'primary.main' : 'divider',
                 borderRadius: 1.25,
-                bgcolor: selected ? 'action.selected' : 'background.paper',
-                boxShadow: selected ? (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}` : 'none',
+                ...(selected ? selectedOptionSx : idleOptionSx),
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 color: 'text.primary',
                 WebkitTapHighlightColor: 'transparent',
                 appearance: 'none',
-                transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
+                transition: 'background-color 180ms ease, border-color 180ms ease, transform 180ms ease',
                 '&:active': {
                   transform: 'scale(0.97)',
                 },

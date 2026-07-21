@@ -1,0 +1,108 @@
+:root {
+  --page-transition-duration: 160ms;
+  --page-transition-duration-emphasis: 220ms;
+}
+
+.page-transition {
+  min-height: 100%;
+}
+
+/* --- fade --- */
+@keyframes page-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-transition--fade-exit {
+  animation: page-fade-out var(--page-transition-duration) var(--motion-ease) forwards;
+}
+
+.page-transition--fade-enter {
+  animation: page-fade-in var(--page-transition-duration) var(--motion-ease) forwards;
+}
+
+/* --- slide (horizontal nudge + fade) --- */
+@keyframes page-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@keyframes page-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-transition--slide-exit {
+  animation: page-slide-out var(--page-transition-duration-emphasis) var(--motion-ease) forwards;
+}
+
+.page-transition--slide-enter {
+  animation: page-slide-in var(--page-transition-duration-emphasis) var(--motion-ease) forwards;
+}
+
+/* --- stack (subtle scale + fade, like a card layer) --- */
+@keyframes page-stack-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes page-stack-in {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.page-transition--stack-exit {
+  animation: page-stack-out var(--page-transition-duration-emphasis) var(--motion-ease) forwards;
+}
+
+.page-transition--stack-enter {
+  animation: page-stack-in var(--page-transition-duration-emphasis) var(--motion-ease) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition--fade-exit,
+  .page-transition--fade-enter,
+  .page-transition--slide-exit,
+  .page-transition--slide-enter,
+  .page-transition--stack-exit,
+  .page-transition--stack-enter {
+    animation: none !important;
+  }
+}

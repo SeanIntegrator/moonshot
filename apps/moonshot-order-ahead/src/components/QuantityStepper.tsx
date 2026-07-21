@@ -8,8 +8,6 @@ type Props = {
   min?: number;
 };
 
-const tapTransition = 'background-color 180ms ease, transform 180ms ease, opacity 180ms ease';
-
 export function QuantityStepper({ value, onChange, min = 1 }: Props) {
   return (
     <Box
@@ -26,14 +24,11 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
     >
       <IconButton
         size="small"
+        disableRipple
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         aria-label="Decrease quantity"
-        sx={{
-          transition: tapTransition,
-          WebkitTapHighlightColor: 'transparent',
-          '&:active:not(:disabled)': { transform: 'scale(0.9)' },
-        }}
+        sx={{ WebkitTapHighlightColor: 'transparent' }}
       >
         <RemoveIcon fontSize="small" />
       </IconButton>
@@ -43,21 +38,23 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
           minWidth: 20,
           textAlign: 'center',
           fontVariantNumeric: 'tabular-nums',
-          transition: 'opacity 120ms ease',
         }}
       >
         {value}
       </Typography>
       <IconButton
         size="small"
+        disableRipple
         onClick={() => onChange(value + 1)}
         aria-label="Increase quantity"
         sx={{
           bgcolor: 'primary.main',
           color: 'primary.contrastText',
-          transition: tapTransition,
           WebkitTapHighlightColor: 'transparent',
-          '&:active': { transform: 'scale(0.9)' },
+          // Keep fill stable — MUI hover/active otherwise washes icon + bg to white on touch.
+          '&:hover': { bgcolor: 'primary.main' },
+          '&:active': { bgcolor: 'primary.main' },
+          '&.Mui-focusVisible': { bgcolor: 'primary.main' },
         }}
       >
         <AddIcon fontSize="small" />

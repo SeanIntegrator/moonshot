@@ -7,6 +7,10 @@ export function formatMoney(minor: number, currency = 'GBP'): string {
 /** Customer-facing price tag — empty string when free (never show £0.00). */
 export function formatPriceTag(minor: number, currency = 'GBP'): string {
   if (minor <= 0) return '';
+  // Sub-pound modifiers/tags read more naturally as pence (50p, not £0.50).
+  if (currency === 'GBP' && minor < 100) {
+    return `${minor}p`;
+  }
   return formatMoney(minor, currency);
 }
 

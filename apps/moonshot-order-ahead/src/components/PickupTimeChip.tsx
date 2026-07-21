@@ -30,6 +30,11 @@ type Props = {
   onChange: (minutes: PickupDelayMinutes) => void;
   /** Café `order_ahead.maxPickupMinutes` (default 60). */
   maxPickupMinutes?: number;
+  /**
+   * `chip` — compact control for page headers (menu).
+   * `field` — full-width form control for checkout.
+   */
+  variant?: 'chip' | 'field';
 };
 
 export function PickupTimeChip({
@@ -37,6 +42,7 @@ export function PickupTimeChip({
   value,
   onChange,
   maxPickupMinutes = 60,
+  variant = 'chip',
 }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const options = useMemo(() => pickupDelayOptions(maxPickupMinutes), [maxPickupMinutes]);
@@ -52,6 +58,80 @@ export function PickupTimeChip({
       })),
     [estimate, options],
   );
+
+  const menu = (
+    <Menu
+      anchorEl={anchorEl}
+      open={Boolean(anchorEl)}
+      onClose={() => setAnchorEl(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: variant === 'field' ? 'left' : 'right' }}
+      transformOrigin={{ vertical: 'top', horizontal: variant === 'field' ? 'left' : 'right' }}
+      slotProps={{
+        paper: { sx: { minWidth: variant === 'field' ? (anchorEl?.clientWidth ?? 280) : undefined } },
+      }}
+    >
+      {menuItems.map((item) => (
+        <MenuItem
+          key={item.minutes}
+          selected={safeValue === item.minutes}
+          onClick={() => {
+            onChange(item.minutes);
+            setAnchorEl(null);
+          }}
+        >
+          {item.label} · {item.time}
+        </MenuItem>
+      ))}
+    </Menu>
+  );
+
+  if (variant === 'field') {
+    return (
+      <>
+        <Box
+          component="button"
+          type="button"
+          onClick={(e) => setAnchorEl(e.currentTarget)}
+          sx={{
+            width: '100%',
+            textAlign: 'left',
+            p: 1.5,
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1.25,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            minHeight: 72,
+            bgcolor: 'background.paper',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            color: 'text.primary',
+            appearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            '&:focus-visible': {
+              outline: 2,
+              outlineColor: 'primary.main',
+              outlineOffset: 2,
+            },
+          }}
+        >
+          <AccessTimeIcon color="action" />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body1" fontWeight={700}>
+              {displayTime}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {optionLabel(safeValue)}
+              {safeValue === 0 && estimate ? ` · in ${estimate.minutesFromNow} min` : ''}
+            </Typography>
+          </Box>
+          <KeyboardArrowDownIcon sx={{ color: 'text.secondary', flexShrink: 0 }} />
+        </Box>
+        {menu}
+      </>
+    );
+  }
 
   return (
     <>
@@ -78,26 +158,7 @@ export function PickupTimeChip({
           '& .MuiChip-icon': { ml: 1, mr: 0.75, color: 'text.secondary' },
         })}
       />
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        {menuItems.map((item) => (
-          <MenuItem
-            key={item.minutes}
-            selected={safeValue === item.minutes}
-            onClick={() => {
-              onChange(item.minutes);
-              setAnchorEl(null);
-            }}
-          >
-            {item.label} · {item.time}
-          </MenuItem>
-        ))}
-      </Menu>
+      {menu}
     </>
   );
 }

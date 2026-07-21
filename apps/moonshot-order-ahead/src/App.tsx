@@ -8,6 +8,7 @@ import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
 import { RequireFeature } from './components/RequireFeature.js';
 import { useCafePath } from './hooks/useCafePath.js';
 import { useCafeFeatures } from './hooks/useCafeFeatures.js';
+import { PageTransition } from './page-transition/index.js';
 import { Checkout } from './pages/Checkout.js';
 import { CheckoutRestore } from './pages/CheckoutRestore.js';
 import { Home } from './pages/Home.js';
@@ -48,45 +49,50 @@ export function App() {
   return (
     <>
       <GoogleOneTap />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route
-          path="/order"
-          element={
-            <RequireFeature feature="orderAhead">
-              <Menu />
-            </RequireFeature>
-          }
-        />
-        <Route
-          path="/order/item/:menuItemId"
-          element={
-            <RequireFeature feature="orderAhead">
-              <ItemDetail />
-            </RequireFeature>
-          }
-        />
-        <Route
-          path="/checkout"
-          element={
-            <RequireFeature feature="orderAhead">
-              <Checkout />
-            </RequireFeature>
-          }
-        />
-        <Route path="/checkout/restore" element={<CheckoutRestore />} />
-        <Route path="/orders/:orderId" element={<OrderDetail />} />
-        <Route path="/orders/:orderId/confirmed" element={<OrderConfirmed />} />
-        <Route
-          path="/rewards"
-          element={
-            <RequireFeature feature="loyalty">
-              <Rewards />
-            </RequireFeature>
-          }
-        />
-        <Route path="/profile" element={<Profile />} />
-      </Routes>
+      {/* Tab bar stays outside so only page content cross-fades */}
+      <PageTransition>
+        {(loc) => (
+          <Routes location={loc}>
+            <Route path="/" element={<Home />} />
+            <Route
+              path="/order"
+              element={
+                <RequireFeature feature="orderAhead">
+                  <Menu />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="/order/item/:menuItemId"
+              element={
+                <RequireFeature feature="orderAhead">
+                  <ItemDetail />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="/checkout"
+              element={
+                <RequireFeature feature="orderAhead">
+                  <Checkout />
+                </RequireFeature>
+              }
+            />
+            <Route path="/checkout/restore" element={<CheckoutRestore />} />
+            <Route path="/orders/:orderId" element={<OrderDetail />} />
+            <Route path="/orders/:orderId/confirmed" element={<OrderConfirmed />} />
+            <Route
+              path="/rewards"
+              element={
+                <RequireFeature feature="loyalty">
+                  <Rewards />
+                </RequireFeature>
+              }
+            />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        )}
+      </PageTransition>
       {!hideNav && (
         <Paper
           component="nav"

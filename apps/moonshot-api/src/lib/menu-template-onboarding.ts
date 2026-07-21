@@ -161,10 +161,13 @@ async function findModifierGroupId(
 function buildModifierOptions(
   modifiers: AdminSaveMenuTemplateRequest['categories'][number]['modifiers'],
   chipMap: Record<string, { colorHex: string; chipLabel: string }>,
+  /** When true (milks), fall back to the first enabled option if none is marked default. */
+  requireDefault = false,
 ) {
   const enabled = (modifiers ?? []).filter((m) => m.enabled);
   const defaultKeys = enabled.filter((m) => m.isDefault).map((m) => m.templateKey);
-  const defaultKey = defaultKeys[0] ?? enabled[0]?.templateKey ?? null;
+  // Syrups are optional multi-select — do not invent a default (e.g. Vanilla).
+  const defaultKey = defaultKeys[0] ?? (requireDefault ? (enabled[0]?.templateKey ?? null) : null);
 
   return enabled.map((m) => {
     const chip = chipMap[m.templateKey] ?? { colorHex: '#e8e8e8', chipLabel: m.name.slice(0, 2) };
@@ -173,7 +176,7 @@ function buildModifierOptions(
       posOptionId: null,
       name: m.name.trim(),
       priceMinor: Math.round(m.priceMinor),
-      isDefault: m.templateKey === defaultKey,
+      isDefault: defaultKey != null && m.templateKey === defaultKey,
       colorHex: chip.colorHex,
       chipLabel: chip.chipLabel,
     };
@@ -207,9 +210,9 @@ export async function applyMenuTemplate(
   const syrupsCat = body.categories.find((c) => c.key === 'syrups');
   const syrupsEnabled = syrupsCat?.enabled === true;
 
-  const milksOptions = buildModifierOptions(milksCat.modifiers, MILK_CHIP);
+  const milksOptions = buildModifierOptions(milksCat.modifiers, MILK_CHIP, true);
   const syrupsOptions = syrupsEnabled
-    ? buildModifierOptions(syrupsCat?.modifiers, SYRUP_CHIP)
+    ? buildModifierOptions(syrupsCat?.modifiers, SYRUP_CHIP, false)
     : [];
 
   let milksGroupId = await findModifierGroupId(client, cafeId, 'Milks');

@@ -20,15 +20,11 @@ import { useMenu } from '../providers/MenuProvider.js';
 function defaultModifiers(item: NormalisedMenuItem): OrderLineModifierSelectionInput[] {
   const out: OrderLineModifierSelectionInput[] = [];
   for (const g of item.modifierGroups) {
+    // Multi groups (e.g. syrups) are optional extras — never pre-select a default.
+    if (g.selectionType !== 'single') continue;
     const defaults = g.options.filter((o) => o.isDefault);
-    if (g.selectionType === 'single') {
-      const pick = defaults[0] ?? g.options[0];
-      if (pick) out.push({ groupId: g.id, optionId: pick.id });
-    } else {
-      for (const d of defaults) {
-        out.push({ groupId: g.id, optionId: d.id });
-      }
-    }
+    const pick = defaults[0] ?? g.options[0];
+    if (pick) out.push({ groupId: g.id, optionId: pick.id });
   }
   return out;
 }
