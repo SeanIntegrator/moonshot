@@ -1,10 +1,13 @@
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { restoreOrderFromCheckoutSession } from '../api/orders-api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
+
+/** StrictMode remounts effects — share in-flight restores across mounts. */
+const restoreInFlight = new Set<string>();
 
 /**
  * Stripe success URLs should point here (or redirect home with `checkout_session_id`,
@@ -19,15 +22,14 @@ export function CheckoutRestore() {
   const { clear } = useCart();
   const [error, setError] = useState<string | null>(null);
   const sessionId = params.get('checkout_session_id')?.trim();
-  const ran = useRef(false);
 
   useEffect(() => {
     if (!sessionId) {
       setError('Missing checkout_session_id');
       return;
     }
-    if (ran.current) return;
-    ran.current = true;
+    if (restoreInFlight.has(sessionId)) return;
+    restoreInFlight.add(sessionId);
 
     void (async () => {
       try {
@@ -36,6 +38,7 @@ export function CheckoutRestore() {
         clear();
         navigate(cafePath(`/orders/${data.order.id}/confirmed`), { replace: true });
       } catch (e) {
+        restoreInFlight.delete(sessionId);
         setError(e instanceof Error ? e.message : 'Could not restore order');
       }
     })();

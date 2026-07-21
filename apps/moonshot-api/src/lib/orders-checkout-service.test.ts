@@ -20,10 +20,16 @@ vi.mock('./order-modifiers.js', () => ({
   resolveOrderLinesWithModifiers: resolveOrderLinesWithModifiers,
 }));
 
-vi.mock('./orders-repository.js', () => ({
+vi.mock('./orders/order-create.js', () => ({
   insertPendingOrderWithResolvedLines,
+}));
+
+vi.mock('./orders/order-checkout.js', () => ({
   deleteAbandonedPendingOrder,
   recordStripeCheckoutSessionForOrder,
+}));
+
+vi.mock('./orders/order-read.js', () => ({
   fetchOrderWithItems,
 }));
 
@@ -40,7 +46,7 @@ vi.mock('./payments/cafe-payment-config.js', () => ({
   getStripeConnectAccountId,
 }));
 
-vi.mock('./order-checkout-env.js', () => ({
+vi.mock('./payments/checkout-urls.js', () => ({
   checkoutUrlsForCafe: (slug: string) => ({
     successUrl: `https://order-ahead.test/${slug}/checkout/restore?checkout_session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `https://order-ahead.test/${slug}/checkout`,

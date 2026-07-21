@@ -12,7 +12,7 @@ Ground-up rebuild monorepo: API, KDS, order-ahead PWA, and admin.
 | [apps/moonshot-admin](apps/moonshot-admin) | `@moonshot/admin` | Vite, React 19, TypeScript, **MUI** |
 | [packages/types](packages/types) | `@moonshot/types` | Shared contracts |
 
-- [docs/](docs/) — architecture and dataflow (start with `dataflow-high-level.md`)
+- [docs/](docs/) — architecture and current flows (start with `docs/README.md`)
 
 All apps depend on `@moonshot/types` via `workspace:*`.
 

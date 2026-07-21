@@ -18,6 +18,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useState } from 'react';
 import {
   createMenuItem,
@@ -33,17 +34,6 @@ const CATEGORIES: { value: MenuCategory; label: string }[] = [
   { value: 'cold_drinks', label: 'Cold drinks' },
   { value: 'food', label: 'Food' },
   { value: 'extras', label: 'Extras' },
-];
-
-const SUBCATEGORY_SUGGESTIONS = [
-  'coffee',
-  'matcha',
-  'tea',
-  'chocolate',
-  'pastries',
-  'breakfast',
-  'lunch',
-  'snacks',
 ];
 
 type DraftItem = NormalisedMenuItem & { attachedGroupIds: string[] };
@@ -83,15 +73,29 @@ type Props = {
   items: NormalisedMenuItem[];
   library: CafeModifierGroup[];
   onItemsChanged: () => void;
+  /** "Add item" is triggered from the parent header so it can sit inline with the tabs. */
+  creating: boolean;
+  onCreatingChange: (creating: boolean) => void;
 };
 
-export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged }: Props) {
+export function MenuItemsPanel({
+  cafeSlug,
+  token,
+  items,
+  library,
+  onItemsChanged,
+  creating,
+  onCreatingChange,
+}: Props) {
   const [drafts, setDrafts] = useState<Record<string, DraftItem>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<DraftItem>(emptyDraft);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Raw text for the base-price input, keyed by item id (or "new") — lets the field be
+  // fully cleared while typing instead of always reflecting priceMinor as a number.
+  const [priceText, setPriceText] = useState<Record<string, string>>({});
 
   function draftFor(item: NormalisedMenuItem): DraftItem {
     return drafts[item.id] ?? toDraft(item, library);
@@ -136,7 +140,7 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
         return copy;
       });
       setNotice(`Saved “${updated.name}”.`);
-      setCreating(false);
+      onCreatingChange(false);
       setNewItem(emptyDraft());
       onItemsChanged();
     } catch (e) {
@@ -146,13 +150,29 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
     }
   }
 
-  async function hideItem(itemId: string) {
-    if (!window.confirm('Hide this item from the order-ahead app?')) return;
+  /** Quick on/off toggle next to the item title — replaces the old separate "hide" action. */
+  async function toggleAvailability(item: NormalisedMenuItem, next: boolean) {
+    setTogglingId(item.id);
+    setError(null);
     try {
-      await deleteMenuItem(token, cafeSlug, itemId);
+      let updated: NormalisedMenuItem;
+      if (next) {
+        updated = await patchMenuItem(token, cafeSlug, item.id, { isAvailable: true });
+      } else {
+        await deleteMenuItem(token, cafeSlug, item.id);
+        updated = { ...item, isAvailable: false };
+      }
+      setDrafts((prev) => {
+        const copy = { ...prev };
+        delete copy[item.id];
+        copy[updated.id] = toDraft(updated, library);
+        return copy;
+      });
       onItemsChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Delete failed');
+      setError(e instanceof Error ? e.message : 'Update failed');
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -191,14 +211,6 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
         </Stack>
 
         <TextField
-          label="Secondary category"
-          size="small"
-          value={draft.subcategory ?? ''}
-          onChange={(e) => update({ subcategory: e.target.value || null })}
-          helperText={`e.g. ${SUBCATEGORY_SUGGESTIONS.slice(0, 4).join(', ')}`}
-        />
-
-        <TextField
           label="Description"
           size="small"
           multiline
@@ -229,9 +241,15 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
             label={`Base price (${draft.currency})`}
             type="number"
             size="small"
-            value={draft.priceMinor / 100}
+            value={priceText[key] ?? String(draft.priceMinor / 100)}
             onChange={(e) => {
-              const v = Number.parseFloat(e.target.value);
+              const raw = e.target.value;
+              setPriceText((prev) => ({ ...prev, [key]: raw }));
+              if (raw.trim() === '') {
+                update({ priceMinor: 0 });
+                return;
+              }
+              const v = Number.parseFloat(raw);
               if (Number.isFinite(v)) update({ priceMinor: Math.round(v * 100) });
             }}
             inputProps={{ min: 0, step: 0.01 }}
@@ -271,16 +289,6 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
           </Box>
         )}
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={draft.isAvailable}
-              onChange={(_, v) => update({ isAvailable: v })}
-            />
-          }
-          label="Orderable on app"
-        />
-
         <Stack direction="row" spacing={1}>
           <Button
             variant="contained"
@@ -290,11 +298,6 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
           >
             {savingId === (itemId ?? 'new') ? 'Saving…' : 'Save item'}
           </Button>
-          {itemId && (
-            <Button size="small" color="error" onClick={() => void hideItem(itemId)}>
-              Hide from menu
-            </Button>
-          )}
         </Stack>
       </Stack>
     );
@@ -319,47 +322,70 @@ export function MenuItemsPanel({ cafeSlug, token, items, library, onItemsChanged
             New item
           </Typography>
           {renderEditor(newItem, null)}
-        <Button size="small" sx={{ mt: 1 }} onClick={() => setCreating(false)}>
-          Cancel
-        </Button>
-      </Box>
+          <Button size="small" sx={{ mt: 1 }} onClick={() => onCreatingChange(false)}>
+            Cancel
+          </Button>
+        </Box>
       )}
 
-      {!creating && (
-        <Button sx={{ mb: 2 }} onClick={() => setCreating(true)}>
-          Add item
-        </Button>
-      )}
-
-      <Stack spacing={1}>
-        {items.map((item) => {
-          const draft = draftFor(item);
-          const displayPrice =
-            draft.sizes.length > 0
-              ? `from ${formatGbpMinor(Math.min(...draft.sizes.map((s) => s.priceMinor)), draft.currency)}`
-              : formatGbpMinor(draft.priceMinor, draft.currency);
+      <Box sx={{ maxHeight: '70vh', overflowY: 'auto', pr: 1 }}>
+        {CATEGORIES.map(({ value: category, label }) => {
+          const categoryItems = items.filter((item) => item.category === category);
+          if (categoryItems.length === 0) return null;
           return (
-            <Accordion key={item.id} disableGutters>
-              <AccordionSummary>
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', pr: 1 }}>
-                  <Typography sx={{ flex: 1 }}>{item.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {displayPrice}
-                  </Typography>
-                  <Typography variant="caption" color={item.isAvailable ? 'success.main' : 'text.disabled'}>
-                    {item.isAvailable ? 'On menu' : 'Hidden'}
-                  </Typography>
-                </Stack>
-              </AccordionSummary>
-              <AccordionDetails>{renderEditor(draft, item.id)}</AccordionDetails>
-            </Accordion>
+            <Box key={category} sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                {label}
+              </Typography>
+              <Stack spacing={1}>
+                {categoryItems.map((item) => {
+                  const draft = draftFor(item);
+                  const displayPrice =
+                    draft.sizes.length > 0
+                      ? `from ${formatGbpMinor(Math.min(...draft.sizes.map((s) => s.priceMinor)), draft.currency)}`
+                      : formatGbpMinor(draft.priceMinor, draft.currency);
+                  return (
+                    <Accordion key={item.id} disableGutters>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', pr: 1 }}>
+                          <Typography sx={{ flex: 1 }}>{item.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {displayPrice}
+                          </Typography>
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            alignItems="center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Switch
+                              size="small"
+                              checked={item.isAvailable}
+                              disabled={togglingId === item.id}
+                              onChange={(_, v) => void toggleAvailability(item, v)}
+                            />
+                            <Typography
+                              variant="caption"
+                              color={item.isAvailable ? 'success.main' : 'text.disabled'}
+                            >
+                              {item.isAvailable ? 'On menu' : 'Hidden'}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                      </AccordionSummary>
+                      <AccordionDetails>{renderEditor(draft, item.id)}</AccordionDetails>
+                    </Accordion>
+                  );
+                })}
+              </Stack>
+            </Box>
           );
         })}
-      </Stack>
 
-      {items.length === 0 && !creating && (
-        <Typography color="text.secondary">No menu items yet. Add your first item above.</Typography>
-      )}
+        {items.length === 0 && !creating && (
+          <Typography color="text.secondary">No menu items yet. Add your first item above.</Typography>
+        )}
+      </Box>
     </Box>
   );
 }

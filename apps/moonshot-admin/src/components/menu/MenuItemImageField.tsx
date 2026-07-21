@@ -49,8 +49,8 @@ export function MenuItemImageField({
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <Box
           sx={{
-            width: 120,
-            height: 80,
+            width: 220,
+            height: 150,
             borderRadius: 1,
             border: 1,
             borderColor: 'divider',

@@ -1,27 +1,96 @@
-# Current implemented flows (summary)
+# Current flows
 
-Thin path in production today:
+Authoritative summary of **shipped** vs **planned** runtime behaviour. Paths use `/api/v1`.
+
+## Topology
+
+```mermaid
+flowchart LR
+  subgraph clients [Clients]
+    OA[order_ahead]
+    KDS[kds]
+    Admin[admin]
+    Mkt[marketing]
+  end
+
+  subgraph api [moonshot_api]
+    Gateway[Express_api_v1]
+    IoKds["Socket_/kds"]
+    IoCust["Socket_/customer"]
+  end
+
+  DB[("Postgres")]
+
+  OA --> Gateway
+  OA --> IoCust
+  KDS --> Gateway
+  KDS --> IoKds
+  Admin --> Gateway
+  Gateway --> DB
+```
+
+## Shipped
+
+### Thin happy path
 
 1. **Order-ahead** loads café + menu (`GET /cafe/:slug`, `GET /menu`). Optional Google sign-in (`POST /auth/google`, `GET /auth/me`).
-2. **Place order:** `POST /orders` with basket. **Guest** responses include **`trackingToken`** when `JWT_SECRET` is set and the row stays guest (`user_id` null). **Signed-in** calls may send **`Authorization`** to attach **`orders.user_id`** (then no `trackingToken`).
-3. **KDS:** device login → `GET /kds/orders` + Socket namespace **`/kds`** (`kds:order:new` / `kds:order:removed`).
-4. **Customer tracking:** order-ahead opens **`/customer`**, emits `customer:subscribe` with `orderId` + `authToken` (tracking JWT or session JWT); KDS completion emits **`customerOrderCompleted`** to that room. **Loyalty + ETA recompute** run after the order row is `completed`; failures there are logged and **do not** fail the KDS **Done** HTTP response.
-5. **Admin:** pre-seeded admin login → dashboard updates order-ahead feature settings, KDS config, and existing menu item price/availability/modifier option prices.
-6. **Track order:** order-ahead **`/orders/:id`** polls while the order is open and opens **`/customer`** socket tracking where possible (`useOrderTracking`). Stripe success URLs land on **`/:cafeSlug/checkout/restore?checkout_session_id=…`** (or Home forwards there). Recovery calls **`GET /orders/checkout-session/:sessionId`** with the route slug as **`X-Cafe-Slug`** — see [stripe-checkout-return.md](../stripe-checkout-return.md).
+2. **Place order:** `POST /orders` with basket. Guests get **`trackingToken`** when `JWT_SECRET` is set and `user_id` is null. Signed-in calls may send **`Authorization`** to attach **`orders.user_id`**.
+3. **KDS:** device login → `GET /kds/orders` + Socket namespace **`/kds`** (`kds:order:new` / `kds:order:removed`). KDS users are provisioned via **admin onboarding** (`POST /admin/onboarding/kds-users`) or bootstrap CLI.
+4. **Customer tracking:** order-ahead opens **`/customer`**, emits `customer:subscribe`; KDS completion emits **`customerOrderCompleted`**. Loyalty + ETA recompute run after `completed`; failures are swallowed so KDS **Done** never 500s after the row is complete.
+5. **Admin:** self-service signup + onboarding wizard, settings, menu, Stripe Connect.
+6. **Stripe return:** `/:cafeSlug/checkout/restore?checkout_session_id=…` → `GET /orders/checkout-session/:sessionId` — see [stripe-checkout-return.md](../stripe-checkout-return.md).
 
-### Stripe vs pay-in-store (customer-visible)
+### Stripe vs pay-in-store
 
 | Mode | Initial DB status | KDS sees order when |
 |------|-------------------|---------------------|
 | `pay_in_store` | `confirmed` / `unpaid` | Immediately on `POST /orders` |
 | `stripe` | `pending` / `unpaid` | After webhook **or** checkout return recovery confirms `paid` / `confirmed` |
 
-Home **`GET /orders/me`** includes **`pending`** in active orders; KDS open queue does **not** — a paid Stripe order stuck as `pending` looks like "order on Home, nothing on KDS".
+Home **`GET /orders/me`** includes **`pending`** in active orders; KDS open queue does **not**.
 
 ### Order status stepper (v1)
 
-Kitchen statuses **`preparing` / `ready`** are not yet pushed on every flow; the UI uses a **four-chip** stepper driven by **`OrderStatus`** when present and **`customerOrderCompleted`** for the final step. **Practical v1:** treat non-terminal orders as **queue-bound** — poll **`GET /orders/:id`** every ~15s (and rely on socket ETA events when connected). When most tickets stay in **`confirmed`** until completion, the customer sees a **two-phase mental model**: *Queued* (chips 0–2 collapsed visually or idle) → *Done*. A fast-follow can wire explicit **`preparing` / `ready`** transitions from KDS for richer steps.
+Kitchen statuses **`preparing` / `ready`** are rarely pushed; the UI uses a four-chip stepper. Practical v1: poll **`GET /orders/:id`** (~15s) and treat non-terminal as queue-bound until **`customerOrderCompleted`**.
+
+### Café + menu (S0)
+
+```mermaid
+sequenceDiagram
+  participant OA as order_ahead
+  participant API as moonshot_api
+  participant DB as Postgres
+  OA->>API: GET /cafe/:slug
+  API->>DB: SELECT cafes
+  API-->>OA: Cafe + activeFeatures
+  OA->>API: GET /menu (X-Cafe-Slug)
+  API->>DB: SELECT menu_items
+  API-->>OA: NormalisedMenu
+```
+
+### Google auth (S1)
+
+`POST /auth/google` → verify Google ID token → upsert `users` + `cafe_users` → JWT. `GET /auth/me` hydrates membership.
+
+### Pay-in-store order (S2a)
+
+`POST /orders` → resolve modifiers/prices → insert **`confirmed` / `unpaid`** → emit **`kds:order:new`** → recompute FIFO ETA (floored by `requested_pickup_not_before`).
+
+### Stripe Checkout (S2b)
+
+`POST /orders` → insert **`pending` / `unpaid`** → Stripe Checkout session → persist `payment_sessions`. Confirmation: webhook `checkout.session.completed` **or** browser recovery — both call the same `confirmOrderPaidFromStripeCheckout` helper (idempotent). Then KDS + ETA.
+
+### KDS complete → customer + loyalty
+
+`POST /kds/orders/:id/complete` → mark completed → emit KDS removed + customer completed → loyalty ledger (idempotent) → optional `customerReviewEligible` after 3 on-time app orders.
 
 Auth details — [architecture/realtime.md](../architecture/realtime.md).
 
-Sequences with Mermaid — [dataflow-sequences.md](../dataflow-sequences.md) (implemented S0–S3 + KDS/customer/admin paths).
+## Planned
+
+- POS webhooks / Square (etc.) ingress beyond the manual adapter — [pos-normalisation.md](../pos-normalisation.md)
+- Stripe incremental checkout / order merge (F3) and refunds on cancel
+- Explicit KDS **`preparing` / `ready`** transitions for a richer customer stepper
+- Feedback HTTP API + order-ahead review drawer (Phase B) — [feedback-prompt-flow.md](../feedback-prompt-flow.md)
+- Café open-hours API (Home no longer hardcodes “open”)
+- KDS milk-colour / chip prep view models (config stored; board still shows `NormalisedOrder`)

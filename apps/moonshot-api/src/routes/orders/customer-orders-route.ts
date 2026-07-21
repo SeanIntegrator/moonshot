@@ -12,14 +12,13 @@ import { estimateTailPickupForCafe } from '../../lib/pickup-eta-estimate.js';
 import {
   cancelOrderAtCafe,
   listCustomerOrdersForUser,
-} from '../../lib/orders-repository.js';
+} from '../../lib/orders/order-customer.js';
+import { UUID_RE } from '../../lib/orders/order-constants.js';
 import { recomputePickupEtasForCafe } from '../../lib/pickup-eta.js';
 import { emitKdsServerToClient } from '../../realtime/kds-events.js';
 import { optionalCustomerAuth } from '../../middleware/optional-customer-auth.js';
 import { requireAuth } from '../../middleware/auth.js';
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { ApiHttpError } from '../../lib/http-errors.js';
 
 export const customerOrdersRouter: IRouter = Router();
 
@@ -61,39 +60,27 @@ customerOrdersRouter.post('/:orderId/cancel', optionalCustomerAuth, async (req, 
   const rawId = req.params.orderId;
   const orderId = Array.isArray(rawId) ? rawId[0] : rawId;
   if (!orderId?.trim() || !UUID_RE.test(orderId.trim())) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Invalid order id',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid order id');
   }
 
   const trimmed = orderId.trim();
   const authorised = await loadCustomerAuthorisedOrder({ req, orderId: trimmed, cafeId });
   if (!authorised) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Order not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found');
   }
 
   const result = await cancelOrderAtCafe(trimmed, cafeId);
 
   if (result.kind === 'not_found') {
-    return res.status(404).json({
-      ok: false,
-      error: 'Order not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found');
   }
 
   if (result.kind === 'not_cancellable') {
-    return res.status(409).json({
-      ok: false,
-      error: 'Order cannot be cancelled in its current state',
-      code: ApiErrorCode.CONFLICT,
-    });
+    throw new ApiHttpError(
+      409,
+      ApiErrorCode.CONFLICT,
+      'Order cannot be cancelled in its current state',
+    );
   }
 
   if (result.kind === 'already_cancelled') {
@@ -125,21 +112,13 @@ customerOrdersRouter.get('/:orderId', optionalCustomerAuth, async (req, res) => 
   const rawId = req.params.orderId;
   const orderId = Array.isArray(rawId) ? rawId[0] : rawId;
   if (!orderId?.trim() || !UUID_RE.test(orderId.trim())) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Invalid order id',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid order id');
   }
 
   const trimmed = orderId.trim();
   const order = await loadCustomerAuthorisedOrder({ req, orderId: trimmed, cafeId });
   if (!order) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Order not found',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found');
   }
 
   return res.json({ ok: true, data: { order } });

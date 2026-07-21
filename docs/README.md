@@ -7,16 +7,15 @@ Start here when onboarding or verifying behaviour against production.
 | Area | Purpose |
 |------|---------|
 | [architecture/](architecture/overview.md) | **Stable**: invariants that should stay true as the codebase grows |
-| [current/](current/http-surface.md) | **What runs today**: HTTP routes, env vars, deployment notes |
-| [roadmap.md](roadmap.md) | **Target state**: Stripe, ETA, modifiers, POS, etc., with planned vs done |
-| [progress.md](progress.md) | **Changelog-style log**: shipped features, operational snags, recent decisions |
-
-Historical narrative files ([dataflow-high-level.md](dataflow-high-level.md), [dataflow-sequences.md](dataflow-sequences.md)) are kept as deep references; diagrams there should align with **current/** and **architecture/**.
+| [current/](current/http-surface.md) | **What runs today**: HTTP routes, env vars, deployed flows |
+| [progress.md](progress.md) | **Changelog + still planned**: shipped features, snags, next steps |
 
 ## Quick links
 
 - [Realtime / Socket auth](architecture/realtime.md) — `/kds` vs `/customer`, JWT rules
-- [Stripe checkout return](stripe-checkout-return.md) — `ORDER_AHEAD_BASE_URL`, recovery endpoint, KDS confirm path
-- [API module layout](architecture/api-modules.md) — where order/loyalty/admin logic lives in `@moonshot/api`
+- [Current flows](current/flows.md) — shipped vs planned sequences
+- [Stripe checkout return](stripe-checkout-return.md) — `ORDER_AHEAD_BASE_URL`, recovery endpoint
+- [API module layout](architecture/api-modules.md) — where order/loyalty/admin logic lives
 - [HTTP routes & CORS](current/http-surface.md)
-- [POS → normalised menu/order mapping (future providers)](pos-normalisation.md)
+- [Self-service onboarding](onboarding.md)
+- [POS → normalised menu/order mapping](pos-normalisation.md)

@@ -10,7 +10,8 @@ export const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
 /** Orders visible on KDS board before completion */
 export const KDS_OPEN_ORDER_STATUSES = ['confirmed', 'preparing', 'ready'] as const;
 
-export const COMPLETABLE_STATUSES = ['confirmed', 'preparing', 'ready'] as const;
+/** Alias — same open statuses that can be marked Done on the KDS. */
+export const COMPLETABLE_STATUSES = KDS_OPEN_ORDER_STATUSES;
 
 export const CUSTOMER_ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready'] as const;
 

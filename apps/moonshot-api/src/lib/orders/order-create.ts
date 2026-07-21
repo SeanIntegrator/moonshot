@@ -136,41 +136,6 @@ export async function insertPendingOrderWithResolvedLines(params: {
   });
 }
 
-/**
- * Stripe path: pending + unpaid until Checkout webhook confirms payment.
- */
-export async function createPendingOrderForCheckout(params: {
-  cafeId: string;
-  userId: string | null;
-  customerName: string;
-  notes: string | null;
-  orderType: OrderType;
-  lines: CreateOrderLineInput[];
-}): Promise<NormalisedOrder> {
-  const { cafeId, userId, customerName, notes, orderType, lines } = params;
-
-  assertValidOrderType(orderType);
-  const trimmedName = assertCustomerName(customerName);
-  validateOrderLines(lines);
-
-  const { lines: resolvedLines, currency, totalMinor } = await resolveOrderLinesWithModifiers({
-    db: pool,
-    cafeId,
-    lines,
-  });
-
-  return insertPendingOrderWithResolvedLines({
-    cafeId,
-    userId,
-    customerName: trimmedName,
-    notes,
-    orderType,
-    resolvedLines,
-    currency,
-    totalMinor,
-  });
-}
-
 async function insertOrderWithResolvedLines(params: {
   cafeId: string;
   userId: string | null;

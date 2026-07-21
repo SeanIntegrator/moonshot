@@ -79,7 +79,7 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
   }
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 3, borderRadius: 2 }}>
       <Typography variant="h6" gutterBottom>
         Kitchen display (KDS)
       </Typography>

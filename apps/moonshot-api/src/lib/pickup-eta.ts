@@ -1,6 +1,6 @@
 import type { KdsConfig } from '@moonshot/types';
 import type { Pool, PoolClient } from 'pg';
-import { KDS_OPEN_ORDER_STATUSES } from './orders-repository.js';
+import { KDS_OPEN_ORDER_STATUSES } from './orders/order-constants.js';
 import { resolveEtaParams } from './pickup-eta-params.js';
 import { applyPickupNotBeforeFloor } from './requested-pickup.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
@@ -13,9 +13,14 @@ type OpenOrderQtyRow = {
 };
 
 /**
- * FIFO queue: open KDS orders by created_at ASC. For each order j,
- * ETA = max(now + base + perItem * qtyAhead, requested_pickup_not_before).
- * Sets `quoted_pickup_time` only on first assignment; `pickup_time` always reflects the live estimate.
+ * Recompute live pickup ETAs for all open KDS orders in a café.
+ *
+ * FIFO queue: open orders ordered by created_at ASC. For each order j,
+ * base FIFO minutes = basePrep + perItem × (sum of quantities in orders ahead).
+ * Live ETA = max(FIFO ms, requested_pickup_not_before) so a customer delay
+ * ("not before 30 min") is never overwritten by a shorter queue estimate.
+ * `quoted_pickup_time` is set only on first assignment; `pickup_time` always
+ * reflects the live estimate and is broadcast to KDS + customer sockets.
  */
 export async function recomputePickupEtasForCafe(params: {
   db: Pool | PoolClient;

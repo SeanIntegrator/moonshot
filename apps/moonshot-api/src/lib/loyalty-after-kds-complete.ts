@@ -7,21 +7,6 @@ import { fetchOrderWithItems } from './orders/order-read.js';
 import { applyLedgerStampAndRewards } from './loyalty/apply-ledger-on-complete.js';
 import { onTimeForReviewPrompt, stampsEarnedForCompletedOrder } from './loyalty/loyalty-rules.js';
 
-export function isCompletedWithinPickupGrace(params: {
-  pickupTime: string | null;
-  completedAt: string | null;
-  nowMs?: number;
-}): boolean {
-  const pickupMs = params.pickupTime ? new Date(params.pickupTime).getTime() : null;
-  if (pickupMs == null || !Number.isFinite(pickupMs)) return false;
-
-  const completedMs = params.completedAt
-    ? new Date(params.completedAt).getTime()
-    : (params.nowMs ?? Date.now());
-
-  return Number.isFinite(completedMs) && completedMs <= pickupMs + 2 * 60 * 1000;
-}
-
 /** After KDS marks an app order complete: ledger stamps/rewards + counters + optional review prompt signal. */
 export async function applyLoyaltyAfterKdsComplete(params: {
   cafeId: string;
@@ -29,15 +14,7 @@ export async function applyLoyaltyAfterKdsComplete(params: {
 }): Promise<void> {
   const { cafeId, order } = params;
   const userId = order.customerId;
-  if (!userId || order.source !== 'app') {
-    console.info('[loyalty.kdsComplete] skipped — guest or non-app order', {
-      cafeId,
-      orderId: order.id,
-      source: order.source,
-      hasCustomerId: Boolean(userId),
-    });
-    return;
-  }
+  if (!userId || order.source !== 'app') return;
 
   const cafe = await findCafeById(cafeId);
   if (!cafe) return;

@@ -1,6 +1,8 @@
 # Review prompt flow (Google TOS–aligned)
 
-This is a planned flow. The Phase 1 database already has `cafe_users.on_time_completed_orders`, `cafe_users.review_prompt_state`, and `cafes.owner_feedback_email`, but the runtime order completion, loyalty update, feedback API, and review drawer are not implemented yet.
+**Phase A (shipped):** on KDS complete for signed-in **app** orders, the API increments `cafe_users.on_time_completed_orders` (2-minute grace vs `pickup_time`) and may emit **`customerReviewEligible`** when the counter hits 3 and `review_prompt_state = 'not_shown'` (review nudge enabled).
+
+**Phase B (planned):** order-ahead review drawer UI, `POST /feedback/...` persistence into `feedback_responses`, and richer Google CTA handling.
 
 After **three on-time completed app orders** for the same user at the same café, show a **bottom drawer** asking for a quick thumbs up / thumbs down. **Both outcomes** must offer a path to **post a public Google review** so the flow is not review-gated.
 

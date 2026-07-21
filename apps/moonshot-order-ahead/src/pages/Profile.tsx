@@ -1,5 +1,4 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import {
   Avatar,
   Box,
@@ -9,7 +8,7 @@ import {
   Link,
   Typography,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { ProfileStatCard } from '../components/ProfileStatCard.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { SignedOutPanel } from '../components/SignedOutPanel.js';
@@ -19,7 +18,6 @@ import { useCafePath } from '../hooks/useCafePath.js';
 import { formatMoney, formatShortDate } from '../lib/format.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { useCart } from '../providers/CartProvider.js';
-import { useNavigate } from 'react-router-dom';
 
 export function Profile() {
   const { user, membership, loading, signOut, isSignedIn } = useAuth();
@@ -30,12 +28,6 @@ export function Profile() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
-      {isSignedIn && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <SettingsOutlinedIcon color="action" />
-        </Box>
-      )}
-
       {loading && (
         <Typography color="text.secondary">Checking session…</Typography>
       )}
@@ -82,13 +74,10 @@ export function Profile() {
           >
             {(
               [
-                ['Name', user.displayName ?? '—', false],
-                ['Email', user.email, false],
-                ['Phone', '—', true],
-                ['Card', '—', true],
-                ['Notifications', '—', true],
+                ['Name', user.displayName ?? '—'],
+                ['Email', user.email],
               ] as const
-            ).map(([label, value, wireframe], i, arr) => (
+            ).map(([label, value], i, arr) => (
               <Box key={label}>
                 <Box
                   sx={{
@@ -103,10 +92,10 @@ export function Profile() {
                     {label}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="body2" color={wireframe ? 'text.disabled' : 'text.secondary'}>
+                    <Typography variant="body2" color="text.secondary">
                       {value}
                     </Typography>
-                    {wireframe ? null : <ChevronRightIcon fontSize="small" color="disabled" />}
+                    <ChevronRightIcon fontSize="small" color="disabled" />
                   </Box>
                 </Box>
                 {i < arr.length - 1 && <Divider />}

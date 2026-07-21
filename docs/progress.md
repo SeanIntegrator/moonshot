@@ -1,6 +1,6 @@
 # Moonshot — Progress
 
-_Last updated: June 2026_
+_Last updated: July 2026_
 
 ## What we set out to do
 
@@ -49,7 +49,7 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 
 - **KDS Done** never returns 500 for post-success loyalty or ETA failures (order already `completed`).
 - **`cafes-repository`** centralises café SELECT columns; global **`errorHandler`** returns **`Internal error`** for unknown 500s (structured logs server-side).
-- **`orders/`** module split (read / create / checkout / KDS / customer) with **`orders-repository.ts`** barrel.
+- **`orders/`** module split (read / create / checkout / KDS / customer); import those modules directly (no barrel).
 - **`admin-settings-service`** owns settings PATCH merge + persist (route is thin like Stripe).
 - **`buildGuestTrackingTokenIfNeeded`** shared by create-order and checkout-session recovery.
 - See [architecture/api-modules.md](architecture/api-modules.md).
@@ -87,17 +87,32 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). A
 4. **Stripe incremental / merge checkout (F3)** — not implemented; only initial **Checkout Session** per order.
 5. **Admin** — still no invite flow or café theme editor; Stripe card is minimal; menu CRUD exists.
 6. **Bootstrap uses sync scrypt** — fine for CLI only.
-7. **Home open hours** — still hardcoded “open”; no hours API yet.
+7. **Home open hours** — café name only on the hero; no hours API yet (do not hardcode “open”).
 
 ---
 
-## Next steps (see `docs/roadmap.md`)
+## Still planned
 
-1. Order-ahead + KDS **UI** polish (modifier pickers, ETA display, explicit **preparing/ready** stepper).
-2. **Order merge** + incremental Stripe sessions.
-3. **POS adapter implementations** (Square, etc.) using [pos-normalisation.md](pos-normalisation.md).
-4. Admin **invites**, full menu CRUD, audit trail.
-5. **Feedback persistence** (`feedback_responses`) and richer review flows.
+| Initiative | Notes |
+|------------|-------|
+| Stripe incremental / merge checkout (F3) | Only initial Checkout Session per order today |
+| Stripe refunds on cancel | Cancel sets status; paid → `refundPending: true` |
+| POS adapters (Square, etc.) | Manual adapter only — [pos-normalisation.md](pos-normalisation.md) |
+| Explicit preparing/ready on KDS | Customer stepper stays queue → done until then |
+| Feedback HTTP + drawer (Phase B) | Socket eligibility MVP shipped; [feedback-prompt-flow.md](feedback-prompt-flow.md) |
+| Café hours API | Home must not invent open/closed |
+| Admin invites / audit / theme editor | Self-service signup shipped; invites remain planned |
+| KDS milk/chip prep UI | Config on `kds_config`; board still uses `NormalisedOrder` |
+
+---
+
+## Next steps
+
+1. Order-ahead + KDS **UI** polish (ETA display, explicit **preparing/ready** stepper).
+2. **Order merge** + incremental Stripe sessions + refunds.
+3. **POS adapter implementations** using [pos-normalisation.md](pos-normalisation.md).
+4. Admin **invites**, audit trail, theme editor.
+5. **Feedback persistence** (`feedback_responses`) and review drawer.
 
 ---
 
@@ -106,6 +121,6 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). A
 - [docs/README.md](README.md) — documentation index
 - [architecture/realtime.md](architecture/realtime.md) — Socket auth model
 - [current/http-surface.md](current/http-surface.md) — routes + CORS
-- [dataflow-sequences.md](dataflow-sequences.md) — sequences
+- [current/flows.md](current/flows.md) — shipped vs planned flows
 - [schema-draft.md](schema-draft.md) — schema
 - [pos-normalisation.md](pos-normalisation.md) — future POS mapping

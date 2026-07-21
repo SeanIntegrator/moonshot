@@ -5,6 +5,7 @@ import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import { BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
+import { RequireFeature } from './components/RequireFeature.js';
 import { useCafePath } from './hooks/useCafePath.js';
 import { useCafeFeatures } from './hooks/useCafeFeatures.js';
 import { Checkout } from './pages/Checkout.js';
@@ -49,13 +50,41 @@ export function App() {
       <GoogleOneTap />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/order" element={<Menu />} />
-        <Route path="/order/item/:menuItemId" element={<ItemDetail />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route
+          path="/order"
+          element={
+            <RequireFeature feature="orderAhead">
+              <Menu />
+            </RequireFeature>
+          }
+        />
+        <Route
+          path="/order/item/:menuItemId"
+          element={
+            <RequireFeature feature="orderAhead">
+              <ItemDetail />
+            </RequireFeature>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <RequireFeature feature="orderAhead">
+              <Checkout />
+            </RequireFeature>
+          }
+        />
         <Route path="/checkout/restore" element={<CheckoutRestore />} />
         <Route path="/orders/:orderId" element={<OrderDetail />} />
         <Route path="/orders/:orderId/confirmed" element={<OrderConfirmed />} />
-        <Route path="/rewards" element={<Rewards />} />
+        <Route
+          path="/rewards"
+          element={
+            <RequireFeature feature="loyalty">
+              <Rewards />
+            </RequireFeature>
+          }
+        />
         <Route path="/profile" element={<Profile />} />
       </Routes>
       {!hideNav && (

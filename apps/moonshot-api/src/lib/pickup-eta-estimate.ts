@@ -1,6 +1,6 @@
 import type { KdsConfig } from '@moonshot/types';
 import type { Pool } from 'pg';
-import { KDS_OPEN_ORDER_STATUSES } from './orders-repository.js';
+import { KDS_OPEN_ORDER_STATUSES } from './orders/order-constants.js';
 import { resolveEtaParams } from './pickup-eta-params.js';
 
 /**

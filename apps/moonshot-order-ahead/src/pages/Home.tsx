@@ -19,12 +19,13 @@ import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafe } from '../hooks/useCafe.js';
-import { firstName, formatMoney, timeGreeting } from '../lib/format.js';
+import { firstName, formatFromPrice, formatMoney, timeGreeting } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
+import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
 
 export function Home() {
   const { loading, error, cafe } = useCafe();
@@ -88,7 +89,8 @@ export function Home() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box>
             <Typography variant="caption" sx={{ opacity: 0.75, color: 'inherit' }}>
-              {cafe.name} · open
+              {/* Hours API not wired yet — avoid hardcoding "open". */}
+              {cafe.name}
             </Typography>
             <Typography variant="h4" component="h1" sx={{ color: 'inherit', mt: 0.5, fontWeight: 700 }}>
               {greeting}, {name}.
@@ -228,10 +230,9 @@ export function Home() {
                       {item.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {formatMoney(item.priceMinor, item.currency)}
-                    </Typography>
-                    <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.25 }}>
-                      Limited time
+                      {item.sizes?.length
+                        ? formatFromPrice(menuItemListPriceMinor(item), item.currency)
+                        : formatMoney(menuItemListPriceMinor(item), item.currency)}
                     </Typography>
                   </Box>
                 </Box>

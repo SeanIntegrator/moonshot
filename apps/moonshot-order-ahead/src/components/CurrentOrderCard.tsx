@@ -101,16 +101,15 @@ export function CurrentOrderCard({ order }: Props) {
 
 type OrderNowProps = {
   onClick: () => void;
-  flush?: boolean;
 };
 
-export function OrderNowButton({ onClick, flush = false }: OrderNowProps) {
+export function OrderNowButton({ onClick }: OrderNowProps) {
   return (
     <Box
       component="button"
       onClick={onClick}
       sx={{
-        mt: flush ? 0 : 2,
+        mt: 2,
         width: '100%',
         display: 'flex',
         alignItems: 'center',

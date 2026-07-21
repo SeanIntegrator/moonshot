@@ -9,13 +9,14 @@ import {
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { findKdsUserForLogin, touchKdsUserLogin } from '../lib/kds-users-repository.js';
-import { completeOrderForKds, listOpenOrdersForKds } from '../lib/orders-repository.js';
+import { completeOrderForKds, listOpenOrdersForKds } from '../lib/orders/order-kds.js';
 import { applyLoyaltyAfterKdsComplete } from '../lib/loyalty-after-kds-complete.js';
 import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 import { requireKdsAuth } from '../middleware/kds-auth.js';
 import { pool } from '../db.js';
+import { ApiHttpError } from '../lib/http-errors.js';
 
 export const kdsRouter: Router = Router();
 
@@ -26,38 +27,22 @@ kdsRouter.post('/auth/login', async (req, res) => {
   const password = typeof body.password === 'string' ? body.password : '';
 
   if (!cafeSlug || !username || !password) {
-    return res.status(400).json({
-      ok: false,
-      error: 'cafeSlug, username, and password are required',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'cafeSlug, username, and password are required');
   }
 
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Server JWT configuration missing',
-      code: ApiErrorCode.CONFIG,
-    });
+    throw new ApiHttpError(500, ApiErrorCode.CONFIG, 'Server JWT configuration missing');
   }
 
   const cafe = await findCafeBySlug(cafeSlug);
   if (!cafe) {
-    return res.status(401).json({
-      ok: false,
-      error: 'Invalid café or credentials',
-      code: ApiErrorCode.UNAUTHORIZED,
-    });
+    throw new ApiHttpError(401, ApiErrorCode.UNAUTHORIZED, 'Invalid café or credentials');
   }
 
   const kdsUser = await findKdsUserForLogin(cafe.cafeId, username);
   if (!kdsUser || !verifyKdsPassword(password, kdsUser.password_hash)) {
-    return res.status(401).json({
-      ok: false,
-      error: 'Invalid café or credentials',
-      code: ApiErrorCode.UNAUTHORIZED,
-    });
+    throw new ApiHttpError(401, ApiErrorCode.UNAUTHORIZED, 'Invalid café or credentials');
   }
 
   await touchKdsUserLogin(kdsUser.id);
@@ -97,11 +82,7 @@ kdsRouter.post('/orders/:orderId/complete', requireKdsAuth, async (req, res) => 
   const cafeId = req.kdsUser!.cafeId;
   const orderId = typeof req.params.orderId === 'string' ? req.params.orderId : '';
   if (!orderId.trim()) {
-    return res.status(400).json({
-      ok: false,
-      error: 'orderId is required',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'orderId is required');
   }
 
   let order;
@@ -115,11 +96,7 @@ kdsRouter.post('/orders/:orderId/complete', requireKdsAuth, async (req, res) => 
   }
 
   if (!order) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Order not found or not completable',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found or not completable');
   }
 
   /**

@@ -18,7 +18,6 @@ type MenuContextValue = {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  prefetch: () => void;
 };
 
 const MenuContext = createContext<MenuContextValue | null>(null);
@@ -87,20 +86,14 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     await loadMenu(slug, { background: Boolean(menu) });
   }, [loadMenu, slug, menu]);
 
-  const prefetch = useCallback(() => {
-    if (menu || inflightRef.current) return;
-    void loadMenu(slug, { background: false });
-  }, [loadMenu, slug, menu]);
-
   const value = useMemo<MenuContextValue>(
     () => ({
       menu,
       loading,
       error,
       refresh,
-      prefetch,
     }),
-    [menu, loading, error, refresh, prefetch],
+    [menu, loading, error, refresh],
   );
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;

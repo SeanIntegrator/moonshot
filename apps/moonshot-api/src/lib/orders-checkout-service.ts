@@ -3,23 +3,27 @@ import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../db.js';
 import { ApiHttpError } from './http-errors.js';
 import { signTrackOrderJwt } from './customer-socket-token.js';
+import { insertPendingOrderWithResolvedLines } from './orders/order-create.js';
 import {
   deleteAbandonedPendingOrder,
-  fetchOrderWithItems,
-  insertPendingOrderWithResolvedLines,
   recordStripeCheckoutSessionForOrder,
-} from './orders-repository.js';
+} from './orders/order-checkout.js';
+import { fetchOrderWithItems } from './orders/order-read.js';
 import { resolveOrderLinesWithModifiers } from './order-modifiers.js';
 import { applyRewardDiscountToTotal } from './loyalty/apply-checkout-reward-pricing.js';
 import { getStripeConnectAccountId, isStripeConnectReady } from './payments/cafe-payment-config.js';
 import { getStripeOrNull } from './payments/stripe-client.js';
 import { createStripeCheckoutSessionDirectCharge } from './payments/stripe-checkout.js';
-import { checkoutUrlsForCafe } from './order-checkout-env.js';
+import { checkoutUrlsForCafe } from './payments/checkout-urls.js';
 
 /**
- * Single menu resolution snapshot → pending order → Stripe Checkout session → persist `payment_sessions`.
- * Rolls back the pending order if Stripe or DB recording fails.
- * Loyalty rewards are consumed on webhook after payment (not at pending insert).
+ * Stripe Checkout create path (idempotent companion: webhook + browser recovery).
+ *
+ * Flow: resolve menu prices once → insert pending/unpaid order (reward not consumed yet) →
+ * create Checkout Session on the connected account → persist payment_sessions.
+ * If Stripe or DB recording fails, the pending order is deleted so the customer can retry.
+ * Payment confirmation (and reward consume) happens in confirmOrderPaidFromStripeCheckout
+ * via webhook or GET checkout-session recovery — both paths share that helper.
  */
 export async function createStripeCheckoutOrderResponse(params: {
   cafeId: string;

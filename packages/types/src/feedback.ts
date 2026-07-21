@@ -1,5 +1,8 @@
 /**
  * Post-order review prompt — 3× on-time rule + Google-compliant paths.
+ *
+ * Planned: HTTP submit endpoint + order-ahead drawer wiring still thin;
+ * types here are the extension contract for Phase B of docs/feedback-prompt-flow.md.
  */
 
 import type { IsoDateTime } from './order.js';

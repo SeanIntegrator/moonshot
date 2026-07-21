@@ -21,15 +21,6 @@ export interface LoyaltyTransaction {
   createdAt: IsoDateTime;
 }
 
-/** Denormalised / cache row — optional; ledger remains authoritative */
-export interface LoyaltyCard {
-  cafeId: string;
-  userId: string;
-  stampsCount: number;
-  rewardsAvailable: number;
-  updatedAt: IsoDateTime;
-}
-
 export type RewardType = 'free_coffee' | string;
 
 export interface LoyaltyReward {
@@ -42,13 +33,6 @@ export interface LoyaltyReward {
   createdAt: IsoDateTime;
   /** Issuance metadata / POS correlation — optional */
   metadata?: Record<string, unknown>;
-}
-
-export interface RewardRedemptionRequest {
-  cafeId: string;
-  userId: string;
-  rewardId: string;
-  orderId?: string | null;
 }
 
 /** GET /loyalty/me — café loyalty settings + cache snapshot */

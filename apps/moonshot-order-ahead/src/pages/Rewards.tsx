@@ -1,6 +1,5 @@
 import { Box, Button, Container, LinearProgress, Typography } from '@mui/material';
-import { useEffect } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
 import { QrCard } from '../components/QrCard.js';
 import { SectionHead } from '../components/SectionHead.js';
@@ -8,27 +7,14 @@ import { SignedOutPanel } from '../components/SignedOutPanel.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafePath } from '../hooks/useCafePath.js';
-import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { formatShortDate } from '../lib/format.js';
 
 export function Rewards() {
-  const navigate = useNavigate();
   const { isSignedIn, loading: authLoading, user } = useAuth();
   const { summary, transactions, loading, loadMore, nextCursor, loadingMore } = useLoyalty();
   const cafePath = useCafePath();
-  const { loyaltyEnabled } = useCafeFeatures();
-
-  useEffect(() => {
-    if (!loyaltyEnabled) {
-      navigate(cafePath('/'), { replace: true });
-    }
-  }, [loyaltyEnabled, navigate, cafePath]);
 
   const redeemed = transactions.filter((t) => t.transactionType === 'reward_redeemed');
-
-  if (!loyaltyEnabled) {
-    return null;
-  }
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>

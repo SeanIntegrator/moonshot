@@ -1,7 +1,7 @@
 import type { Request } from 'express';
 import type { NormalisedOrder } from '@moonshot/types';
 import { classifyCustomerSocketToken } from './customer-socket-token.js';
-import { findOrderByIdAndCafe } from './orders-repository.js';
+import { findOrderByIdAndCafe } from './orders/order-read.js';
 
 /**
  * Customer HTTP access model mirrors `/customer` socket subscribe:

@@ -4,7 +4,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createMoonshotHttpServer } from './create-moonshot-http-server.js';
 import { pool } from './db.js';
-import { findOrderByStripeCheckoutSessionForCafe } from './lib/orders-repository.js';
+import { findOrderByStripeCheckoutSessionForCafe } from './lib/orders/order-checkout.js';
 
 const connectionString = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 

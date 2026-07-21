@@ -40,7 +40,7 @@ function ProtectedDashboard() {
           </Button>
         </Toolbar>
       </AppBar>
-      <Container sx={{ py: 3 }}>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
         <DashboardPage session={session} />
       </Container>
     </Box>

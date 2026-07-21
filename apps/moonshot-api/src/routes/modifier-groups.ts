@@ -9,9 +9,7 @@ import {
 } from '../lib/menu-modifier-library.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { UUID_RE } from '../lib/orders/order-constants.js';
 
 export const modifierGroupsRouter: Router = Router();
 

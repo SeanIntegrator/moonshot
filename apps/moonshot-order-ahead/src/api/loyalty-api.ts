@@ -2,7 +2,6 @@ import type {
   LoyaltyRewardsListResponse,
   LoyaltySummaryResponse,
   LoyaltyTransactionsResponse,
-  RedeemRewardResponse,
 } from '@moonshot/types';
 import { apiFetch } from '../lib/api.js';
 
@@ -21,11 +20,4 @@ export function fetchLoyaltyTransactions(
 
 export function fetchUnredeemedRewards(): Promise<LoyaltyRewardsListResponse> {
   return apiFetch<LoyaltyRewardsListResponse>('/loyalty/rewards');
-}
-
-export function redeemLoyaltyReward(rewardId: string): Promise<RedeemRewardResponse> {
-  return apiFetch<RedeemRewardResponse>(
-    `/loyalty/rewards/${encodeURIComponent(rewardId.trim())}/redeem`,
-    { method: 'POST' },
-  );
 }

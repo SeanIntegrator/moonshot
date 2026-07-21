@@ -1,4 +1,6 @@
-import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, IconButton, Paper, Stack, Tooltip, Typography } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import type { AdminStripeAccountStatusResponse } from '@moonshot/types';
 import { useCallback, useEffect, useState } from 'react';
 import { adminStripeOnboardingLink, adminStripeStatus } from '../lib/admin-api.js';
@@ -94,10 +96,21 @@ export function StripePaymentsCard({
     (error !== null && isStripeServerUnavailable(error));
 
   return (
-    <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Online payments (Stripe Connect)
-      </Typography>
+    <Paper sx={{ p: 3, borderRadius: 2, height: '100%' }}>
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+        <Typography variant="h6" gutterBottom>
+          Enable Stripe payments
+        </Typography>
+        {!stripeUnavailable && (
+          <Tooltip title="Refresh status">
+            <span>
+              <IconButton size="small" disabled={busy} onClick={() => load()} aria-label="Refresh Stripe status">
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+      </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Order-ahead uses Stripe when payment provider is set to Stripe. Customers cannot place paid orders until
         charges are enabled on the connected account.
@@ -123,25 +136,31 @@ export function StripePaymentsCard({
       {stripeUnavailable ? null : loading || !status ? (
         <Typography color="text.secondary">Loading Stripe status…</Typography>
       ) : (
-        <Stack spacing={1}>
-          <Typography variant="body2">
-            Account: {status.accountId ?? '— (not created yet)'}
-          </Typography>
-          <Typography variant="body2">Charges enabled: {status.chargesEnabled ? 'yes' : 'no'}</Typography>
-          <Typography variant="body2">Details submitted: {status.detailsSubmitted ? 'yes' : 'no'}</Typography>
-          <Typography variant="body2">Payouts enabled: {status.payoutsEnabled ? 'yes' : 'no'}</Typography>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-            {status.chargesEnabled ? (
-              <Button variant="contained" onClick={() => onChargesEnabled?.()}>
+        <Stack spacing={2}>
+          {status.chargesEnabled && (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'success.main' }}>
+              <CheckCircleIcon fontSize="small" />
+              <Typography variant="body2" fontWeight={600}>
+                Stripe connected
+              </Typography>
+            </Stack>
+          )}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {status.chargesEnabled && onChargesEnabled && (
+              <Button variant="contained" onClick={() => onChargesEnabled()}>
                 Continue to go live
               </Button>
-            ) : (
-              <Button variant="contained" disabled={busy} onClick={() => void openOnboarding()}>
-                {status.accountId ? 'Continue Stripe setup' : 'Connect with Stripe'}
-              </Button>
             )}
-            <Button variant="outlined" disabled={busy} onClick={() => load()}>
-              Refresh status
+            <Button
+              variant={status.chargesEnabled ? 'outlined' : 'contained'}
+              disabled={busy}
+              onClick={() => void openOnboarding()}
+            >
+              {status.chargesEnabled
+                ? 'Visit Stripe portal'
+                : status.accountId
+                  ? 'Continue Stripe setup'
+                  : 'Connect with Stripe'}
             </Button>
           </Box>
         </Stack>

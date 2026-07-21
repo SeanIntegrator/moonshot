@@ -30,7 +30,10 @@ async function parseApiEnvelope<T>(res: Response): Promise<ApiEnvelope<T>> {
 
 export function getCafeSlug(): string {
   if (runtimeCafeSlug) return runtimeCafeSlug;
-  return import.meta.env.VITE_CAFE_SLUG ?? 'clay-and-bean';
+  const fromEnv = import.meta.env.VITE_CAFE_SLUG?.trim();
+  if (fromEnv) return fromEnv;
+  // Root `/` redirect only — CaféProvider always sets the URL slug for real routes.
+  return 'unknown';
 }
 
 let runtimeCafeSlug: string | null = null;

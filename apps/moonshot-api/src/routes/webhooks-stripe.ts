@@ -10,7 +10,7 @@ import {
   updateCafePaymentConfig,
 } from '../lib/payments/repository.js';
 import { getStripeOrNull } from '../lib/payments/stripe-client.js';
-import { confirmOrderPaidFromStripeCheckout } from '../lib/orders-repository.js';
+import { confirmOrderPaidFromStripeCheckout } from '../lib/orders/order-checkout.js';
 import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 

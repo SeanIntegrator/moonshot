@@ -60,11 +60,11 @@ Onboarding menu creation goes through **menu provisioners** (parallel to `PosAda
 | Source | Provisioner | Payload | Persistence |
 |--------|-------------|---------|-------------|
 | `template` | `templateMenuProvisioner` | `AdminSaveMenuTemplateRequest` | `applyMenuTemplate` today |
-| `pos` | `posImportMenuProvisioner` | `PosMenuProvisionPayload` | `PosAdapter.fetchMenu` → `persistNormalisedMenuCatalog` (planned) |
+| `pos` | `posImportMenuProvisioner` | `PosMenuProvisionPayload` | `PosAdapter.fetchMenu` → shared menu write helper (planned) |
 
 `POST /admin/onboarding/menu-template` delegates to `getMenuProvisioner('template')`.
 
-`persistNormalisedMenuCatalog` in `menu-catalog-persistence.ts` is the shared write path both sources will use once POS import ships.
+POS import will share the same menu persistence path as template provisioning once provider OAuth is wired (stub removed until then).
 
 `POST /admin/onboarding/menu-template` runs in a transaction:
 

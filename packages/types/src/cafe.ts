@@ -114,6 +114,10 @@ export interface MilkColorConfig {
   isDark: boolean;
 }
 
+/**
+ * Planned: KDS milk colour chips + bean badges — stored on cafés.kds_config today;
+ * board rendering still uses NormalisedOrder directly (no KdsPrep view model yet).
+ */
 export interface BeanBadgeStyle {
   label: string;
   bg: string;
@@ -159,14 +163,14 @@ export interface KdsDisplayPreferences {
   showOrderSource: boolean;
 }
 
-/** Rudimentary auto-ETA tuning (v1) — see docs/dataflow-sequences.md S5 */
+/** Rudimentary auto-ETA tuning (v1) — see docs/current/flows.md */
 export interface KdsEtaConfig {
   basePrepMinutes: number;
   perItemMinutes: number;
 }
 
 /**
- * `cafes.kds_config` JSON — barista-facing display + Flow prep hints.
+ * `cafes.kds_config` JSON — layout/ETA shipped; milk/chip prep hints are planned.
  */
 export interface KdsConfig {
   cafeId: string;

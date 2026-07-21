@@ -23,14 +23,6 @@ export const KDS_SOCKET_SERVER_EVENT = {
 export type KdsSocketServerEventName =
   (typeof KDS_SOCKET_SERVER_EVENT)[keyof typeof KDS_SOCKET_SERVER_EVENT];
 
-/** @deprecated KDS uses handshake `auth.token` only; no emitted client event with this name today. */
-export const KDS_SOCKET_CLIENT_EVENT = {
-  SUBSCRIBE: 'kds:subscribe',
-} as const;
-
-export type KdsSocketClientEventName =
-  (typeof KDS_SOCKET_CLIENT_EVENT)[keyof typeof KDS_SOCKET_CLIENT_EVENT];
-
 /** Order-ahead / customer namespace — server → client */
 export const CUSTOMER_SOCKET_SERVER_EVENT = {
   ORDER_COMPLETED: 'customerOrderCompleted',

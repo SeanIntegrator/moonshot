@@ -1,22 +1,8 @@
 # Postgres schema (Phase 1 + planned v2)
 
-The repo now has a Phase 1 migration at `apps/moonshot-api/migrations/sql/001_initial_schema.sql`. That migration creates `cafes`, `users`, `cafe_users`, and `menu_items`, and seeds the `clay-and-bean` café plus one menu item.
+Migrations live under `apps/moonshot-api/migrations/` (node-pg-migrate wrappers + `sql/` sources). Through **013** (`orders.requested_pickup_not_before`) the live schema covers cafés, users/memberships, menu + modifier library, orders/items, KDS users, admin users, payment/webhook tables, and loyalty ledger. Self-service **admin onboarding** provisions café + admin + optional KDS user + template menu without a separate schema phase.
 
-Phase 2 migration `apps/moonshot-api/migrations/sql/002_orders_schema.sql` (wrapper `apps/moonshot-api/migrations/1734900000000_orders_schema.cjs`) adds `orders` and `order_items` with CHECK constraints and indexes aligned with `@moonshot/types`.
-
-Phase 3 migration `apps/moonshot-api/migrations/sql/003_kds_users_schema.sql` (wrapper `apps/moonshot-api/migrations/1735000000000_kds_users_schema.cjs`) adds `kds_users` for café-scoped KDS device login (hashed passwords).
-
-Phase 4 migration `apps/moonshot-api/migrations/sql/004_admin_users_schema.sql` (wrapper `apps/moonshot-api/migrations/1735100000000_admin_users_schema.cjs`) adds pre-seeded café admin accounts. Invite columns exist for a future onboarding flow, but runtime login currently uses pre-created credentials.
-
-Phase 5 migration `apps/moonshot-api/migrations/sql/005_payment_webhook_schema.sql` (wrapper `apps/moonshot-api/migrations/1735200000000_payment_webhook_schema.cjs`) adds **`payment_sessions`** and **`webhook_events`** for Stripe Checkout + Connect webhook delivery tracking.
-
-Phase 6 migration `apps/moonshot-api/migrations/sql/006_webhook_events_processing_status.sql` (wrapper `apps/moonshot-api/migrations/1735300000000_webhook_events_processing_status.cjs`) adds **`processing_status`**, **`last_error`**, and **`updated_at`** on **`webhook_events`** so failed Stripe handlers can be retried safely (same `event.id`) without dropping retries as duplicates.
-
-Phase 7 migration `apps/moonshot-api/migrations/sql/007_loyalty_ledger.sql` (wrapper `apps/moonshot-api/migrations/1735400000000_loyalty_ledger.cjs`) adds **`loyalty_transactions`**, **`loyalty_rewards`**, and **`cafe_users.loyalty_display_id`** (plus indexes / trigger to assign display ids). Phase 9 renames **`loyalty_stamps` → `loyalty_card_progress`**. Phase 10 adds **`cafes.loyalty_display_counter`** and replaces the display-id trigger with per-café 6-digit numeric IDs for new rows (existing IDs unchanged).
-
-Phase 8 migration `apps/moonshot-api/migrations/sql/008_menu_seed_dev.sql` (wrapper `apps/moonshot-api/migrations/1735500000000_menu_seed_dev.cjs`) refreshes dev seed menu structure (modifiers / subcategories) and enables loyalty on the seed café.
-
-Sections below for **`feedback_responses`**, additional POS tables, etc. remain **planned v2** beyond what migrations 1–8 create today.
+Sections below for **`feedback_responses`**, additional POS tables, etc. remain **planned v2** beyond what migrations create today.
 
 ## Conventions
 
@@ -201,7 +187,7 @@ Implemented in Phase 4 (`004_admin_users_schema.sql`). Passwords use the same op
 
 ## `orders`
 
-Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store and Stripe Checkout creation are exposed as `POST /api/v1/orders` (see `docs/dataflow-sequences.md` S3). KDS list/complete and Socket.io fan-out run after KDS login; **customer tracking** uses namespace `/customer` with JWT validation (see `docs/architecture/realtime.md`). Stripe **`checkout.session.completed`** updates orders via **`POST /api/v1/webhooks/stripe`** using **`webhook_events.processing_status`** for safe retries.
+Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store and Stripe Checkout creation are exposed as `POST /api/v1/orders` (see `docs/current/flows.md`). KDS list/complete and Socket.io fan-out run after KDS login; **customer tracking** uses namespace `/customer` with JWT validation (see `docs/architecture/realtime.md`). Stripe **`checkout.session.completed`** updates orders via **`POST /api/v1/webhooks/stripe`** using **`webhook_events.processing_status`** for safe retries.
 
 | Column               | Type        | Notes |
 | -------------------- | ----------- | ----- |

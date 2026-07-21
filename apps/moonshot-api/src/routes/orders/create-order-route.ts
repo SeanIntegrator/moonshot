@@ -4,13 +4,15 @@ import type { IRouter } from 'express';
 import { Router } from 'express';
 import { ensureCafeMembership } from '../../lib/cafe-membership.js';
 import { buildGuestTrackingTokenIfNeeded } from '../../lib/customer-socket-token.js';
-import { createGuestPayInStoreOrder } from '../../lib/orders-repository.js';
+import { ApiHttpError } from '../../lib/http-errors.js';
+import { createGuestPayInStoreOrder } from '../../lib/orders/order-create.js';
 import { emitKdsServerToClient } from '../../realtime/kds-events.js';
 import { optionalCustomerAuth } from '../../middleware/optional-customer-auth.js';
 import { recomputePickupEtasForCafe } from '../../lib/pickup-eta.js';
 import { pool } from '../../db.js';
 import { createStripeCheckoutOrderResponse } from '../../lib/orders-checkout-service.js';
-import { parseCreateOrderBody, parseOrderAheadPaymentMode } from '../../lib/order-checkout-env.js';
+import { parseCreateOrderBody } from '../../lib/orders/parse-create-order-body.js';
+import { parseOrderAheadPaymentMode } from '../../lib/orders/order-payment-mode.js';
 import { resolveRequestedPickupNotBefore } from '../../lib/requested-pickup.js';
 
 export const createOrderRouter: IRouter = Router();
@@ -21,11 +23,7 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
 
   const parsed = parseCreateOrderBody(body);
   if (!parsed.ok) {
-    return res.status(400).json({
-      ok: false,
-      error: parsed.error,
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, parsed.error);
   }
 
   const { customerName, notes, orderType, items, redeemRewardId, pickupDelayMinutes } = parsed.value;
@@ -42,17 +40,6 @@ createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
     // Loyalty and order history need a cafe_users row; Google sign-in alone may not create one.
     await ensureCafeMembership({ db: pool, cafeId, userId });
   }
-
-  console.info('[orders.create] mode selected', {
-    cafeId,
-    cafeSlug: req.cafe!.slug,
-    paymentMode,
-    signedIn: userId != null,
-    userId: userId ?? undefined,
-    itemCount: items.length,
-    redeemRewardId: redeemRewardId ?? undefined,
-    pickupDelayMinutes: pickupDelayMinutes ?? undefined,
-  });
 
   if (paymentMode === 'pay_in_store') {
     const result = await createGuestPayInStoreOrder({

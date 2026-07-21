@@ -107,4 +107,4 @@ Requires order **`status = completed`** and signed-in **`orders.user_id`**.
 | `apps/moonshot-api/src/lib/cafe-membership.ts` | `ensureCafeMembership` before orders / loyalty |
 | `apps/moonshot-api/src/lib/requested-pickup.ts` | Clamp delay → `requested_pickup_not_before` |
 
-See also [current/http-surface.md](current/http-surface.md), [architecture/realtime.md](architecture/realtime.md), [dataflow-sequences.md](dataflow-sequences.md) (S4).
+See also [current/http-surface.md](current/http-surface.md), [architecture/realtime.md](architecture/realtime.md), [current/flows.md](current/flows.md).

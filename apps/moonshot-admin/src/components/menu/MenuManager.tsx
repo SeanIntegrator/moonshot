@@ -1,4 +1,5 @@
-import { Alert, Box, Button, CircularProgress, Paper, Tab, Tabs, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Paper, Stack, Tab, Tabs, Typography } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useCallback, useEffect, useState } from 'react';
 import type { CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
 import { fetchMenuForAdmin, fetchModifierGroups } from '../../lib/admin-api.js';
@@ -12,6 +13,7 @@ type Props = {
 
 export function MenuManager({ cafeSlug, token }: Props) {
   const [tab, setTab] = useState(0);
+  const [addingItem, setAddingItem] = useState(false);
   const [items, setItems] = useState<NormalisedMenuItem[]>([]);
   const [library, setLibrary] = useState<CafeModifierGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export function MenuManager({ cafeSlug, token }: Props) {
   }
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 3, borderRadius: 2 }}>
       <Typography variant="h6" gutterBottom>
         Menu & pricing
       </Typography>
@@ -67,10 +69,21 @@ export function MenuManager({ cafeSlug, token }: Props) {
         Add items, sizes, and reusable modifier sections. Changes appear on the order-ahead app immediately.
       </Typography>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-        <Tab label="Items" />
-        <Tab label="Sections (milks, syrups…)" />
-      </Tabs>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }} spacing={2}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+          <Tab label="Items" />
+          <Tab label="Sections (milks, syrups…)" />
+        </Tabs>
+        {tab === 0 && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setAddingItem(true)}
+          >
+            Add item
+          </Button>
+        )}
+      </Stack>
 
       <Box hidden={tab !== 0}>
         <MenuItemsPanel
@@ -79,6 +92,8 @@ export function MenuManager({ cafeSlug, token }: Props) {
           items={items}
           library={library}
           onItemsChanged={reload}
+          creating={addingItem}
+          onCreatingChange={setAddingItem}
         />
       </Box>
       <Box hidden={tab !== 1}>

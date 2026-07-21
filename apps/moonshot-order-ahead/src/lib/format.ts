@@ -23,7 +23,12 @@ export function formatFromPrice(minor: number, currency = 'GBP'): string {
 
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Force 24h so pickup chips don't pick up locale am/PM quirks.
+  return new Date(iso).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 }
 
 export function formatShortDate(iso: string | null | undefined): string {
@@ -43,10 +48,6 @@ export function firstName(displayName: string | null | undefined, email?: string
   if (displayName?.trim()) return displayName.trim().split(/\s+/)[0]!;
   if (email) return email.split('@')[0]!;
   return 'there';
-}
-
-export function categoryLabel(category: string): string {
-  return category.replace(/_/g, ' ');
 }
 
 export function modifierSummary(modifiers: { optionName: string }[]): string {

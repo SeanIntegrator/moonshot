@@ -1,4 +1,4 @@
-import type { MenuCategory, PickupEstimateResponse } from '@moonshot/types';
+import type { MenuCategory } from '@moonshot/types';
 import { Alert, Box, Container, Snackbar, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,10 +10,9 @@ import { MenuPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { groupMenuByCategory } from '../lib/menu-utils.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
-import { fetchPickupEstimate } from '../api/orders-api.js';
 import { unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
-import { useCafePath } from '../hooks/useCafePath.js';
+import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
 
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
   const hit = lines.find(
@@ -33,22 +32,15 @@ type MenuLocationState = {
 export function Menu() {
   const navigate = useNavigate();
   const location = useLocation();
-  const cafePath = useCafePath();
-  const { orderAheadEnabled, pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
+  const { pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
+  const { estimate } = usePickupEstimate();
   const locationState = location.state as MenuLocationState | null;
   const { menu, loading, error } = useMenu();
   const [activeCategory, setActiveCategory] = useState<MenuCategory>('hot_drinks');
-  const [estimate, setEstimate] = useState<PickupEstimateResponse | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
   const categoryInitialized = useRef(false);
-
-  useEffect(() => {
-    if (!orderAheadEnabled) {
-      navigate(cafePath('/'), { replace: true });
-    }
-  }, [orderAheadEnabled, navigate, cafePath]);
 
   useEffect(() => {
     if (!locationState?.addedItemName) return;
@@ -65,17 +57,6 @@ export function Menu() {
     }
   }, [menu]);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const est = await fetchPickupEstimate();
-        setEstimate(est);
-      } catch {
-        setEstimate(null);
-      }
-    })();
-  }, []);
-
   const sections = useMemo(() => (menu ? groupMenuByCategory(menu) : []), [menu]);
 
   const cartTotalMinor = useMemo(() => {
@@ -83,13 +64,7 @@ export function Menu() {
     return lines.reduce((sum, line) => {
       const item = menu.items.find((i) => i.id === line.menuItemId);
       if (!item) return sum;
-      let delta = 0;
-      for (const sel of line.modifiers) {
-        const g = item.modifierGroups.find((x) => x.id === sel.groupId);
-        const opt = g?.options.find((o) => o.id === sel.optionId);
-        if (opt) delta += opt.priceMinor;
-      }
-      const unit = unitPriceForItem(item, line.sizeId, delta);
+      const unit = unitPriceForItem(item, line.sizeId, line.modifiers);
       return sum + unit * line.quantity;
     }, 0);
   }, [menu, lines]);

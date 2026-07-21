@@ -81,7 +81,7 @@ export function OrderAheadSettingsCard({ cafe, token, onCafeUpdated }: Props) {
   }
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 3, borderRadius: 2, height: '100%' }}>
       <Typography variant="h6" gutterBottom>
         Order ahead
       </Typography>

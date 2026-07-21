@@ -1,9 +1,4 @@
-import type {
-  NormalisedMenuItem,
-  OrderLineModifierSelectionInput,
-  OrderType,
-  PickupEstimateResponse,
-} from '@moonshot/types';
+import type { OrderType } from '@moonshot/types';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   Box,
@@ -14,77 +9,44 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AllergyChecklist } from '../components/AllergyChecklist.js';
-import { CheckoutLineRow } from '../components/CheckoutLineRow.js';
+import { CheckoutOrderSummary } from '../components/CheckoutOrderSummary.js';
 import { PageHeader } from '../components/PageHeader.js';
 import { PickupTimeChip } from '../components/PickupTimeChip.js';
 import { RewardRow } from '../components/RewardRow.js';
 import { CheckoutPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
-import { createCustomerOrder, fetchPickupEstimate } from '../api/orders-api.js';
+import { useCheckoutPricing } from '../hooks/useCheckoutPricing.js';
+import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
+import { createCustomerOrder } from '../api/orders-api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { formatMoney, formatTime } from '../lib/format.js';
-import { unitPriceForItem } from '../lib/menu-price-utils.js';
 
-function estimateLineMinor(
-  item: NormalisedMenuItem,
-  modifiers: OrderLineModifierSelectionInput[],
-  sizeId: string | null,
-): number {
-  let delta = 0;
-  for (const sel of modifiers) {
-    const g = item.modifierGroups.find((x) => x.id === sel.groupId);
-    const opt = g?.options.find((o) => o.id === sel.optionId);
-    if (opt) delta += opt.priceMinor;
-  }
-  return unitPriceForItem(item, sizeId, delta);
-}
-
-function drinkDiscountMinor(
-  pricedLines: { item: NormalisedMenuItem | undefined; unit: number | null }[],
-): number {
-  let max = 0;
-  for (const row of pricedLines) {
-    if (!row.item || row.unit == null) continue;
-    if (row.item.category === 'hot_drinks' || row.item.category === 'cold_drinks') {
-      max = Math.max(max, row.unit);
-    }
-  }
-  return max;
-}
+const ORDER_TYPE: OrderType = 'takeaway';
 
 export function Checkout() {
   const navigate = useNavigate();
   const cafePath = useCafePath();
   const { lines, clear, upsertLine, removeLine, pickupDelayMinutes, setPickupDelayMinutes } =
     useCart();
-  const { orderAheadEnabled, loyaltyEnabled, pickupTimeEnabled, maxPickupMinutes } =
-    useCafeFeatures();
+  const { loyaltyEnabled, pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
   const { isSignedIn, user } = useAuth();
   const { summary, rewards, refresh: refreshLoyalty } = useLoyalty();
   const { menu, loading: menuLoading } = useMenu();
-  const [customerName, setCustomerName] = useState('');
-  const [orderType] = useState<OrderType>('takeaway');
+  const { estimate } = usePickupEstimate();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [estimate, setEstimate] = useState<PickupEstimateResponse | null>(null);
   const [allergyMode, setAllergyMode] = useState<'none' | 'allergies'>('none');
   const [checkoutAllergens, setCheckoutAllergens] = useState<string[]>([]);
   const [applyReward, setApplyReward] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
-
-  useEffect(() => {
-    if (!orderAheadEnabled) {
-      navigate(cafePath('/'), { replace: true });
-    }
-  }, [orderAheadEnabled, navigate, cafePath]);
 
   useEffect(() => {
     if (isSignedIn && loyaltyEnabled) void refreshLoyalty();
@@ -94,48 +56,17 @@ export function Checkout() {
     if (lines.length === 0) navigate(cafePath('/order'), { replace: true });
   }, [lines.length, navigate, cafePath]);
 
-  useEffect(() => {
-    if (user?.displayName) setCustomerName(user.displayName);
-    else if (user?.email) setCustomerName(user.email.split('@')[0] ?? '');
-  }, [user]);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const est = await fetchPickupEstimate();
-        setEstimate(est);
-      } catch {
-        setEstimate(null);
-      }
-    })();
-  }, []);
-
-  const pricedLines = useMemo(() => {
-    if (!menu) return [];
-    return lines.map((line) => {
-      const item = menu.items.find((i) => i.id === line.menuItemId);
-      const unit = item ? estimateLineMinor(item, line.modifiers, line.sizeId) : null;
-      return { line, item, unit };
-    });
-  }, [menu, lines]);
-
-  const subtotalMinor = useMemo(
-    () =>
-      pricedLines.reduce((sum, row) => {
-        if (row.unit == null) return sum;
-        return sum + row.unit * row.line.quantity;
-      }, 0),
-    [pricedLines],
-  );
-
-  const discountMinor = applyReward && rewards.length > 0 ? drinkDiscountMinor(pricedLines) : 0;
-  const totalMinor = Math.max(0, subtotalMinor - discountMinor);
-  const itemCount = lines.reduce((s, l) => s + l.quantity, 0);
+  const { pricedLines, discountMinor, totalMinor, itemCount } = useCheckoutPricing({
+    lines,
+    menuItems: menu?.items,
+    applyReward,
+    hasRewards: rewards.length > 0,
+  });
 
   async function placeOrder(): Promise<void> {
     if (lines.length === 0) return;
     const name =
-      customerName.trim() || user?.displayName?.trim() || user?.email?.split('@')[0] || 'Guest';
+      user?.displayName?.trim() || user?.email?.split('@')[0] || 'Guest';
     setError(null);
     setSubmitting(true);
     try {
@@ -144,7 +75,7 @@ export function Checkout() {
 
       const data = await createCustomerOrder({
         customerName: name,
-        orderType,
+        orderType: ORDER_TYPE,
         redeemRewardId: applyReward && rewards[0] ? rewards[0].id : undefined,
         pickupDelayMinutes: pickupTimeEnabled ? pickupDelayMinutes : undefined,
         items: lines.map((l) => ({
@@ -202,96 +133,23 @@ export function Checkout() {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Container
         maxWidth="sm"
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          py: 2,
-        }}
+        sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2 }}
       >
         <Box sx={{ flex: 1 }}>
           <PageHeader title="Checkout" onBack={() => navigate(cafePath('/order'))} />
-
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
-            <Typography variant="subtitle1" fontWeight={700}>
-              Your order
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {itemCount} items
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1.25,
-              bgcolor: 'background.paper',
-              overflow: 'hidden',
-              minHeight: pricedLines.length > 0 ? undefined : 120,
+          <CheckoutOrderSummary
+            pricedLines={pricedLines}
+            itemCount={itemCount}
+            discountMinor={discountMinor}
+            totalMinor={totalMinor}
+            onQtyChange={(line, qty) => {
+              if (qty <= 0) removeLine(line.key);
+              else upsertLine({ ...line, quantity: qty });
             }}
-          >
-            {pricedLines.map(({ line, item, unit }, index) => (
-              <CheckoutLineRow
-                key={line.key}
-                line={line}
-                item={item}
-                unitMinor={unit}
-                isLast={index === pricedLines.length - 1 && discountMinor === 0}
-                onQtyChange={(qty) => {
-                  if (qty <= 0) removeLine(line.key);
-                  else upsertLine({ ...line, quantity: qty });
-                }}
-              />
-            ))}
-            {discountMinor > 0 && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  px: 1.5,
-                  py: 1,
-                  color: 'success.main',
-                  borderTop: pricedLines.length > 0 ? 1 : 0,
-                  borderColor: 'divider',
-                }}
-              >
-                <Typography variant="body2" fontWeight={600}>
-                  Loyalty (−1 free)
-                </Typography>
-                <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                  −{formatMoney(discountMinor)}
-                </Typography>
-              </Box>
-            )}
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                px: 1.5,
-                py: 1.25,
-                borderTop: pricedLines.length > 0 || discountMinor > 0 ? 1 : 0,
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="body1" fontWeight={700}>
-                Total
-              </Typography>
-              <Typography variant="body1" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                {formatMoney(totalMinor)}
-              </Typography>
-            </Box>
-          </Box>
+          />
 
           <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
             Pickup time
@@ -359,14 +217,10 @@ export function Checkout() {
                 fontWeight: 600,
                 fontSize: '0.875rem',
                 color: 'text.secondary',
-                transition: 'background-color 180ms ease, color 180ms ease, box-shadow 180ms ease',
                 '&.Mui-selected': {
                   bgcolor: 'background.paper',
                   color: 'text.primary',
                   boxShadow: 1,
-                },
-                '&:not(.Mui-selected)': {
-                  bgcolor: 'transparent',
                 },
               },
             }}

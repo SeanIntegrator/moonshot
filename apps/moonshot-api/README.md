@@ -17,7 +17,7 @@ Persistence is grouped by domain under `src/lib/`:
 | Area | Entry / modules |
 |------|-----------------|
 | Cafés | `cafes-repository.ts` |
-| Orders | `orders-repository.ts` → `orders/order-{read,create,checkout,kds,customer}.ts` |
+| Orders | `orders/order-{read,create,checkout,kds,customer}.ts` (+ payment mode / parse helpers) |
 | Loyalty | `loyalty/`, `loyalty-after-kds-complete.ts` |
 | Admin | `admin-settings-service.ts`, `admin-stripe-service.ts` |
 | Errors | `middleware/error-handler.ts` (registered last on the Express app) |
@@ -39,7 +39,7 @@ CI without a database still passes; set **`TEST_DATABASE_URL`** locally or in CI
 
 ## KDS device login
 
-After migration `kds_users` exists. Create or update a KDS user from **environment variables only** (do not commit credentials):
+Self-service cafés create a KDS user during **admin onboarding** (`POST /admin/onboarding/kds-users`). For seed/dev cafés, create or update a user from **environment variables only** (do not commit credentials):
 
 ```bash
 # from apps/moonshot-api with .env loaded

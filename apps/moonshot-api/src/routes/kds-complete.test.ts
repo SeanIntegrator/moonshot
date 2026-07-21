@@ -21,7 +21,7 @@ const emitKdsServerToClient = vi.hoisted(() => vi.fn());
 const emitCustomerServerToClient = vi.hoisted(() => vi.fn());
 const poolQuery = vi.hoisted(() => vi.fn());
 
-vi.mock('../lib/orders-repository.js', () => ({
+vi.mock('../lib/orders/order-kds.js', () => ({
   completeOrderForKds,
   listOpenOrdersForKds: vi.fn(),
 }));

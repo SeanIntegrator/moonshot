@@ -18,7 +18,7 @@ Stable map of where persistence and orchestration live after the **Pass A + B** 
 
 ## Orders
 
-Implementation is split under `src/lib/orders/`; **`orders-repository.ts`** re-exports the public surface so existing imports keep working.
+Implementation is split under `src/lib/orders/` (`order-read`, `order-create`, `order-checkout`, `order-kds`, `order-customer`, plus checkout recovery). Import those modules directly.
 
 | Module | Responsibility |
 |--------|----------------|

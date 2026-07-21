@@ -64,14 +64,6 @@ export interface NormalisedOrderItem {
   notes: string | null;
 }
 
-/**
- * Derived read-model: union of allergen strings across lines (not stored in DB).
- */
-export interface OrderAllergySummary {
-  byLineItem: Array<{ lineItemId: string; allergens: string[] }>;
-  union: string[];
-}
-
 export interface NormalisedOrder {
   id: string;
   cafeId: string;

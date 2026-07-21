@@ -10,7 +10,6 @@ export * from './customer-orders.js';
 export * from './dataflow.js';
 export * from './feature-flags.js';
 export * from './feedback.js';
-export * from './kds.js';
 export * from './kds-auth.js';
 export * from './loyalty.js';
 export * from './menu.js';

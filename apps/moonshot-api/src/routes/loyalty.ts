@@ -19,6 +19,7 @@ import {
   insertRewardRedeemed,
   listUnredeemedRewards,
 } from '../lib/loyalty/repository.js';
+import { ApiHttpError } from '../lib/http-errors.js';
 
 export const loyaltyRouter: IRouter = Router();
 
@@ -38,11 +39,7 @@ loyaltyRouter.get('/me', requireAuth, async (req, res) => {
   );
 
   if (membership.rows.length === 0) {
-    return res.status(404).json({
-      ok: false,
-      error: 'No café membership for this user',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'No café membership for this user');
   }
 
   const loyaltyCfg = features.loyalty;
@@ -106,11 +103,7 @@ loyaltyRouter.post('/rewards/:rewardId/redeem', requireAuth, async (req, res) =>
   const rawId = req.params.rewardId;
   const rewardId = Array.isArray(rawId) ? rawId[0] : rawId;
   if (!rewardId?.trim()) {
-    return res.status(400).json({
-      ok: false,
-      error: 'rewardId required',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'rewardId required');
   }
 
   const client = await pool.connect();
@@ -136,11 +129,7 @@ loyaltyRouter.post('/rewards/:rewardId/redeem', requireAuth, async (req, res) =>
 
     if (upd.rows.length === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).json({
-        ok: false,
-        error: 'Reward not found or already redeemed',
-        code: ApiErrorCode.NOT_FOUND,
-      });
+      throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Reward not found or already redeemed');
     }
 
     const tx = await insertRewardRedeemed({

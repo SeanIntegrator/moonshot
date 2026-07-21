@@ -1,5 +1,8 @@
 /**
  * POS adapter contracts — implementations live in moonshotApi; types are shared.
+ *
+ * Planned: Square/Epos Now/etc. adapters implement this surface; today only
+ * `manual` (DB menu) is live. Keep the interface stable for onboarding POS import.
  */
 
 import type { NormalisedMenu } from './menu.js';

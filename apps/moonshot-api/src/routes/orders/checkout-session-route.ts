@@ -3,6 +3,7 @@ import { ApiErrorCode } from '@moonshot/types';
 import type { IRouter } from 'express';
 import { Router } from 'express';
 import { buildGuestTrackingTokenIfNeeded } from '../../lib/customer-socket-token.js';
+import { ApiHttpError } from '../../lib/http-errors.js';
 import { recoverOrderFromStripeCheckoutSession } from '../../lib/orders/checkout-session-recovery.js';
 import { isStripeCheckoutSessionIdWellFormed } from '../../lib/stripe-checkout-session-id.js';
 
@@ -12,21 +13,13 @@ checkoutSessionRouter.get('/checkout-session/:sessionId', async (req, res) => {
   const raw = req.params.sessionId;
   const sessionId = Array.isArray(raw) ? raw[0] : raw;
   if (!sessionId || !isStripeCheckoutSessionIdWellFormed(sessionId)) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Invalid checkout session id',
-      code: ApiErrorCode.VALIDATION,
-    });
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid checkout session id');
   }
 
   const cafeId = req.cafe!.cafeId;
   const order = await recoverOrderFromStripeCheckoutSession({ sessionId, cafeId });
   if (!order) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Order not found for this checkout session',
-      code: ApiErrorCode.NOT_FOUND,
-    });
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found for this checkout session');
   }
 
   const trackingToken = buildGuestTrackingTokenIfNeeded({

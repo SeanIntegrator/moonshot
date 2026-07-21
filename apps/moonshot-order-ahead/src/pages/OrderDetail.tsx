@@ -178,10 +178,6 @@ export function OrderDetail() {
                 {formatTime(pickupTime)}
               </Typography>
             </Box>
-            {/* Wireframe: reschedule not implemented */}
-            <Typography variant="body2" color="text.disabled">
-              Change ›
-            </Typography>
           </Box>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 3, letterSpacing: 0.5, display: 'block' }}>

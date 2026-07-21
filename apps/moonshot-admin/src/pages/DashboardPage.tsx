@@ -55,8 +55,21 @@ export function DashboardPage({ session }: Props) {
 
   return (
     <Stack spacing={3}>
-      <OrderAheadSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
-      <StripePaymentsCard token={session.token} />
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: 3,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+          <OrderAheadSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+          <StripePaymentsCard token={session.token} />
+        </Box>
+      </Box>
       <MenuEditorCard cafeSlug={session.cafe.slug} token={session.token} />
       <KdsSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
     </Stack>

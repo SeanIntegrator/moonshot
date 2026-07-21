@@ -16,7 +16,7 @@ import { cafeRouter } from './routes/cafe.js';
 import { kdsRouter } from './routes/kds.js';
 import { mediaRouter } from './routes/media.js';
 import { menuRouter } from './routes/menu.js';
-import { ordersRouter } from './routes/orders.js';
+import { ordersRouter } from './routes/orders/index.js';
 import { loyaltyRouter } from './routes/loyalty.js';
 import { stripeWebhookRouter } from './routes/webhooks-stripe.js';
 
