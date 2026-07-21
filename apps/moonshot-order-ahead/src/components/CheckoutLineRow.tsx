@@ -52,11 +52,27 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
         gap: 0.75,
       }}
     >
-      {/* Row 1 — name + quantity + price */}
+      {/* Row 1 — name + edit + quantity */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="body2" fontWeight={700} sx={{ flex: 1, minWidth: 0 }}>
-          {item?.name ?? line.menuItemId}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flex: 1, minWidth: 0 }}>
+          <Typography variant="body2" fontWeight={700} sx={{ minWidth: 0 }}>
+            {item?.name ?? line.menuItemId}
+          </Typography>
+          <IconButton
+            size="small"
+            aria-label={`Edit ${item?.name ?? 'item'}`}
+            onClick={() => navigate(cafePath(`/order/item/${line.menuItemId}`))}
+            sx={{
+              width: 28,
+              height: 28,
+              flexShrink: 0,
+              color: 'text.secondary',
+              '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
+            }}
+          >
+            <EditOutlinedIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
           <IconButton
             size="small"
@@ -93,20 +109,11 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
           >
             <AddIcon sx={{ fontSize: 16 }} />
           </IconButton>
-          {lineTotalLabel ? (
-            <Typography
-              variant="body2"
-              fontWeight={700}
-              sx={{ minWidth: 44, textAlign: 'right', fontVariantNumeric: 'tabular-nums', ml: 0.25 }}
-            >
-              {lineTotalLabel}
-            </Typography>
-          ) : null}
         </Box>
       </Box>
 
-      {/* Row 2 — customisation summary + edit */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 28 }}>
+      {/* Row 2 — customisation summary + price */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 20 }}>
         <Typography
           variant="caption"
           color="text.secondary"
@@ -114,19 +121,15 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
         >
           {mods || 'No extras'}
         </Typography>
-        <IconButton
-          size="small"
-          aria-label={`Edit ${item?.name ?? 'item'}`}
-          onClick={() => navigate(cafePath(`/order/item/${line.menuItemId}`))}
-          sx={{
-            width: 28,
-            height: 28,
-            color: 'text.secondary',
-            '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
-          }}
-        >
-          <EditOutlinedIcon sx={{ fontSize: 18 }} />
-        </IconButton>
+        {lineTotalLabel ? (
+          <Typography
+            variant="body2"
+            fontWeight={700}
+            sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {lineTotalLabel}
+          </Typography>
+        ) : null}
       </Box>
     </Box>
   );

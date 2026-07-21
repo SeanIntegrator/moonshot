@@ -20,23 +20,31 @@ export function CategoryStrip({ sections, active, onSelect }: Props) {
         '&::-webkit-scrollbar': { display: 'none' },
       }}
     >
-      {sections.map((s) => (
-        <Chip
-          key={s.category}
-          label={s.label}
-          onClick={() => onSelect(s.category)}
-          variant={active === s.category ? 'filled' : 'outlined'}
-          color={active === s.category ? 'primary' : 'default'}
-          sx={{
-            flexShrink: 0,
-            transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease',
-            WebkitTapHighlightColor: 'transparent',
-            '&:active': {
-              transform: 'scale(0.96)',
-            },
-          }}
-        />
-      ))}
+      {sections.map((s) => {
+        const selected = active === s.category;
+        return (
+          <Chip
+            key={s.category}
+            label={s.label}
+            clickable
+            disableRipple
+            onClick={() => onSelect(s.category)}
+            variant={selected ? 'filled' : 'outlined'}
+            color={selected ? 'primary' : 'default'}
+            sx={{
+              flexShrink: 0,
+              WebkitTapHighlightColor: 'transparent',
+              // Avoid hover/press fills that read like the selected chip.
+              '&.MuiChip-clickable:hover': selected
+                ? { bgcolor: 'primary.main' }
+                : { bgcolor: 'transparent' },
+              '&.MuiChip-clickable:active': selected
+                ? { bgcolor: 'primary.main' }
+                : { bgcolor: 'transparent' },
+            }}
+          />
+        );
+      })}
     </Box>
   );
 }

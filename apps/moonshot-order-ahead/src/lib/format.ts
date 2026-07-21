@@ -56,5 +56,5 @@ export function firstName(displayName: string | null | undefined, email?: string
 
 export function modifierSummary(modifiers: { optionName: string }[]): string {
   if (modifiers.length === 0) return '';
-  return modifiers.map((m) => m.optionName.toLowerCase()).join(' · ');
+  return modifiers.map((m) => m.optionName).join(' · ');
 }

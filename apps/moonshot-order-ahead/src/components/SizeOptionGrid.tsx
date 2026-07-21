@@ -39,6 +39,10 @@ export function SizeOptionGrid({ sizes, currency, selectedId, onSelect }: Props)
                 fontFamily: 'inherit',
                 color: 'text.primary',
                 appearance: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                '&:active': {
+                  bgcolor: selected ? 'action.selected' : 'background.paper',
+                },
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>

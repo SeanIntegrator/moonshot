@@ -97,10 +97,12 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
           >
             {group.options.map((opt) => {
               const selected = picked.has(opt.id);
+              const surface = selected ? selectedOptionSx : idleOptionSx;
               return (
                 <Chip
                   key={opt.id}
                   clickable
+                  disableRipple
                   label={
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       {colorDot(opt.colorHex)}
@@ -111,14 +113,14 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                   sx={{
                     borderRadius: 999,
                     border: 1,
-                    ...(selected ? selectedOptionSx : idleOptionSx),
+                    ...surface,
                     color: 'text.primary',
                     fontWeight: 600,
                     WebkitTapHighlightColor: 'transparent',
-                    transition: 'background-color 180ms ease, border-color 180ms ease, transform 180ms ease',
-                    '&:active': {
-                      transform: 'scale(0.96)',
-                    },
+                    // Keep press/hover fill identical to idle/selected so it doesn't mimic selection.
+                    '&.MuiChip-clickable:hover': surface,
+                    '&.MuiChip-clickable:active': surface,
+                    '&.Mui-focusVisible': surface,
                   }}
                 />
               );
@@ -202,9 +204,8 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 color: 'text.primary',
                 WebkitTapHighlightColor: 'transparent',
                 appearance: 'none',
-                transition: 'background-color 180ms ease, border-color 180ms ease, transform 180ms ease',
                 '&:active': {
-                  transform: 'scale(0.97)',
+                  bgcolor: selected ? 'action.selected' : 'background.paper',
                 },
                 '&:focus': {
                   outline: 'none',

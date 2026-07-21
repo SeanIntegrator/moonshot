@@ -272,7 +272,8 @@ export function Checkout() {
             variant="contained"
             fullWidth
             sx={{
-              py: 1.5,
+              py: 2,
+              minHeight: 56,
               display: 'flex',
               justifyContent: 'space-between',
               '&.Mui-disabled': {
