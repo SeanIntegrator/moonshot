@@ -43,7 +43,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
   }));
 
   return (
-    <Box sx={{ mt: 2, px: 0.5 }}>
+    <Box sx={{ mt: 2.5, px: 0.5, pb: 2.5, '&:first-of-type': { mt: 0.5 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
         <Typography variant="subtitle2" fontWeight={700}>
           {group.name}
@@ -69,8 +69,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
           if (opt) onSelect(group.id, opt.id);
         }}
         sx={{
-          mt: 1,
-          mb: 1,
+          mt: 0.5,
           // Room for two-line marks (+price under chip label).
           '& .MuiSlider-markLabel': {
             whiteSpace: 'pre-line',
