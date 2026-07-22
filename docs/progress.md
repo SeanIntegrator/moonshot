@@ -45,7 +45,7 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 - New self-service cafés provision with **loyalty enabled by default** (10 stamps, free drink).
 - **Pickup delay:** `POST /orders` accepts **`pickupDelayMinutes`**; stored as **`orders.requested_pickup_not_before`**; live ETA = max(FIFO, not-before).
 - **Opening hours:** `cafes.hours` weekly JSON; Admin editor; Home caption + Order Now gate via `cafeOpenStatus`.
-- **Tracker reliability:** order detail always polls while active; subscribe ack + completion reload catch missed sockets.
+- **Tracker reliability:** order detail always polls while active; subscribe ack + completion reload catch missed sockets. Home / Profile active lists subscribe to the same customer rooms (optimistic remove on `customerOrderCompleted`) with a 30s poll fallback.
 - **KDS API (M2 contracts):** modifier chip fields on read (`isDefault`); `category` on order lines; `deriveFlowLine` + `deriveLinePrep`; Flow prep groups seeded; `GET /kds/config`; preparing/ready status advance + `customerOrderStatusUpdated`; barista ETA stretch (`eta_mode`) without FIFO clobber. Flow board UI iteration 1 shipped — [architecture/kds-board.md](architecture/kds-board.md).
 
 ### Backend refactor (Pass A + B, May 2026)

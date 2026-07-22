@@ -41,7 +41,9 @@ export function registerCustomerSocketHandlers(io: Server): void {
           }
 
           const trimmedOrderId = payload.orderId.trim();
-          void socket.join(customerOrderRoom(trimmedOrderId));
+          // Await join before ack — otherwise the client may think it is
+          // subscribed while still outside the room and miss the next push.
+          await socket.join(customerOrderRoom(trimmedOrderId));
           ack?.();
         })();
       },

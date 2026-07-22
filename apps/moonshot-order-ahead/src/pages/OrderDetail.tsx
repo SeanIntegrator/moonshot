@@ -106,7 +106,10 @@ export function OrderDetail() {
 
   const pickupTime = lastPickupTime ?? order?.pickup.pickupTime;
   const allDone = trackingStatus === 'completed' || order?.status === 'completed';
-  const statusMeta = order ? getOrderStatusMeta(order.status) : null;
+  // Prefer socket-driven completion so the chip flips before the HTTP reload lands.
+  const statusMeta = order
+    ? getOrderStatusMeta(allDone ? 'completed' : order.status)
+    : null;
   const loyaltyEnabled = summary?.loyaltyEnabled === true;
   const showStampEarned = isSignedIn && loyaltyEnabled && allDone;
   const showStampPending =

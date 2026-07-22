@@ -7,7 +7,8 @@ Each item has a short repro. Fix outside M1 unless marked launch-blocker.
 
 | Card | Repro | Resolution |
 |------|-------|------------|
-| Tracker stuck after KDS Done while socket shows `tracking` | Open order detail, complete on KDS; or complete before subscribe ack | Always-on 5s poll + subscribe catch-up reload |
+| Tracker stuck after KDS Done while socket shows `tracking` | Open order detail, complete on KDS; or complete before subscribe ack | Always-on 5s poll + subscribe catch-up reload; await room join before subscribe ack |
+| Home active card lagged ~30s after KDS Done | Signed-in Home while barista clears order | `ActiveOrdersProvider` observes customer sockets (optimistic remove) + 30s poll fallback |
 | Home hours / closed gating | Open Home with café closed or empty hours | `cafes.hours` + `cafeOpenStatus`; Order Now blocked when closed |
 | Pickup time missing on KDS | Place order with pickup delay; check KDS card time | Card shows `pickup.pickupTime` (fallback `createdAt`) |
 

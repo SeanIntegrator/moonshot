@@ -19,6 +19,13 @@ Constants: [`KDS_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts), [`CUS
 
 ## Customer order tracking
 
+Order-ahead surfaces:
+
+| Surface | Push | HTTP fallback |
+|---------|------|---------------|
+| **Order detail** (`useOrderTracking`) | `customer:subscribe` for that order | 5s poll while active |
+| **Home / Profile lists** (`ActiveOrdersProvider`) | subscribe to each active order id | 30s poll |
+
 Subscribing requires **one** of:
 
 1. **Guest** — `authToken` is a **`trackingToken`** JWT from `POST /api/v1/orders` (`purpose: 'track_order'`, short TTL ~48h, scoped to `orderId` + `cafeId`). Only valid while `orders.user_id` IS NULL for that row.
