@@ -29,7 +29,7 @@ export const ORDER_SELECT_COLUMNS = `
 
 export const ORDER_ITEM_SELECT_COLUMNS = `
   id, order_id, menu_item_id, item_name, quantity, unit_price_minor,
-  modifiers, allergens, notes, created_at
+  modifiers, allergens, notes, category, created_at
 `;
 
 export function validateOrderLines(lines: CreateOrderLineInput[]): void {

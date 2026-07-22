@@ -38,14 +38,18 @@ export function defaultNewCafeKdsConfig(): Omit<KdsConfig, 'cafeId'> {
   return {
     milkColors: {},
     beanBadges: {
-      house: { label: 'Ho', bg: '#2d2d2d', text: '#f5f5f5' },
-      decaf: { label: 'Dc', bg: '#6b4f2a', text: '#fff' },
-      guest: { label: 'Gu', bg: '#1a4d3a', text: '#fff' },
+      house: { label: 'Ho', bg: '#2d2d2d', text: '#f5f5f5', accent: '#e8a33d' },
+      decaf: { label: 'Dc', bg: '#6b4f2a', text: '#fff', accent: '#7aa2d6' },
+      guest: { label: 'Gu', bg: '#1a4d3a', text: '#fff', accent: '#7fb069' },
       custom: [],
     },
     modifierClassification: {
       coffeeModifiers: ['Milks', 'Milk'],
       additions: ['Syrups', 'Extras'],
+      shots: ['Shots'],
+      beans: ['Beans'],
+      milkTemperature: ['Milk Temperature'],
+      milkTexture: ['Milk Texture'],
     },
     timerThresholds: { greenMax: 3, amberMax: 5 },
     layout: { columns: 3, groupBy: 'order_type' },

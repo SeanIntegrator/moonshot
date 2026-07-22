@@ -1,6 +1,11 @@
 import type { BaseThemeId, CafeFeatures, CafeTheme, KdsConfig } from '@moonshot/types';
 import type { FeatureFlagKey } from '@moonshot/types';
-import { FeatureFlagKeys, normalizeCafeHours } from '@moonshot/types';
+import {
+  DEFAULT_BEAN_ACCENTS,
+  DEFAULT_MODIFIER_CLASSIFICATION,
+  FeatureFlagKeys,
+  normalizeCafeHours,
+} from '@moonshot/types';
 import type { ResolvedCafe } from './resolved-cafe.js';
 
 type CafeRow = {
@@ -21,7 +26,62 @@ type CafeRow = {
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+/** Fill Flow classification / bean accent gaps so older kds_config rows stay usable. */
+function normalizeKdsConfig(raw: KdsConfig, cafeId: string): KdsConfig {
+  const mc = raw.modifierClassification ?? {
+    coffeeModifiers: [],
+    additions: [],
+    shots: [],
+    beans: [],
+    milkTemperature: [],
+    milkTexture: [],
+  };
+  const badges = raw.beanBadges;
+  return {
+    ...raw,
+    cafeId,
+    modifierClassification: {
+      coffeeModifiers:
+        mc.coffeeModifiers?.length > 0
+          ? mc.coffeeModifiers
+          : [...DEFAULT_MODIFIER_CLASSIFICATION.coffeeModifiers],
+      additions:
+        mc.additions?.length > 0
+          ? mc.additions
+          : [...DEFAULT_MODIFIER_CLASSIFICATION.additions],
+      shots: mc.shots?.length > 0 ? mc.shots : [...DEFAULT_MODIFIER_CLASSIFICATION.shots],
+      beans: mc.beans?.length > 0 ? mc.beans : [...DEFAULT_MODIFIER_CLASSIFICATION.beans],
+      milkTemperature:
+        mc.milkTemperature?.length > 0
+          ? mc.milkTemperature
+          : [...DEFAULT_MODIFIER_CLASSIFICATION.milkTemperature],
+      milkTexture:
+        mc.milkTexture?.length > 0
+          ? mc.milkTexture
+          : [...DEFAULT_MODIFIER_CLASSIFICATION.milkTexture],
+    },
+    beanBadges: {
+      ...badges,
+      house: {
+        ...badges.house,
+        accent: badges.house?.accent ?? DEFAULT_BEAN_ACCENTS.house,
+      },
+      decaf: {
+        ...badges.decaf,
+        accent: badges.decaf?.accent ?? DEFAULT_BEAN_ACCENTS.decaf,
+      },
+      guest: {
+        ...badges.guest,
+        accent: badges.guest?.accent ?? DEFAULT_BEAN_ACCENTS.guest,
+      },
+      custom: [...(badges.custom ?? [])],
+    },
+  };
 }
 
 /** Derive enabled feature flag keys from `CafeFeatures` JSON */
@@ -41,11 +101,7 @@ export function activeFeatureKeys(features: CafeFeatures): FeatureFlagKey[] {
 export function mapCafeRow(row: CafeRow): ResolvedCafe {
   const features = row.features as CafeFeatures;
   const themeOverrides = (row.theme_overrides || {}) as Partial<CafeTheme>;
-  let kdsConfig = row.kds_config as KdsConfig;
-  kdsConfig = {
-    ...kdsConfig,
-    cafeId: row.id,
-  };
+  const kdsConfig = normalizeKdsConfig(row.kds_config as KdsConfig, row.id);
 
   return {
     cafeId: row.id,

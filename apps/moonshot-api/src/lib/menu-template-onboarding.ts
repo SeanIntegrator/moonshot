@@ -12,6 +12,7 @@ import {
 } from '@moonshot/types';
 import { copyTemplateDrinkImageToCafeItem } from './menu-image-storage.js';
 import { setMenuItemModifierGroups } from './menu-modifier-library.js';
+import { ensureFlowPrepModifierGroups } from './menu-seed-library.js';
 
 export class MenuTemplateError extends Error {
   constructor(
@@ -245,10 +246,16 @@ export async function applyMenuTemplate(
     );
   }
 
-  const modifierGroupIds = [milksGroupId];
-  if (syrupsEnabled && syrupsOptions.length > 0) {
-    modifierGroupIds.push(syrupsGroupId);
-  }
+  const flowGroups = await ensureFlowPrepModifierGroups(client, cafeId);
+
+  const modifierGroupIds = [
+    milksGroupId,
+    ...(syrupsEnabled && syrupsOptions.length > 0 ? [syrupsGroupId] : []),
+    flowGroups.shotsId,
+    flowGroups.beansId,
+    flowGroups.milkTemperatureId,
+    flowGroups.milkTextureId,
+  ];
 
   const drinkCategories = body.categories.filter(
     (c) => (c.key === 'hot_drinks' || c.key === 'cold_drinks') && c.enabled,

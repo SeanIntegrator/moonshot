@@ -88,13 +88,13 @@ sequenceDiagram
 
 `POST /kds/orders/:id/eta` `{ pickupTime }` → `eta_mode=manual_override`; FIFO skips those rows; emit ETA sockets.
 
-`GET /kds/config` → café `kdsConfig` for the board UI plan.
+`GET /kds/config` → café `kdsConfig` for the Flow board (milk/bean accents, classification, timers).
 
-Auth details — [architecture/realtime.md](../architecture/realtime.md). Prep contracts — [architecture/kds-board.md](../architecture/kds-board.md).
+Auth details — [architecture/realtime.md](../architecture/realtime.md). Flow board — [architecture/kds-board.md](../architecture/kds-board.md).
 
 ## Planned
 
 - POS webhooks / Square (etc.) ingress beyond the manual adapter — [pos-normalisation.md](../pos-normalisation.md)
 - Stripe incremental checkout / order merge (F3) and refunds on cancel
 - Feedback HTTP API + order-ahead review drawer (Phase B) — [feedback-prompt-flow.md](../feedback-prompt-flow.md)
-- KDS board UI (row layout / chips / allergy / timers) — API contracts ready; see [architecture/kds-board.md](../architecture/kds-board.md)
+- KDS recall / hold, synced line made-state, layout.columns grouping — [architecture/kds-board.md](../architecture/kds-board.md)

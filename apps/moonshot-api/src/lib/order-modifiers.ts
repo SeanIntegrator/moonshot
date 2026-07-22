@@ -130,6 +130,7 @@ function resolveBasePriceAndSize(
       optionName: size.name,
       priceMinor: size.priceMinor,
       isSize: true,
+      isDefault: size.isDefault === true,
       colorHex: size.colorHex ?? null,
       chipLabel: size.chipLabel ?? null,
     },
@@ -244,5 +245,6 @@ function modifierSnapshot(
     colorHex: opt.colorHex ?? null,
     chipLabel: opt.chipLabel ?? null,
     isSize: false,
+    isDefault: opt.isDefault === true,
   };
 }

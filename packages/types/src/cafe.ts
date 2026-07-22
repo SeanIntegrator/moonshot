@@ -123,6 +123,8 @@ export interface BeanBadgeStyle {
   label: string;
   bg: string;
   text: string;
+  /** Accent colour for Flow shot brackets (e.g. house orange). */
+  accent?: string;
 }
 
 export interface CustomBeanBadge extends BeanBadgeStyle {
@@ -137,8 +139,18 @@ export interface KdsBeanBadges {
 }
 
 export interface KdsModifierClassification {
+  /** Milk / milk-like groups → square chips */
   coffeeModifiers: string[];
+  /** Syrups / extras → round chips */
   additions: string[];
+  /** Shot-count groups (Single / Double / Triple / …) */
+  shots: string[];
+  /** Bean / roast groups (House / Decaf / Guest) */
+  beans: string[];
+  /** Milk temperature groups (Hot / Warm / Extra Hot / …) */
+  milkTemperature: string[];
+  /** Milk texture groups (Standard / Wet / Dry / Extra Foam) */
+  milkTexture: string[];
 }
 
 export interface KdsTimerThresholds {

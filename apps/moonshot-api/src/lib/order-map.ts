@@ -45,6 +45,7 @@ export type OrderItemRowDb = {
   modifiers: unknown;
   allergens: string[];
   notes: string | null;
+  category?: string | null;
   created_at: Date | string;
 };
 
@@ -71,6 +72,7 @@ function parseModifiers(raw: unknown): NormalisedOrderLineModifier[] {
         colorHex: typeof o.colorHex === 'string' ? o.colorHex : null,
         chipLabel: typeof o.chipLabel === 'string' ? o.chipLabel : null,
         isSize: o.isSize === true,
+        isDefault: o.isDefault === true,
       });
       continue;
     }
@@ -86,6 +88,7 @@ function parseModifiers(raw: unknown): NormalisedOrderLineModifier[] {
         colorHex: typeof o.colorHex === 'string' ? o.colorHex : null,
         chipLabel: typeof o.chipLabel === 'string' ? o.chipLabel : null,
         isSize: o.isSize === true,
+        isDefault: o.isDefault === true,
       });
     }
   }
@@ -112,6 +115,7 @@ export function mapOrderItemRow(row: OrderItemRowDb): NormalisedOrderItem {
     modifiers: parseModifiers(row.modifiers),
     allergens: row.allergens ?? [],
     notes: row.notes,
+    category: row.category ?? null,
   };
 }
 

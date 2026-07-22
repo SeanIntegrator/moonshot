@@ -22,18 +22,20 @@ M2 — KDS row-based board (the differentiator)
 
 The infrastructure is nearly there; this is largely the UI build the master spec already defines. Mostly Feature.
 
-API / contracts (shipped — board UI deferred to a separate plan; see [kds-board.md](kds-board.md)):
+API / contracts (shipped — see [kds-board.md](kds-board.md)):
 
- [API] Chip metadata on read (`colorHex` / `chipLabel` / `isSize`); `deriveLinePrep` + seeded classification; `GET /kds/config`.
+ [API] Chip metadata on read (`colorHex` / `chipLabel` / `isSize` / `isDefault`); `category` on order lines; `deriveFlowLine` + `deriveLinePrep`; seeded Shots/Beans/Milk Temperature/Milk Texture; `GET /kds/config`.
  [KDS] [API] Introduce preparing and ready states. Done when: API advances confirmed → preparing → ready; customer stepper follows via `customerOrderStatusUpdated` / poll.
  [API] [Order-ahead] Feed ETA changes from KDS back to the customer app. Done when: barista stretch API sets `eta_mode=manual_override` and FIFO does not clobber; customer receives `customerEtaUpdated`.
 
-Board UI (separate plan):
+Board UI (iteration 1 shipped):
 
- [KDS] Build the row-based layout: milk-colour-coded drink lines, quantity-left / name / modifiers reading order. Done when: it matches the Flow variant spec, not the current card stub.
- [KDS] Add the chip taxonomy: square chips = coffee modifiers, round chips = additions; bean badge (quiet for house, filled for decaf/guest). Done when: a barista can read milk and modifiers without reading full text.
- [KDS] Add allergy escalation: card border + inline bar. Done when: an allergy order is unmistakable at distance and on read.
- [KDS] Add order timers with green/amber/red thresholds and order-type grouping. Done when: ageing orders visibly escalate colour.
+ [x] [KDS] Flow row-based layout: drinks then food, shot / milk / notes columns, qty bar, size underline, food divider.
+ [x] [KDS] Chip taxonomy: square milk (+ italic temp/texture), round syrups; bean-coloured `[shot · bean]` brackets (defaults hidden).
+ [x] [KDS] Allergen warnings with yellow/black striped border; free-text notes in italics.
+ [x] [KDS] Hybrid countdown/count-up timer (green → amber → red); ticket kinds SIT IN / TAKEAWAY / PICKUP.
+ [ ] [KDS] Order-type grouping / layout.columns from config; recall & hold (later).
+ [ ] [KDS] Synced per-line made-state; preparing/ready chrome (later).
 M3 — Square OAuth onboarding + C&B cutover
 
 The OAuth step. Built and debugged against C&B specifically. Feature + one critical Chore (the refresh job).

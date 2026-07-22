@@ -5,11 +5,13 @@ Kitchen display: **React + Vite + TypeScript** with **plain CSS** (no MUI).
 ## What ships today
 
 - Café slug + device login (`POST /kds/auth/login`)
-- Open orders list + **Done** (`GET /kds/orders`, `POST /kds/orders/:id/complete`)
-- Socket.io namespace **`/kds`** for `kds:order:new` / `removed` / ETA updates
+- **Flow board**: row-based tickets with shot / milk / notes columns
+- Loads `GET /kds/config` after login for milk colours, bean accents, timers
+- Open orders via `GET /kds/orders` + Socket.io `/kds` (`kds:order:new` / `updated` / `removed` / ETA)
+- Tap a **line** → local strikethrough; tap the **header** → `POST /kds/orders/:id/complete`
 - Safety-net poll on reconnect / interval
 
-Milk-colour chips, bean badges, and rich prep chrome are **not** built yet — `KdsConfig` may carry those keys for a future board pass. The board renders **`NormalisedOrder`** directly.
+See `docs/architecture/kds-board.md` for the Flow row model, ticket kinds, and hybrid timer rules.
 
 ## Local env
 

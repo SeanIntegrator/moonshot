@@ -47,6 +47,8 @@ export interface NormalisedOrderLineModifier {
   chipLabel?: string | null;
   /** True when this row is the selected item size (not a library modifier) */
   isSize?: boolean;
+  /** Snapshot of option/size `isDefault` at order time — KDS hides defaults */
+  isDefault?: boolean;
 }
 
 
@@ -62,6 +64,11 @@ export interface NormalisedOrderItem {
   /** Per-item allergens (v2); KDS summary is derived */
   allergens: string[];
   notes: string | null;
+  /**
+   * Menu category snapshotted at create (`hot_drinks` | `cold_drinks` | `food` | …).
+   * KDS treats category containing "food" as a food line. Nullable for legacy rows.
+   */
+  category?: string | null;
 }
 
 export interface NormalisedOrder {

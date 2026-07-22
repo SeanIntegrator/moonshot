@@ -1,6 +1,8 @@
 import './index.css';
 import type { FormEvent } from 'react';
 import { useCallback, useState } from 'react';
+import { FlowBoard } from './board/FlowBoard.js';
+import { useKdsConfig } from './hooks/useKdsConfig.js';
 import { useKdsOrders } from './hooks/useKdsOrders.js';
 import { kdsLogin } from './lib/kds-api.js';
 import {
@@ -8,11 +10,6 @@ import {
   saveKdsSession,
   type KdsSession,
 } from './lib/kds-session.js';
-
-function formatMoney(minor: number, currency: string): string {
-  const sym = currency === 'GBP' ? '£' : `${currency} `;
-  return `${sym}${(minor / 100).toFixed(2)}`;
-}
 
 export function App() {
   const [session, setSession] = useState<KdsSession | null>(() => loadKdsSession());
@@ -30,15 +27,33 @@ export function App() {
     setSession(null);
   }, []);
 
-  const { orders, error, setError, busyId, complete } = useKdsOrders({
+  const {
+    orders,
+    error: ordersError,
+    setError: setOrdersError,
+    busyId,
+    complete,
+  } = useKdsOrders({
     session,
     onSessionExpired: clearExpiredSession,
   });
 
+  const {
+    kdsConfig,
+    error: configError,
+    setError: setConfigError,
+  } = useKdsConfig({
+    session,
+    onSessionExpired: clearExpiredSession,
+  });
+
+  const error = loginError ?? ordersError ?? configError;
+
   async function handleLogin(e: FormEvent): Promise<void> {
     e.preventDefault();
     setLoginError(null);
-    setError(null);
+    setOrdersError(null);
+    setConfigError(null);
     try {
       const data = await kdsLogin({
         cafeSlug: loginForm.cafeSlug.trim(),
@@ -62,7 +77,8 @@ export function App() {
   function logout(): void {
     saveKdsSession(null);
     setSession(null);
-    setError(null);
+    setOrdersError(null);
+    setConfigError(null);
     setLoginError(null);
   }
 
@@ -118,7 +134,7 @@ export function App() {
   }
 
   return (
-    <div className="kds-shell">
+    <div className="kds-shell kds-shell-board">
       <header className="kds-header">
         <h1 className="kds-title">Moonshot KDS</h1>
         <div className="kds-header-meta">
@@ -135,47 +151,15 @@ export function App() {
           {error}
         </p>
       )}
-      {orders.length === 0 ? (
-        <p className="kds-placeholder">No open orders. Waiting for tickets…</p>
+      {kdsConfig ? (
+        <FlowBoard
+          orders={orders}
+          kdsConfig={kdsConfig}
+          busyId={busyId}
+          onComplete={(id) => void complete(id)}
+        />
       ) : (
-        <ul className="kds-board">
-          {orders.map((order) => (
-            <li key={order.id} className="kds-card">
-              <div className="kds-card-top">
-                <span className="kds-card-name">{order.customerName}</span>
-                <span className="kds-card-total">{formatMoney(order.totalMinor, order.currency)}</span>
-              </div>
-              <div className="kds-card-meta">
-                <span>{order.orderType.replace('_', ' ')}</span>
-                <span>{order.paymentStatus}</span>
-                <span className="kds-card-time">
-                  Pickup{' '}
-                  {new Date(
-                    order.pickup.pickupTime ?? order.createdAt,
-                  ).toLocaleTimeString()}
-                </span>
-              </div>
-              {order.notes ? <p className="kds-card-notes">{order.notes}</p> : null}
-              <ul className="kds-lines">
-                {order.items.map((item) => (
-                  <li key={item.id} className="kds-line">
-                    <span>
-                      {item.quantity}× {item.itemName}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                className="kds-button kds-button-done"
-                disabled={busyId === order.id}
-                onClick={() => void complete(order.id)}
-              >
-                {busyId === order.id ? 'Completing…' : 'Done'}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <p className="kds-placeholder">Loading board config…</p>
       )}
     </div>
   );

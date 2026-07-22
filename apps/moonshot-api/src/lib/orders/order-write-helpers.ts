@@ -14,8 +14,8 @@ export async function insertOrderItems(
     await client.query(
       `INSERT INTO order_items (
         order_id, menu_item_id, item_name, quantity, unit_price_minor,
-        modifiers, allergens, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)`,
+        modifiers, allergens, notes, category
+      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)`,
       [
         orderId,
         rl.menuItemId,
@@ -25,6 +25,7 @@ export async function insertOrderItems(
         JSON.stringify(rl.modifiers),
         rl.allergens,
         rl.notes,
+        rl.category,
       ],
     );
   }

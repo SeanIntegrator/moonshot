@@ -2,6 +2,7 @@ import {
   API_VERSION_PREFIX,
   type ApiEnvelope,
   type KdsCompleteOrderResponse,
+  type KdsConfigResponse,
   type KdsLoginRequest,
   type KdsLoginResponse,
   type KdsOrdersResponse,
@@ -61,7 +62,25 @@ export async function kdsFetchOrders(token: string): Promise<KdsOrdersResponse> 
   return json.data;
 }
 
-export async function kdsCompleteOrder(token: string, orderId: string): Promise<KdsCompleteOrderResponse> {
+export async function kdsFetchConfig(token: string): Promise<KdsConfigResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/kds/config`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    throw new Error('SESSION_EXPIRED');
+  }
+  const json = await parseEnvelope<KdsConfigResponse>(res);
+  if (!json.ok) throw new Error(json.error ?? 'Failed to load KDS config');
+  return json.data;
+}
+
+export async function kdsCompleteOrder(
+  token: string,
+  orderId: string,
+): Promise<KdsCompleteOrderResponse> {
   const base = getApiBaseUrl();
   if (!base) throw new Error('VITE_API_URL is not set');
   const url = `${base}${API_VERSION_PREFIX}/kds/orders/${encodeURIComponent(orderId)}/complete`;

@@ -46,7 +46,7 @@ Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so 
 - **Pickup delay:** `POST /orders` accepts **`pickupDelayMinutes`**; stored as **`orders.requested_pickup_not_before`**; live ETA = max(FIFO, not-before).
 - **Opening hours:** `cafes.hours` weekly JSON; Admin editor; Home caption + Order Now gate via `cafeOpenStatus`.
 - **Tracker reliability:** order detail always polls while active; subscribe ack + completion reload catch missed sockets.
-- **KDS API (M2 contracts):** modifier chip fields on read; `deriveLinePrep`; `GET /kds/config`; preparing/ready status advance + `customerOrderStatusUpdated`; barista ETA stretch (`eta_mode`) without FIFO clobber. Board UI deferred — [architecture/kds-board.md](architecture/kds-board.md).
+- **KDS API (M2 contracts):** modifier chip fields on read (`isDefault`); `category` on order lines; `deriveFlowLine` + `deriveLinePrep`; Flow prep groups seeded; `GET /kds/config`; preparing/ready status advance + `customerOrderStatusUpdated`; barista ETA stretch (`eta_mode`) without FIFO clobber. Flow board UI iteration 1 shipped — [architecture/kds-board.md](architecture/kds-board.md).
 
 ### Backend refactor (Pass A + B, May 2026)
 
@@ -101,16 +101,16 @@ Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). A
 | Stripe incremental / merge checkout (F3) | Only initial Checkout Session per order today |
 | Stripe refunds on cancel | Cancel sets status; paid → `refundPending: true` |
 | POS adapters (Square, etc.) | Manual adapter only — [pos-normalisation.md](pos-normalisation.md) |
-| Explicit preparing/ready on KDS | API shipped; board advance buttons deferred to KDS UI plan |
+| Explicit preparing/ready on KDS | API shipped; Flow board uses header→complete for now |
+| KDS milk/chip prep UI | Flow board iteration 1 shipped (`deriveFlowLine`) |
 | Feedback HTTP + drawer (Phase B) | Socket eligibility MVP shipped; [feedback-prompt-flow.md](feedback-prompt-flow.md) |
 | Admin invites / audit / theme editor | Self-service signup shipped; invites remain planned |
-| KDS milk/chip prep UI | Contracts + `deriveLinePrep` ready; board chrome deferred |
 
 ---
 
 ## Next steps
 
-1. Order-ahead + KDS **UI** polish (ETA display, explicit **preparing/ready** stepper).
+1. KDS **iteration 2**: recall / hold, synced line made-state, layout grouping, preparing/ready chrome.
 2. **Order merge** + incremental Stripe sessions + refunds.
 3. **POS adapter implementations** using [pos-normalisation.md](pos-normalisation.md).
 4. Admin **invites**, audit trail, theme editor.
