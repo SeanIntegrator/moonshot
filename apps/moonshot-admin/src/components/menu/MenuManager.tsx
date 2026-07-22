@@ -16,26 +16,42 @@ export function MenuManager({ cafeSlug, token }: Props) {
   const [addingItem, setAddingItem] = useState(false);
   const [items, setItems] = useState<NormalisedMenuItem[]>([]);
   const [library, setLibrary] = useState<CafeModifierGroup[]>([]);
+  const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reload = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    Promise.all([fetchMenuForAdmin(token, cafeSlug), fetchModifierGroups(token, cafeSlug)])
-      .then(([menu, groups]) => {
-        setItems(menu.items);
-        setLibrary(groups);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load menu'))
-      .finally(() => setLoading(false));
-  }, [cafeSlug, token]);
+  const load = useCallback(
+    (mode: 'initial' | 'soft') => {
+      if (mode === 'soft') {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+      Promise.all([fetchMenuForAdmin(token, cafeSlug), fetchModifierGroups(token, cafeSlug)])
+        .then(([menu, groups]) => {
+          setItems(menu.items);
+          setLibrary(groups);
+          setReady(true);
+        })
+        .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load menu'))
+        .finally(() => {
+          setLoading(false);
+          setRefreshing(false);
+        });
+    },
+    [cafeSlug, token],
+  );
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    setReady(false);
+    load('initial');
+  }, [load]);
 
-  if (loading) {
+  const softReload = useCallback(() => load('soft'), [load]);
+
+  if (loading && !ready) {
     return (
       <Paper sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress size={32} />
@@ -43,13 +59,13 @@ export function MenuManager({ cafeSlug, token }: Props) {
     );
   }
 
-  if (error) {
+  if (error && !ready) {
     return (
       <Paper sx={{ p: 2 }}>
         <Alert
           severity="error"
           action={
-            <Button color="inherit" size="small" onClick={() => reload()}>
+            <Button color="inherit" size="small" onClick={() => load('initial')}>
               Retry
             </Button>
           }
@@ -61,7 +77,7 @@ export function MenuManager({ cafeSlug, token }: Props) {
   }
 
   return (
-    <Paper sx={{ p: 3, borderRadius: 2 }}>
+    <Paper sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
       <Typography variant="h6" gutterBottom>
         Menu & pricing
       </Typography>
@@ -69,35 +85,77 @@ export function MenuManager({ cafeSlug, token }: Props) {
         Add items, sizes, and reusable modifier sections. Changes appear on the order-ahead app immediately.
       </Typography>
 
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }} spacing={2}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-          <Tab label="Items" />
-          <Tab label="Sections (milks, syrups…)" />
-        </Tabs>
-        {tab === 0 && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setAddingItem(true)}
-          >
-            Add item
-          </Button>
-        )}
-      </Stack>
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          onClose={() => setError(null)}
+          action={
+            <Button color="inherit" size="small" onClick={() => softReload()}>
+              Retry
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      )}
 
-      <Box hidden={tab !== 0}>
-        <MenuItemsPanel
-          cafeSlug={cafeSlug}
-          token={token}
-          items={items}
-          library={library}
-          onItemsChanged={reload}
-          creating={addingItem}
-          onCreatingChange={setAddingItem}
-        />
-      </Box>
-      <Box hidden={tab !== 1}>
-        <ModifierLibraryEditor cafeSlug={cafeSlug} token={token} onLibraryChanged={reload} />
+      <Box sx={{ position: 'relative' }}>
+        <Box
+          sx={{
+            opacity: refreshing ? 0.55 : 1,
+            pointerEvents: refreshing ? 'none' : 'auto',
+            transition: 'opacity 0.15s ease',
+          }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }} spacing={2}>
+            <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+              <Tab label="Items" />
+              <Tab label="Sections (milks, syrups…)" />
+            </Tabs>
+            {tab === 0 && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setAddingItem(true)}
+              >
+                Add item
+              </Button>
+            )}
+          </Stack>
+
+          <Box hidden={tab !== 0}>
+            <MenuItemsPanel
+              cafeSlug={cafeSlug}
+              token={token}
+              items={items}
+              library={library}
+              onItemsChanged={softReload}
+              creating={addingItem}
+              onCreatingChange={setAddingItem}
+            />
+          </Box>
+          <Box hidden={tab !== 1}>
+            <ModifierLibraryEditor cafeSlug={cafeSlug} token={token} onLibraryChanged={softReload} />
+          </Box>
+        </Box>
+
+        {refreshing && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'rgba(255, 255, 255, 0.35)',
+              borderRadius: 1,
+              zIndex: 1,
+            }}
+          >
+            <CircularProgress size={28} />
+          </Box>
+        )}
       </Box>
     </Paper>
   );

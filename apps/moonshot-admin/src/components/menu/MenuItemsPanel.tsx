@@ -168,6 +168,9 @@ export function MenuItemsPanel({
         copy[updated.id] = toDraft(updated, library);
         return copy;
       });
+      setNotice(
+        next ? `“${item.name}” is on the menu.` : `“${item.name}” is hidden.`,
+      );
       onItemsChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Update failed');
@@ -328,16 +331,16 @@ export function MenuItemsPanel({
         </Box>
       )}
 
-      <Box sx={{ maxHeight: '70vh', overflowY: 'auto', pr: 1 }}>
+      <Box sx={{ maxHeight: '70vh', overflowY: 'auto', minWidth: 0 }}>
         {CATEGORIES.map(({ value: category, label }) => {
           const categoryItems = items.filter((item) => item.category === category);
           if (categoryItems.length === 0) return null;
           return (
-            <Box key={category} sx={{ mb: 3 }}>
+            <Box key={category} sx={{ mb: 3, minWidth: 0 }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 {label}
               </Typography>
-              <Stack spacing={1}>
+              <Stack spacing={1} sx={{ minWidth: 0 }}>
                 {categoryItems.map((item) => {
                   const draft = draftFor(item);
                   const displayPrice =
@@ -345,17 +348,39 @@ export function MenuItemsPanel({
                       ? `from ${formatGbpMinor(Math.min(...draft.sizes.map((s) => s.priceMinor)), draft.currency)}`
                       : formatGbpMinor(draft.priceMinor, draft.currency);
                   return (
-                    <Accordion key={item.id} disableGutters>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', pr: 1 }}>
-                          <Typography sx={{ flex: 1 }}>{item.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
+                    <Accordion key={item.id} disableGutters sx={{ minWidth: 0 }}>
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{
+                          minWidth: 0,
+                          '& .MuiAccordionSummary-content': { minWidth: 0, overflow: 'hidden' },
+                        }}
+                      >
+                        <Stack
+                          direction="row"
+                          spacing={2}
+                          alignItems="center"
+                          sx={{ width: '100%', minWidth: 0 }}
+                        >
+                          <Typography
+                            sx={{
+                              flex: 1,
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {item.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
                             {displayPrice}
                           </Typography>
                           <Stack
                             direction="row"
                             spacing={0.5}
                             alignItems="center"
+                            sx={{ flexShrink: 0 }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Switch

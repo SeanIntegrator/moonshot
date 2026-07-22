@@ -1,4 +1,7 @@
-import { Box, TextField, Typography } from '@mui/material';
+import { Box, TextField } from '@mui/material';
+
+/** Max chars shown on KDS pills — keep short enough to read at a glance. */
+const CHIP_LABEL_MAX = 12;
 
 type Props = {
   colorHex: string;
@@ -31,10 +34,10 @@ export function ColorChipField({
         label="Chip label"
         size="small"
         value={chipLabel}
-        onChange={(e) => onLabelChange(e.target.value.slice(0, 4))}
+        onChange={(e) => onLabelChange(e.target.value.slice(0, CHIP_LABEL_MAX))}
         placeholder="Oa"
         helperText={compact ? undefined : 'Short text on KDS pills'}
-        sx={{ width: compact ? 72 : 100 }}
+        sx={{ width: compact ? 120 : 160 }}
       />
       <Box
         sx={{

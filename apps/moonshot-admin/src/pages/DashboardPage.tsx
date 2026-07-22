@@ -61,13 +61,13 @@ export function DashboardPage({ session }: Props) {
           display: 'flex',
           flexDirection: { xs: 'column', lg: 'row' },
           gap: 3,
-          alignItems: 'flex-start',
+          alignItems: 'stretch',
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
           <OrderAheadSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
         </Box>
-        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
           <StripePaymentsCard token={session.token} />
         </Box>
       </Box>

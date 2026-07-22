@@ -17,6 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useCallback, useEffect, useState } from 'react';
 import {
   createModifierGroup,
@@ -299,7 +300,13 @@ export function ModifierLibraryEditor({ cafeSlug, token, onLibraryChanged }: Pro
           </Accordion>
         ))}
       </Stack>
-      <Button sx={{ mt: 2 }} onClick={() => void addGroup()} disabled={savingId === 'new'}>
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        sx={{ mt: 2 }}
+        onClick={() => void addGroup()}
+        disabled={savingId === 'new'}
+      >
         Add section
       </Button>
     </Box>
