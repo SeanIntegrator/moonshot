@@ -1,7 +1,6 @@
 import {
   Avatar,
   Box,
-  Button,
   Container,
   Link,
   Typography,
@@ -12,6 +11,7 @@ import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
 import { QrModal } from '../components/QrModal.js';
 import { SectionHead } from '../components/SectionHead.js';
+import { UsualSuggestCard } from '../components/UsualSuggestCard.js';
 import { HomePageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
@@ -23,6 +23,7 @@ import { useCafe } from '../hooks/useCafe.js';
 import { firstName, formatFromPrice, formatMoney, timeGreeting } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
+import { defaultSelectionsForItem, findWhyNotTryItem } from '../lib/why-not-try.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
@@ -57,6 +58,10 @@ export function Home() {
   }, [location.pathname, isSignedIn, loyaltyEnabled, refreshLoyalty]);
 
   const usualOrder = recent[0] ?? null;
+  const whyNotTryItem = useMemo(
+    () => (usualOrder ? null : findWhyNotTryItem(menu)),
+    [usualOrder, menu],
+  );
   const featured = useMemo(() => (menu ? featuredItems(menu) : []), [menu]);
   const activeOrder = active[0] ?? null;
   const greeting = timeGreeting();
@@ -134,61 +139,35 @@ export function Home() {
       </Box>
 
       <Box sx={{ px: 2, pt: 2 }}>
-        {usualOrder && orderingAvailable && (
-          <Box sx={{ mb: 3 }}>
-            <SectionHead title="Your usual" />
-            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
-              {usualOrder.items.map((li) => {
-                const menuItem = li.menuItemId
-                  ? menu?.items?.find((i) => i.id === li.menuItemId)
-                  : undefined;
-                return (
-                <Box key={li.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>
-                  <MenuItemImage
-                    src={menuItem?.imageUrl}
-                    alt={li.itemName}
-                    width={48}
-                    height={48}
-                    borderRadius={1}
-                    loading="lazy"
-                  />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" fontWeight={600}>
-                      {li.itemName}
-                    </Typography>
-                    {li.modifiers.length > 0 && (
-                      <Typography variant="caption" color="text.secondary">
-                        {li.modifiers.map((m) => m.optionName).join(' · ')}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-                );
-              })}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Total
-                  </Typography>
-                  <Typography variant="body1" fontWeight={700}>
-                    {formatMoney(usualOrder.totalMinor, usualOrder.currency)}
-                  </Typography>
-                </Box>
-                <Button
-                  variant="contained"
-                  disabled={!orderingAvailable}
-                  onClick={() => {
-                    if (!orderingAvailable) return;
-                    reorderFromOrder(usualOrder, upsertLine);
-                    navigate(cafePath('/checkout'));
-                  }}
-                  sx={{ minWidth: 140 }}
-                >
-                  Order →
-                </Button>
-              </Box>
-            </Box>
-          </Box>
+        {orderingAvailable && usualOrder && (
+          <UsualSuggestCard
+            variant="usual"
+            order={usualOrder}
+            menu={menu}
+            orderingAvailable={orderingAvailable}
+            onOrder={() => {
+              reorderFromOrder(usualOrder, upsertLine);
+              navigate(cafePath('/checkout'));
+            }}
+          />
+        )}
+        {orderingAvailable && !usualOrder && whyNotTryItem && (
+          <UsualSuggestCard
+            variant="whyNotTry"
+            item={whyNotTryItem}
+            orderingAvailable={orderingAvailable}
+            onOrder={() => {
+              const { sizeId, modifiers } = defaultSelectionsForItem(whyNotTryItem);
+              upsertLine({
+                menuItemId: whyNotTryItem.id,
+                sizeId,
+                quantity: 1,
+                modifiers,
+                allergens: [],
+              });
+              navigate(cafePath('/checkout'));
+            }}
+          />
         )}
 
         {featured.length > 0 && orderingAvailable && (
