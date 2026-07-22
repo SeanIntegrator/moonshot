@@ -54,6 +54,11 @@ export function firstName(displayName: string | null | undefined, email?: string
   return 'there';
 }
 
+/**
+ * Customer-facing modifier line for cards / receipts.
+ * Pass already-filtered modifiers when defaults should stay hidden
+ * (see `isStandardModifierVariant`).
+ */
 export function modifierSummary(modifiers: { optionName: string }[]): string {
   if (modifiers.length === 0) return '';
   // Keep Title Case for display even if a snapshot was stored lowercase.

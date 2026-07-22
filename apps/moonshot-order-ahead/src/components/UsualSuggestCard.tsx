@@ -2,11 +2,9 @@ import type { NormalisedMenu, NormalisedMenuItem, NormalisedOrder } from '@moons
 import { Box, Button, Typography } from '@mui/material';
 import { MenuItemImage } from './MenuItemImage.js';
 import { SectionHead } from './SectionHead.js';
-import { formatMoney } from '../lib/format.js';
-import {
-  defaultSelectionsForItem,
-  whyNotTryTotalMinor,
-} from '../lib/why-not-try.js';
+import { formatMoney, modifierSummary } from '../lib/format.js';
+import { isStandardModifierVariant } from '../lib/modifier-display.js';
+import { whyNotTryTotalMinor } from '../lib/why-not-try.js';
 
 type LineView = {
   key: string;
@@ -37,24 +35,26 @@ function linesFromUsual(order: NormalisedOrder, menu: NormalisedMenu | null): Li
     const menuItem = li.menuItemId
       ? menu?.items?.find((i) => i.id === li.menuItemId)
       : undefined;
+    const custom = li.modifiers.filter((m) => !isStandardModifierVariant(m, menuItem));
+    const summary = modifierSummary(custom);
     return {
       key: li.id,
       name: li.itemName,
       imageUrl: menuItem?.imageUrl ?? null,
-      modifierSummary:
-        li.modifiers.length > 0 ? li.modifiers.map((m) => m.optionName).join(' · ') : null,
+      // Only non-standard customisations — Whole milk / Regular / Double etc. stay hidden.
+      modifierSummary: summary || null,
     };
   });
 }
 
 function linesFromWhyNotTry(item: NormalisedMenuItem): LineView[] {
-  const { optionNames } = defaultSelectionsForItem(item);
+  // Suggestion uses menu defaults only — nothing non-standard to surface.
   return [
     {
       key: item.id,
       name: item.name,
       imageUrl: item.imageUrl,
-      modifierSummary: optionNames.length > 0 ? optionNames.join(' · ') : null,
+      modifierSummary: null,
     },
   ];
 }
