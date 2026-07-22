@@ -14,7 +14,7 @@ function colorDot(hex: string | null | undefined) {
         height: 10,
         borderRadius: '50%',
         bgcolor: hex,
-        border: 1,
+        border: '0.5px solid',
         borderColor: 'divider',
         flexShrink: 0,
       }}
@@ -31,14 +31,21 @@ function uniformGroupDelta(group: NormalisedModifierGroup): string {
   return formatModifierDelta(first);
 }
 
+const OPTION_TRANSITION = 'background-color 180ms ease, border-color 180ms ease';
+
+/** Shared selected / idle surfaces for milks, beans, and syrups. */
 const selectedOptionSx = {
-  borderColor: 'divider',
+  border: '0.5px solid',
+  borderColor: 'text.primary',
   bgcolor: 'action.selected',
+  transition: OPTION_TRANSITION,
 } as const;
 
 const idleOptionSx = {
+  border: '0.5px solid',
   borderColor: 'divider',
   bgcolor: 'background.paper',
+  transition: OPTION_TRANSITION,
 } as const;
 
 type Props = {
@@ -111,7 +118,6 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                   onClick={() => onSelect(group.id, opt.id, 'multi', !selected)}
                   sx={{
                     borderRadius: 999,
-                    border: 1,
                     ...surface,
                     color: 'text.primary',
                     fontWeight: 600,
@@ -150,7 +156,7 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 right: 0,
                 bottom: expanded ? -2 : 0,
                 bgcolor: 'background.paper',
-                border: 1,
+                border: '0.5px solid',
                 borderColor: 'divider',
                 transform: expanded ? 'rotate(180deg)' : 'none',
                 transition: 'transform 220ms ease',
@@ -180,7 +186,7 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
         {group.options.map((opt) => {
           const selected = picked.has(opt.id);
           const delta = formatModifierDelta(opt.priceMinor);
-          const sublabel = delta || '';
+          const surface = selected ? selectedOptionSx : idleOptionSx;
           return (
             <Box
               key={opt.id}
@@ -196,9 +202,8 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
               sx={{
                 textAlign: 'left',
                 p: 1.25,
-                border: 1,
                 borderRadius: 1.25,
-                ...(selected ? selectedOptionSx : idleOptionSx),
+                ...surface,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 color: 'text.primary',
@@ -212,17 +217,22 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
                 {colorDot(opt.colorHex)}
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="body2" fontWeight={600} sx={{ minWidth: 0, flex: 1 }}>
                   {opt.name}
                 </Typography>
+                {delta ? (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    sx={{ ml: 'auto', flexShrink: 0 }}
+                  >
+                    {delta}
+                  </Typography>
+                ) : null}
               </Box>
-              {sublabel ? (
-                <Typography variant="caption" color="text.secondary">
-                  {sublabel}
-                </Typography>
-              ) : null}
             </Box>
           );
         })}

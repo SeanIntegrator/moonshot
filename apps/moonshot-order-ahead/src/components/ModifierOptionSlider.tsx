@@ -34,6 +34,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
   );
   const selected = options[valueIndex];
   const selectedDelta = selected ? formatModifierDelta(selected.priceMinor) : '';
+  const lastMarkIndex = Math.max(0, options.length - 1);
 
   if (options.length === 0) return null;
 
@@ -43,8 +44,8 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
   }));
 
   return (
-    <Box sx={{ mt: 2.5, px: 0.5, pb: 2.5, '&:first-of-type': { mt: 0.5 } }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
+    <Box sx={{ mt: 2.5, px: 0.5, pb: 3.5, '&:first-of-type': { mt: 0.5 } }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, mb: 1 }}>
         <Typography variant="subtitle2" fontWeight={700}>
           {group.name}
         </Typography>
@@ -58,7 +59,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
       <Slider
         value={valueIndex}
         min={0}
-        max={Math.max(0, options.length - 1)}
+        max={lastMarkIndex}
         step={1}
         marks={marks}
         valueLabelDisplay="off"
@@ -69,15 +70,27 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
           if (opt) onSelect(group.id, opt.id);
         }}
         sx={{
-          mt: 0.5,
-          // Room for two-line marks (+price under chip label).
+          // Horizontal padding insets the rail/marks so end dots aren't flush to the card.
+          mx: 1.25,
+          mt: 1,
+          mb: 0.5,
+          width: 'auto',
+          // Room below the thumb so labels don't sit under the handle.
+          pb: 3.25,
           '& .MuiSlider-markLabel': {
             whiteSpace: 'pre-line',
             textAlign: 'center',
             fontSize: '0.7rem',
             lineHeight: 1.15,
             color: 'text.secondary',
-            top: 28,
+            top: 36,
+          },
+          // Keep end labels readable inside the padded track instead of clipping.
+          '& .MuiSlider-markLabel[data-index="0"]': {
+            transform: 'translateX(0%)',
+          },
+          [`& .MuiSlider-markLabel[data-index="${lastMarkIndex}"]`]: {
+            transform: 'translateX(-100%)',
           },
           '& .MuiSlider-thumb': {
             width: 20,
