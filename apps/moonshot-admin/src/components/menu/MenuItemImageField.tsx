@@ -13,6 +13,7 @@ type Props = {
   onUploaded: (item: NormalisedMenuItem) => void;
 };
 
+/** Photo preview + upload controls stacked for the item editor’s right column. */
 export function MenuItemImageField({
   cafeSlug,
   token,
@@ -42,55 +43,53 @@ export function MenuItemImageField({
   }
 
   return (
-    <Box>
+    <Box sx={{ width: '100%' }}>
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
         Item photo
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <Box
-          sx={{
-            width: 220,
-            height: 150,
-            borderRadius: 1,
-            border: 1,
-            borderColor: 'divider',
-            overflow: 'hidden',
-            bgcolor: 'action.hover',
-            backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            flexShrink: 0,
-          }}
-          aria-label={imageUrl ? `${itemName} photo` : 'No photo'}
-        />
-        <Box sx={{ flex: 1, minWidth: 180 }}>
-          {!itemId ? (
-            <Typography variant="body2" color="text.secondary">
-              Save the item first, then upload a photo.
+      <Box
+        sx={{
+          width: '100%',
+          aspectRatio: '4 / 3',
+          maxHeight: 180,
+          borderRadius: 1,
+          border: 1,
+          borderColor: 'divider',
+          overflow: 'hidden',
+          bgcolor: 'action.hover',
+          backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+        }}
+        aria-label={imageUrl ? `${itemName} photo` : 'No photo'}
+      />
+      <Box sx={{ mt: 1 }}>
+        {!itemId ? (
+          <Typography variant="body2" color="text.secondary">
+            Save the item first, then upload a photo.
+          </Typography>
+        ) : (
+          <>
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={disabled || uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              {imageUrl ? 'Replace photo' : 'Upload photo'}
+            </Button>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>
+              JPEG, PNG, or WebP · max 5MB · resized to a small thumbnail automatically
             </Typography>
-          ) : (
-            <>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={disabled || uploading}
-                onClick={() => inputRef.current?.click()}
-              >
-                {imageUrl ? 'Replace photo' : 'Upload photo'}
-              </Button>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>
-                JPEG, PNG, or WebP · max 5MB · resized to a small thumbnail automatically
-              </Typography>
-            </>
-          )}
-          {uploading && <LinearProgress sx={{ mt: 1 }} />}
-          {error && (
-            <Alert severity="error" sx={{ mt: 1 }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-        </Box>
+          </>
+        )}
+        {uploading && <LinearProgress sx={{ mt: 1 }} />}
+        {error && (
+          <Alert severity="error" sx={{ mt: 1 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
       </Box>
       <input
         ref={inputRef}

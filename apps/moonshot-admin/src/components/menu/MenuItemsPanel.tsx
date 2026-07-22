@@ -171,6 +171,7 @@ export function MenuItemsPanel({
       setNotice(
         next ? `“${item.name}” is on the menu.` : `“${item.name}” is hidden.`,
       );
+      console.log('toggleAvailability', item.id, next, updated);
       onItemsChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Update failed');
@@ -188,77 +189,88 @@ export function MenuItemsPanel({
 
     return (
       <Stack spacing={2}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
-            label="Item name"
-            size="small"
-            required
-            value={draft.name}
-            onChange={(e) => update({ name: e.target.value })}
-            sx={{ flex: 1 }}
-          />
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Category</InputLabel>
-            <Select
-              label="Category"
-              value={draft.category}
-              onChange={(e) => update({ category: e.target.value as MenuCategory })}
-            >
-              {CATEGORIES.map((c) => (
-                <MenuItem key={c.value} value={c.value}>
-                  {c.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Stack>
+        <FormControl size="small" sx={{ maxWidth: 220 }}>
+          <InputLabel>Category</InputLabel>
+          <Select
+            label="Category"
+            value={draft.category}
+            onChange={(e) => update({ category: e.target.value as MenuCategory })}
+          >
+            {CATEGORIES.map((c) => (
+              <MenuItem key={c.value} value={c.value}>
+                {c.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-        <TextField
-          label="Description"
-          size="small"
-          multiline
-          minRows={2}
-          value={draft.description ?? ''}
-          onChange={(e) => update({ description: e.target.value || null })}
-        />
-
-        <MenuItemImageField
-          cafeSlug={cafeSlug}
-          token={token}
-          itemId={itemId}
-          imageUrl={draft.imageUrl}
-          itemName={draft.name || 'Menu item'}
-          disabled={savingId === (itemId ?? 'new')}
-          onUploaded={(updated) => {
-            if (itemId) {
-              setDraft(itemId, toDraft(updated, library));
-            } else {
-              setNewItem(toDraft(updated, library));
-            }
-            onItemsChanged();
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 2,
+            alignItems: 'flex-start',
           }}
-        />
+        >
+          <Stack spacing={2} sx={{ flex: 2, minWidth: 0, width: '100%' }}>
+            <TextField
+              label="Item name"
+              size="small"
+              required
+              fullWidth
+              value={draft.name}
+              onChange={(e) => update({ name: e.target.value })}
+            />
+            <TextField
+              label="Description"
+              size="small"
+              multiline
+              minRows={2}
+              fullWidth
+              value={draft.description ?? ''}
+              onChange={(e) => update({ description: e.target.value || null })}
+            />
+            {draft.sizes.length === 0 && (
+              <TextField
+                label={`Base price (${draft.currency})`}
+                type="number"
+                size="small"
+                value={priceText[key] ?? String(draft.priceMinor / 100)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setPriceText((prev) => ({ ...prev, [key]: raw }));
+                  if (raw.trim() === '') {
+                    update({ priceMinor: 0 });
+                    return;
+                  }
+                  const v = Number.parseFloat(raw);
+                  if (Number.isFinite(v)) update({ priceMinor: Math.round(v * 100) });
+                }}
+                inputProps={{ min: 0, step: 0.01 }}
+                sx={{ maxWidth: 200 }}
+              />
+            )}
+          </Stack>
 
-        {draft.sizes.length === 0 && (
-          <TextField
-            label={`Base price (${draft.currency})`}
-            type="number"
-            size="small"
-            value={priceText[key] ?? String(draft.priceMinor / 100)}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setPriceText((prev) => ({ ...prev, [key]: raw }));
-              if (raw.trim() === '') {
-                update({ priceMinor: 0 });
-                return;
-              }
-              const v = Number.parseFloat(raw);
-              if (Number.isFinite(v)) update({ priceMinor: Math.round(v * 100) });
-            }}
-            inputProps={{ min: 0, step: 0.01 }}
-            sx={{ maxWidth: 200 }}
-          />
-        )}
+          <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+            <MenuItemImageField
+              cafeSlug={cafeSlug}
+              token={token}
+              itemId={itemId}
+              imageUrl={draft.imageUrl}
+              itemName={draft.name || 'Menu item'}
+              disabled={savingId === (itemId ?? 'new')}
+              onUploaded={(updated) => {
+                if (itemId) {
+                  setDraft(itemId, toDraft(updated, library));
+                } else {
+                  setNewItem(toDraft(updated, library));
+                }
+                onItemsChanged();
+              }}
+            />
+          </Box>
+        </Box>
 
         <SizeEditor
           sizes={draft.sizes}

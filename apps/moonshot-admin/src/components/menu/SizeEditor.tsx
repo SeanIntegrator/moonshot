@@ -8,6 +8,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { ColorChipField } from './ColorChipField.js';
 
 function newSize(): NormalisedItemSize {
@@ -97,7 +98,13 @@ export function SizeEditor({ sizes, currency, onChange }: Props) {
           </Box>
         ))}
       </Stack>
-      <Button size="small" sx={{ mt: 1 }} onClick={() => onChange([...sizes, newSize()])}>
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<AddIcon />}
+        sx={{ mt: 1 }}
+        onClick={() => onChange([...sizes, newSize()])}
+      >
         Add size
       </Button>
     </Box>
