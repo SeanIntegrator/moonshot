@@ -1,7 +1,8 @@
-import { useState, type TransitionEvent } from 'react';
+import { useRef, useState, type TransitionEvent } from 'react';
 import { deriveFlowLine, type KdsConfig, type NormalisedOrder } from '@moonshot/types';
 import { DrinkRow } from './DrinkRow.js';
 import { FoodRow } from './FoodRow.js';
+import { useEqualizeShotColumnWidth } from './useEqualizeShotColumnWidth.js';
 import {
   deriveTicketKind,
   ticketKindLabel,
@@ -35,6 +36,7 @@ export function OrderCard({
   const kind = deriveTicketKind(order);
   const timer = useOrderTimer(order, kdsConfig);
   const [madeIds, setMadeIds] = useState<Set<string>>(() => new Set());
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   const lines = order.items.map((item) => ({
     item,
@@ -46,6 +48,16 @@ export function OrderCard({
     kind === 'pickup' &&
     kdsConfig.display.showCustomerNameInHeader &&
     Boolean(order.customerName?.trim());
+
+  // Content that affects natural shot-column width (remeasure when it changes).
+  const shotContentKey = drinks
+    .map(
+      ({ item, view }) =>
+        `${item.id}:${item.quantity}:${item.itemName}:${view.shotLabel ?? ''}:${view.sizeLabel ?? ''}`,
+    )
+    .join('|');
+
+  useEqualizeShotColumnWidth(bodyRef, shotContentKey);
 
   function toggleMade(lineId: string): void {
     setMadeIds((prev) => {
@@ -83,7 +95,7 @@ export function OrderCard({
         <span className={`flow-timer flow-timer-${timer.tone}`}>{timer.display}</span>
       </button>
 
-      <div className="flow-card-body">
+      <div className="flow-card-body" ref={bodyRef}>
         {drinks.length === 0 && foods.length > 0 ? <FoodDivider only /> : null}
 
         {drinks.map(({ item, view }) => (

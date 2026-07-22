@@ -172,11 +172,15 @@
 }
 
 .flow-row-drink {
-  grid-template-columns: minmax(10rem, auto) minmax(9rem, auto) minmax(0, 1fr);
+  /* First track locked per-order via --flow-shot-col-width so milk chips align. */
+  grid-template-columns:
+    var(--flow-shot-col-width, minmax(10rem, auto))
+    minmax(9rem, auto)
+    minmax(0, 1fr);
 }
 
 .flow-row-drink.flow-row-no-mods {
-  grid-template-columns: minmax(10rem, auto) minmax(0, 1fr);
+  grid-template-columns: var(--flow-shot-col-width, minmax(10rem, auto)) minmax(0, 1fr);
 }
 
 .flow-row-food {
@@ -203,6 +207,11 @@
   min-width: 0;
   white-space: nowrap;
   margin-right: 16px;
+  box-sizing: border-box;
+}
+
+.flow-row-drink .flow-col-shot {
+  width: 100%;
 }
 
 .flow-col-shot-multi {
