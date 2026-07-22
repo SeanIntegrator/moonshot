@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type TransitionEvent } from 'react';
 import { deriveFlowLine, type KdsConfig, type NormalisedOrder } from '@moonshot/types';
 import { DrinkRow } from './DrinkRow.js';
 import { FoodRow } from './FoodRow.js';
@@ -12,8 +12,9 @@ import {
 type OrderCardProps = {
   order: NormalisedOrder;
   kdsConfig: KdsConfig;
-  busy: boolean;
+  dismissing: boolean;
   onComplete: (orderId: string) => void;
+  onExited: (orderId: string) => void;
 };
 
 function FoodDivider({ only }: { only: boolean }) {
@@ -24,7 +25,13 @@ function FoodDivider({ only }: { only: boolean }) {
   );
 }
 
-export function OrderCard({ order, kdsConfig, busy, onComplete }: OrderCardProps) {
+export function OrderCard({
+  order,
+  kdsConfig,
+  dismissing,
+  onComplete,
+  onExited,
+}: OrderCardProps) {
   const kind = deriveTicketKind(order);
   const timer = useOrderTimer(order, kdsConfig);
   const [madeIds, setMadeIds] = useState<Set<string>>(() => new Set());
@@ -49,12 +56,21 @@ export function OrderCard({ order, kdsConfig, busy, onComplete }: OrderCardProps
     });
   }
 
+  function handleTransitionEnd(e: TransitionEvent<HTMLLIElement>): void {
+    if (e.target !== e.currentTarget) return;
+    if (e.propertyName !== 'max-height') return;
+    if (!dismissing) return;
+    onExited(order.id);
+  }
+
   return (
-    <li className={`flow-card flow-card-${kind}`}>
+    <li
+      className={`flow-card flow-card-${kind}${dismissing ? ' flow-card-dismissing' : ''}`}
+      onTransitionEnd={handleTransitionEnd}
+    >
       <button
         type="button"
         className="flow-card-header"
-        disabled={busy}
         onClick={() => onComplete(order.id)}
         title="Mark order done"
       >

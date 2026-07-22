@@ -5,13 +5,24 @@ import './board.css';
 type FlowBoardProps = {
   orders: NormalisedOrder[];
   kdsConfig: KdsConfig;
-  busyId: string | null;
+  dismissingIds: ReadonlySet<string>;
   onComplete: (orderId: string) => void;
+  onExited: (orderId: string) => void;
 };
 
-export function FlowBoard({ orders, kdsConfig, busyId, onComplete }: FlowBoardProps) {
+export function FlowBoard({
+  orders,
+  kdsConfig,
+  dismissingIds,
+  onComplete,
+  onExited,
+}: FlowBoardProps) {
   if (orders.length === 0) {
-    return <p className="kds-placeholder">No open orders. Waiting for tickets…</p>;
+    return (
+      <div className="flow-empty" role="status">
+        Waiting for orders
+      </div>
+    );
   }
 
   return (
@@ -21,8 +32,9 @@ export function FlowBoard({ orders, kdsConfig, busyId, onComplete }: FlowBoardPr
           key={order.id}
           order={order}
           kdsConfig={kdsConfig}
-          busy={busyId === order.id}
+          dismissing={dismissingIds.has(order.id)}
           onComplete={onComplete}
+          onExited={onExited}
         />
       ))}
     </ul>

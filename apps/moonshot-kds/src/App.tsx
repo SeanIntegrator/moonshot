@@ -31,8 +31,9 @@ export function App() {
     orders,
     error: ordersError,
     setError: setOrdersError,
-    busyId,
+    dismissingIds,
     complete,
+    finalizeDismiss,
   } = useKdsOrders({
     session,
     onSessionExpired: clearExpiredSession,
@@ -155,8 +156,9 @@ export function App() {
         <FlowBoard
           orders={orders}
           kdsConfig={kdsConfig}
-          busyId={busyId}
-          onComplete={(id) => void complete(id)}
+          dismissingIds={dismissingIds}
+          onComplete={complete}
+          onExited={finalizeDismiss}
         />
       ) : (
         <p className="kds-placeholder">Loading board config…</p>

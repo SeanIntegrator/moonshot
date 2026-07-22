@@ -19,16 +19,19 @@ export function useKdsOrders(params: {
   orders: NormalisedOrder[];
   error: string | null;
   setError: (error: string | null) => void;
-  busyId: string | null;
-  complete: (orderId: string) => Promise<void>;
+  dismissingIds: ReadonlySet<string>;
+  complete: (orderId: string) => void;
+  finalizeDismiss: (orderId: string) => void;
 } {
   const { session, onSessionExpired } = params;
   const [orders, setOrders] = useState<NormalisedOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [dismissingIds, setDismissingIds] = useState<Set<string>>(() => new Set());
   const socketRef = useRef<Socket | null>(null);
   const onExpiredRef = useRef(onSessionExpired);
   onExpiredRef.current = onSessionExpired;
+  const dismissingRef = useRef(dismissingIds);
+  dismissingRef.current = dismissingIds;
 
   const applyEvent = useCallback((ev: KdsServerToClientEvent) => {
     setOrders((prev) => {
@@ -38,6 +41,8 @@ export function useKdsOrders(params: {
         case 'kds:order:removed':
           return prev.filter((o) => o.id !== ev.orderId);
         case 'kds:order:updated':
+          // Don't resurrect a card mid-dismiss animation.
+          if (dismissingRef.current.has(ev.order.id)) return prev;
           return sortOrders([...prev.filter((o) => o.id !== ev.order.id), ev.order]);
         case 'kds:eta:updated':
           return prev.map((o) => {
@@ -52,11 +57,31 @@ export function useKdsOrders(params: {
           return prev;
       }
     });
+    if (ev.type === 'kds:order:removed') {
+      setDismissingIds((prev) => {
+        if (!prev.has(ev.orderId)) return prev;
+        const next = new Set(prev);
+        next.delete(ev.orderId);
+        return next;
+      });
+    }
   }, []);
 
   const refreshOrders = useCallback(async (token: string) => {
     const data = await kdsFetchOrders(token);
-    setOrders(sortOrders(data.orders));
+    setOrders((prev) => {
+      // Keep locally-dismissing cards so the collapse animation can finish.
+      const dismissing = dismissingRef.current;
+      if (dismissing.size === 0) return sortOrders(data.orders);
+      const byId = new Map(data.orders.map((o) => [o.id, o]));
+      const merged = prev
+        .filter((o) => dismissing.has(o.id) || byId.has(o.id))
+        .map((o) => (dismissing.has(o.id) ? o : byId.get(o.id)!));
+      for (const o of data.orders) {
+        if (!merged.some((m) => m.id === o.id)) merged.push(o);
+      }
+      return sortOrders(merged);
+    });
   }, []);
 
   useEffect(() => {
@@ -66,6 +91,7 @@ export function useKdsOrders(params: {
         socketRef.current = null;
       }
       setOrders([]);
+      setDismissingIds(new Set());
       return;
     }
 
@@ -125,27 +151,46 @@ export function useKdsOrders(params: {
     };
   }, [session, applyEvent, refreshOrders]);
 
+  const finalizeDismiss = useCallback((orderId: string): void => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    setDismissingIds((prev) => {
+      if (!prev.has(orderId)) return prev;
+      const next = new Set(prev);
+      next.delete(orderId);
+      return next;
+    });
+  }, []);
+
   const complete = useCallback(
-    async (orderId: string): Promise<void> => {
+    (orderId: string): void => {
       if (!session) return;
-      setBusyId(orderId);
+      if (dismissingRef.current.has(orderId)) return;
+
+      setDismissingIds((prev) => {
+        const next = new Set(prev);
+        next.add(orderId);
+        return next;
+      });
       setError(null);
-      try {
-        await kdsCompleteOrder(session.token, orderId);
-        setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      } catch (err) {
+
+      void kdsCompleteOrder(session.token, orderId).catch((err) => {
+        // Roll back the collapse so the card expands back into the board.
+        setDismissingIds((prev) => {
+          if (!prev.has(orderId)) return prev;
+          const next = new Set(prev);
+          next.delete(orderId);
+          return next;
+        });
         if (err instanceof Error && err.message === 'SESSION_EXPIRED') {
           onExpiredRef.current(session);
           setError('Session expired — please sign in again.');
         } else {
           setError(err instanceof Error ? err.message : 'Complete failed');
         }
-      } finally {
-        setBusyId(null);
-      }
+      });
     },
     [session],
   );
 
-  return { orders, error, setError, busyId, complete };
+  return { orders, error, setError, dismissingIds, complete, finalizeDismiss };
 }

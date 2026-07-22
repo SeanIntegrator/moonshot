@@ -68,7 +68,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
             <span
               key={`${s.label}-${i}`}
               className="flow-syrup-chip"
-              style={{ background: s.colorHex ?? '#4a3f6b', color: '#ffffff' }}
+              style={{ ['--syrup' as string]: s.colorHex ?? '#4a3f6b' }}
             >
               {s.label}
             </span>
