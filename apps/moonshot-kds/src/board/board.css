@@ -57,22 +57,39 @@
   text-align: left;
   color: #f5f5f5;
   font: inherit;
-}
-
-.flow-card-header:hover {
-  filter: brightness(1.08);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .flow-card-sit_in .flow-card-header {
-  background: #3a322c;
+  background: #2a3344;
 }
 
 .flow-card-takeaway .flow-card-header {
-  background: #2c3540;
+  background: #354a66;
 }
 
 .flow-card-pickup .flow-card-header {
-  background: #2a3a32;
+  background: #3d3554;
+}
+
+.flow-card-header:hover,
+.flow-card-header:active {
+  filter: none;
+}
+
+.flow-card-sit_in .flow-card-header:hover,
+.flow-card-sit_in .flow-card-header:active {
+  background: #2a3344;
+}
+
+.flow-card-takeaway .flow-card-header:hover,
+.flow-card-takeaway .flow-card-header:active {
+  background: #354a66;
+}
+
+.flow-card-pickup .flow-card-header:hover,
+.flow-card-pickup .flow-card-header:active {
+  background: #3d3554;
 }
 
 .flow-card-header-left {
@@ -108,18 +125,18 @@
 }
 
 .flow-timer-green {
-  background: #1f6b45;
-  color: #e8fff2;
+  background: #4a6080;
+  color: #e8eef5;
 }
 
 .flow-timer-amber {
-  background: #c9a227;
-  color: #1a1408;
+  background: #5c6a9a;
+  color: #eef0f8;
 }
 
 .flow-timer-red {
-  background: #8b1e1e;
-  color: #ffe8e8;
+  background: #6b4a72;
+  color: #f5eef6;
 }
 
 .flow-card-body {
@@ -141,14 +158,17 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .flow-row:last-child {
   border-bottom: none;
 }
 
-.flow-row:hover {
-  background: rgba(255, 255, 255, 0.03);
+.flow-row:hover,
+.flow-row:active {
+  filter: none;
+  background: transparent;
 }
 
 .flow-row-drink {
@@ -183,6 +203,10 @@
   min-width: 0;
   white-space: nowrap;
   margin-right: 16px;
+}
+
+.flow-col-shot-multi {
+  background: #2a2623;
 }
 
 .flow-qty {
@@ -236,7 +260,7 @@
 
 .flow-shot-brackets {
   font-weight: 700;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   white-space: nowrap;
 }
 
@@ -295,6 +319,7 @@
   display: inline-flex;
   align-items: center;
   background: #ffffff;
+  color: #1a1a1a;
   padding: 10px 0.5rem;
   font-size: 1.15rem;
   font-style: italic;
@@ -308,12 +333,12 @@
   align-items: center;
   justify-content: center;
   min-width: 5rem; /* ~80px */
-  padding: 10px 0.7rem;
+  padding: 4px 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--syrup, #4a3f6b);
   background: color-mix(in srgb, var(--syrup, #4a3f6b) 20%, #1a1614);
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 400;
   font-size: 1.15rem;
   line-height: 1.1;
   white-space: nowrap;

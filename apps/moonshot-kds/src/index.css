@@ -84,10 +84,14 @@ body,
   color: var(--kds-text);
   font-size: 0.9rem;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.kds-button:hover {
-  border-color: #3d4656;
+.kds-button:hover,
+.kds-button:active {
+  filter: none;
+  border-color: #2d3340;
+  background: #1e2430;
 }
 
 .kds-button:disabled {
@@ -96,6 +100,12 @@ body,
 }
 
 .kds-button-primary {
+  border-color: var(--kds-accent);
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.kds-button-primary:hover,
+.kds-button-primary:active {
   border-color: var(--kds-accent);
   background: rgba(59, 130, 246, 0.2);
 }

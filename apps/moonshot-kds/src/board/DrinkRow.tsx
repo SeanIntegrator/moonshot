@@ -26,7 +26,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
         .join(' ')}
       onClick={onToggleMade}
     >
-      <div className="flow-col-shot">
+      <div className={`flow-col-shot${qtyMulti ? ' flow-col-shot-multi' : ''}`}>
         <span className={`flow-qty${qtyMulti ? ' flow-qty-multi' : ''}`}>{quantity}</span>
         <span className={`flow-qty-bar${qtyMulti ? ' flow-qty-bar-multi' : ''}`} aria-hidden />
         <div className="flow-shot-body">
@@ -47,9 +47,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
           {view.milk ? (
             <span className="flow-milk-wrap">
               {view.milk.temperature ? (
-                <em className="flow-milk-adj" style={{ color: view.milk.bg }}>
-                  {view.milk.temperature}
-                </em>
+                <em className="flow-milk-adj">{view.milk.temperature}</em>
               ) : null}
               <span
                 className="flow-milk-chip"
@@ -58,9 +56,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
                 {view.milk.name}
               </span>
               {view.milk.texture ? (
-                <em className="flow-milk-adj" style={{ color: view.milk.bg }}>
-                  {view.milk.texture}
-                </em>
+                <em className="flow-milk-adj">{view.milk.texture}</em>
               ) : null}
             </span>
           ) : null}

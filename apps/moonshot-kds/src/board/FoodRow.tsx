@@ -18,7 +18,7 @@ export function FoodRow({ itemName, quantity, view, made, onToggleMade }: FoodRo
       className={`flow-row flow-row-food${made ? ' flow-row-made' : ''}`}
       onClick={onToggleMade}
     >
-      <div className="flow-col-shot">
+      <div className={`flow-col-shot${qtyMulti ? ' flow-col-shot-multi' : ''}`}>
         <span className={`flow-qty${qtyMulti ? ' flow-qty-multi' : ''}`}>{quantity}</span>
         <span className={`flow-qty-bar${qtyMulti ? ' flow-qty-bar-multi' : ''}`} aria-hidden />
         <span className="flow-food-name">{itemName}</span>
