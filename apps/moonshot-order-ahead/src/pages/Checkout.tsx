@@ -19,6 +19,7 @@ import { RewardRow } from '../components/RewardRow.js';
 import { CheckoutPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
+import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { useCheckoutPricing } from '../hooks/useCheckoutPricing.js';
 import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
 import { createCustomerOrder } from '../api/orders-api.js';
@@ -43,6 +44,7 @@ export function Checkout() {
   const { lines, clear, upsertLine, removeLine, pickupDelayMinutes, setPickupDelayMinutes } =
     useCart();
   const { loyaltyEnabled, pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
+  const { isOpen, closedBarMessage } = useCafeOpenStatus();
   const { isSignedIn, user } = useAuth();
   const { summary, rewards, refresh: refreshLoyalty } = useLoyalty();
   const { menu, loading: menuLoading } = useMenu();
@@ -70,7 +72,7 @@ export function Checkout() {
   });
 
   async function placeOrder(): Promise<void> {
-    if (lines.length === 0) return;
+    if (!isOpen || lines.length === 0) return;
     const name =
       user?.displayName?.trim() || user?.email?.split('@')[0] || 'Guest';
     setError(null);
@@ -267,6 +269,11 @@ export function Checkout() {
               {error}
             </Typography>
           )}
+          {!isOpen && (
+            <Typography color="warning.dark" sx={{ mb: 1.5 }} fontWeight={600}>
+              {closedBarMessage}
+            </Typography>
+          )}
 
           <Button
             variant="contained"
@@ -282,7 +289,7 @@ export function Checkout() {
                 opacity: 0.85,
               },
             }}
-            disabled={submitting || pricedLines.length === 0}
+            disabled={submitting || pricedLines.length === 0 || !isOpen}
             onClick={() => void placeOrder()}
           >
             <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

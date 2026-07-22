@@ -9,11 +9,20 @@ type Props = {
   itemCount: number;
   totalMinor: number;
   currency?: string;
+  /** When true, show a fixed closed warning instead of the checkout cart bar. */
+  cafeClosed?: boolean;
+  closedMessage?: string;
 };
 
-export function FloatingCartBar({ itemCount, totalMinor, currency = 'GBP' }: Props) {
+export function FloatingCartBar({
+  itemCount,
+  totalMinor,
+  currency = 'GBP',
+  cafeClosed = false,
+  closedMessage = 'Cafe is currently closed',
+}: Props) {
   const cafePath = useCafePath();
-  const visible = itemCount > 0;
+  const visible = cafeClosed || itemCount > 0;
 
   return (
     <Slide direction="up" in={visible} mountOnEnter unmountOnExit>
@@ -28,36 +37,57 @@ export function FloatingCartBar({ itemCount, totalMinor, currency = 'GBP' }: Pro
           mx: 'auto',
         }}
       >
-        <Button
-          component={RouterLink}
-          to={cafePath('/checkout')}
-          fullWidth
-          sx={{
-            py: 1.5,
-            px: 2,
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-            borderRadius: 0,
-            display: 'flex',
-            justifyContent: 'space-between',
-            WebkitTapHighlightColor: 'transparent',
-            transition: 'background-color 180ms ease, transform 180ms ease',
-            '&:active': {
-              transform: 'scale(0.99)',
-              bgcolor: 'primary.dark',
-            },
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ShoppingBagOutlinedIcon fontSize="small" />
+        {cafeClosed ? (
+          <Box
+            role="status"
+            sx={{
+              py: 1.5,
+              px: 2,
+              bgcolor: 'warning.main',
+              color: 'warning.contrastText',
+              borderRadius: 0,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center',
+            }}
+          >
             <Typography variant="body2" fontWeight={600}>
-              {itemCount} item{itemCount !== 1 ? 's' : ''} · {formatMoney(totalMinor, currency)}
+              {closedMessage}
             </Typography>
           </Box>
-          <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center' }}>
-            Checkout <ChevronRightIcon fontSize="small" />
-          </Typography>
-        </Button>
+        ) : (
+          <Button
+            component={RouterLink}
+            to={cafePath('/checkout')}
+            fullWidth
+            sx={{
+              py: 1.5,
+              px: 2,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              borderRadius: 0,
+              display: 'flex',
+              justifyContent: 'space-between',
+              WebkitTapHighlightColor: 'transparent',
+              transition: 'background-color 180ms ease, transform 180ms ease',
+              '&:active': {
+                transform: 'scale(0.99)',
+                bgcolor: 'primary.dark',
+              },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ShoppingBagOutlinedIcon fontSize="small" />
+              <Typography variant="body2" fontWeight={600}>
+                {itemCount} item{itemCount !== 1 ? 's' : ''} · {formatMoney(totalMinor, currency)}
+              </Typography>
+            </Box>
+            <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center' }}>
+              Checkout <ChevronRightIcon fontSize="small" />
+            </Typography>
+          </Button>
+        )}
       </Box>
     </Slide>
   );

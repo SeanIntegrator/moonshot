@@ -8,6 +8,7 @@ import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
 import { RequireFeature } from './components/RequireFeature.js';
 import { useCafePath } from './hooks/useCafePath.js';
 import { useCafeFeatures } from './hooks/useCafeFeatures.js';
+import { useCafeOpenStatus } from './hooks/useCafeOpenStatus.js';
 import { PageTransition } from './page-transition/index.js';
 import { Checkout } from './pages/Checkout.js';
 import { CheckoutRestore } from './pages/CheckoutRestore.js';
@@ -38,7 +39,8 @@ export function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const cafePath = useCafePath();
-  const { orderAheadEnabled, loyaltyEnabled } = useCafeFeatures();
+  const { loyaltyEnabled } = useCafeFeatures();
+  const { orderingAvailable } = useCafeOpenStatus();
   const navValue = pathToNavValue(location.pathname);
 
   const hideNav =
@@ -117,7 +119,7 @@ export function App() {
             onChange={(_, v) => {
               if (v === 0) navigate(cafePath('/'));
               else if (v === 1) {
-                if (!orderAheadEnabled) return;
+                if (!orderingAvailable) return;
                 navigate(cafePath('/order'));
               } else if (v === 2) {
                 if (!loyaltyEnabled) return;
@@ -129,8 +131,8 @@ export function App() {
             <BottomNavigationAction
               label="Order"
               icon={<LocalCafeOutlinedIcon />}
-              disabled={!orderAheadEnabled}
-              sx={{ opacity: orderAheadEnabled ? 1 : 0.4 }}
+              disabled={!orderingAvailable}
+              sx={{ opacity: orderingAvailable ? 1 : 0.4 }}
             />
             <BottomNavigationAction
               label="Rewards"

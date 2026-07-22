@@ -15,6 +15,7 @@ import { SectionHead } from '../components/SectionHead.js';
 import { HomePageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
+import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
@@ -26,13 +27,13 @@ import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
-import { cafeOpenStatus } from '@moonshot/types';
 
 export function Home() {
   const { loading, error, cafe } = useCafe();
   const { orderAheadEnabled, loyaltyEnabled } = useCafeFeatures();
   const { user, membership, isSignedIn } = useAuth();
   const { summary, refresh: refreshLoyalty } = useLoyalty();
+  const { caption: openCaption, orderingAvailable } = useCafeOpenStatus();
   const { active, recent } = useActiveOrders();
   const { menu } = useMenu();
   const navigate = useNavigate();
@@ -61,11 +62,6 @@ export function Home() {
   const greeting = timeGreeting();
   const name = isSignedIn ? firstName(user?.displayName, user?.email) : 'there';
   const canShowLiveLoyalty = isSignedIn && loyaltyEnabled && summary?.loyaltyEnabled && membership;
-  const openStatus = useMemo(
-    () => cafeOpenStatus(cafe?.hours, cafe?.timezone ?? 'UTC'),
-    [cafe?.hours, cafe?.timezone],
-  );
-  const orderingAvailable = orderAheadEnabled && openStatus.isOpen;
 
   if (loading) {
     return <HomePageSkeleton />;
@@ -95,7 +91,7 @@ export function Home() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box>
             <Typography variant="caption" sx={{ opacity: 0.75, color: 'inherit' }}>
-              {openStatus.caption}
+              {openCaption}
             </Typography>
             <Typography variant="h4" component="h1" sx={{ color: 'inherit', mt: 0.5, fontWeight: 700 }}>
               {greeting}, {name}.
@@ -132,7 +128,7 @@ export function Home() {
           <Typography variant="body2" sx={{ mt: 2, opacity: 0.85 }}>
             {!orderAheadEnabled
               ? 'Online ordering is not available for this café right now.'
-              : `${openStatus.caption}. Online ordering will be back when the café is open.`}
+              : `${openCaption}. Online ordering will be back when the café is open.`}
           </Typography>
         )}
       </Box>

@@ -6,9 +6,10 @@ type Props = {
   value: number;
   onChange: (value: number) => void;
   min?: number;
+  disabled?: boolean;
 };
 
-export function QuantityStepper({ value, onChange, min = 1 }: Props) {
+export function QuantityStepper({ value, onChange, min = 1, disabled = false }: Props) {
   return (
     <Box
       sx={{
@@ -20,13 +21,14 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
         borderRadius: 999,
         px: 1.5,
         py: 0.75,
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       <IconButton
         size="small"
         disableRipple
         onClick={() => onChange(Math.max(min, value - 1))}
-        disabled={value <= min}
+        disabled={disabled || value <= min}
         aria-label="Decrease quantity"
         sx={{ WebkitTapHighlightColor: 'transparent' }}
       >
@@ -46,6 +48,7 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
         size="small"
         disableRipple
         onClick={() => onChange(value + 1)}
+        disabled={disabled}
         aria-label="Increase quantity"
         sx={{
           bgcolor: 'primary.main',
@@ -55,6 +58,7 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
           '&:hover': { bgcolor: 'primary.main' },
           '&:active': { bgcolor: 'primary.main' },
           '&.Mui-focusVisible': { bgcolor: 'primary.main' },
+          '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' },
         }}
       >
         <AddIcon fontSize="small" />

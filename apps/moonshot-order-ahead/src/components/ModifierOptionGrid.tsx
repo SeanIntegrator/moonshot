@@ -180,7 +180,7 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
         {group.options.map((opt) => {
           const selected = picked.has(opt.id);
           const delta = formatModifierDelta(opt.priceMinor);
-          const sublabel = delta || (opt.isDefault ? 'Standard' : '');
+          const sublabel = delta || '';
           return (
             <Box
               key={opt.id}

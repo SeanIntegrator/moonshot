@@ -12,6 +12,7 @@ import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
+import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
 
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
@@ -33,6 +34,7 @@ export function Menu() {
   const navigate = useNavigate();
   const location = useLocation();
   const { pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
+  const { isOpen, closedBarMessage } = useCafeOpenStatus();
   const { estimate } = usePickupEstimate();
   const locationState = location.state as MenuLocationState | null;
   const { menu, loading, error } = useMenu();
@@ -41,6 +43,8 @@ export function Menu() {
   const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
   const categoryInitialized = useRef(false);
+  const cafeClosed = !isOpen;
+  const cartQty = totalCartQty(lines);
 
   useEffect(() => {
     if (!locationState?.addedItemName) return;
@@ -131,9 +135,11 @@ export function Menu() {
       ))}
 
       <FloatingCartBar
-        itemCount={totalCartQty(lines)}
+        itemCount={cartQty}
         totalMinor={cartTotalMinor}
         currency={menu?.items[0]?.currency}
+        cafeClosed={cafeClosed}
+        closedMessage={closedBarMessage}
       />
 
       <Snackbar
@@ -142,7 +148,7 @@ export function Menu() {
         onClose={() => setToastMessage(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         sx={{
-          bottom: totalCartQty(lines) > 0 ? 112 : 72,
+          bottom: cafeClosed || cartQty > 0 ? 112 : 72,
           width: '100%',
           maxWidth: 600,
           px: 2,

@@ -12,6 +12,7 @@ import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
 import { ItemDetailSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { formatPriceTag } from '../lib/format.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCart } from '../providers/CartProvider.js';
@@ -44,6 +45,7 @@ export function ItemDetail() {
   const cafePath = useCafePath();
   const { upsertLine } = useCart();
   const { menu, loading, error } = useMenu();
+  const { isOpen } = useCafeOpenStatus();
   const [quantity, setQuantity] = useState(1);
   const [sizeId, setSizeId] = useState<string | null>(null);
   const [modifiers, setModifiers] = useState<OrderLineModifierSelectionInput[]>([]);
@@ -65,6 +67,8 @@ export function ItemDetail() {
   const ready = item
     ? (!hasSizes || sizeId != null) && modifiersAreComplete(item, modifiers)
     : false;
+  const cafeClosed = !isOpen;
+  const canAdd = ready && !cafeClosed;
 
   const headerPrice = item
     ? hasSizes
@@ -191,12 +195,13 @@ export function ItemDetail() {
           zIndex: (t) => t.zIndex.appBar,
         }}
       >
-        <QuantityStepper value={quantity} onChange={setQuantity} />
+        <QuantityStepper value={quantity} onChange={setQuantity} disabled={cafeClosed} />
         <Button
           variant="contained"
           fullWidth
-          disabled={!ready}
+          disabled={!canAdd}
           onClick={() => {
+            if (cafeClosed || !item) return;
             upsertLine({
               menuItemId: item.id,
               sizeId: hasSizes ? sizeId : null,
@@ -214,7 +219,9 @@ export function ItemDetail() {
             '&::before, &::after': { display: 'none' },
           }}
         >
-          Add{formatPriceTag(lineUnit * quantity, item.currency) ? ` · ${formatPriceTag(lineUnit * quantity, item.currency)}` : ''}
+          {cafeClosed
+            ? 'Cafe is currently closed'
+            : `Add${formatPriceTag(lineUnit * quantity, item.currency) ? ` · ${formatPriceTag(lineUnit * quantity, item.currency)}` : ''}`}
         </Button>
       </Box>
     </Box>

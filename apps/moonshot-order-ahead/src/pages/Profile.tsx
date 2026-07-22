@@ -15,6 +15,7 @@ import { SignedOutPanel } from '../components/SignedOutPanel.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { formatMoney, formatShortDate } from '../lib/format.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { useCart } from '../providers/CartProvider.js';
@@ -25,6 +26,7 @@ export function Profile() {
   const cafePath = useCafePath();
   const navigate = useNavigate();
   const { upsertLine } = useCart();
+  const { orderingAvailable } = useCafeOpenStatus();
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
@@ -136,10 +138,13 @@ export function Profile() {
                       variant="caption"
                       color="text.secondary"
                       underline="hover"
+                      disabled={!orderingAvailable}
                       onClick={() => {
+                        if (!orderingAvailable) return;
                         reorderFromOrder(o, upsertLine);
                         navigate(cafePath('/checkout'));
                       }}
+                      sx={{ opacity: orderingAvailable ? 1 : 0.4 }}
                     >
                       Reorder →
                     </Link>
