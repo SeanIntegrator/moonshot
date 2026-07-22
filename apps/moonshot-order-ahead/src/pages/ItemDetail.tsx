@@ -6,6 +6,7 @@ import { ArrowBack } from '@mui/icons-material';
 import { Box, Button, Container, IconButton, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { AdditionalCustomisationAccordion } from '../components/AdditionalCustomisationAccordion.js';
 import { ModifierOptionGrid } from '../components/ModifierOptionGrid.js';
 import { QuantityStepper } from '../components/QuantityStepper.js';
 import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
@@ -14,6 +15,7 @@ import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { formatPriceTag } from '../lib/format.js';
+import { partitionModifierGroups } from '../lib/modifier-slider-groups.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
@@ -64,6 +66,10 @@ export function ItemDetail() {
 
   const lineUnit = item ? unitPriceForItem(item, sizeId, modifiers) : 0;
   const hasSizes = (item?.sizes?.length ?? 0) > 0;
+  const { primary: primaryGroups, additional: additionalGroups } = useMemo(
+    () => (item ? partitionModifierGroups(item.modifierGroups) : { primary: [], additional: [] }),
+    [item],
+  );
   const ready = item
     ? (!hasSizes || sizeId != null) && modifiersAreComplete(item, modifiers)
     : false;
@@ -166,7 +172,7 @@ export function ItemDetail() {
           />
         )}
 
-        {item.modifierGroups.map((g) => (
+        {primaryGroups.map((g) => (
           <ModifierOptionGrid
             key={g.id}
             group={g}
@@ -174,6 +180,12 @@ export function ItemDetail() {
             onSelect={handleSelect}
           />
         ))}
+
+        <AdditionalCustomisationAccordion
+          groups={additionalGroups}
+          selections={modifiers}
+          onSelect={(groupId, optionId) => handleSelect(groupId, optionId, 'single', true)}
+        />
       </Container>
 
       <Box

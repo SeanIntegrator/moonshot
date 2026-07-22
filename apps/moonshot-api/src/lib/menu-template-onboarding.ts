@@ -251,8 +251,8 @@ export async function applyMenuTemplate(
   const modifierGroupIds = [
     milksGroupId,
     ...(syrupsEnabled && syrupsOptions.length > 0 ? [syrupsGroupId] : []),
-    flowGroups.shotsId,
     flowGroups.beansId,
+    flowGroups.shotsId,
     flowGroups.milkTemperatureId,
     flowGroups.milkTextureId,
   ];

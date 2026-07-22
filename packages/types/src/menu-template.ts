@@ -43,6 +43,8 @@ export type MenuTemplateCategoryKey = MenuCategory | 'milks' | 'syrups';
 export const MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR = 350;
 export const MENU_TEMPLATE_SYRUP_PRICE_MINOR = 30;
 export const MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR = 50;
+/** Triple / Quad espresso shots on order-ahead. */
+export const MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR = 80;
 
 export interface MenuTemplateDrinkDef {
   key: MenuTemplateDrinkKey;

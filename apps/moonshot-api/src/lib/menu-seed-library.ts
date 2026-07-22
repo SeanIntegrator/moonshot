@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import {
+  MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR,
   MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
   MENU_TEMPLATE_SYRUP_PRICE_MINOR,
 } from '@moonshot/types';
@@ -119,8 +120,8 @@ export async function seedDefaultModifierLibrary(
   const shotsOptions = [
     opt('Single', { chipLabel: '1' }),
     opt('Double', { isDefault: true, chipLabel: '2' }),
-    opt('Triple', { chipLabel: '3' }),
-    opt('Quad', { chipLabel: '4' }),
+    opt('Triple', { chipLabel: '3', priceMinor: MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR }),
+    opt('Quad', { chipLabel: '4', priceMinor: MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR }),
   ];
 
   const beansOptions = [
@@ -129,16 +130,18 @@ export async function seedDefaultModifierLibrary(
     opt('Guest', { chipLabel: 'Gu' }),
   ];
 
+  // Warm leftmost so the slider reads cool → hot; Hot remains default.
   const milkTemperatureOptions = [
-    opt('Hot', { isDefault: true, chipLabel: 'Hot' }),
     opt('Warm', { chipLabel: 'Warm' }),
+    opt('Hot', { isDefault: true, chipLabel: 'Hot' }),
     opt('Extra Hot', { chipLabel: 'XH' }),
     opt('Extra Extra Hot', { chipLabel: 'XXH' }),
   ];
 
+  // Wet → Standard → Dry continuum; Standard is default (centre).
   const milkTextureOptions = [
-    opt('Standard', { isDefault: true, chipLabel: 'Std' }),
     opt('Wet', { chipLabel: 'Wet' }),
+    opt('Standard', { isDefault: true, chipLabel: 'Std' }),
     opt('Dry', { chipLabel: 'Dry' }),
     opt('Extra Foam', { chipLabel: 'EF' }),
   ];
@@ -148,8 +151,8 @@ export async function seedDefaultModifierLibrary(
      VALUES
        ($1, $2, 'Milks', 'single', TRUE, $3::jsonb, 0),
        ($4, $2, 'Syrups', 'multi', FALSE, $5::jsonb, 1),
-       ($6, $2, 'Shots', 'single', TRUE, $7::jsonb, 2),
-       ($8, $2, 'Beans', 'single', TRUE, $9::jsonb, 3),
+       ($6, $2, 'Beans', 'single', TRUE, $7::jsonb, 2),
+       ($8, $2, 'Shots', 'single', TRUE, $9::jsonb, 3),
        ($10, $2, 'Milk Temperature', 'single', TRUE, $11::jsonb, 4),
        ($12, $2, 'Milk Texture', 'single', TRUE, $13::jsonb, 5)`,
     [
@@ -158,10 +161,10 @@ export async function seedDefaultModifierLibrary(
       JSON.stringify(milksOptions),
       syrupsId,
       JSON.stringify(syrupsOptions),
-      shotsId,
-      JSON.stringify(shotsOptions),
       beansId,
       JSON.stringify(beansOptions),
+      shotsId,
+      JSON.stringify(shotsOptions),
       milkTemperatureId,
       JSON.stringify(milkTemperatureOptions),
       milkTextureId,
@@ -211,26 +214,26 @@ export async function ensureFlowPrepModifierGroups(
     return again.rows[0]!.id;
   }
 
-  const shotsId = await findOrCreate('Shots', 2, [
-    opt('Single', { chipLabel: '1' }),
-    opt('Double', { isDefault: true, chipLabel: '2' }),
-    opt('Triple', { chipLabel: '3' }),
-    opt('Quad', { chipLabel: '4' }),
-  ]);
-  const beansId = await findOrCreate('Beans', 3, [
+  const beansId = await findOrCreate('Beans', 2, [
     opt('House', { isDefault: true, chipLabel: 'Ho' }),
     opt('Decaf', { chipLabel: 'Dc' }),
     opt('Guest', { chipLabel: 'Gu' }),
   ]);
+  const shotsId = await findOrCreate('Shots', 3, [
+    opt('Single', { chipLabel: '1' }),
+    opt('Double', { isDefault: true, chipLabel: '2' }),
+    opt('Triple', { chipLabel: '3', priceMinor: MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR }),
+    opt('Quad', { chipLabel: '4', priceMinor: MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR }),
+  ]);
   const milkTemperatureId = await findOrCreate('Milk Temperature', 4, [
-    opt('Hot', { isDefault: true, chipLabel: 'Hot' }),
     opt('Warm', { chipLabel: 'Warm' }),
+    opt('Hot', { isDefault: true, chipLabel: 'Hot' }),
     opt('Extra Hot', { chipLabel: 'XH' }),
     opt('Extra Extra Hot', { chipLabel: 'XXH' }),
   ]);
   const milkTextureId = await findOrCreate('Milk Texture', 5, [
-    opt('Standard', { isDefault: true, chipLabel: 'Std' }),
     opt('Wet', { chipLabel: 'Wet' }),
+    opt('Standard', { isDefault: true, chipLabel: 'Std' }),
     opt('Dry', { chipLabel: 'Dry' }),
     opt('Extra Foam', { chipLabel: 'EF' }),
   ]);
