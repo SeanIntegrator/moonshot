@@ -42,6 +42,9 @@ function normalizeKdsConfig(raw: KdsConfig, cafeId: string): KdsConfig {
     milkTexture: [],
   };
   const badges = raw.beanBadges;
+  const defaultHouse = { label: 'Ho', bg: '#2d2d2d', text: '#f5f5f5' };
+  const defaultDecaf = { label: 'Dc', bg: '#6b4f2a', text: '#fff' };
+  const defaultGuest = { label: 'Gu', bg: '#1a4d3a', text: '#fff' };
   return {
     ...raw,
     cafeId,
@@ -66,20 +69,22 @@ function normalizeKdsConfig(raw: KdsConfig, cafeId: string): KdsConfig {
           : [...DEFAULT_MODIFIER_CLASSIFICATION.milkTexture],
     },
     beanBadges: {
-      ...badges,
       house: {
-        ...badges.house,
-        accent: badges.house?.accent ?? DEFAULT_BEAN_ACCENTS.house,
+        ...defaultHouse,
+        ...(badges?.house ?? {}),
+        accent: badges?.house?.accent ?? DEFAULT_BEAN_ACCENTS.house,
       },
       decaf: {
-        ...badges.decaf,
-        accent: badges.decaf?.accent ?? DEFAULT_BEAN_ACCENTS.decaf,
+        ...defaultDecaf,
+        ...(badges?.decaf ?? {}),
+        accent: badges?.decaf?.accent ?? DEFAULT_BEAN_ACCENTS.decaf,
       },
       guest: {
-        ...badges.guest,
-        accent: badges.guest?.accent ?? DEFAULT_BEAN_ACCENTS.guest,
+        ...defaultGuest,
+        ...(badges?.guest ?? {}),
+        accent: badges?.guest?.accent ?? DEFAULT_BEAN_ACCENTS.guest,
       },
-      custom: [...(badges.custom ?? [])],
+      custom: [...(badges?.custom ?? [])],
     },
   };
 }

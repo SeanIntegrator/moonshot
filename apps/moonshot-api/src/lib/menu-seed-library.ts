@@ -194,12 +194,21 @@ export async function ensureFlowPrepModifierGroups(
     if (existing.rows[0]) return existing.rows[0].id;
 
     const id = randomUUID();
-    await client.query(
+    // Unique (cafe_id, name) + ON CONFLICT closes the check-then-insert race.
+    const inserted = await client.query<{ id: string }>(
       `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order)
-       VALUES ($1, $2, $3, 'single', TRUE, $4::jsonb, $5)`,
+       VALUES ($1, $2, $3, 'single', TRUE, $4::jsonb, $5)
+       ON CONFLICT (cafe_id, name) DO NOTHING
+       RETURNING id`,
       [id, cafeId, name, JSON.stringify(options), sortOrder],
     );
-    return id;
+    if (inserted.rows[0]) return inserted.rows[0].id;
+
+    const again = await client.query<{ id: string }>(
+      `SELECT id FROM modifier_groups WHERE cafe_id = $1 AND name = $2 LIMIT 1`,
+      [cafeId, name],
+    );
+    return again.rows[0]!.id;
   }
 
   const shotsId = await findOrCreate('Shots', 2, [
