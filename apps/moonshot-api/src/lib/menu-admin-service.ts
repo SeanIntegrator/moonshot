@@ -1,4 +1,4 @@
-import type { MenuCategory, NormalisedMenuItem, NormalisedModifierGroup } from '@moonshot/types';
+import type { NormalisedMenuItem, NormalisedModifierGroup } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import type { Pool } from 'pg';
 import { ApiHttpError } from './http-errors.js';
@@ -8,9 +8,15 @@ import {
   uploadMenuItemThumbnail,
 } from './menu-image-storage.js';
 import { normalizeSizes, setMenuItemModifierGroups } from './menu-modifier-library.js';
+import {
+  assertValidMenuSectionKey,
+  enableMenuSectionByKey,
+  ensureSystemMenuSections,
+} from './menu-sections.js';
 import { UUID_RE } from './uuid.js';
 
-export const MENU_CATEGORIES: MenuCategory[] = ['hot_drinks', 'cold_drinks', 'food', 'extras'];
+/** @deprecated Prefer café `menu_sections` — kept for any legacy callers. */
+export const MENU_CATEGORIES = ['hot_drinks', 'cold_drinks', 'food', 'extras'] as const;
 
 function parseModifierGroupIds(body: Record<string, unknown>): string[] | undefined {
   if (!('modifierGroupIds' in body)) return undefined;
@@ -36,16 +42,19 @@ export async function createMenuItem(
   body: Record<string, unknown>,
 ): Promise<NormalisedMenuItem> {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
-  const category = typeof body.category === 'string' ? body.category : '';
+  const category = typeof body.category === 'string' ? body.category.trim() : '';
   const priceMinor = typeof body.priceMinor === 'number' ? body.priceMinor : Number.NaN;
 
-  if (!name || !MENU_CATEGORIES.includes(category as MenuCategory) || !Number.isFinite(priceMinor)) {
+  if (!name || !category || !Number.isFinite(priceMinor)) {
     throw new ApiHttpError(
       400,
       ApiErrorCode.VALIDATION,
-      'name, category (valid MenuCategory), and priceMinor are required',
+      'name, category (valid menu section), and priceMinor are required',
     );
   }
+
+  await ensureSystemMenuSections(db, cafeId);
+  await assertValidMenuSectionKey(db, cafeId, category);
 
   const description = typeof body.description === 'string' ? body.description : null;
   const currency = typeof body.currency === 'string' ? body.currency : 'GBP';
@@ -90,6 +99,9 @@ export async function createMenuItem(
     await setMenuItemModifierGroups(db, itemId, modifierGroupIds);
   }
 
+  // First item in a disabled section (e.g. Food) turns the section on.
+  await enableMenuSectionByKey(db, cafeId, category);
+
   const item = await loadMergedItem(db, cafeId, itemId);
   if (!item) {
     throw new ApiHttpError(500, ApiErrorCode.INTERNAL, 'Menu item created but could not be loaded');
@@ -129,11 +141,10 @@ export async function patchMenuItem(
     values.push(body.priceMinor);
   }
   if ('category' in body && typeof body.category === 'string') {
-    if (!MENU_CATEGORIES.includes(body.category as MenuCategory)) {
-      throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid category');
-    }
+    await ensureSystemMenuSections(db, cafeId);
+    await assertValidMenuSectionKey(db, cafeId, body.category.trim());
     sets.push(`category = $${i++}`);
-    values.push(body.category);
+    values.push(body.category.trim());
   }
   if ('isAvailable' in body && typeof body.isAvailable === 'boolean') {
     sets.push(`is_available = $${i++}`);
@@ -182,6 +193,10 @@ export async function patchMenuItem(
 
   if (modifierGroupIds !== undefined) {
     await setMenuItemModifierGroups(db, itemId, modifierGroupIds);
+  }
+
+  if ('category' in body && typeof body.category === 'string') {
+    await enableMenuSectionByKey(db, cafeId, body.category.trim());
   }
 
   const item = await loadMergedItem(db, cafeId, itemId);

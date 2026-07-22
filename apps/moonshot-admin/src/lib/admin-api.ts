@@ -13,13 +13,17 @@ export {
 } from './adminApi/settings.js';
 export {
   createMenuItem,
+  createMenuSection,
   createModifierGroup,
   deleteMenuItem,
+  deleteMenuSection,
   deleteModifierGroup,
   fetchMenuForAdmin,
   fetchMenuForCafe,
+  fetchMenuSections,
   fetchModifierGroups,
   patchMenuItem,
+  patchMenuSection,
   updateModifierGroup,
   uploadMenuItemImage,
 } from './adminApi/menu.js';

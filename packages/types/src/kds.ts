@@ -256,7 +256,7 @@ export function deriveLinePrep(item: NormalisedOrderItem, config: KdsConfig): Kd
 }
 
 function isFoodCategory(category: string | null | undefined): boolean {
-  return typeof category === 'string' && category.toLowerCase().includes('food');
+  return typeof category === 'string' && (category === 'food' || category.toLowerCase().includes('food'));
 }
 
 /**

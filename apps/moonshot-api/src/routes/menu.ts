@@ -1,31 +1,33 @@
 import { Router } from 'express';
 import { ApiErrorCode } from '@moonshot/types';
-import type { MenuCategory, PosProvider } from '@moonshot/types';
+import type { PosProvider } from '@moonshot/types';
 import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 import {
   assertMenuItemId,
   createMenuItem,
-  MENU_CATEGORIES,
   patchMenuItem,
   softHideMenuItem,
   uploadMenuItemImage,
 } from '../lib/menu-admin-service.js';
 import { fetchMenuForCafe } from '../lib/menu-fetch.js';
+import { ensureSystemMenuSections, listMenuSectionsForCafe } from '../lib/menu-sections.js';
 import { UUID_RE } from '../lib/uuid.js';
 import { getPosAdapter } from '../lib/pos-adapters/index.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { menuItemImageUpload } from '../middleware/menu-item-image-upload.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
 import { modifierGroupsRouter } from './modifier-groups.js';
+import { menuSectionsRouter } from './menu-sections.js';
 
 /** Literal path segments that must not be handled by GET /:segment */
-const RESERVED_MENU_SEGMENTS = new Set(['manage']);
+const RESERVED_MENU_SEGMENTS = new Set(['manage', 'sections', 'modifier-groups']);
 
 export const menuRouter: Router = Router();
 
 menuRouter.use(requireCafeContext);
 menuRouter.use('/modifier-groups', modifierGroupsRouter);
+menuRouter.use('/sections', menuSectionsRouter);
 
 // Static GET routes before parameterized handlers (Express matches in registration order).
 menuRouter.get('/manage', requireMenuMutationAuth, async (req, res) => {
@@ -89,12 +91,16 @@ menuRouter.get('/:segment', async (req, res) => {
   if (RESERVED_MENU_SEGMENTS.has(segment) || UUID_RE.test(segment)) {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Not found');
   }
-  if (!MENU_CATEGORIES.includes(segment as MenuCategory)) {
+
+  const cafeId = req.cafe!.cafeId;
+  await ensureSystemMenuSections(pool, cafeId);
+  const sections = await listMenuSectionsForCafe(pool, cafeId);
+  if (!sections.some((s) => s.key === segment)) {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Unknown category');
   }
 
   const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
-  const menu = await adapter.fetchMenu(req.cafe!.cafeId);
+  const menu = await adapter.fetchMenu(cafeId);
   const filtered = {
     ...menu,
     items: menu.items.filter((item) => item.category === segment),

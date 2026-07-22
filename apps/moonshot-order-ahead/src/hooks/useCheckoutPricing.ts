@@ -1,4 +1,5 @@
 import type { NormalisedMenuItem, OrderLineModifierSelectionInput } from '@moonshot/types';
+import { isDrinkMenuCategory } from '@moonshot/types';
 import { useMemo } from 'react';
 import type { CartLine } from '../providers/CartProvider.js';
 import { unitPriceForItem } from '../lib/menu-price-utils.js';
@@ -13,7 +14,7 @@ function drinkDiscountMinor(pricedLines: PricedCartLine[]): number {
   let max = 0;
   for (const row of pricedLines) {
     if (!row.item || row.unit == null) continue;
-    if (row.item.category === 'hot_drinks' || row.item.category === 'cold_drinks') {
+    if (isDrinkMenuCategory(row.item.category)) {
       max = Math.max(max, row.unit);
     }
   }

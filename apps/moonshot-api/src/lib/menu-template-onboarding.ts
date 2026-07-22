@@ -13,6 +13,7 @@ import {
 import { copyTemplateDrinkImageToCafeItem } from './menu-image-storage.js';
 import { setMenuItemModifierGroups } from './menu-modifier-library.js';
 import { ensureFlowPrepModifierGroups } from './menu-seed-library.js';
+import { ensureSystemMenuSections } from './menu-sections.js';
 
 export class MenuTemplateError extends Error {
   constructor(
@@ -316,6 +317,11 @@ export async function applyMenuTemplate(
   if (itemCount === 0) {
     throw new MenuTemplateError('Select at least one drink', 400, ApiErrorCode.VALIDATION);
   }
+
+  const foodCat = body.categories.find((c) => c.key === 'food');
+  await ensureSystemMenuSections(client, cafeId, {
+    foodEnabled: foodCat?.enabled === true,
+  });
 
   return { itemCount, milksGroupId, syrupsGroupId };
 }

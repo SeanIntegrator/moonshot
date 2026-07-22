@@ -91,6 +91,8 @@ describe('menu-template-onboarding validation', () => {
       } else if (cat.key === 'syrups') {
         cat.enabled = false;
         for (const m of cat.modifiers ?? []) m.enabled = false;
+      } else if (cat.key === 'food') {
+        cat.enabled = false;
       }
     }
 

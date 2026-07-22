@@ -1,4 +1,5 @@
 import type {
+  CafeMenuSection,
   CafeModifierGroup,
   NormalisedMenu,
   NormalisedMenuItem,
@@ -189,5 +190,83 @@ export async function deleteModifierGroup(
   const envelope = await parseEnvelope<{ removed: boolean }>(res);
   if (!envelope.ok) {
     throw new Error(envelope.error || `Delete section failed (${res.status})`);
+  }
+}
+
+export async function fetchMenuSections(
+  token: string,
+  cafeSlug: string,
+): Promise<CafeMenuSection[]> {
+  const res = await fetch(apiUrl('/menu/sections'), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+  });
+  const envelope = await parseEnvelope<CafeMenuSection[]>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Failed to load menu sections (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function createMenuSection(
+  token: string,
+  cafeSlug: string,
+  body: { label: string },
+): Promise<CafeMenuSection> {
+  const res = await fetch(apiUrl('/menu/sections'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<CafeMenuSection>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Create menu section failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function patchMenuSection(
+  token: string,
+  cafeSlug: string,
+  sectionId: string,
+  body: Record<string, unknown>,
+): Promise<CafeMenuSection> {
+  const res = await fetch(apiUrl(`/menu/sections/${encodeURIComponent(sectionId)}`), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<CafeMenuSection>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Update menu section failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function deleteMenuSection(
+  token: string,
+  cafeSlug: string,
+  sectionId: string,
+): Promise<void> {
+  const res = await fetch(apiUrl(`/menu/sections/${encodeURIComponent(sectionId)}`), {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+  });
+  const envelope = await parseEnvelope<{ removed: boolean }>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Delete menu section failed (${res.status})`);
   }
 }

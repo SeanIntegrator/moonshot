@@ -1,8 +1,5 @@
-import type { CafeModifierGroup, MenuCategory, NormalisedMenuItem } from '@moonshot/types';
+import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -14,27 +11,20 @@ import {
   MenuItem,
   Select,
   Stack,
-  Switch,
   TextField,
   Typography,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useState } from 'react';
 import {
   createMenuItem,
+  createMenuSection,
   deleteMenuItem,
   patchMenuItem,
+  patchMenuSection,
 } from '../../lib/admin-api.js';
-import { formatGbpMinor } from '../../lib/format.js';
 import { MenuItemImageField } from './MenuItemImageField.js';
+import { MenuSectionBlock } from './MenuSectionBlock.js';
 import { SizeEditor } from './SizeEditor.js';
-
-const CATEGORIES: { value: MenuCategory; label: string }[] = [
-  { value: 'hot_drinks', label: 'Hot drinks' },
-  { value: 'cold_drinks', label: 'Cold drinks' },
-  { value: 'food', label: 'Food' },
-  { value: 'extras', label: 'Extras' },
-];
 
 type DraftItem = NormalisedMenuItem & { attachedGroupIds: string[] };
 
@@ -47,7 +37,7 @@ function toDraft(item: NormalisedMenuItem, library: CafeModifierGroup[]): DraftI
   };
 }
 
-function emptyDraft(): DraftItem {
+function emptyDraft(defaultCategory: string): DraftItem {
   return {
     id: '',
     posItemId: null,
@@ -55,7 +45,7 @@ function emptyDraft(): DraftItem {
     description: null,
     priceMinor: 0,
     currency: 'GBP',
-    category: 'hot_drinks',
+    category: defaultCategory,
     subcategory: null,
     imageUrl: null,
     emoji: null,
@@ -71,6 +61,7 @@ type Props = {
   cafeSlug: string;
   token: string;
   items: NormalisedMenuItem[];
+  sections: CafeMenuSection[];
   library: CafeModifierGroup[];
   onItemsChanged: () => void;
   /** "Add item" is triggered from the parent header so it can sit inline with the tabs. */
@@ -82,20 +73,27 @@ export function MenuItemsPanel({
   cafeSlug,
   token,
   items,
+  sections,
   library,
   onItemsChanged,
   creating,
   onCreatingChange,
 }: Props) {
+  const defaultCategory = sections.find((s) => s.key === 'hot_drinks')?.key ?? sections[0]?.key ?? 'hot_drinks';
   const [drafts, setDrafts] = useState<Record<string, DraftItem>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [newItem, setNewItem] = useState<DraftItem>(emptyDraft);
+  const [sectionBusyId, setSectionBusyId] = useState<string | null>(null);
+  const [newItem, setNewItem] = useState<DraftItem>(() => emptyDraft(defaultCategory));
+  const [newSectionLabel, setNewSectionLabel] = useState('');
+  const [addingSection, setAddingSection] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Raw text for the base-price input, keyed by item id (or "new") — lets the field be
   // fully cleared while typing instead of always reflecting priceMinor as a number.
   const [priceText, setPriceText] = useState<Record<string, string>>({});
+
+  const categoryOptions = sections.map((s) => ({ value: s.key, label: s.label }));
 
   function draftFor(item: NormalisedMenuItem): DraftItem {
     return drafts[item.id] ?? toDraft(item, library);
@@ -141,7 +139,7 @@ export function MenuItemsPanel({
       });
       setNotice(`Saved “${updated.name}”.`);
       onCreatingChange(false);
-      setNewItem(emptyDraft());
+      setNewItem(emptyDraft(defaultCategory));
       onItemsChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -150,7 +148,6 @@ export function MenuItemsPanel({
     }
   }
 
-  /** Quick on/off toggle next to the item title — replaces the old separate "hide" action. */
   async function toggleAvailability(item: NormalisedMenuItem, next: boolean) {
     setTogglingId(item.id);
     setError(null);
@@ -168,15 +165,43 @@ export function MenuItemsPanel({
         copy[updated.id] = toDraft(updated, library);
         return copy;
       });
-      setNotice(
-        next ? `“${item.name}” is on the menu.` : `“${item.name}” is hidden.`,
-      );
-      console.log('toggleAvailability', item.id, next, updated);
+      setNotice(next ? `“${item.name}” is on the menu.` : `“${item.name}” is hidden.`);
       onItemsChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Update failed');
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  async function toggleSectionEnabled(section: CafeMenuSection, enabled: boolean) {
+    setSectionBusyId(section.id);
+    setError(null);
+    try {
+      await patchMenuSection(token, cafeSlug, section.id, { enabled });
+      setNotice(enabled ? `“${section.label}” enabled.` : `“${section.label}” disabled.`);
+      onItemsChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update section');
+    } finally {
+      setSectionBusyId(null);
+    }
+  }
+
+  async function onAddSection() {
+    const label = newSectionLabel.trim();
+    if (!label) return;
+    setAddingSection(true);
+    setError(null);
+    try {
+      await createMenuSection(token, cafeSlug, { label });
+      setNewSectionLabel('');
+      setNotice(`Added section “${label}”.`);
+      onItemsChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not add section');
+    } finally {
+      setAddingSection(false);
     }
   }
 
@@ -187,6 +212,11 @@ export function MenuItemsPanel({
       else setNewItem({ ...draft, ...patch });
     };
 
+    const selectOptions =
+      categoryOptions.some((c) => c.value === draft.category)
+        ? categoryOptions
+        : [...categoryOptions, { value: draft.category, label: draft.category }];
+
     return (
       <Stack spacing={2}>
         <FormControl size="small" sx={{ maxWidth: 220 }}>
@@ -194,9 +224,9 @@ export function MenuItemsPanel({
           <Select
             label="Category"
             value={draft.category}
-            onChange={(e) => update({ category: e.target.value as MenuCategory })}
+            onChange={(e) => update({ category: e.target.value })}
           >
-            {CATEGORIES.map((c) => (
+            {selectOptions.map((c) => (
               <MenuItem key={c.value} value={c.value}>
                 {c.label}
               </MenuItem>
@@ -331,6 +361,25 @@ export function MenuItemsPanel({
         </Alert>
       )}
 
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }} alignItems={{ sm: 'center' }}>
+        <TextField
+          size="small"
+          label="New section name"
+          placeholder="e.g. Ube, Pandan"
+          value={newSectionLabel}
+          onChange={(e) => setNewSectionLabel(e.target.value)}
+          sx={{ maxWidth: 280 }}
+        />
+        <Button
+          variant="outlined"
+          size="small"
+          disabled={!newSectionLabel.trim() || addingSection}
+          onClick={() => void onAddSection()}
+        >
+          {addingSection ? 'Adding…' : 'Add section'}
+        </Button>
+      </Stack>
+
       {creating && (
         <Box sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2, mb: 2 }}>
           <Typography variant="subtitle1" fontWeight={700} gutterBottom>
@@ -344,84 +393,26 @@ export function MenuItemsPanel({
       )}
 
       <Box sx={{ maxHeight: '70vh', overflowY: 'auto', minWidth: 0 }}>
-        {CATEGORIES.map(({ value: category, label }) => {
-          const categoryItems = items.filter((item) => item.category === category);
-          if (categoryItems.length === 0) return null;
+        {sections.map((section) => {
+          const categoryItems = items.filter((item) => item.category === section.key);
+          // Food always listed; other empty+disabled sections stay hidden.
+          if (section.key !== 'food' && categoryItems.length === 0 && !section.enabled) {
+            return null;
+          }
           return (
-            <Box key={category} sx={{ mb: 3, minWidth: 0 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                {label}
-              </Typography>
-              <Stack spacing={1} sx={{ minWidth: 0 }}>
-                {categoryItems.map((item) => {
-                  const draft = draftFor(item);
-                  const displayPrice =
-                    draft.sizes.length > 0
-                      ? `from ${formatGbpMinor(Math.min(...draft.sizes.map((s) => s.priceMinor)), draft.currency)}`
-                      : formatGbpMinor(draft.priceMinor, draft.currency);
-                  return (
-                    <Accordion key={item.id} disableGutters sx={{ minWidth: 0 }}>
-                      <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
-                        sx={{
-                          minWidth: 0,
-                          '& .MuiAccordionSummary-content': { minWidth: 0, overflow: 'hidden' },
-                        }}
-                      >
-                        <Stack
-                          direction="row"
-                          spacing={2}
-                          alignItems="center"
-                          sx={{ width: '100%', minWidth: 0 }}
-                        >
-                          <Typography
-                            sx={{
-                              flex: 1,
-                              minWidth: 0,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {item.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
-                            {displayPrice}
-                          </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            alignItems="center"
-                            sx={{ flexShrink: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Switch
-                              size="small"
-                              checked={item.isAvailable}
-                              disabled={togglingId === item.id}
-                              onChange={(_, v) => void toggleAvailability(item, v)}
-                            />
-                            <Typography
-                              variant="caption"
-                              color={item.isAvailable ? 'success.main' : 'text.disabled'}
-                            >
-                              {item.isAvailable ? 'On menu' : 'Hidden'}
-                            </Typography>
-                          </Stack>
-                        </Stack>
-                      </AccordionSummary>
-                      <AccordionDetails>{renderEditor(draft, item.id)}</AccordionDetails>
-                    </Accordion>
-                  );
-                })}
-              </Stack>
-            </Box>
+            <MenuSectionBlock
+              key={section.id}
+              section={section}
+              items={categoryItems}
+              sectionBusyId={sectionBusyId}
+              togglingId={togglingId}
+              draftFor={draftFor}
+              onToggleSection={(s, enabled) => void toggleSectionEnabled(s, enabled)}
+              onToggleAvailability={(item, next) => void toggleAvailability(item, next)}
+              renderEditor={(draft, itemId) => renderEditor(draft, itemId)}
+            />
           );
         })}
-
-        {items.length === 0 && !creating && (
-          <Typography color="text.secondary">No menu items yet. Add your first item above.</Typography>
-        )}
       </Box>
     </Box>
   );

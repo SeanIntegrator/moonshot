@@ -45,13 +45,13 @@ Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe-provi
 - `order_ahead.paymentProvider`: `pay_in_store` (switch to Stripe after Connect onboarding)
 - All other features: `null` (disabled)
 - `kds_config`: seed template from migration `001_initial_schema.sql`, with `cafeId` set to row UUID
-- Modifier library (`Milks`, `Syrups`) seeded at signup; onboarding step 3 applies the owner’s template selections
+- Modifier library (`Milks`, `Syrups`) seeded at signup; system menu sections (`hot_drinks`, `cold_drinks`, `food` disabled) created; onboarding step 3 applies the owner’s template selections
 
 ## Starter menu template (onboarding step 3)
 
 Owners choose **Edit template** or **Import from POS** (POS import UI is stubbed; API provisioner returns not-implemented).
 
-Template path: toggle categories (Hot drinks and Milks are always on), tick individual drinks/milks/syrups, and edit names, descriptions, and prices before save.
+Template path: toggle categories (Hot drinks and Milks are always on; **Food** is present but off by default with “No current food items”), tick individual drinks/milks/syrups, and edit names, descriptions, and prices before save. Custom specialty sections (e.g. Ube) are added later from the dashboard Items tab.
 
 ### Menu provisioning layer
 

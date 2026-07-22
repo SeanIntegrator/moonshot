@@ -18,13 +18,13 @@ function line(category: ResolvedOrderLine['category'], unitPriceMinor: number): 
 }
 
 describe('computeFreeDrinkDiscountMinor', () => {
-  it('returns highest drink unit price', () => {
+  it('returns highest drink unit price including custom sections', () => {
     const discount = computeFreeDrinkDiscountMinor([
       line('hot_drinks', 340),
-      line('cold_drinks', 380),
+      line('ube', 420),
       line('food', 280),
     ]);
-    expect(discount).toBe(380);
+    expect(discount).toBe(420);
   });
 
   it('returns 0 when no drinks', () => {

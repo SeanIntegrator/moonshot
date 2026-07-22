@@ -38,6 +38,9 @@ export type MenuTemplateModifierKey =
   | 'salted-caramel'
   | 'honey';
 
+/** Built-in drink template categories (Food is a separate empty template section). */
+export type MenuTemplateDrinkCategory = 'hot_drinks' | 'cold_drinks';
+
 export type MenuTemplateCategoryKey = MenuCategory | 'milks' | 'syrups';
 
 export const MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR = 350;
@@ -49,7 +52,7 @@ export const MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR = 80;
 export interface MenuTemplateDrinkDef {
   key: MenuTemplateDrinkKey;
   name: string;
-  category: Extract<MenuCategory, 'hot_drinks' | 'cold_drinks'>;
+  category: MenuTemplateDrinkCategory;
   defaultSelected: boolean;
   defaultDescription: string;
   subcategory?: string;
@@ -79,7 +82,7 @@ export interface AdminMenuTemplateDrinkInput {
   name: string;
   description: string;
   priceMinor: number;
-  category: Extract<MenuCategory, 'hot_drinks' | 'cold_drinks'>;
+  category: MenuTemplateDrinkCategory;
   enabled: boolean;
 }
 
@@ -269,6 +272,14 @@ export const MENU_TEMPLATE_CATEGORIES: MenuTemplateCategoryDef[] = [
         subcategory: 'matcha',
       }),
     ],
+  },
+  {
+    key: 'food',
+    label: 'Food',
+    disableToggle: false,
+    kind: 'drinks',
+    // Empty for v1 — enabling Food marks the café section on; add items in the dashboard.
+    drinks: [],
   },
   {
     key: 'syrups',

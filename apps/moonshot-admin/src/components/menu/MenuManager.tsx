@@ -1,8 +1,8 @@
 import { Alert, Box, Button, CircularProgress, Paper, Stack, Tab, Tabs, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useCallback, useEffect, useState } from 'react';
-import type { CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
-import { fetchMenuForAdmin, fetchModifierGroups } from '../../lib/admin-api.js';
+import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
+import { fetchMenuForAdmin, fetchMenuSections, fetchModifierGroups } from '../../lib/admin-api.js';
 import { MenuItemsPanel } from './MenuItemsPanel.js';
 import { ModifierLibraryEditor } from './ModifierLibraryEditor.js';
 
@@ -15,6 +15,7 @@ export function MenuManager({ cafeSlug, token }: Props) {
   const [tab, setTab] = useState(0);
   const [addingItem, setAddingItem] = useState(false);
   const [items, setItems] = useState<NormalisedMenuItem[]>([]);
+  const [sections, setSections] = useState<CafeMenuSection[]>([]);
   const [library, setLibrary] = useState<CafeModifierGroup[]>([]);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,10 +30,15 @@ export function MenuManager({ cafeSlug, token }: Props) {
         setLoading(true);
       }
       setError(null);
-      Promise.all([fetchMenuForAdmin(token, cafeSlug), fetchModifierGroups(token, cafeSlug)])
-        .then(([menu, groups]) => {
+      Promise.all([
+        fetchMenuForAdmin(token, cafeSlug),
+        fetchModifierGroups(token, cafeSlug),
+        fetchMenuSections(token, cafeSlug),
+      ])
+        .then(([menu, groups, menuSections]) => {
           setItems(menu.items);
           setLibrary(groups);
+          setSections(menu.sections?.length ? menu.sections : menuSections);
           setReady(true);
         })
         .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load menu'))
@@ -129,6 +135,7 @@ export function MenuManager({ cafeSlug, token }: Props) {
               cafeSlug={cafeSlug}
               token={token}
               items={items}
+              sections={sections}
               library={library}
               onItemsChanged={softReload}
               creating={addingItem}

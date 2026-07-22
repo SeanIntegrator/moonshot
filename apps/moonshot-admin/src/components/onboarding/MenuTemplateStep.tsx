@@ -149,6 +149,11 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
             <AccordionDetails>
               {cat.kind === 'drinks' && (
                 <Stack spacing={2}>
+                  {cat.key === 'food' && cat.drinks.length === 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      No current food items
+                    </Typography>
+                  )}
                   {cat.drinks.map((drink) => (
                     <Box
                       key={drink.templateKey}

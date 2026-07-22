@@ -54,16 +54,25 @@ function modifierFromDef(def: MenuTemplateModifierDef): MenuTemplateModifierStat
 
 /** Initial accordion/checkbox state for the onboarding menu template step. */
 export function createInitialMenuTemplateState(): MenuTemplateCategoryState[] {
-  return MENU_TEMPLATE_CATEGORIES.map((cat) => ({
-    key: cat.key,
-    label: cat.label,
-    disableToggle: cat.disableToggle,
-    kind: cat.kind,
-    enabled: cat.disableToggle ? true : cat.kind === 'drinks' ? hasDefaultSelectedDrink(cat) : hasDefaultSelectedModifier(cat),
-    expanded: cat.disableToggle || (cat.kind === 'drinks' ? hasDefaultSelectedDrink(cat) : hasDefaultSelectedModifier(cat)),
-    drinks: (cat.drinks ?? []).map(drinkFromDef),
-    modifiers: (cat.modifiers ?? []).map(modifierFromDef),
-  }));
+  return MENU_TEMPLATE_CATEGORIES.map((cat) => {
+    const enabled = cat.disableToggle
+      ? true
+      : cat.key === 'food'
+        ? false
+        : cat.kind === 'drinks'
+          ? hasDefaultSelectedDrink(cat)
+          : hasDefaultSelectedModifier(cat);
+    return {
+      key: cat.key,
+      label: cat.label,
+      disableToggle: cat.disableToggle,
+      kind: cat.kind,
+      enabled,
+      expanded: enabled,
+      drinks: (cat.drinks ?? []).map(drinkFromDef),
+      modifiers: (cat.modifiers ?? []).map(modifierFromDef),
+    };
+  });
 }
 
 function hasDefaultSelectedDrink(cat: MenuTemplateCategoryDef): boolean {
@@ -116,7 +125,7 @@ export function buildMenuTemplateSavePayload(
 
 export function countEnabledDrinks(categories: MenuTemplateCategoryState[]): number {
   return categories
-    .filter((c) => c.kind === 'drinks' && c.enabled)
+    .filter((c) => c.kind === 'drinks' && c.enabled && c.key !== 'food')
     .flatMap((c) => c.drinks)
     .filter((d) => d.enabled).length;
 }

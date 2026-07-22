@@ -3,7 +3,45 @@
  * apps read the same contract from the API.
  */
 
-export type MenuCategory = 'hot_drinks' | 'cold_drinks' | 'food' | 'extras';
+/**
+ * Section key on a menu item (`menu_items.category`).
+ * Built-ins: `hot_drinks`, `cold_drinks`, `food`, `extras`.
+ * Cafés may also define custom keys (e.g. `ube`, `pandan`) via `menu_sections`.
+ */
+export type MenuCategory = string;
+
+/** Built-in section keys always provisioned for a café. */
+export const SYSTEM_MENU_SECTION_KEYS = ['hot_drinks', 'cold_drinks', 'food'] as const;
+export type SystemMenuSectionKey = (typeof SYSTEM_MENU_SECTION_KEYS)[number];
+
+export const SYSTEM_MENU_SECTION_LABELS: Record<SystemMenuSectionKey, string> = {
+  hot_drinks: 'Hot drinks',
+  cold_drinks: 'Cold drinks',
+  food: 'Food',
+};
+
+/** Café-scoped top-level menu section (Items tab grouping / order-ahead nav). */
+export interface CafeMenuSection {
+  id: string;
+  cafeId: string;
+  key: string;
+  label: string;
+  enabled: boolean;
+  isSystem: boolean;
+  sortOrder: number;
+}
+
+/** True when a category key should be treated as food (KDS / loyalty). */
+export function isFoodMenuCategory(category: string): boolean {
+  return category === 'food' || category.toLowerCase().includes('food');
+}
+
+/** True when a category key earns a free-drink loyalty reward. */
+export function isDrinkMenuCategory(category: string): boolean {
+  if (isFoodMenuCategory(category)) return false;
+  if (category === 'extras') return false;
+  return true;
+}
 
 export type ModifierSelectionType = 'single' | 'multi';
 
@@ -68,6 +106,8 @@ export interface CafeModifierGroup extends NormalisedModifierGroup {
 export interface NormalisedMenu {
   cafeId: string;
   items: NormalisedMenuItem[];
+  /** Café section registry — drives admin grouping and order-ahead nav labels. */
+  sections: CafeMenuSection[];
   /** ISO timestamp when this snapshot was produced */
   fetchedAt: string;
 }

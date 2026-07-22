@@ -1,6 +1,7 @@
 import type { NormalisedMenu } from '@moonshot/types';
 import type { Pool, PoolClient } from 'pg';
 import { mapMenuItemRow, mapModifierGroupRow, type MenuItemRow, type ModifierGroupRow } from './menu-map.js';
+import { ensureSystemMenuSections, listMenuSectionsForCafe } from './menu-sections.js';
 
 type Db = Pool | PoolClient;
 
@@ -20,6 +21,9 @@ type AttachRow = {
  * Load menu items for a café with attached library modifier groups merged into each item.
  */
 export async function fetchMenuForCafe(db: Db, cafeId: string, availableOnly = true): Promise<NormalisedMenu> {
+  await ensureSystemMenuSections(db, cafeId);
+  const sections = await listMenuSectionsForCafe(db, cafeId);
+
   const availabilityClause = availableOnly ? 'AND mi.is_available = TRUE' : '';
 
   const { rows: itemRows } = await db.query<MenuItemRow>(
@@ -34,7 +38,7 @@ export async function fetchMenuForCafe(db: Db, cafeId: string, availableOnly = t
   );
 
   if (itemRows.length === 0) {
-    return { cafeId, items: [], fetchedAt: new Date().toISOString() };
+    return { cafeId, items: [], sections, fetchedAt: new Date().toISOString() };
   }
 
   const itemIds = itemRows.map((r) => r.id);
@@ -78,6 +82,7 @@ export async function fetchMenuForCafe(db: Db, cafeId: string, availableOnly = t
   return {
     cafeId,
     items,
+    sections,
     fetchedAt: new Date().toISOString(),
   };
 }
