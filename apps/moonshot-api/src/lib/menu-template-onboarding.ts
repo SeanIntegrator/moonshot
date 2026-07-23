@@ -14,6 +14,7 @@ import {
 } from '@moonshot/types';
 import {
   libraryByNameFromGroups,
+  parseCafeDrinkArchetypeConfig,
   resolveArchetypeGroups,
 } from './drink-archetype-resolve.js';
 import { copyTemplateDrinkImageToCafeItem } from './menu-image-storage.js';
@@ -272,9 +273,11 @@ export async function applyMenuTemplate(
     `SELECT drink_archetype_config FROM cafes WHERE id = $1`,
     [cafeId],
   );
-  const cafeConfig =
-    (configRows[0]?.drink_archetype_config as Record<string, unknown>) ??
-    platformDrinkArchetypeConfig();
+  const cafeConfig = parseCafeDrinkArchetypeConfig(
+    configRows[0]?.drink_archetype_config ?? platformDrinkArchetypeConfig(),
+  );
+  const effectiveConfig =
+    Object.keys(cafeConfig).length === 0 ? platformDrinkArchetypeConfig() : cafeConfig;
 
   const libraryRows = [
     { id: milksGroupId, name: 'Milks', options: milksOptions },
@@ -308,7 +311,7 @@ export async function applyMenuTemplate(
         ? Math.round(drink.priceMinor)
         : MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR;
       const archetypeId = MENU_TEMPLATE_DRINK_ARCHETYPE[drink.templateKey];
-      const resolved = resolveArchetypeGroups(archetypeId, cafeConfig as never, libraryByName);
+      const resolved = resolveArchetypeGroups(archetypeId, effectiveConfig, libraryByName);
 
       // Insert first so we have an item id, then copy the canonical template into
       // café-scoped storage. Café replaces never mutate template/drinks/*.

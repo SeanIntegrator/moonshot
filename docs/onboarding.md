@@ -45,7 +45,7 @@ Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe-provi
 - `order_ahead.paymentProvider`: `pay_in_store` (switch to Stripe after Connect onboarding)
 - All other features: `null` (disabled)
 - `kds_config`: seed template from migration `001_initial_schema.sql`, with `cafeId` set to row UUID
-- Modifier library (`Milks`, `Syrups`) seeded at signup; system menu sections (`hot_drinks`, `cold_drinks`, `food` disabled) created; onboarding step 3 applies the owner’s template selections
+- Modifier library (`Milks`, `Syrups`, Flow prep, Ice Level, Toppings) seeded at signup; system menu sections (`hot_drinks`, `cold_drinks`, `food` disabled) created; platform drink-archetype recipes written to `drink_archetype_config`; onboarding step 3 applies the owner’s template selections
 
 ## Starter menu template (onboarding step 3)
 
@@ -69,8 +69,9 @@ POS import will share the same menu persistence path as template provisioning on
 `POST /admin/onboarding/menu-template` runs in a transaction:
 
 1. Updates `Milks` and `Syrups` modifier groups with enabled options
-2. Creates selected drink `menu_items` at £3.50 by default (non-dairy milks +50p, syrups +30p)
-3. Attaches Milks to every drink; attaches Syrups when that category is enabled
+2. Ensures Flow prep groups (shots, beans, milk temp/texture) plus Ice Level and Toppings
+3. Creates selected drink `menu_items` at £3.50 by default (non-dairy milks +50p, syrups +30p)
+4. Sets each drink’s **archetype** from the template map and attaches only the modifier groups for that recipe (e.g. espresso → shots + beans; iced latte → milks + syrups + shots + ice + beans). Low-milk / tea types set `waive_milk_surcharge`
 
 Completion still requires `hasMenuItem` (at least one available drink).
 

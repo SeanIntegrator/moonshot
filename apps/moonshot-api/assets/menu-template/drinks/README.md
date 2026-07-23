@@ -12,6 +12,7 @@ Accepted filenames (prefer `.webp`, else `.jpg` / `.jpeg` / `.png`):
 
 - espresso
 - americano
+- macchiato
 - cortado
 - flat-white
 - latte
@@ -21,7 +22,6 @@ Accepted filenames (prefer `.webp`, else `.jpg` / `.jpeg` / `.png`):
 - breakfast-tea
 - chai-latte
 - matcha-latte
-- babycino
 - iced-latte
 - iced-americano
 - iced-chocolate

@@ -93,7 +93,7 @@ Canonical templates are **not** editable from the café admin UI. Update them by
 1. Ensure `MENU_IMAGE_*` is set on the API (and locally if syncing from your machine).
 2. Drop real photos into `apps/moonshot-api/assets/menu-template/drinks/` named by drink key:
    - Prefer `{key}.webp`, or `{key}.jpg` / `{key}.jpeg` / `{key}.png`
-   - Keys: `espresso`, `americano`, `cortado`, `flat-white`, `latte`, `cappuccino`, `mocha`, `hot-chocolate`, `breakfast-tea`, `chai-latte`, `matcha-latte`, `babycino`, `iced-latte`, `iced-americano`, `iced-chocolate`, `iced-mocha`, `iced-matcha-latte`
+   - Keys: `espresso`, `americano`, `macchiato`, `cortado`, `flat-white`, `latte`, `cappuccino`, `mocha`, `hot-chocolate`, `breakfast-tea`, `chai-latte`, `matcha-latte`, `iced-latte`, `iced-americano`, `iced-chocolate`, `iced-mocha`, `iced-matcha-latte`
 3. Run:
 
 ```bash

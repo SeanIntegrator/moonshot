@@ -47,6 +47,20 @@ describe('partitionModifierGroups', () => {
       'Milk Texture',
     ]);
   });
+
+  it('pulls Ice Level into additional and leaves Toppings in primary', () => {
+    const groups = [
+      group('Milks', ['Whole']),
+      group('Toppings', ['Marshmallows']),
+      group('Ice Level', ['Light', 'Regular', 'Extra'], 'Regular'),
+    ];
+    groups[1]!.selectionType = 'multi';
+    groups[1]!.required = false;
+
+    const { primary, additional } = partitionModifierGroups(groups);
+    expect(primary.map((g) => g.name)).toEqual(['Milks', 'Toppings']);
+    expect(additional.map((g) => g.name)).toEqual(['Ice Level']);
+  });
 });
 
 describe('sortOptionsForSlider', () => {

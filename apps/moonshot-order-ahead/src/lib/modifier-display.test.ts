@@ -42,6 +42,8 @@ const menuItem: NormalisedMenuItem = {
     },
   ],
   tags: [],
+  archetype: null,
+  waiveMilkSurcharge: false,
 };
 
 describe('isStandardModifierVariant', () => {

@@ -5,6 +5,7 @@ export const ADDITIONAL_CUSTOMISATION_GROUP_NAMES = [
   'Shots',
   'Milk Temperature',
   'Milk Texture',
+  'Ice Level',
 ] as const;
 
 export type AdditionalCustomisationGroupName =
@@ -19,6 +20,7 @@ const SLIDER_OPTION_ORDER: Record<AdditionalCustomisationGroupName, readonly str
   // Warm is the cool end of the continuum; Hot (default) sits next.
   'Milk Temperature': ['Warm', 'Hot', 'Extra Hot', 'Extra Extra Hot'],
   'Milk Texture': ['Wet', 'Standard', 'Dry', 'Extra Foam'],
+  'Ice Level': ['Light', 'Regular', 'Extra'],
 };
 
 export function isAdditionalCustomisationGroup(
