@@ -34,7 +34,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
             <span className="flow-item-name">{itemName}</span>
             {view.shotLabel ? (
               <span className="flow-shot-brackets" style={{ color: view.beanAccent }}>
-                [{view.shotLabel}]
+                {`[ ${view.shotLabel} ]`}
               </span>
             ) : null}
           </div>
@@ -49,10 +49,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
               {view.milk.temperature ? (
                 <em className="flow-milk-adj">{view.milk.temperature}</em>
               ) : null}
-              <span
-                className="flow-milk-chip"
-                style={{ background: view.milk.bg, color: view.milk.text }}
-              >
+              <span className="flow-milk-chip" style={{ background: view.milk.bg }}>
                 {view.milk.name}
               </span>
               {view.milk.texture ? (

@@ -22,8 +22,9 @@
 
 .flow-card {
   border-radius: 10px;
-  background: #1a1614;
-  border: 1px solid #2a2420;
+  /* Cool near-black slate — avoid warm browns/reds on ticket bodies */
+  background: #0e1116;
+  border: 1px solid #1c2229;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -55,7 +56,7 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  color: #f5f5f5;
+  color: #e8eef2;
   font: inherit;
   -webkit-tap-highlight-color: transparent;
 }
@@ -152,9 +153,9 @@
   width: 100%;
   padding: 0 1rem;
   border: none;
-  border-bottom: 1px solid #2a2420;
+  border-bottom: 1px solid #1c2229;
   background: transparent;
-  color: #f0ece8;
+  color: #e8eef2;
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -206,7 +207,6 @@
   gap: 0.55rem;
   min-width: 0;
   white-space: nowrap;
-  margin-right: 16px;
   box-sizing: border-box;
 }
 
@@ -215,7 +215,7 @@
 }
 
 .flow-col-shot-multi {
-  background: #2a2623;
+  background: #1a1f26;
 }
 
 .flow-qty {
@@ -224,26 +224,26 @@
   text-align: center;
   font-weight: 700;
   font-size: 1.4rem;
-  color: #9a9590;
+  color: #8b939c;
   font-variant-numeric: tabular-nums;
   align-self: center;
-  padding: 0.55rem 0;
+  padding: calc(0.55rem + 8px) 0;
 }
 
 .flow-qty-multi {
-  color: #e8e4df;
+  color: #e8eef2;
 }
 
 .flow-qty-bar {
   width: 1px;
   align-self: stretch;
-  background: #3a3530;
+  background: #3a424c;
   flex-shrink: 0;
 }
 
 .flow-qty-bar-multi {
   width: 2px;
-  background: #c8c2ba;
+  background: #c5cdd6;
 }
 
 .flow-shot-body {
@@ -252,7 +252,7 @@
   justify-content: center;
   gap: 0.15rem;
   min-width: 0;
-  padding: 0.55rem 0;
+  padding: calc(0.55rem + 8px) 0;
 }
 
 .flow-shot-name-row {
@@ -271,6 +271,9 @@
   font-weight: 700;
   font-size: 1.25rem;
   white-space: nowrap;
+  font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .flow-size {
@@ -289,7 +292,7 @@
   font-weight: 600;
   font-size: 1.5rem;
   align-self: center;
-  padding: 0.55rem 0;
+  padding: calc(0.55rem + 8px) 0;
 }
 
 .flow-col-mods {
@@ -299,7 +302,9 @@
   gap: 0.45rem;
   min-width: 0;
   overflow: hidden;
-  padding: 0.55rem 0;
+  padding: calc(0.55rem + 8px) 0;
+  /* Prefer 32px gap after equalized shot col; shrink to 16px when the row is tight */
+  margin-left: clamp(16px, 4vw, 32px);
 }
 
 .flow-milk-wrap {
@@ -322,12 +327,14 @@
   font-weight: 700;
   font-size: 1.15rem;
   line-height: 1.1;
+  /* Milk name always cool off-white over coloured chip bg */
+  color: #e8eef2;
 }
 
 .flow-milk-adj {
   display: inline-flex;
   align-items: center;
-  background: #ffffff;
+  background: #c8cdd4;
   color: #1a1a1a;
   padding: 10px 0.5rem;
   font-size: 1.15rem;
@@ -345,8 +352,8 @@
   padding: 4px 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--syrup, #4a3f6b);
-  background: color-mix(in srgb, var(--syrup, #4a3f6b) 20%, #1a1614);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--syrup, #4a3f6b) 20%, #0e1116);
+  color: #e8eef2;
   font-weight: 400;
   font-size: 1.15rem;
   line-height: 1.1;
@@ -361,7 +368,7 @@
   gap: 0.4rem;
   min-width: 0;
   justify-content: flex-end;
-  padding: 0.55rem 0;
+  padding: calc(0.55rem + 8px) 0;
 }
 
 .flow-col-notes-wide {
@@ -371,7 +378,7 @@
 .flow-freetext {
   font-style: italic;
   font-size: 1.05rem;
-  color: #d4cfc8;
+  color: #c5cdd6;
 }
 
 .flow-allergen {
@@ -399,7 +406,7 @@
   align-items: center;
   gap: 0.65rem;
   padding: 0.45rem 1rem;
-  color: #8a857e;
+  color: #7a8490;
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -410,7 +417,7 @@
 .flow-food-divider::after {
   content: '';
   flex: 1;
-  border-top: 1px dashed #4a453f;
+  border-top: 1px dashed #3a424c;
 }
 
 .flow-food-divider span {
