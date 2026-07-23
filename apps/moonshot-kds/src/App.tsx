@@ -1,6 +1,9 @@
 import './index.css';
 import type { FormEvent } from 'react';
 import { useCallback, useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AppHeader } from '@/components/AppHeader';
+import { LoginScreen } from '@/components/LoginScreen';
 import { FlowBoard } from './board/FlowBoard.js';
 import { useKdsConfig } from './hooks/useKdsConfig.js';
 import { useKdsOrders } from './hooks/useKdsOrders.js';
@@ -85,73 +88,28 @@ export function App() {
 
   if (!session) {
     return (
-      <div className="kds-shell">
-        <header className="kds-title">Moonshot KDS — Sign in</header>
-        {loginError && (
-          <p className="kds-error" role="alert">
-            {loginError}
-          </p>
-        )}
-        <form className="kds-form" onSubmit={(e) => void handleLogin(e)}>
-          <label className="kds-label">
-            Café slug
-            <input
-              className="kds-input"
-              autoComplete="username"
-              value={loginForm.cafeSlug}
-              onChange={(e) => setLoginForm((f) => ({ ...f, cafeSlug: e.target.value }))}
-              placeholder="e.g. clay-and-bean"
-              required
-            />
-          </label>
-          <label className="kds-label">
-            KDS username
-            <input
-              className="kds-input"
-              autoComplete="username"
-              value={loginForm.username}
-              onChange={(e) => setLoginForm((f) => ({ ...f, username: e.target.value }))}
-              required
-            />
-          </label>
-          <label className="kds-label">
-            Password
-            <input
-              className="kds-input"
-              type="password"
-              autoComplete="current-password"
-              value={loginForm.password}
-              onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
-              required
-            />
-          </label>
-          <button className="kds-button kds-button-primary" type="submit">
-            Sign in
-          </button>
-        </form>
-        <p className="kds-hint">Set `VITE_API_URL` to your API origin (no `/api/v1` suffix).</p>
-      </div>
+      <LoginScreen
+        form={loginForm}
+        error={loginError}
+        onChange={setLoginForm}
+        onSubmit={handleLogin}
+      />
     );
   }
 
   return (
-    <div className="kds-shell kds-shell-board">
-      <header className="kds-header">
-        <h1 className="kds-title">Moonshot KDS</h1>
-        <div className="kds-header-meta">
-          <span className="kds-meta">
-            {session.cafeName} ({session.cafeSlug}) — {session.username}
-          </span>
-          <button type="button" className="kds-button" onClick={() => logout()}>
-            Sign out
-          </button>
-        </div>
-      </header>
-      {error && (
-        <p className="kds-error" role="alert">
-          {error}
-        </p>
-      )}
+    <div className="min-h-full px-5 py-4 pb-6">
+      <AppHeader
+        cafeName={session.cafeName}
+        cafeSlug={session.cafeSlug}
+        username={session.username}
+        onLogout={logout}
+      />
+      {error ? (
+        <Alert variant="destructive" className="mt-3">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
       {kdsConfig ? (
         <FlowBoard
           orders={orders}
@@ -161,7 +119,7 @@ export function App() {
           onExited={finalizeDismiss}
         />
       ) : (
-        <p className="kds-placeholder">Loading board config…</p>
+        <p className="mt-3 text-sm text-muted-foreground">Loading board config…</p>
       )}
     </div>
   );

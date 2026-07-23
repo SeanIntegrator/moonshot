@@ -30,6 +30,7 @@ Implemented in Phase 1.
 | theme_id           | TEXT        | base template id |
 | theme_overrides    | JSONB       | deep-merge overrides |
 | kds_config         | JSONB       | milk colours, timer thresholds, **eta: `{ base_prep_minutes, per_item_minutes }`**, layout |
+| drink_archetype_config | JSONB   | café drink-type recipes (slots + milk charge); see `docs/menu-management.md` |
 | timezone           | TEXT        | default `Europe/London` |
 | owner_feedback_email | TEXT      | optional; used for negative-review path `mailto:` |
 | loyalty_display_counter | INTEGER  | **Phase 10** — next 6-digit `loyalty_display_id` for new `cafe_users` rows |
@@ -99,6 +100,8 @@ Implemented in Phase 1; **Phase 12** (`012_menu_modifier_library.sql`) adds `siz
 | tags             | TEXT[]      | |
 | sizes            | JSONB       | **Phase 12** — `NormalisedItemSize[]` absolute per-size prices |
 | modifier_groups  | JSONB       | legacy embedded `NormalisedModifierGroup[]` (merged with library) |
+| archetype        | TEXT        | drink type id (`espresso-neat`, …); nullable |
+| waive_milk_surcharge | BOOLEAN | when true, Milks option prices treated as £0 |
 | sort_order       | INTEGER     | |
 | synced_at        | TIMESTAMPTZ | |
 | created_at       | TIMESTAMPTZ | |

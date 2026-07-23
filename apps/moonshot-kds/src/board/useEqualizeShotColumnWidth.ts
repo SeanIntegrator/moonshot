@@ -19,7 +19,9 @@ export function useEqualizeShotColumnWidth(
       const body = bodyRef.current;
       if (!body) return;
 
-      const cols = body.querySelectorAll<HTMLElement>('.flow-row-drink .flow-col-shot');
+      const cols = body.querySelectorAll<HTMLElement>(
+        '[data-flow-row="drink"] [data-flow-col="shot"]',
+      );
       if (cols.length === 0) {
         body.style.removeProperty('--flow-shot-col-width');
         return;

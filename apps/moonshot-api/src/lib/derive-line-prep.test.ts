@@ -104,6 +104,40 @@ describe('deriveLinePrep', () => {
     // Beans are role groups — not chips in prep derivation.
     expect(prep.chips).toEqual([]);
   });
+
+  it('skips Ice Level as a role group (not a chip)', () => {
+    const item: NormalisedOrderItem = {
+      id: 'line-1',
+      menuItemId: null,
+      itemName: 'Iced Latte',
+      quantity: 1,
+      unitPriceMinor: 350,
+      allergens: [],
+      notes: null,
+      modifiers: [
+        {
+          groupId: 'ice',
+          groupName: 'Ice Level',
+          optionId: 'extra',
+          optionName: 'Extra',
+          priceMinor: 0,
+          chipLabel: 'Ex',
+        },
+        {
+          groupId: 'syrups',
+          groupName: 'Syrups',
+          optionId: 'vanilla',
+          optionName: 'Vanilla',
+          priceMinor: 30,
+          colorHex: '#f5e6c8',
+          chipLabel: 'Va',
+        },
+      ],
+    };
+
+    const prep = deriveLinePrep(item, baseConfig());
+    expect(prep.chips).toEqual([{ label: 'Va', shape: 'round', colorHex: '#f5e6c8' }]);
+  });
 });
 
 describe('deriveFlowLine', () => {
@@ -274,6 +308,40 @@ describe('deriveFlowLine', () => {
       temperature: 'Warm',
       texture: 'Dry',
     });
+  });
+
+  it('does not render Ice Level as a syrup chip', () => {
+    const item: NormalisedOrderItem = {
+      id: 'line-1',
+      menuItemId: null,
+      itemName: 'Iced Americano',
+      quantity: 1,
+      unitPriceMinor: 320,
+      category: 'cold_drinks',
+      allergens: [],
+      notes: null,
+      modifiers: [
+        {
+          groupId: 'ice',
+          groupName: 'Ice Level',
+          optionId: 'extra',
+          optionName: 'Extra',
+          priceMinor: 0,
+          isDefault: false,
+        },
+        {
+          groupId: 'syrups',
+          groupName: 'Syrups',
+          optionId: 'vanilla',
+          optionName: 'Vanilla',
+          priceMinor: 30,
+          colorHex: '#f5e6c8',
+        },
+      ],
+    };
+
+    const view = deriveFlowLine(item, baseConfig());
+    expect(view.syrups).toEqual([{ label: 'Vanilla', colorHex: '#f5e6c8' }]);
   });
 
   it('shows non-default size and marks food by category', () => {

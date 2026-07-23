@@ -217,12 +217,13 @@ export function deriveLinePrep(item: NormalisedOrderItem, config: KdsConfig): Kd
   for (const mod of item.modifiers) {
     if (mod.isSize) continue;
 
-    // Role groups (shots/beans/temp/texture) are not chips in the legacy prep model.
+    // Role groups (shots/beans/temp/texture/ice) are not chips in the legacy prep model.
     if (
       groupNamesMatch(mod.groupName, classification.shots) ||
       groupNamesMatch(mod.groupName, classification.beans) ||
       groupNamesMatch(mod.groupName, classification.milkTemperature) ||
-      groupNamesMatch(mod.groupName, classification.milkTexture)
+      groupNamesMatch(mod.groupName, classification.milkTexture) ||
+      groupNamesMatch(mod.groupName, classification.iceLevel)
     ) {
       const bean = beanKeyFromMod(mod);
       if (bean && !beanBadgeKey) beanBadgeKey = bean;
@@ -305,6 +306,11 @@ export function deriveFlowLine(item: NormalisedOrderItem, config: KdsConfig): Fl
 
     if (groupNamesMatch(mod.groupName, classification.milkTexture)) {
       if (!mod.isDefault) textureMod = mod;
+      continue;
+    }
+
+    // Ice level is a prep slider — not a Flow syrup/extra chip.
+    if (groupNamesMatch(mod.groupName, classification.iceLevel)) {
       continue;
     }
 

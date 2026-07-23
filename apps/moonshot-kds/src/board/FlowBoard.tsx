@@ -1,6 +1,5 @@
 import type { KdsConfig, NormalisedOrder } from '@moonshot/types';
 import { OrderCard } from './OrderCard.js';
-import './board.css';
 
 type FlowBoardProps = {
   orders: NormalisedOrder[];
@@ -19,14 +18,17 @@ export function FlowBoard({
 }: FlowBoardProps) {
   if (orders.length === 0) {
     return (
-      <div className="flow-empty" role="status">
+      <div
+        className="flex min-h-[60vh] items-center justify-center text-4xl font-bold tracking-wide text-muted-foreground opacity-60"
+        role="status"
+      >
         Waiting for orders
       </div>
     );
   }
 
   return (
-    <ul className="flow-board">
+    <div className="mt-4 flex flex-col items-stretch">
       {orders.map((order) => (
         <OrderCard
           key={order.id}
@@ -37,6 +39,6 @@ export function FlowBoard({
           onExited={onExited}
         />
       ))}
-    </ul>
+    </div>
   );
 }

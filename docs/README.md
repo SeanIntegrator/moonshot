@@ -14,6 +14,7 @@ Start here when onboarding or verifying behaviour against production.
 
 - [Realtime / Socket auth](architecture/realtime.md) — `/kds` vs `/customer`, JWT rules
 - [KDS board contracts](architecture/kds-board.md) — chips, status machine, ETA stretch (UI deferred)
+- [KDS UI (shadcn)](kds-ui.md) — Base UI + `base-nova`, dark theme, app-local components
 - [Current flows](current/flows.md) — shipped vs planned sequences
 - [Stripe checkout return](stripe-checkout-return.md) — `ORDER_AHEAD_BASE_URL`, recovery endpoint
 - [M1 bug triage](bugs/m1-triage.md) — discrete cards for remaining UI glitches

@@ -1,5 +1,9 @@
 import { useRef, useState, type TransitionEvent } from 'react';
 import { deriveFlowLine, type KdsConfig, type NormalisedOrder } from '@moonshot/types';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import { DrinkRow } from './DrinkRow.js';
 import { FoodRow } from './FoodRow.js';
 import { useEqualizeShotColumnWidth } from './useEqualizeShotColumnWidth.js';
@@ -8,6 +12,7 @@ import {
   ticketKindLabel,
   useOrderTimer,
   type FlowTicketKind,
+  type TimerTone,
 } from './useOrderTimer.js';
 
 type OrderCardProps = {
@@ -18,10 +23,26 @@ type OrderCardProps = {
   onExited: (orderId: string) => void;
 };
 
+const HEADER_BY_KIND: Record<FlowTicketKind, string> = {
+  sit_in: 'bg-[#2a3344] hover:bg-[#2a3344]',
+  takeaway: 'bg-[#354a66] hover:bg-[#354a66]',
+  pickup: 'bg-[#3d3554] hover:bg-[#3d3554]',
+};
+
+const TIMER_BY_TONE: Record<TimerTone, string> = {
+  green: 'border-transparent bg-[#4a6080] text-[#e8eef5]',
+  amber: 'border-transparent bg-[#5c6a9a] text-[#eef0f8]',
+  red: 'border-transparent bg-[#6b4a72] text-[#f5eef6]',
+};
+
 function FoodDivider({ only }: { only: boolean }) {
   return (
-    <div className="flow-food-divider" role="separator">
-      <span>{only ? 'FOOD ONLY' : 'FOOD'}</span>
+    <div className="flex items-center gap-2.5 px-4 py-2" role="separator">
+      <Separator className="w-auto flex-1" />
+      <span className="shrink-0 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+        {only ? 'FOOD ONLY' : 'FOOD'}
+      </span>
+      <Separator className="w-auto flex-1" />
     </div>
   );
 }
@@ -68,7 +89,7 @@ export function OrderCard({
     });
   }
 
-  function handleTransitionEnd(e: TransitionEvent<HTMLLIElement>): void {
+  function handleTransitionEnd(e: TransitionEvent<HTMLDivElement>): void {
     if (e.target !== e.currentTarget) return;
     if (e.propertyName !== 'max-height') return;
     if (!dismissing) return;
@@ -76,53 +97,70 @@ export function OrderCard({
   }
 
   return (
-    <li
-      className={`flow-card flow-card-${kind}${dismissing ? ' flow-card-dismissing' : ''}`}
+    <div
+      className={cn(
+        'mb-3 max-h-[2000px] overflow-hidden transition-[max-height,opacity,margin,border-width] duration-300 ease-in-out',
+        dismissing && 'pointer-events-none mb-0 max-h-0 border-0 opacity-0',
+      )}
       onTransitionEnd={handleTransitionEnd}
     >
-      <button
-        type="button"
-        className="flow-card-header"
-        onClick={() => onComplete(order.id)}
-        title="Mark order done"
-      >
-        <div className="flow-card-header-left">
-          <span className="flow-card-type">{ticketKindLabel(kind)}</span>
-          {showCustomer ? (
-            <span className="flow-card-customer">{order.customerName.trim()}</span>
-          ) : null}
-        </div>
-        <span className={`flow-timer flow-timer-${timer.tone}`}>{timer.display}</span>
-      </button>
+      <Card className="w-full gap-0 overflow-hidden rounded-[10px] bg-[#0e1116] py-0 ring-[#1c2229]">
+        <button
+          type="button"
+          className={cn(
+            'flex w-full cursor-pointer items-center justify-between gap-3 border-0 px-4 py-3 text-left text-[#e8eef2] outline-none [-webkit-tap-highlight-color:transparent]',
+            HEADER_BY_KIND[kind],
+          )}
+          onClick={() => onComplete(order.id)}
+          title="Mark order done"
+        >
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-[1.35rem] font-bold tracking-wider uppercase">
+              {ticketKindLabel(kind)}
+            </span>
+            {showCustomer ? (
+              <span className="truncate text-lg opacity-90">{order.customerName.trim()}</span>
+            ) : null}
+          </div>
+          <Badge
+            className={cn(
+              'h-auto shrink-0 rounded-full px-3.5 py-1 text-[1.3rem] font-bold tabular-nums leading-snug',
+              TIMER_BY_TONE[timer.tone],
+            )}
+          >
+            {timer.display}
+          </Badge>
+        </button>
 
-      <div className="flow-card-body" ref={bodyRef}>
-        {drinks.length === 0 && foods.length > 0 ? <FoodDivider only /> : null}
+        <CardContent className="flex flex-col p-0" ref={bodyRef}>
+          {drinks.length === 0 && foods.length > 0 ? <FoodDivider only /> : null}
 
-        {drinks.map(({ item, view }) => (
-          <DrinkRow
-            key={item.id}
-            itemName={item.itemName}
-            quantity={item.quantity}
-            view={view}
-            made={madeIds.has(item.id)}
-            onToggleMade={() => toggleMade(item.id)}
-          />
-        ))}
+          {drinks.map(({ item, view }) => (
+            <DrinkRow
+              key={item.id}
+              itemName={item.itemName}
+              quantity={item.quantity}
+              view={view}
+              made={madeIds.has(item.id)}
+              onToggleMade={() => toggleMade(item.id)}
+            />
+          ))}
 
-        {foods.length > 0 && drinks.length > 0 ? <FoodDivider only={false} /> : null}
+          {foods.length > 0 && drinks.length > 0 ? <FoodDivider only={false} /> : null}
 
-        {foods.map(({ item, view }) => (
-          <FoodRow
-            key={item.id}
-            itemName={item.itemName}
-            quantity={item.quantity}
-            view={view}
-            made={madeIds.has(item.id)}
-            onToggleMade={() => toggleMade(item.id)}
-          />
-        ))}
-      </div>
-    </li>
+          {foods.map(({ item, view }) => (
+            <FoodRow
+              key={item.id}
+              itemName={item.itemName}
+              quantity={item.quantity}
+              view={view}
+              made={madeIds.has(item.id)}
+              onToggleMade={() => toggleMade(item.id)}
+            />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

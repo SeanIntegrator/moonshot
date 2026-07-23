@@ -120,11 +120,35 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
+  }
   html {
     @apply font-sans;
-    }
+    height: 100%;
+  }
+  body,
+  #root {
+    @apply bg-background text-foreground;
+    height: 100%;
+    margin: 0;
+  }
+}
+
+/* Hazard stripe for allergen chips — kept as CSS (repeating gradient border). */
+.flow-allergen {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #1a1a1a;
+  padding: 0.3rem 0.55rem;
+  border-radius: 2px;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(#f5d90a, #f5d90a) padding-box,
+    repeating-linear-gradient(
+      -45deg,
+      #f5d90a,
+      #f5d90a 5px,
+      #1a1a1a 5px,
+      #1a1a1a 10px
+    )
+    border-box;
 }

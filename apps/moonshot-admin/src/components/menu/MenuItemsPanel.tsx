@@ -80,7 +80,7 @@ function applyArchetypeToDraft(
   library: CafeModifierGroup[],
 ): DraftItem {
   if (!archetypeId || !recipe) {
-    return { ...draft, archetype: null };
+    return { ...draft, archetype: null, waiveMilkSurcharge: false };
   }
   const byName = new Map(library.map((g) => [g.name, g]));
   const attachedGroupIds: string[] = [];
@@ -295,7 +295,9 @@ export function MenuItemsPanel({
             onChange={(e) => {
               const value = e.target.value;
               if (!value) {
-                update({ archetype: null });
+                const next = applyArchetypeToDraft(draft, null, null, library);
+                if (itemId) setDraft(itemId, next);
+                else setNewItem(next);
                 return;
               }
               if (!isDrinkArchetypeId(value)) return;
