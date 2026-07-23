@@ -55,14 +55,19 @@ export function Checkout() {
   const [checkoutAllergens, setCheckoutAllergens] = useState<string[]>([]);
   const [applyReward, setApplyReward] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  /** True once we clear the cart and head to confirmed — blocks empty-cart → menu bounce. */
+  const [leavingToConfirmed, setLeavingToConfirmed] = useState(false);
 
   useEffect(() => {
     if (isSignedIn && loyaltyEnabled) void refreshLoyalty();
   }, [isSignedIn, loyaltyEnabled, refreshLoyalty]);
 
   useEffect(() => {
-    if (lines.length === 0) navigate(cafePath('/order'), { replace: true });
-  }, [lines.length, navigate, cafePath]);
+    // Skip while placing / leaving for confirmed — clear() empties the cart before navigate.
+    if (lines.length === 0 && !submitting && !redirecting && !leavingToConfirmed) {
+      navigate(cafePath('/order'), { replace: true });
+    }
+  }, [lines.length, navigate, cafePath, submitting, redirecting, leavingToConfirmed]);
 
   const { pricedLines, discountMinor, totalMinor, itemCount } = useCheckoutPricing({
     lines,
@@ -104,10 +109,11 @@ export function Checkout() {
         window.location.assign(data.checkoutUrl);
         return;
       }
+      setLeavingToConfirmed(true);
       clear();
       navigate(cafePath(`/orders/${data.order.id}/confirmed`), {
         replace: true,
-        state: { discountMinor: data.discountMinor ?? 0 },
+        state: { order: data.order, discountMinor: data.discountMinor ?? 0 },
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Order failed');

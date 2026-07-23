@@ -45,7 +45,10 @@ export function CheckoutRestore() {
       .then((data) => {
         rememberOrderTracking(data.order.id, data.trackingToken);
         clear();
-        navigate(cafePath(`/orders/${data.order.id}/confirmed`), { replace: true });
+        navigate(cafePath(`/orders/${data.order.id}/confirmed`), {
+          replace: true,
+          state: { order: data.order, discountMinor: data.discountMinor ?? 0 },
+        });
       })
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Could not restore order');

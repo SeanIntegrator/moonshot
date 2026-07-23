@@ -55,6 +55,15 @@ export function PageTransition({ children, kind = ACTIVE_PAGE_TRANSITION }: Prop
     pendingLocation.current = location;
     if (location.key === renderedLocation.key) return;
 
+    // Same path, new key (e.g. replace to clear location.state) — sync without animating.
+    if (
+      location.pathname === renderedLocation.pathname &&
+      location.search === renderedLocation.search
+    ) {
+      setRenderedLocation(location);
+      return;
+    }
+
     if (reducedMotion) {
       setRenderedLocation(location);
       setPhase('idle');
@@ -64,7 +73,7 @@ export function PageTransition({ children, kind = ACTIVE_PAGE_TRANSITION }: Prop
     // Already exiting toward a newer target — keep exiting; pendingLocation has the latest.
     if (phase === 'exit') return;
     setPhase('exit');
-  }, [location, renderedLocation.key, reducedMotion, phase]);
+  }, [location, renderedLocation.key, renderedLocation.pathname, renderedLocation.search, reducedMotion, phase]);
 
   // Fallback if animationend is swallowed (nested UI) or disabled by CSS.
   useEffect(() => {

@@ -2,24 +2,43 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import type { NormalisedOrder } from '@moonshot/types';
 import { Box, Button, Container, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { fetchCustomerOrder } from '../api/orders-api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
 import { firstName, formatTime } from '../lib/format.js';
 
+type ConfirmedLocationState = {
+  order?: NormalisedOrder;
+  discountMinor?: number;
+};
+
+function seedFromLocation(
+  orderId: string,
+  state: ConfirmedLocationState | null,
+): NormalisedOrder | null {
+  const seeded = state?.order;
+  if (!seeded || !orderId.trim() || seeded.id !== orderId.trim()) return null;
+  return seeded;
+}
+
 export function OrderConfirmed() {
   const { orderId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const cafePath = useCafePath();
   const { user, isSignedIn } = useAuth();
-  const [order, setOrder] = useState<NormalisedOrder | null>(null);
+  const [order, setOrder] = useState<NormalisedOrder | null>(() =>
+    seedFromLocation(orderId, location.state as ConfirmedLocationState | null),
+  );
   const [error, setError] = useState<string | null>(null);
+  const hadSeedRef = useRef(order != null);
 
   const guestTracking = !isSignedIn ? readOrderTracking(orderId.trim()) : null;
 
+  // Background refresh — seed from navigate state so pickup time paints on first frame.
   useEffect(() => {
     if (!orderId.trim()) return;
     void (async () => {
@@ -27,7 +46,10 @@ export function OrderConfirmed() {
         const data = await fetchCustomerOrder(orderId.trim(), guestTracking);
         setOrder(data.order);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Could not load order');
+        // Keep seeded order visible; only surface error when we have nothing to show.
+        if (!hadSeedRef.current) {
+          setError(e instanceof Error ? e.message : 'Could not load order');
+        }
       }
     })();
   }, [orderId, guestTracking, isSignedIn]);

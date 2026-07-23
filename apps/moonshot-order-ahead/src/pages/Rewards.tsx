@@ -38,6 +38,14 @@ export function Rewards() {
   }, [isSignedIn, authLoading, ensureTransactions]);
 
   const redeemed = transactions.filter((t) => t.transactionType === 'reward_redeemed');
+  const rewardsAvailable = summary?.rewardsAvailable ?? 0;
+  // Summary count is source of truth; synthesize placeholders if the list fetch lagged.
+  const rewardCards =
+    rewardsAvailable > 0
+      ? rewards.length > 0
+        ? rewards
+        : Array.from({ length: rewardsAvailable }, (_, i) => ({ id: `summary-reward-${i}` }))
+      : [];
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
@@ -67,8 +75,8 @@ export function Rewards() {
 
           <Box sx={{ mt: 3 }}>
             <SectionHead title="Your rewards" />
-            {rewards.length > 0 ? (
-              rewards.map((reward) => (
+            {rewardCards.length > 0 ? (
+              rewardCards.map((reward) => (
                 <Box
                   key={reward.id}
                   sx={{
@@ -120,7 +128,7 @@ export function Rewards() {
         !loading &&
         summary?.loyaltyEnabled &&
         summary.stamps === 0 &&
-        rewards.length === 0 &&
+        summary.rewardsAvailable === 0 &&
         redeemed.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" fontWeight={700} gutterBottom>
