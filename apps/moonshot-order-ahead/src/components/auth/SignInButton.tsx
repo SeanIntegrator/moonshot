@@ -1,3 +1,4 @@
+import { Typography } from '@mui/material';
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { ensureGoogleInitialized, exchangeGoogleCredential } from '../../lib/auth.js';
@@ -32,7 +33,11 @@ export function SignInButton() {
   }, [clientId, refresh]);
 
   if (!clientId || clientId.includes('your-google-oauth')) {
-    return <p style={{ color: 'var(--color-text-muted)' }}>Set a real VITE_GOOGLE_CLIENT_ID to enable sign-in.</p>;
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Set a real VITE_GOOGLE_CLIENT_ID to enable sign-in.
+      </Typography>
+    );
   }
 
   return <div ref={ref} />;

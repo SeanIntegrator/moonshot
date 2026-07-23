@@ -10,6 +10,9 @@ const defaultCafeLayout = {
 /**
  * Functional default MUI system (components, density, typography scale).
  * Café-specific colours/fonts are layered on via `createTheme(baseMuiTheme, cafeLayer)`.
+ *
+ * Component styleOverrides must use theme callbacks (not hex literals) so café palette
+ * merges actually re-skin buttons, paper, chips, and toggle controls.
  */
 export const baseMuiThemeOptions: ThemeOptions = {
   shape: { borderRadius: 10 },
@@ -52,26 +55,56 @@ export const baseMuiThemeOptions: ThemeOptions = {
     MuiButton: {
       defaultProps: { variant: 'contained', disableElevation: true },
       styleOverrides: {
-        root: { borderRadius: 12, fontWeight: 700 },
-        containedPrimary: {
-          backgroundColor: '#0d1b3d',
-          '&:hover': { backgroundColor: '#16295a' },
-        },
+        root: ({ theme }) => ({
+          borderRadius: theme.shape.borderRadius * 1.2,
+          fontWeight: 700,
+        }),
+        containedPrimary: ({ theme }) => ({
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.primary.contrastText,
+          '&:hover': {
+            backgroundColor: theme.palette.primary.dark || theme.palette.primary.main,
+          },
+        }),
+        outlined: ({ theme }) => ({
+          borderColor: theme.palette.divider,
+          color: theme.palette.text.primary,
+        }),
       },
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           backgroundImage: 'none',
-          border: '1px solid #dbe3f1',
-        },
+          border: `1px solid ${theme.palette.divider}`,
+        }),
       },
     },
     MuiLink: {
       styleOverrides: { root: { fontWeight: 600 } },
     },
     MuiChip: {
-      styleOverrides: { root: { fontWeight: 600 } },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontWeight: 600,
+          borderColor: theme.palette.divider,
+        }),
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          color: theme.palette.text.primary,
+        }),
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+        },
+      },
     },
   },
 };

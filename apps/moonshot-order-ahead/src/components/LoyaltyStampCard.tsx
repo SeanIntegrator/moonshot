@@ -3,6 +3,13 @@ import CheckIcon from '@mui/icons-material/Check';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import { Box, Button, Typography } from '@mui/material';
+import {
+  LoyaltyCardShell,
+  LoyaltyHeroQrButton,
+  LoyaltyHeroShell,
+  LoyaltyRewardsLink,
+  LoyaltyStampSlot,
+} from './ui/LoyaltySurfaces.js';
 
 type Props = {
   filled: number;
@@ -34,27 +41,10 @@ export function LoyaltyStampCard({
   const footer = loyaltyFooterMessage(rewardsAvailable, filled, total);
   const hasReward = rewardsAvailable > 0;
   const showRewardsLink = hasReward && Boolean(onRewardsClick);
+  const Shell = hero ? LoyaltyHeroShell : LoyaltyCardShell;
 
   return (
-    <Box
-      sx={{
-        ...(hero
-          ? {
-              bgcolor: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.14)',
-              borderRadius: 1.5,
-              p: 1.5,
-              mt: 2,
-            }
-          : {
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1.5,
-              p: 2,
-              bgcolor: 'background.paper',
-            }),
-      }}
-    >
+    <Shell>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography
           variant="caption"
@@ -68,26 +58,16 @@ export function LoyaltyStampCard({
         >
           Loyalty
         </Typography>
-        {onShowQr && (
-          <Button
-            size="small"
-            variant={hero ? 'contained' : 'outlined'}
-            startIcon={<QrCode2Icon fontSize="small" />}
-            onClick={onShowQr}
-            sx={
-              hero
-                ? {
-                    bgcolor: 'rgba(255,255,255,0.12)',
-                    color: 'common.white',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-                  }
-                : undefined
-            }
-          >
-            Show QR
-          </Button>
-        )}
+        {onShowQr &&
+          (hero ? (
+            <LoyaltyHeroQrButton size="small" variant="contained" startIcon={<QrCode2Icon fontSize="small" />} onClick={onShowQr}>
+              Show QR
+            </LoyaltyHeroQrButton>
+          ) : (
+            <Button size="small" variant="outlined" startIcon={<QrCode2Icon fontSize="small" />} onClick={onShowQr}>
+              Show QR
+            </Button>
+          ))}
       </Box>
       <Box
         sx={{
@@ -97,57 +77,47 @@ export function LoyaltyStampCard({
         }}
       >
         {Array.from({ length: total }).map((_, i) => (
-          <Box
-            key={i}
-            sx={{
-              aspectRatio: '1',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: i < filled ? (hero ? 'common.white' : 'primary.main') : 'transparent',
-              border: i < filled ? 'none' : '1px dashed',
-              borderColor: hero ? 'rgba(255,255,255,0.35)' : 'divider',
-            }}
-          >
+          <LoyaltyStampSlot key={i} filled={i < filled} hero={hero}>
             {i < filled && (
               <CheckIcon sx={{ fontSize: 14, color: hero ? 'primary.main' : 'primary.contrastText' }} />
             )}
-          </Box>
+          </LoyaltyStampSlot>
         ))}
       </Box>
       {hasReward ? (
-        <Box
-          component={showRewardsLink ? 'button' : 'div'}
-          {...(showRewardsLink ? { type: 'button' as const, onClick: onRewardsClick } : {})}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: 0.5,
-            mt: 1,
-            width: '100%',
-            opacity: hero ? 0.9 : 1,
-            color: hero ? 'inherit' : 'text.secondary',
-            ...(showRewardsLink
-              ? {
-                  appearance: 'none',
-                  border: 0,
-                  background: 'none',
-                  p: 0,
-                  cursor: 'pointer',
-                  font: 'inherit',
-                  textAlign: 'inherit',
-                }
-              : null),
-          }}
-        >
-          <CardGiftcardIcon sx={{ fontSize: 14 }} />
-          <Typography variant="caption" sx={{ color: 'inherit' }}>
-            {footer}
-          </Typography>
-          {showRewardsLink && <ChevronRightIcon sx={{ fontSize: 14 }} />}
-        </Box>
+        showRewardsLink ? (
+          <LoyaltyRewardsLink
+            onClick={onRewardsClick}
+            sx={{
+              opacity: hero ? 0.9 : 1,
+              color: hero ? 'inherit' : 'text.secondary',
+            }}
+          >
+            <CardGiftcardIcon sx={{ fontSize: 14 }} />
+            <Typography variant="caption" sx={{ color: 'inherit' }}>
+              {footer}
+            </Typography>
+            <ChevronRightIcon sx={{ fontSize: 14 }} />
+          </LoyaltyRewardsLink>
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: 0.5,
+              mt: 1,
+              width: '100%',
+              opacity: hero ? 0.9 : 1,
+              color: hero ? 'inherit' : 'text.secondary',
+            }}
+          >
+            <CardGiftcardIcon sx={{ fontSize: 14 }} />
+            <Typography variant="caption" sx={{ color: 'inherit' }}>
+              {footer}
+            </Typography>
+          </Box>
+        )
       ) : (
         <Typography
           variant="caption"
@@ -161,6 +131,6 @@ export function LoyaltyStampCard({
           {footer}
         </Typography>
       )}
-    </Box>
+    </Shell>
   );
 }

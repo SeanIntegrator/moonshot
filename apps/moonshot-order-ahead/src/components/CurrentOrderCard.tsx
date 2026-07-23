@@ -1,7 +1,7 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import type { NormalisedOrder } from '@moonshot/types';
-import { Box, Chip, Divider, Typography } from '@mui/material';
+import { Box, Button, Chip, Divider, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { formatTime, modifierSummary } from '../lib/format.js';
 import { getOrderStatusMeta } from '../lib/order-status.js';
@@ -113,32 +113,15 @@ type OrderNowProps = {
 
 export function OrderNowButton({ onClick }: OrderNowProps) {
   return (
-    <Box
-      component="button"
+    <Button
+      variant="outlined"
+      fullWidth
       onClick={onClick}
-      sx={{
-        mt: 2,
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 1,
-        py: 1.75,
-        px: 2,
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: (theme) => `${theme.shape.borderRadius}px`,
-        bgcolor: 'background.paper',
-        color: 'text.primary',
-        fontWeight: 600,
-        fontSize: '1.05rem',
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-      }}
+      startIcon={<LocalCafeIcon fontSize="small" />}
+      endIcon={<ChevronRightIcon fontSize="small" />}
+      sx={{ mt: 2, py: 1.75, fontSize: '1.05rem' }}
     >
-      <LocalCafeIcon fontSize="small" />
       Order now
-      <ChevronRightIcon fontSize="small" />
-    </Box>
+    </Button>
   );
 }

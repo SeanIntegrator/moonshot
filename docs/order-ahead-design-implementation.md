@@ -55,3 +55,4 @@ This document captures the substantial order-ahead work completed across the rec
 
 - Keep visual styles driven by theme tokens rather than one-off per-page colors to preserve white-label theming flexibility.
 - If future brand variants are introduced, extend theme layers per café without changing base interaction components.
+- Styling conventions (theme vs styled vs `sx` vs CSS): see [order-ahead-styling.md](./order-ahead-styling.md).

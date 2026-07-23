@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { formatModifierDelta } from '../lib/format.js';
 import { sortOptionsForSlider } from '../lib/modifier-slider-groups.js';
+import { StepSliderLabelButton, StepSliderThumb, StepSliderTrack } from './ui/StepSliderParts.js';
 
 type Props = {
   group: NormalisedModifierGroup;
@@ -132,7 +133,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
         ) : null}
       </Box>
 
-      <Box
+      <StepSliderTrack
         ref={trackRef}
         role="slider"
         tabIndex={0}
@@ -146,17 +147,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
         onKeyDown={onKeyDown}
-        sx={{
-          position: 'relative',
-          height: 28,
-          mx: 0.5,
-          cursor: options.length > 1 ? 'pointer' : 'default',
-          touchAction: 'none',
-          outline: 'none',
-          '&:focus-visible .step-slider-thumb': {
-            boxShadow: (theme) => `0 0 0 3px ${theme.palette.primary.main}33`,
-          },
-        }}
+        sx={{ cursor: options.length > 1 ? 'pointer' : 'default' }}
       >
         <Box
           aria-hidden
@@ -203,27 +194,8 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
             }}
           />
         ))}
-        <Box
-          aria-hidden
-          className="step-slider-thumb"
-          sx={{
-            position: 'absolute',
-            left: `${thumbPct}%`,
-            top: '50%',
-            width: 20,
-            height: 20,
-            ml: '-10px',
-            mt: '-10px',
-            borderRadius: '50%',
-            bgcolor: 'primary.main',
-            border: '2px solid',
-            borderColor: 'common.white',
-            boxShadow: 1,
-            pointerEvents: 'none',
-            transition: dragging ? 'none' : 'left 120ms ease-out',
-          }}
-        />
-      </Box>
+        <StepSliderThumb aria-hidden dragging={dragging} sx={{ left: `${thumbPct}%` }} />
+      </StepSliderTrack>
 
       <Box sx={{ position: 'relative', minHeight: 32, mx: 0.5, mt: 0.25, mb: 0.5 }}>
         {options.map((opt, i) => {
@@ -232,18 +204,14 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
           const label = optionLabel(opt.name, opt.chipLabel);
           const delta = formatModifierDelta(opt.priceMinor);
           return (
-            <Box
+            <StepSliderLabelButton
               key={opt.id}
               onClick={() => selectIndex(i)}
               sx={{
-                position: 'absolute',
                 left: `${stepPercent(i, options.length)}%`,
-                top: 0,
                 transform: isFirst ? 'none' : isLast ? 'translateX(-100%)' : 'translateX(-50%)',
                 maxWidth: labelMaxWidth,
                 textAlign: isFirst ? 'left' : isLast ? 'right' : 'center',
-                cursor: 'pointer',
-                userSelect: 'none',
               }}
             >
               <Typography
@@ -264,7 +232,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
                   </>
                 ) : null}
               </Typography>
-            </Box>
+            </StepSliderLabelButton>
           );
         })}
       </Box>

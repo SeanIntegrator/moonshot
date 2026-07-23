@@ -12,6 +12,7 @@ import { QuantityStepper } from '../components/QuantityStepper.js';
 import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
 import { ItemDetailSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
+import { FixedBottomBar } from '../components/ui/FixedBottomBar.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { formatPriceTag } from '../lib/format.js';
@@ -188,25 +189,7 @@ export function ItemDetail() {
         />
       </Container>
 
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          maxWidth: 600,
-          mx: 'auto',
-          px: 2,
-          py: 1.5,
-          bgcolor: 'background.paper',
-          borderTop: 1,
-          borderColor: 'divider',
-          display: 'flex',
-          gap: 1.5,
-          alignItems: 'center',
-          zIndex: (t) => t.zIndex.appBar,
-        }}
-      >
+      <FixedBottomBar>
         <QuantityStepper value={quantity} onChange={setQuantity} disabled={cafeClosed} />
         <Button
           variant="contained"
@@ -235,7 +218,7 @@ export function ItemDetail() {
             ? 'Cafe is currently closed'
             : `Add${formatPriceTag(lineUnit * quantity, item.currency) ? ` · ${formatPriceTag(lineUnit * quantity, item.currency)}` : ''}`}
         </Button>
-      </Box>
+      </FixedBottomBar>
     </Box>
   );
 }

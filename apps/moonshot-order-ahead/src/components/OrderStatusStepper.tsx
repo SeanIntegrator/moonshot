@@ -1,5 +1,6 @@
 import CheckIcon from '@mui/icons-material/Check';
 import { Box, Typography } from '@mui/material';
+import { StepCircle } from './ui/StepCircle.js';
 
 const STEPS = ['Confirmed', 'Preparing', 'Ready', 'Done'] as const;
 
@@ -28,24 +29,9 @@ export function OrderStatusStepper({ stepIndex, completed = false }: Props) {
           const active = !completed && i === stepIndex;
           return (
             <Box key={label} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, flex: 1 }}>
-              <Box
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: done || active ? 'primary.main' : 'background.paper',
-                  border: done || active ? 'none' : 1,
-                  borderColor: 'divider',
-                  color: done || active ? 'primary.contrastText' : 'text.secondary',
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
+              <StepCircle emphasized={done || active}>
                 {done ? <CheckIcon sx={{ fontSize: 16 }} /> : i + 1}
-              </Box>
+              </StepCircle>
               <Typography
                 variant="caption"
                 color={active ? 'text.primary' : 'text.secondary'}

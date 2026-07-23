@@ -1,25 +1,14 @@
 import type { NormalisedModifierGroup, OrderLineModifierSelectionInput } from '@moonshot/types';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Box, Chip, IconButton, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useEffect, useRef, useState } from 'react';
 import { formatModifierDelta } from '../lib/format.js';
+import { OptionColorDot, OptionTile } from './ui/OptionTile.js';
 
 function colorDot(hex: string | null | undefined) {
   if (!hex) return null;
-  return (
-    <Box
-      component="span"
-      sx={{
-        width: 10,
-        height: 10,
-        borderRadius: '50%',
-        bgcolor: hex,
-        border: '0.5px solid',
-        borderColor: 'divider',
-        flexShrink: 0,
-      }}
-    />
-  );
+  return <OptionColorDot sx={{ bgcolor: hex }} />;
 }
 
 /** Shared price for a multi group when every option costs the same (e.g. syrups +30p). */
@@ -33,20 +22,29 @@ function uniformGroupDelta(group: NormalisedModifierGroup): string {
 
 const OPTION_TRANSITION = 'background-color 180ms ease, border-color 180ms ease';
 
-/** Shared selected / idle surfaces for milks, beans, and syrups. */
-const selectedOptionSx = {
-  border: '0.5px solid',
-  borderColor: 'text.primary',
-  bgcolor: 'action.selected',
-  transition: OPTION_TRANSITION,
-} as const;
-
-const idleOptionSx = {
-  border: '0.5px solid',
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  transition: OPTION_TRANSITION,
-} as const;
+/** Multi-select chip surfaces — selected/idle from theme palette. */
+const OptionChip = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== 'selected',
+})<{ selected?: boolean }>(({ theme, selected }) => {
+  const surface = {
+    border: '0.5px solid',
+    borderColor: selected ? theme.palette.text.primary : theme.palette.divider,
+    backgroundColor: selected ? theme.palette.action.selected : theme.palette.background.paper,
+    transition: OPTION_TRANSITION,
+  };
+  return {
+    borderRadius: 999,
+    ...surface,
+    color: theme.palette.text.primary,
+    fontWeight: 600,
+    WebkitTapHighlightColor: 'transparent',
+    // Keep press/hover fill identical to idle/selected so it doesn't mimic selection.
+    '&.MuiChip-clickable:hover': surface,
+    '&.MuiChip-clickable:active': surface,
+    '&.Mui-focusVisible': surface,
+    '& .MuiTouchRipple-root': { display: 'none' },
+  };
+});
 
 type Props = {
   group: NormalisedModifierGroup;
@@ -104,11 +102,11 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
           >
             {group.options.map((opt) => {
               const selected = picked.has(opt.id);
-              const surface = selected ? selectedOptionSx : idleOptionSx;
               return (
-                <Chip
+                <OptionChip
                   key={opt.id}
                   clickable
+                  selected={selected}
                   label={
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       {colorDot(opt.colorHex)}
@@ -116,18 +114,6 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                     </Box>
                   }
                   onClick={() => onSelect(group.id, opt.id, 'multi', !selected)}
-                  sx={{
-                    borderRadius: 999,
-                    ...surface,
-                    color: 'text.primary',
-                    fontWeight: 600,
-                    WebkitTapHighlightColor: 'transparent',
-                    // Keep press/hover fill identical to idle/selected so it doesn't mimic selection.
-                    '&.MuiChip-clickable:hover': surface,
-                    '&.MuiChip-clickable:active': surface,
-                    '&.Mui-focusVisible': surface,
-                    '& .MuiTouchRipple-root': { display: 'none' },
-                  }}
                 />
               );
             })}
@@ -186,35 +172,16 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
         {group.options.map((opt) => {
           const selected = picked.has(opt.id);
           const delta = formatModifierDelta(opt.priceMinor);
-          const surface = selected ? selectedOptionSx : idleOptionSx;
           return (
-            <Box
+            <OptionTile
               key={opt.id}
-              component="button"
-              type="button"
+              selected={selected}
               onClick={() => {
                 if (group.selectionType === 'single') {
                   onSelect(group.id, opt.id, 'single', true);
                 } else {
                   onSelect(group.id, opt.id, 'multi', !selected);
                 }
-              }}
-              sx={{
-                textAlign: 'left',
-                p: 1.25,
-                borderRadius: 1.25,
-                ...surface,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                color: 'text.primary',
-                WebkitTapHighlightColor: 'transparent',
-                appearance: 'none',
-                '&:active': {
-                  bgcolor: selected ? 'action.selected' : 'background.paper',
-                },
-                '&:focus': {
-                  outline: 'none',
-                },
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
@@ -233,7 +200,7 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
                   </Typography>
                 ) : null}
               </Box>
-            </Box>
+            </OptionTile>
           );
         })}
       </Box>

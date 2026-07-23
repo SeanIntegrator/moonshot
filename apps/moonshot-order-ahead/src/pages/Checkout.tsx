@@ -6,7 +6,6 @@ import {
   CircularProgress,
   Container,
   ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
@@ -17,6 +16,7 @@ import { PageHeader } from '../components/PageHeader.js';
 import { PickupTimeChip } from '../components/PickupTimeChip.js';
 import { RewardRow } from '../components/RewardRow.js';
 import { CheckoutPageSkeleton } from '../components/skeletons/PageSkeletons.js';
+import { SegmentedToggleGroup } from '../components/ui/SegmentedToggleGroup.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
@@ -206,43 +206,16 @@ export function Checkout() {
           <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
             Allergy info
           </Typography>
-          <ToggleButtonGroup
+          <SegmentedToggleGroup
             exclusive
             fullWidth
             value={allergyMode}
             onChange={(_, v) => v && setAllergyMode(v)}
             size="small"
-            sx={{
-              mb: 1,
-              bgcolor: 'action.hover',
-              borderRadius: 999,
-              p: 0.5,
-              border: 0,
-              '& .MuiToggleButtonGroup-grouped': {
-                border: 0,
-                borderRadius: '999px !important',
-                mx: 0,
-                flex: 1,
-              },
-              '& .MuiToggleButton-root': {
-                border: 0,
-                borderRadius: 999,
-                py: 1,
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                color: 'text.secondary',
-                '&.Mui-selected': {
-                  bgcolor: 'background.paper',
-                  color: 'text.primary',
-                  boxShadow: 1,
-                },
-              },
-            }}
           >
             <ToggleButton value="none">None</ToggleButton>
             <ToggleButton value="allergies">I have allergies</ToggleButton>
-          </ToggleButtonGroup>
+          </SegmentedToggleGroup>
           {allergyMode === 'allergies' && (
             <AllergyChecklist selected={checkoutAllergens} onChange={setCheckoutAllergens} />
           )}

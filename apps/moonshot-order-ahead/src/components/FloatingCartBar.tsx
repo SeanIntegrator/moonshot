@@ -1,9 +1,10 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
-import { Box, Button, Slide, Typography } from '@mui/material';
+import { Box, Slide, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { formatMoney } from '../lib/format.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { FloatingCartButton, FloatingClosedBanner } from './ui/FixedBottomBar.js';
 
 type Props = {
   itemCount: number;
@@ -38,45 +39,13 @@ export function FloatingCartBar({
         }}
       >
         {cafeClosed ? (
-          <Box
-            role="status"
-            sx={{
-              py: 1.5,
-              px: 2,
-              bgcolor: 'warning.main',
-              color: 'warning.contrastText',
-              borderRadius: 0,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
-          >
+          <FloatingClosedBanner role="status">
             <Typography variant="body2" fontWeight={600}>
               {closedMessage}
             </Typography>
-          </Box>
+          </FloatingClosedBanner>
         ) : (
-          <Button
-            component={RouterLink}
-            to={cafePath('/checkout')}
-            fullWidth
-            sx={{
-              py: 1.5,
-              px: 2,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              borderRadius: 0,
-              display: 'flex',
-              justifyContent: 'space-between',
-              WebkitTapHighlightColor: 'transparent',
-              transition: 'background-color 180ms ease, transform 180ms ease',
-              '&:active': {
-                transform: 'scale(0.99)',
-                bgcolor: 'primary.dark',
-              },
-            }}
-          >
+          <FloatingCartButton component={RouterLink} to={cafePath('/checkout')} fullWidth>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <ShoppingBagOutlinedIcon fontSize="small" />
               <Typography variant="body2" fontWeight={600}>
@@ -86,7 +55,7 @@ export function FloatingCartBar({
             <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center' }}>
               Checkout <ChevronRightIcon fontSize="small" />
             </Typography>
-          </Button>
+          </FloatingCartButton>
         )}
       </Box>
     </Slide>

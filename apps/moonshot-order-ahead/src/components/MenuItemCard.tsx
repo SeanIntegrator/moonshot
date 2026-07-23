@@ -7,6 +7,8 @@ import { isMenuImageReady } from '../lib/menu-image-cache.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { MenuItemImage } from './MenuItemImage.js';
+import { PressableCard } from './ui/PressableCard.js';
+import { QtyBadge } from './ui/QtyBadge.js';
 
 type Props = {
   item: NormalisedMenuItem;
@@ -22,25 +24,14 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
     : formatPriceTag(listMinor, item.currency);
   const [imageReady, setImageReady] = useState(() => isMenuImageReady(item.imageUrl));
   const handleReady = useCallback((ready: boolean) => setImageReady(ready), []);
+  const badgeVisible = qty > 0 && imageReady;
 
   return (
     <Box sx={{ position: 'relative' }}>
-      <Box
+      <PressableCard
         component={RouterLink}
         to={cafePath(`/order/item/${item.id}`)}
-        className="pressable-card"
-        sx={{
-          display: 'block',
-          textDecoration: 'none',
-          color: 'inherit',
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1.25,
-          overflow: 'hidden',
-          bgcolor: 'background.paper',
-          WebkitTapHighlightColor: 'transparent',
-          position: 'relative',
-        }}
+        sx={{ position: 'relative' }}
       >
         <MenuItemImage
           src={item.imageUrl}
@@ -81,32 +72,10 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
             </Box>
           </Box>
         )}
-      </Box>
-      <Box
-        aria-hidden={qty === 0}
-        sx={{
-          position: 'absolute',
-          bottom: 52,
-          right: 8,
-          width: 32,
-          height: 32,
-          borderRadius: '50%',
-          bgcolor: qty > 0 ? 'primary.main' : 'transparent',
-          color: 'primary.contrastText',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 13,
-          fontWeight: 700,
-          opacity: qty > 0 && imageReady ? 1 : 0,
-          transform: qty > 0 && imageReady ? 'scale(1)' : 'scale(0.6)',
-          transition: 'opacity 180ms ease, transform 180ms ease, background-color 180ms ease',
-          pointerEvents: 'none',
-          zIndex: 1,
-        }}
-      >
+      </PressableCard>
+      <QtyBadge aria-hidden={qty === 0} visible={badgeVisible}>
         {qty > 0 ? qty : null}
-      </Box>
+      </QtyBadge>
     </Box>
   );
 }

@@ -1,13 +1,14 @@
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import type { PickupEstimateResponse } from '@moonshot/types';
-import { alpha, Box, Chip, Menu, MenuItem, Typography } from '@mui/material';
+import { Box, Chip, Menu, MenuItem, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { formatTime } from '../lib/format.js';
 import {
   pickupDelayOptions,
   type PickupDelayMinutes,
 } from '../lib/pickup-delay-options.js';
+import { PickupTimeFieldButton, pickupChipSx } from './ui/PickupTimeFieldButton.js';
 
 export type { PickupDelayMinutes } from '../lib/pickup-delay-options.js';
 export { pickupDelayOptions } from '../lib/pickup-delay-options.js';
@@ -88,34 +89,7 @@ export function PickupTimeChip({
   if (variant === 'field') {
     return (
       <>
-        <Box
-          component="button"
-          type="button"
-          onClick={(e) => setAnchorEl(e.currentTarget)}
-          sx={{
-            width: '100%',
-            textAlign: 'left',
-            p: 1.5,
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1.25,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            minHeight: 72,
-            bgcolor: 'background.paper',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            color: 'text.primary',
-            appearance: 'none',
-            WebkitTapHighlightColor: 'transparent',
-            '&:focus-visible': {
-              outline: 2,
-              outlineColor: 'primary.main',
-              outlineOffset: 2,
-            },
-          }}
-        >
+        <PickupTimeFieldButton onClick={(e) => setAnchorEl(e.currentTarget)}>
           <AccessTimeIcon color="action" />
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="body1" fontWeight={700}>
@@ -127,7 +101,7 @@ export function PickupTimeChip({
             </Typography>
           </Box>
           <KeyboardArrowDownIcon sx={{ color: 'text.secondary', flexShrink: 0 }} />
-        </Box>
+        </PickupTimeFieldButton>
         {menu}
       </>
     );
@@ -148,15 +122,7 @@ export function PickupTimeChip({
           </Box>
         }
         variant="filled"
-        sx={(theme) => ({
-          height: 'auto',
-          py: 0.625,
-          border: 'none',
-          bgcolor: alpha(theme.palette.primary.main, 0.08),
-          '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.12) },
-          '& .MuiChip-label': { px: 0.5 },
-          '& .MuiChip-icon': { ml: 1, mr: 0.75, color: 'text.secondary' },
-        })}
+        sx={pickupChipSx}
       />
       {menu}
     </>

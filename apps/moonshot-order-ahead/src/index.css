@@ -1,4 +1,6 @@
-/* App shell: MUI CssBaseline supplies typography/scrollbars; keep structural minimum */
+/* App shell: MUI CssBaseline supplies typography/scrollbars; keep structural minimum.
+ * Brand colours live on the MUI theme — see docs/order-ahead-styling.md.
+ */
 *,
 *::before,
 *::after {
@@ -26,16 +28,6 @@ svg {
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Mobile tap feedback — no hover dependency */
-.pressable-card {
-  transition: transform var(--motion-duration) var(--motion-ease);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.pressable-card:active {
-  transform: scale(0.97);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -44,9 +36,5 @@ svg {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-
-  .pressable-card:active {
-    transform: none;
   }
 }

@@ -5,6 +5,7 @@ import {
   Link,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard.js';
@@ -13,6 +14,7 @@ import { QrModal } from '../components/QrModal.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { UsualSuggestCard } from '../components/UsualSuggestCard.js';
 import { HomePageSkeleton } from '../components/skeletons/PageSkeletons.js';
+import { PressableCard } from '../components/ui/PressableCard.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
@@ -106,7 +108,12 @@ export function Home() {
             <Avatar
               src={user.avatarUrl ?? undefined}
               alt=""
-              sx={{ width: 36, height: 36, border: '1.5px solid', borderColor: 'rgba(255,255,255,0.3)' }}
+              sx={(theme) => ({
+                width: 36,
+                height: 36,
+                border: '1.5px solid',
+                borderColor: alpha(theme.palette.cafe.heroText, 0.3),
+              })}
             >
               {name.charAt(0).toUpperCase()}
             </Avatar>
@@ -184,20 +191,13 @@ export function Home() {
             />
             <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1, scrollbarWidth: 'none' }}>
               {featured.map((item) => (
-                <Box
+                <PressableCard
                   key={item.id}
                   component={RouterLink}
                   to={cafePath(`/order/item/${item.id}`)}
-                  className="pressable-card"
                   sx={{
                     flexShrink: 0,
                     width: 180,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    border: 1,
-                    borderColor: 'divider',
-                    borderRadius: 1.25,
-                    overflow: 'hidden',
                   }}
                 >
                   <MenuItemImage
@@ -218,7 +218,7 @@ export function Home() {
                         : formatMoney(menuItemListPriceMinor(item), item.currency)}
                     </Typography>
                   </Box>
-                </Box>
+                </PressableCard>
               ))}
             </Box>
           </Box>
