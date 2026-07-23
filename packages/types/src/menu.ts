@@ -96,6 +96,13 @@ export interface NormalisedMenuItem {
   sizes: NormalisedItemSize[];
   modifierGroups: NormalisedModifierGroup[];
   tags: string[];
+  /** Drink archetype id when set — drives default modifier attachment in admin. */
+  archetype: string | null;
+  /**
+   * When true, Milks option prices are treated as £0 for this item
+   * (display + checkout). Typical for low-milk drinks (americano, tea).
+   */
+  waiveMilkSurcharge: boolean;
 }
 
 /** Café-scoped reusable modifier section (Milks, Syrups, Toppings) — admin library shape */

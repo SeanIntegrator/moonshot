@@ -270,3 +270,69 @@ export async function deleteMenuSection(
     throw new Error(envelope.error || `Delete menu section failed (${res.status})`);
   }
 }
+
+export type DrinkArchetypeConfigPayload = {
+  recipes: Record<string, import('@moonshot/types').DrinkArchetypeDef>;
+  config: import('@moonshot/types').CafeDrinkArchetypeConfig;
+  catalogue: readonly import('@moonshot/types').DrinkArchetypeDef[];
+};
+
+export async function fetchDrinkArchetypes(
+  token: string,
+  cafeSlug: string,
+): Promise<DrinkArchetypeConfigPayload> {
+  const res = await fetch(apiUrl('/menu/drink-archetypes'), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+  });
+  const envelope = await parseEnvelope<DrinkArchetypeConfigPayload>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Failed to load drink types (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function patchDrinkArchetypes(
+  token: string,
+  cafeSlug: string,
+  config: import('@moonshot/types').CafeDrinkArchetypeConfig,
+): Promise<DrinkArchetypeConfigPayload> {
+  const res = await fetch(apiUrl('/menu/drink-archetypes'), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: JSON.stringify({ config }),
+  });
+  const envelope = await parseEnvelope<DrinkArchetypeConfigPayload>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Failed to save drink types (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function applyDrinkArchetypeToItems(
+  token: string,
+  cafeSlug: string,
+  archetypeId: string,
+): Promise<{ updatedCount: number }> {
+  const res = await fetch(
+    apiUrl(`/menu/drink-archetypes/${encodeURIComponent(archetypeId)}/apply`),
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Cafe-Slug': cafeSlug,
+      },
+    },
+  );
+  const envelope = await parseEnvelope<{ updatedCount: number }>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Failed to apply drink type (${res.status})`);
+  }
+  return envelope.data;
+}

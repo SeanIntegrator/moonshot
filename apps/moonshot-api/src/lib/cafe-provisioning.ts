@@ -1,5 +1,5 @@
 import type { CafeFeatures, KdsConfig } from '@moonshot/types';
-import { defaultWeekdayCafeHours } from '@moonshot/types';
+import { defaultWeekdayCafeHours, platformDrinkArchetypeConfig } from '@moonshot/types';
 import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { hashKdsPassword } from './kds-password.js';
@@ -46,11 +46,12 @@ export function defaultNewCafeKdsConfig(): Omit<KdsConfig, 'cafeId'> {
     },
     modifierClassification: {
       coffeeModifiers: ['Milks', 'Milk'],
-      additions: ['Syrups', 'Extras'],
+      additions: ['Syrups', 'Extras', 'Toppings'],
       shots: ['Shots'],
       beans: ['Beans'],
       milkTemperature: ['Milk Temperature'],
       milkTexture: ['Milk Texture'],
+      iceLevel: ['Ice Level'],
     },
     timerThresholds: { greenMax: 3, amberMax: 5 },
     layout: { columns: 3, groupBy: 'order_type' },
@@ -120,8 +121,8 @@ async function insertCafeWithAdmin(
   const kdsConfig = defaultNewCafeKdsConfig();
 
   const cafeInsert = await client.query<{ id: string }>(
-    `INSERT INTO cafes (name, slug, pos_provider, features, theme_id, kds_config, timezone, hours)
-     VALUES ($1, $2, 'manual', $3::jsonb, 'heritage', $4::jsonb, $5, $6::jsonb)
+    `INSERT INTO cafes (name, slug, pos_provider, features, theme_id, kds_config, timezone, hours, drink_archetype_config)
+     VALUES ($1, $2, 'manual', $3::jsonb, 'heritage', $4::jsonb, $5, $6::jsonb, $7::jsonb)
      RETURNING id`,
     [
       name,
@@ -130,6 +131,7 @@ async function insertCafeWithAdmin(
       JSON.stringify(kdsConfig),
       timezone,
       JSON.stringify(defaultWeekdayCafeHours()),
+      JSON.stringify(platformDrinkArchetypeConfig()),
     ],
   );
   const cafeId = cafeInsert.rows[0]!.id;

@@ -4,6 +4,7 @@ import type { MenuCategory } from './menu.js';
 export type MenuTemplateDrinkKey =
   | 'espresso'
   | 'americano'
+  | 'macchiato'
   | 'cortado'
   | 'flat-white'
   | 'latte'
@@ -13,7 +14,6 @@ export type MenuTemplateDrinkKey =
   | 'breakfast-tea'
   | 'chai-latte'
   | 'matcha-latte'
-  | 'babycino'
   | 'iced-latte'
   | 'iced-americano'
   | 'iced-chocolate'
@@ -144,6 +144,14 @@ export const MENU_TEMPLATE_CATEGORIES: MenuTemplateCategoryDef[] = [
         subcategory: 'coffee',
       }),
       DRINK({
+        key: 'macchiato',
+        name: 'Macchiato',
+        category: 'hot_drinks',
+        defaultSelected: true,
+        defaultDescription: 'Espresso marked with a dollop of steamed milk.',
+        subcategory: 'coffee',
+      }),
+      DRINK({
         key: 'cortado',
         name: 'Cortado',
         category: 'hot_drinks',
@@ -214,14 +222,6 @@ export const MENU_TEMPLATE_CATEGORIES: MenuTemplateCategoryDef[] = [
         defaultSelected: false,
         defaultDescription: 'Ceremonial matcha whisked with steamed milk.',
         subcategory: 'matcha',
-      }),
-      DRINK({
-        key: 'babycino',
-        name: 'Babycino',
-        category: 'hot_drinks',
-        defaultSelected: false,
-        defaultDescription: 'Warm frothy milk for little ones.',
-        subcategory: 'coffee',
       }),
     ],
   },

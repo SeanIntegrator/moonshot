@@ -3,6 +3,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useCallback, useEffect, useState } from 'react';
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
 import { fetchMenuForAdmin, fetchMenuSections, fetchModifierGroups } from '../../lib/admin-api.js';
+import { DrinkArchetypesPanel } from './DrinkArchetypesPanel.js';
 import { MenuItemsPanel } from './MenuItemsPanel.js';
 import { ModifierLibraryEditor } from './ModifierLibraryEditor.js';
 
@@ -118,6 +119,7 @@ export function MenuManager({ cafeSlug, token }: Props) {
             <Tabs value={tab} onChange={(_, v) => setTab(v)}>
               <Tab label="Items" />
               <Tab label="Sections (milks, syrups…)" />
+              <Tab label="Drink types" />
             </Tabs>
             {tab === 0 && (
               <Button
@@ -144,6 +146,9 @@ export function MenuManager({ cafeSlug, token }: Props) {
           </Box>
           <Box hidden={tab !== 1}>
             <ModifierLibraryEditor cafeSlug={cafeSlug} token={token} onLibraryChanged={softReload} />
+          </Box>
+          <Box hidden={tab !== 2}>
+            <DrinkArchetypesPanel cafeSlug={cafeSlug} token={token} />
           </Box>
         </Box>
 

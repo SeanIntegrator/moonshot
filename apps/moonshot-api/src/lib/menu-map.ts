@@ -22,6 +22,8 @@ export type MenuItemRow = {
   tags: string[];
   modifier_groups: unknown;
   sizes: unknown;
+  archetype: string | null;
+  waive_milk_surcharge: boolean;
 };
 
 export type ModifierGroupRow = {
@@ -123,12 +125,29 @@ export function mergeModifierGroups(
     .filter((g): g is NormalisedModifierGroup => g != null);
 }
 
+/** Zero Milks option prices when the item waives alt-milk surcharge. */
+export function applyMilkSurchargeWaiver(
+  groups: NormalisedModifierGroup[],
+  waiveMilkSurcharge: boolean,
+): NormalisedModifierGroup[] {
+  if (!waiveMilkSurcharge) return groups;
+  return groups.map((g) => {
+    if (g.name !== 'Milks' && g.name !== 'Milk') return g;
+    return {
+      ...g,
+      options: g.options.map((o) => ({ ...o, priceMinor: 0 })),
+    };
+  });
+}
+
 export function mapMenuItemRow(
   row: MenuItemRow,
   attachedGroups: NormalisedModifierGroup[] = [],
 ): NormalisedMenuItem {
   const embedded = parseEmbeddedGroups(row.modifier_groups);
-  const groups = mergeModifierGroups(attachedGroups, embedded);
+  const merged = mergeModifierGroups(attachedGroups, embedded);
+  const waiveMilkSurcharge = row.waive_milk_surcharge === true;
+  const groups = applyMilkSurchargeWaiver(merged, waiveMilkSurcharge);
 
   return {
     id: row.id,
@@ -145,6 +164,8 @@ export function mapMenuItemRow(
     sizes: parseSizes(row.sizes),
     modifierGroups: groups,
     tags: row.tags ?? [],
+    archetype: row.archetype ?? null,
+    waiveMilkSurcharge,
   };
 }
 

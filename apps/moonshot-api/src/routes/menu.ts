@@ -19,15 +19,22 @@ import { menuItemImageUpload } from '../middleware/menu-item-image-upload.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
 import { modifierGroupsRouter } from './modifier-groups.js';
 import { menuSectionsRouter } from './menu-sections.js';
+import { drinkArchetypesRouter } from './drink-archetypes.js';
 
 /** Literal path segments that must not be handled by GET /:segment */
-const RESERVED_MENU_SEGMENTS = new Set(['manage', 'sections', 'modifier-groups']);
+const RESERVED_MENU_SEGMENTS = new Set([
+  'manage',
+  'sections',
+  'modifier-groups',
+  'drink-archetypes',
+]);
 
 export const menuRouter: Router = Router();
 
 menuRouter.use(requireCafeContext);
 menuRouter.use('/modifier-groups', modifierGroupsRouter);
 menuRouter.use('/sections', menuSectionsRouter);
+menuRouter.use('/drink-archetypes', drinkArchetypesRouter);
 
 // Static GET routes before parameterized handlers (Express matches in registration order).
 menuRouter.get('/manage', requireMenuMutationAuth, async (req, res) => {

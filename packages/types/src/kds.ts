@@ -29,11 +29,12 @@ export interface KdsPrep {
 /** Default group-name classification when café config is empty / partial. */
 export const DEFAULT_MODIFIER_CLASSIFICATION = {
   coffeeModifiers: ['Milks', 'Milk'],
-  additions: ['Syrups', 'Extras'],
+  additions: ['Syrups', 'Extras', 'Toppings'],
   shots: ['Shots'],
   beans: ['Beans'],
   milkTemperature: ['Milk Temperature'],
   milkTexture: ['Milk Texture'],
+  iceLevel: ['Ice Level'],
 } as const;
 
 /** Default bean bracket accents for Flow shot labels. */
@@ -130,6 +131,10 @@ function resolveClassification(config: KdsConfig) {
       mc?.milkTexture?.length > 0
         ? mc.milkTexture
         : [...DEFAULT_MODIFIER_CLASSIFICATION.milkTexture],
+    iceLevel:
+      mc?.iceLevel && mc.iceLevel.length > 0
+        ? mc.iceLevel
+        : [...DEFAULT_MODIFIER_CLASSIFICATION.iceLevel],
   };
 }
 

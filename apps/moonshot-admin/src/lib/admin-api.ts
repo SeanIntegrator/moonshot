@@ -12,20 +12,24 @@ export {
   type PublicCafePayload,
 } from './adminApi/settings.js';
 export {
+  applyDrinkArchetypeToItems,
   createMenuItem,
   createMenuSection,
   createModifierGroup,
   deleteMenuItem,
   deleteMenuSection,
   deleteModifierGroup,
+  fetchDrinkArchetypes,
   fetchMenuForAdmin,
   fetchMenuForCafe,
   fetchMenuSections,
   fetchModifierGroups,
+  patchDrinkArchetypes,
   patchMenuItem,
   patchMenuSection,
   updateModifierGroup,
   uploadMenuItemImage,
+  type DrinkArchetypeConfigPayload,
 } from './adminApi/menu.js';
 export { adminStripeOnboardingLink, adminStripeStatus } from './adminApi/stripe.js';
 export {

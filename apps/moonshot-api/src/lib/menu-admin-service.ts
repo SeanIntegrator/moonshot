@@ -1,5 +1,5 @@
 import type { NormalisedMenuItem, NormalisedModifierGroup } from '@moonshot/types';
-import { ApiErrorCode } from '@moonshot/types';
+import { ApiErrorCode, isDrinkArchetypeId } from '@moonshot/types';
 import type { Pool } from 'pg';
 import { ApiHttpError } from './http-errors.js';
 import { fetchMenuItemsByIds } from './menu-fetch.js';
@@ -22,6 +22,23 @@ function parseModifierGroupIds(body: Record<string, unknown>): string[] | undefi
   if (!('modifierGroupIds' in body)) return undefined;
   if (!Array.isArray(body.modifierGroupIds)) return [];
   return body.modifierGroupIds.filter((id): id is string => typeof id === 'string' && UUID_RE.test(id));
+}
+
+function parseArchetype(body: Record<string, unknown>): string | null | undefined {
+  if (!('archetype' in body)) return undefined;
+  if (body.archetype === null || body.archetype === '') return null;
+  if (typeof body.archetype !== 'string' || !isDrinkArchetypeId(body.archetype)) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid drink archetype');
+  }
+  return body.archetype;
+}
+
+function parseWaiveMilk(body: Record<string, unknown>): boolean | undefined {
+  if (!('waiveMilkSurcharge' in body)) return undefined;
+  if (typeof body.waiveMilkSurcharge !== 'boolean') {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'waiveMilkSurcharge must be a boolean');
+  }
+  return body.waiveMilkSurcharge;
 }
 
 async function loadMergedItem(db: Pool, cafeId: string, itemId: string): Promise<NormalisedMenuItem | null> {
@@ -69,12 +86,15 @@ export async function createMenuItem(
   const sizes = normalizeSizes(body.sizes);
   const sortOrder = typeof body.sortOrder === 'number' ? body.sortOrder : 0;
   const modifierGroupIds = parseModifierGroupIds(body) ?? [];
+  const archetype = parseArchetype(body) ?? null;
+  const waiveMilkSurcharge = parseWaiveMilk(body) ?? false;
 
   const { rows } = await db.query<{ id: string }>(
     `INSERT INTO menu_items (
       cafe_id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-      image_url, emoji, is_available, tags, modifier_groups, sizes, sort_order
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13::jsonb, $14)
+      image_url, emoji, is_available, tags, modifier_groups, sizes, sort_order,
+      archetype, waive_milk_surcharge
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13::jsonb, $14, $15, $16)
     RETURNING id`,
     [
       cafeId,
@@ -91,6 +111,8 @@ export async function createMenuItem(
       JSON.stringify(modifierGroups),
       JSON.stringify(sizes),
       sortOrder,
+      archetype,
+      waiveMilkSurcharge,
     ],
   );
 
@@ -119,6 +141,8 @@ export async function patchMenuItem(
   const values: unknown[] = [];
   let i = 1;
   const modifierGroupIds = parseModifierGroupIds(body);
+  const archetype = parseArchetype(body);
+  const waiveMilkSurcharge = parseWaiveMilk(body);
 
   const optionalString = (key: string, col: string) => {
     if (key in body) {
@@ -165,6 +189,14 @@ export async function patchMenuItem(
   if ('sortOrder' in body && typeof body.sortOrder === 'number') {
     sets.push(`sort_order = $${i++}`);
     values.push(body.sortOrder);
+  }
+  if (archetype !== undefined) {
+    sets.push(`archetype = $${i++}`);
+    values.push(archetype);
+  }
+  if (waiveMilkSurcharge !== undefined) {
+    sets.push(`waive_milk_surcharge = $${i++}`);
+    values.push(waiveMilkSurcharge);
   }
 
   if (sets.length === 0 && modifierGroupIds === undefined) {

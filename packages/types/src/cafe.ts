@@ -151,6 +151,8 @@ export interface KdsModifierClassification {
   milkTemperature: string[];
   /** Milk texture groups (Standard / Wet / Dry / Extra Foam) */
   milkTexture: string[];
+  /** Ice level groups (Light / Regular / Extra) */
+  iceLevel?: string[];
 }
 
 export interface KdsTimerThresholds {

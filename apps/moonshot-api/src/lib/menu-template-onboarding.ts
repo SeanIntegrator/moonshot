@@ -4,15 +4,24 @@ import {
   ApiErrorCode,
   MENU_TEMPLATE_CATEGORIES,
   MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR,
+  MENU_TEMPLATE_DRINK_ARCHETYPE,
+  platformDrinkArchetypeConfig,
   type AdminSaveMenuTemplateRequest,
   type AdminSaveMenuTemplateResponse,
   type MenuTemplateCategoryKey,
   type MenuTemplateDrinkKey,
   type MenuTemplateModifierKey,
 } from '@moonshot/types';
+import {
+  libraryByNameFromGroups,
+  resolveArchetypeGroups,
+} from './drink-archetype-resolve.js';
 import { copyTemplateDrinkImageToCafeItem } from './menu-image-storage.js';
 import { setMenuItemModifierGroups } from './menu-modifier-library.js';
-import { ensureFlowPrepModifierGroups } from './menu-seed-library.js';
+import {
+  ensureFlowPrepModifierGroups,
+  ensureIceAndToppingsModifierGroups,
+} from './menu-seed-library.js';
 import { ensureSystemMenuSections } from './menu-sections.js';
 
 export class MenuTemplateError extends Error {
@@ -248,15 +257,41 @@ export async function applyMenuTemplate(
   }
 
   const flowGroups = await ensureFlowPrepModifierGroups(client, cafeId);
+  const iceToppings = await ensureIceAndToppingsModifierGroups(client, cafeId);
 
-  const modifierGroupIds = [
-    milksGroupId,
-    ...(syrupsEnabled && syrupsOptions.length > 0 ? [syrupsGroupId] : []),
-    flowGroups.beansId,
-    flowGroups.shotsId,
-    flowGroups.milkTemperatureId,
-    flowGroups.milkTextureId,
+  // Ensure café has platform archetype recipes if still empty.
+  await client.query(
+    `UPDATE cafes
+     SET drink_archetype_config = $1::jsonb
+     WHERE id = $2
+       AND (drink_archetype_config = '{}'::jsonb OR drink_archetype_config IS NULL)`,
+    [JSON.stringify(platformDrinkArchetypeConfig()), cafeId],
+  );
+
+  const { rows: configRows } = await client.query<{ drink_archetype_config: unknown }>(
+    `SELECT drink_archetype_config FROM cafes WHERE id = $1`,
+    [cafeId],
+  );
+  const cafeConfig =
+    (configRows[0]?.drink_archetype_config as Record<string, unknown>) ??
+    platformDrinkArchetypeConfig();
+
+  const libraryRows = [
+    { id: milksGroupId, name: 'Milks', options: milksOptions },
+    { id: syrupsGroupId, name: 'Syrups', options: syrupsOptions },
+    { id: flowGroups.beansId, name: 'Beans', options: [{}] },
+    { id: flowGroups.shotsId, name: 'Shots', options: [{}] },
+    { id: flowGroups.milkTemperatureId, name: 'Milk Temperature', options: [{}] },
+    { id: flowGroups.milkTextureId, name: 'Milk Texture', options: [{}] },
+    { id: iceToppings.iceLevelId, name: 'Ice Level', options: [{}] },
+    { id: iceToppings.toppingsId, name: 'Toppings', options: [{}] },
   ];
+  // When syrups are disabled, mark as empty so syrup slot is skipped.
+  if (!syrupsEnabled || syrupsOptions.length === 0) {
+    const syrups = libraryRows.find((r) => r.name === 'Syrups');
+    if (syrups) syrups.options = [];
+  }
+  const libraryByName = libraryByNameFromGroups(libraryRows);
 
   const drinkCategories = body.categories.filter(
     (c) => (c.key === 'hot_drinks' || c.key === 'cold_drinks') && c.enabled,
@@ -272,14 +307,17 @@ export async function applyMenuTemplate(
       const priceMinor = Number.isFinite(drink.priceMinor)
         ? Math.round(drink.priceMinor)
         : MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR;
+      const archetypeId = MENU_TEMPLATE_DRINK_ARCHETYPE[drink.templateKey];
+      const resolved = resolveArchetypeGroups(archetypeId, cafeConfig as never, libraryByName);
 
       // Insert first so we have an item id, then copy the canonical template into
       // café-scoped storage. Café replaces never mutate template/drinks/*.
       const { rows } = await client.query<{ id: string }>(
         `INSERT INTO menu_items (
           cafe_id, name, description, price_minor, currency, category, subcategory,
-          image_url, is_available, tags, modifier_groups, sizes, sort_order
-        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, NULL, TRUE, $7::text[], $8::jsonb, $9::jsonb, $10)
+          image_url, is_available, tags, modifier_groups, sizes, sort_order,
+          archetype, waive_milk_surcharge
+        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, NULL, TRUE, $7::text[], $8::jsonb, $9::jsonb, $10, $11, $12)
         RETURNING id`,
         [
           cafeId,
@@ -292,6 +330,8 @@ export async function applyMenuTemplate(
           '[]',
           '[]',
           sortOrder++,
+          archetypeId,
+          resolved.waiveMilkSurcharge,
         ],
       );
       const itemId = rows[0]!.id;
@@ -309,7 +349,7 @@ export async function applyMenuTemplate(
         ]);
       }
 
-      await setMenuItemModifierGroups(client, itemId, modifierGroupIds);
+      await setMenuItemModifierGroups(client, itemId, resolved.groupIds);
       itemCount++;
     }
   }

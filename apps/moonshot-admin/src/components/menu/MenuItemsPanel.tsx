@@ -1,4 +1,14 @@
-import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
+import type {
+  CafeMenuSection,
+  CafeModifierGroup,
+  DrinkArchetypeDef,
+  DrinkArchetypeId,
+  NormalisedMenuItem,
+} from '@moonshot/types';
+import {
+  DRINK_ARCHETYPE_SLOT_GROUP_NAMES,
+  isDrinkArchetypeId,
+} from '@moonshot/types';
 import {
   Alert,
   Box,
@@ -11,14 +21,16 @@ import {
   MenuItem,
   Select,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   createMenuItem,
   createMenuSection,
   deleteMenuItem,
+  fetchDrinkArchetypes,
   patchMenuItem,
   patchMenuSection,
 } from '../../lib/admin-api.js';
@@ -33,6 +45,8 @@ function toDraft(item: NormalisedMenuItem, library: CafeModifierGroup[]): DraftI
   return {
     ...structuredClone(item),
     sizes: item.sizes ?? [],
+    archetype: item.archetype ?? null,
+    waiveMilkSurcharge: item.waiveMilkSurcharge ?? false,
     attachedGroupIds: item.modifierGroups.filter((g) => libraryIds.has(g.id)).map((g) => g.id),
   };
 }
@@ -53,7 +67,35 @@ function emptyDraft(defaultCategory: string): DraftItem {
     sizes: [],
     modifierGroups: [],
     tags: [],
+    archetype: null,
+    waiveMilkSurcharge: false,
     attachedGroupIds: [],
+  };
+}
+
+function applyArchetypeToDraft(
+  draft: DraftItem,
+  archetypeId: DrinkArchetypeId | null,
+  recipe: DrinkArchetypeDef | null,
+  library: CafeModifierGroup[],
+): DraftItem {
+  if (!archetypeId || !recipe) {
+    return { ...draft, archetype: null };
+  }
+  const byName = new Map(library.map((g) => [g.name, g]));
+  const attachedGroupIds: string[] = [];
+  for (const slot of recipe.slots) {
+    const groupName = DRINK_ARCHETYPE_SLOT_GROUP_NAMES[slot];
+    const group = byName.get(groupName);
+    if (!group) continue;
+    if (slot === 'syrup' && group.options.length === 0) continue;
+    attachedGroupIds.push(group.id);
+  }
+  return {
+    ...draft,
+    archetype: archetypeId,
+    waiveMilkSurcharge: recipe.milkCharge === 'waived',
+    attachedGroupIds,
   };
 }
 
@@ -89,9 +131,18 @@ export function MenuItemsPanel({
   const [addingSection, setAddingSection] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recipes, setRecipes] = useState<Record<string, DrinkArchetypeDef>>({});
   // Raw text for the base-price input, keyed by item id (or "new") — lets the field be
   // fully cleared while typing instead of always reflecting priceMinor as a number.
   const [priceText, setPriceText] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchDrinkArchetypes(token, cafeSlug)
+      .then((data) => setRecipes(data.recipes))
+      .catch(() => {
+        /* item editor still works without recipes */
+      });
+  }, [token, cafeSlug]);
 
   const categoryOptions = sections.map((s) => ({ value: s.key, label: s.label }));
 
@@ -127,6 +178,8 @@ export function MenuItemsPanel({
         isAvailable: draft.isAvailable,
         sizes: draft.sizes,
         modifierGroupIds: draft.attachedGroupIds,
+        archetype: draft.archetype,
+        waiveMilkSurcharge: draft.waiveMilkSurcharge,
       };
       const updated = draft.id
         ? await patchMenuItem(token, cafeSlug, draft.id, body)
@@ -219,7 +272,7 @@ export function MenuItemsPanel({
 
     return (
       <Stack spacing={2}>
-        <FormControl size="small" sx={{ maxWidth: 220 }}>
+        <FormControl size="small" sx={{ maxWidth: 280 }}>
           <InputLabel>Category</InputLabel>
           <Select
             label="Category"
@@ -229,6 +282,33 @@ export function MenuItemsPanel({
             {selectOptions.map((c) => (
               <MenuItem key={c.value} value={c.value}>
                 {c.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ maxWidth: 320 }}>
+          <InputLabel>Drink type</InputLabel>
+          <Select
+            label="Drink type"
+            value={draft.archetype ?? ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value) {
+                update({ archetype: null });
+                return;
+              }
+              if (!isDrinkArchetypeId(value)) return;
+              const recipe = recipes[value] ?? null;
+              const next = applyArchetypeToDraft(draft, value, recipe, library);
+              if (itemId) setDraft(itemId, next);
+              else setNewItem(next);
+            }}
+          >
+            <MenuItem value="">None (food / custom)</MenuItem>
+            {Object.values(recipes).map((r) => (
+              <MenuItem key={r.id} value={r.id}>
+                {r.label}
               </MenuItem>
             ))}
           </Select>
@@ -331,6 +411,21 @@ export function MenuItemsPanel({
                 />
               ))}
             </FormGroup>
+            {draft.attachedGroupIds.some((id) => {
+              const g = library.find((x) => x.id === id);
+              return g?.name === 'Milks' || g?.name === 'Milk';
+            }) && (
+              <FormControlLabel
+                sx={{ mt: 1 }}
+                control={
+                  <Switch
+                    checked={draft.waiveMilkSurcharge}
+                    onChange={(e) => update({ waiveMilkSurcharge: e.target.checked })}
+                  />
+                }
+                label="Waive alt-milk surcharge on this item"
+              />
+            )}
           </Box>
         )}
 

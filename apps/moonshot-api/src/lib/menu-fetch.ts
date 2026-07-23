@@ -30,7 +30,7 @@ export async function fetchMenuForCafe(db: Db, cafeId: string, availableOnly = t
     `SELECT
       mi.id, mi.pos_item_id, mi.name, mi.description, mi.price_minor, mi.currency,
       mi.category, mi.subcategory, mi.image_url, mi.emoji, mi.is_available,
-      mi.tags, mi.modifier_groups, mi.sizes
+      mi.tags, mi.modifier_groups, mi.sizes, mi.archetype, mi.waive_milk_surcharge
     FROM menu_items mi
     WHERE mi.cafe_id = $1 ${availabilityClause}
     ORDER BY mi.sort_order ASC, mi.name ASC`,
@@ -99,7 +99,7 @@ export async function fetchMenuItemsByIds(
     `SELECT
       mi.id, mi.pos_item_id, mi.name, mi.description, mi.price_minor, mi.currency,
       mi.category, mi.subcategory, mi.image_url, mi.emoji, mi.is_available,
-      mi.tags, mi.modifier_groups, mi.sizes
+      mi.tags, mi.modifier_groups, mi.sizes, mi.archetype, mi.waive_milk_surcharge
     FROM menu_items mi
     WHERE mi.cafe_id = $1 AND mi.id = ANY($2::uuid[]) AND mi.is_available = TRUE`,
     [cafeId, itemIds],

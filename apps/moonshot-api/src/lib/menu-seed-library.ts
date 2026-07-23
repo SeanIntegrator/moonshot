@@ -47,6 +47,8 @@ export async function seedDefaultModifierLibrary(
   beansId: string;
   milkTemperatureId: string;
   milkTextureId: string;
+  iceLevelId: string;
+  toppingsId: string;
 }> {
   const milksId = randomUUID();
   const syrupsId = randomUUID();
@@ -54,6 +56,8 @@ export async function seedDefaultModifierLibrary(
   const beansId = randomUUID();
   const milkTemperatureId = randomUUID();
   const milkTextureId = randomUUID();
+  const iceLevelId = randomUUID();
+  const toppingsId = randomUUID();
 
   const milksOptions = [
     opt('Whole', { isDefault: true, colorHex: '#f5f0e8', chipLabel: 'WM' }),
@@ -146,6 +150,17 @@ export async function seedDefaultModifierLibrary(
     opt('Extra Foam', { chipLabel: 'EF' }),
   ];
 
+  const iceLevelOptions = [
+    opt('Light', { chipLabel: 'Lt' }),
+    opt('Regular', { isDefault: true, chipLabel: 'Reg' }),
+    opt('Extra', { chipLabel: 'Ex' }),
+  ];
+
+  const toppingsOptions = [
+    opt('Marshmallows', { chipLabel: 'Mm' }),
+    opt('Whipped cream', { chipLabel: 'Wh' }),
+  ];
+
   await client.query(
     `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order)
      VALUES
@@ -154,7 +169,9 @@ export async function seedDefaultModifierLibrary(
        ($6, $2, 'Beans', 'single', TRUE, $7::jsonb, 2),
        ($8, $2, 'Shots', 'single', TRUE, $9::jsonb, 3),
        ($10, $2, 'Milk Temperature', 'single', TRUE, $11::jsonb, 4),
-       ($12, $2, 'Milk Texture', 'single', TRUE, $13::jsonb, 5)`,
+       ($12, $2, 'Milk Texture', 'single', TRUE, $13::jsonb, 5),
+       ($14, $2, 'Ice Level', 'single', TRUE, $15::jsonb, 6),
+       ($16, $2, 'Toppings', 'multi', FALSE, $17::jsonb, 7)`,
     [
       milksId,
       cafeId,
@@ -169,10 +186,23 @@ export async function seedDefaultModifierLibrary(
       JSON.stringify(milkTemperatureOptions),
       milkTextureId,
       JSON.stringify(milkTextureOptions),
+      iceLevelId,
+      JSON.stringify(iceLevelOptions),
+      toppingsId,
+      JSON.stringify(toppingsOptions),
     ],
   );
 
-  return { milksId, syrupsId, shotsId, beansId, milkTemperatureId, milkTextureId };
+  return {
+    milksId,
+    syrupsId,
+    shotsId,
+    beansId,
+    milkTemperatureId,
+    milkTextureId,
+    iceLevelId,
+    toppingsId,
+  };
 }
 
 /** Ensure Flow coffee-prep groups exist for a café; create with defaults if missing. */
@@ -239,4 +269,52 @@ export async function ensureFlowPrepModifierGroups(
   ]);
 
   return { shotsId, beansId, milkTemperatureId, milkTextureId };
+}
+
+/** Ensure Ice Level + Toppings exist for iced / non-coffee archetypes. */
+export async function ensureIceAndToppingsModifierGroups(
+  client: PoolClient,
+  cafeId: string,
+): Promise<{ iceLevelId: string; toppingsId: string }> {
+  async function findOrCreate(
+    name: string,
+    sortOrder: number,
+    selectionType: 'single' | 'multi',
+    required: boolean,
+    options: SeedOption[],
+  ): Promise<string> {
+    const existing = await client.query<{ id: string }>(
+      `SELECT id FROM modifier_groups WHERE cafe_id = $1 AND name = $2 LIMIT 1`,
+      [cafeId, name],
+    );
+    if (existing.rows[0]) return existing.rows[0].id;
+
+    const id = randomUUID();
+    const inserted = await client.query<{ id: string }>(
+      `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
+       ON CONFLICT (cafe_id, name) DO NOTHING
+       RETURNING id`,
+      [id, cafeId, name, selectionType, required, JSON.stringify(options), sortOrder],
+    );
+    if (inserted.rows[0]) return inserted.rows[0].id;
+
+    const again = await client.query<{ id: string }>(
+      `SELECT id FROM modifier_groups WHERE cafe_id = $1 AND name = $2 LIMIT 1`,
+      [cafeId, name],
+    );
+    return again.rows[0]!.id;
+  }
+
+  const iceLevelId = await findOrCreate('Ice Level', 6, 'single', true, [
+    opt('Light', { chipLabel: 'Lt' }),
+    opt('Regular', { isDefault: true, chipLabel: 'Reg' }),
+    opt('Extra', { chipLabel: 'Ex' }),
+  ]);
+  const toppingsId = await findOrCreate('Toppings', 7, 'multi', false, [
+    opt('Marshmallows', { chipLabel: 'Mm' }),
+    opt('Whipped cream', { chipLabel: 'Wh' }),
+  ]);
+
+  return { iceLevelId, toppingsId };
 }
