@@ -5,7 +5,11 @@ import type { ComponentType } from 'react';
 
 export type StepSliderThumbProps = BoxProps & { dragging?: boolean };
 
-/** Discrete slider thumb — focus ring via parent `&:focus-visible &`. */
+/**
+ * Discrete slider thumb.
+ * Focus ring is applied from the track via `[data-step-slider-thumb]` — do not interpolate
+ * this styled component into a CSS selector (needs @emotion/babel-plugin, which we don't use).
+ */
 export const StepSliderThumb: ComponentType<StepSliderThumbProps> = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'dragging',
 })<{ dragging?: boolean }>(({ theme, dragging }) => ({
@@ -30,8 +34,8 @@ export const StepSliderTrack = styled(Box)(({ theme }) => ({
   marginRight: theme.spacing(0.5),
   outline: 'none',
   touchAction: 'none',
-  // Emotion resolves nested styled component to its generated class.
-  [`&:focus-visible ${StepSliderThumb}`]: {
+  // Stable attribute selector — no Emotion component interpolation (no babel plugin).
+  '&:focus-visible [data-step-slider-thumb]': {
     boxShadow: `0 0 0 3px ${theme.palette.primary.main}33`,
   },
 })) as typeof Box;

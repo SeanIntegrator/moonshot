@@ -194,7 +194,12 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
             }}
           />
         ))}
-        <StepSliderThumb aria-hidden dragging={dragging} sx={{ left: `${thumbPct}%` }} />
+        <StepSliderThumb
+          aria-hidden
+          data-step-slider-thumb
+          dragging={dragging}
+          sx={{ left: `${thumbPct}%` }}
+        />
       </StepSliderTrack>
 
       <Box sx={{ position: 'relative', minHeight: 32, mx: 0.5, mt: 0.25, mb: 0.5 }}>
