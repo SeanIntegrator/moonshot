@@ -327,8 +327,7 @@
   font-weight: 700;
   font-size: 1.15rem;
   line-height: 1.1;
-  /* Milk name always cool off-white over coloured chip bg */
-  color: #e8eef2;
+  /* Colour comes from view.milk.text (milkColors / dark-bg heuristic) */
 }
 
 .flow-milk-adj {

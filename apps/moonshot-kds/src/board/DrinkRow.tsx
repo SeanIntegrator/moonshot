@@ -49,7 +49,10 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
               {view.milk.temperature ? (
                 <em className="flow-milk-adj">{view.milk.temperature}</em>
               ) : null}
-              <span className="flow-milk-chip" style={{ background: view.milk.bg }}>
+              <span
+                className="flow-milk-chip"
+                style={{ background: view.milk.bg, color: view.milk.text }}
+              >
                 {view.milk.name}
               </span>
               {view.milk.texture ? (
