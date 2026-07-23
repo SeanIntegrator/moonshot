@@ -1,4 +1,6 @@
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import { Box, Button, Container, LinearProgress, Typography } from '@mui/material';
+import type { LoyaltySummaryResponse } from '@moonshot/types';
 import { useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
@@ -10,10 +12,17 @@ import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { formatShortDate } from '../lib/format.js';
 
+function stampsUntilRewardCopy(summary: LoyaltySummaryResponse): string {
+  const remaining = Math.max(0, summary.stampsPerReward - summary.stamps);
+  if (remaining === 1) return '1 stamp until next reward';
+  return `${remaining} stamps until next reward`;
+}
+
 export function Rewards() {
   const { isSignedIn, loading: authLoading, user } = useAuth();
   const {
     summary,
+    rewards,
     transactions,
     loading,
     loadMore,
@@ -56,12 +65,40 @@ export function Rewards() {
             />
           </Box>
 
-          {summary.rewardsAvailable > 0 && (
-            <Typography variant="body2" color="success.main" sx={{ mt: 1.5, textAlign: 'center' }}>
-              {summary.rewardsAvailable} reward{summary.rewardsAvailable !== 1 ? 's' : ''} ready to
-              redeem at checkout
-            </Typography>
-          )}
+          <Box sx={{ mt: 3 }}>
+            <SectionHead title="Your rewards" />
+            {rewards.length > 0 ? (
+              rewards.map((reward) => (
+                <Box
+                  key={reward.id}
+                  sx={{
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 1.25,
+                    p: 1.5,
+                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <CardGiftcardIcon color="success" fontSize="small" />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600}>
+                      {summary.rewardDescription || 'Free drink'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Ready to redeem at checkout
+                    </Typography>
+                  </Box>
+                </Box>
+              ))
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                {stampsUntilRewardCopy(summary)}
+              </Typography>
+            )}
+          </Box>
         </Box>
       )}
 
@@ -83,6 +120,7 @@ export function Rewards() {
         !loading &&
         summary?.loyaltyEnabled &&
         summary.stamps === 0 &&
+        rewards.length === 0 &&
         redeemed.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" fontWeight={700} gutterBottom>

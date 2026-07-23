@@ -120,6 +120,7 @@ export function Home() {
             total={summary.stampsPerReward}
             rewardsAvailable={summary.rewardsAvailable}
             onShowQr={() => setQrOpen(true)}
+            onRewardsClick={() => navigate(cafePath('/rewards'))}
           />
         ) : loyaltyEnabled ? (
           <LoyaltyStampCard variant="hero" filled={0} total={10} />

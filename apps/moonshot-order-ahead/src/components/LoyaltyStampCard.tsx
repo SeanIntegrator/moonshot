@@ -9,6 +9,8 @@ type Props = {
   total: number;
   rewardsAvailable?: number;
   onShowQr?: () => void;
+  /** When set, the rewards footer (icon + copy + chevron) is tappable. */
+  onRewardsClick?: () => void;
   variant?: 'hero' | 'card';
 };
 
@@ -25,11 +27,13 @@ export function LoyaltyStampCard({
   total,
   rewardsAvailable = 0,
   onShowQr,
+  onRewardsClick,
   variant = 'card',
 }: Props) {
   const hero = variant === 'hero';
   const footer = loyaltyFooterMessage(rewardsAvailable, filled, total);
   const hasReward = rewardsAvailable > 0;
+  const showRewardsLink = hasReward && Boolean(onRewardsClick);
 
   return (
     <Box
@@ -112,22 +116,51 @@ export function LoyaltyStampCard({
           </Box>
         ))}
       </Box>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0.5,
-          mt: 1,
-          opacity: hero ? 0.9 : 1,
-          color: hero ? 'inherit' : 'text.secondary',
-        }}
-      >
-        {hasReward && <CardGiftcardIcon sx={{ fontSize: 14 }} />}
-        <Typography variant="caption" sx={{ flex: 1, color: 'inherit' }}>
+      {hasReward ? (
+        <Box
+          component={showRewardsLink ? 'button' : 'div'}
+          {...(showRewardsLink ? { type: 'button' as const, onClick: onRewardsClick } : {})}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 0.5,
+            mt: 1,
+            width: '100%',
+            opacity: hero ? 0.9 : 1,
+            color: hero ? 'inherit' : 'text.secondary',
+            ...(showRewardsLink
+              ? {
+                  appearance: 'none',
+                  border: 0,
+                  background: 'none',
+                  p: 0,
+                  cursor: 'pointer',
+                  font: 'inherit',
+                  textAlign: 'inherit',
+                }
+              : null),
+          }}
+        >
+          <CardGiftcardIcon sx={{ fontSize: 14 }} />
+          <Typography variant="caption" sx={{ color: 'inherit' }}>
+            {footer}
+          </Typography>
+          {showRewardsLink && <ChevronRightIcon sx={{ fontSize: 14 }} />}
+        </Box>
+      ) : (
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            mt: 1,
+            opacity: hero ? 0.9 : 1,
+            color: hero ? 'inherit' : 'text.secondary',
+          }}
+        >
           {footer}
         </Typography>
-        {hasReward && <ChevronRightIcon sx={{ fontSize: 14 }} />}
-      </Box>
+      )}
     </Box>
   );
 }
