@@ -1,11 +1,18 @@
 import {
   KDS_SOCKET_NAMESPACE,
+  type KdsAdvanceStatusRequest,
   type KdsServerToClientEvent,
   type NormalisedOrder,
 } from '@moonshot/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type Socket, io } from 'socket.io-client';
-import { getApiBaseUrl, kdsCompleteOrder, kdsFetchOrders, kdsRecallLastOrder } from '../lib/kds-api.js';
+import {
+  getApiBaseUrl,
+  kdsAdvanceOrderStatus,
+  kdsCompleteOrder,
+  kdsFetchOrders,
+  kdsRecallLastOrder,
+} from '../lib/kds-api.js';
 import type { KdsSession } from '../lib/kds-session.js';
 
 function sortOrders(orders: NormalisedOrder[]): NormalisedOrder[] {
@@ -24,6 +31,7 @@ export function useKdsOrders(params: {
   finalizeDismiss: (orderId: string) => void;
   recallLast: () => void;
   recalling: boolean;
+  setStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
 } {
   const { session, onSessionExpired } = params;
   const [orders, setOrders] = useState<NormalisedOrder[]>([]);
@@ -224,6 +232,27 @@ export function useKdsOrders(params: {
       });
   }, [session, recalling]);
 
+  const setStatus = useCallback(
+    (orderId: string, status: KdsAdvanceStatusRequest['status']): void => {
+      if (!session) return;
+      setError(null);
+
+      void kdsAdvanceOrderStatus(session.token, orderId, status)
+        .then(({ order }) => {
+          setOrders((prev) => sortOrders([...prev.filter((o) => o.id !== order.id), order]));
+        })
+        .catch((err) => {
+          if (err instanceof Error && err.message === 'SESSION_EXPIRED') {
+            onExpiredRef.current(session);
+            setError('Session expired — please sign in again.');
+          } else {
+            setError(err instanceof Error ? err.message : 'Status update failed');
+          }
+        });
+    },
+    [session],
+  );
+
   return {
     orders,
     error,
@@ -233,5 +262,6 @@ export function useKdsOrders(params: {
     finalizeDismiss,
     recallLast,
     recalling,
+    setStatus,
   };
 }

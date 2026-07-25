@@ -61,7 +61,7 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
   - `POST /api/v1/kds/auth/login`
   - `GET /api/v1/kds/orders`
   - `GET /api/v1/kds/config`
-  - `POST /api/v1/kds/orders/:orderId/status`
+  - `POST /api/v1/kds/orders/:orderId/status` — `{ status: "confirmed" | "preparing" | "ready" }`
   - `POST /api/v1/kds/orders/:orderId/eta`
   - `POST /api/v1/kds/orders/:orderId/complete`
   - `POST /api/v1/kds/orders/recall-last` — reopen most recently completed order as `confirmed`

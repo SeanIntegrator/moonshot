@@ -1,6 +1,8 @@
 import {
   API_VERSION_PREFIX,
   type ApiEnvelope,
+  type KdsAdvanceStatusRequest,
+  type KdsAdvanceStatusResponse,
   type KdsCompleteOrderResponse,
   type KdsConfigResponse,
   type KdsLoginRequest,
@@ -110,5 +112,29 @@ export async function kdsRecallLastOrder(token: string): Promise<KdsRecallLastOr
   }
   const json = await parseEnvelope<KdsRecallLastOrderResponse>(res);
   if (!json.ok) throw new Error(json.error ?? 'Recall failed');
+  return json.data;
+}
+
+export async function kdsAdvanceOrderStatus(
+  token: string,
+  orderId: string,
+  status: KdsAdvanceStatusRequest['status'],
+): Promise<KdsAdvanceStatusResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/kds/orders/${encodeURIComponent(orderId)}/status`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status } satisfies KdsAdvanceStatusRequest),
+  });
+  if (res.status === 401) {
+    throw new Error('SESSION_EXPIRED');
+  }
+  const json = await parseEnvelope<KdsAdvanceStatusResponse>(res);
+  if (!json.ok) throw new Error(json.error ?? 'Status update failed');
   return json.data;
 }

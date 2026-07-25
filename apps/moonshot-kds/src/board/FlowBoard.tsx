@@ -1,4 +1,4 @@
-import type { KdsConfig, NormalisedOrder } from '@moonshot/types';
+import type { KdsAdvanceStatusRequest, KdsConfig, NormalisedOrder } from '@moonshot/types';
 import { OrderCard } from './OrderCard.js';
 
 type FlowBoardProps = {
@@ -7,6 +7,7 @@ type FlowBoardProps = {
   dismissingIds: ReadonlySet<string>;
   onComplete: (orderId: string) => void;
   onExited: (orderId: string) => void;
+  onSetStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
 };
 
 export function FlowBoard({
@@ -15,6 +16,7 @@ export function FlowBoard({
   dismissingIds,
   onComplete,
   onExited,
+  onSetStatus,
 }: FlowBoardProps) {
   if (orders.length === 0) {
     return (
@@ -37,6 +39,7 @@ export function FlowBoard({
           dismissing={dismissingIds.has(order.id)}
           onComplete={onComplete}
           onExited={onExited}
+          onSetStatus={onSetStatus}
         />
       ))}
     </div>

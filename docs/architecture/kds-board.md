@@ -68,6 +68,8 @@ stateDiagram-v2
   [*] --> confirmed: pay_or_create
   confirmed --> preparing: POST_status
   preparing --> ready: POST_status
+  confirmed --> ready: allLinesMade
+  ready --> confirmed: uncrossLine
   confirmed --> completed: POST_complete
   preparing --> completed: POST_complete
   ready --> completed: POST_complete
@@ -76,19 +78,19 @@ stateDiagram-v2
 
 | Method | Path | Body |
 |--------|------|------|
-| `POST` | `/api/v1/kds/orders/:orderId/status` | `{ status: "preparing" \| "ready" }` |
+| `POST` | `/api/v1/kds/orders/:orderId/status` | `{ status: "confirmed" \| "preparing" \| "ready" }` |
 | `POST` | `/api/v1/kds/orders/:orderId/complete` | (existing) |
 | `POST` | `/api/v1/kds/orders/recall-last` | reopen latest `completed` → `confirmed` |
 
-Flow board interaction (iteration 1):
+Flow board interaction:
 
-- Tap a **line** → local-only strikethrough (not synced).
+- Tap a **line** → local strikethrough; when **all** lines made → `POST .../status` `{ status: "ready" }` (demote to `confirmed` if a line is un-crossed).
 - Tap the **header** → `POST .../complete` (emits `customerOrderCompleted` for order-ahead).
 - Top-bar **Recall** → `POST .../recall-last` (emits `kds:order:new` + `customerOrderStatusUpdated`).
 
 Emits:
 
-- `kds:order:updated` (full order) on status advance
+- `kds:order:updated` (full order) on status advance / demote
 - `kds:order:new` on recall-last
 - `customerOrderStatusUpdated` `{ orderId, cafeId, status }`
 - `customerOrderCompleted` on Done

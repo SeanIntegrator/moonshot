@@ -157,8 +157,12 @@ kdsRouter.post('/orders/:orderId/status', requireKdsAuth, async (req, res) => {
   if (!orderId.trim()) {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'orderId is required');
   }
-  if (nextStatus !== 'preparing' && nextStatus !== 'ready') {
-    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'status must be preparing or ready');
+  if (nextStatus !== 'confirmed' && nextStatus !== 'preparing' && nextStatus !== 'ready') {
+    throw new ApiHttpError(
+      400,
+      ApiErrorCode.VALIDATION,
+      'status must be confirmed, preparing, or ready',
+    );
   }
 
   const order = await advanceOrderStatusForKds(orderId, cafeId, nextStatus);

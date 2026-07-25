@@ -90,20 +90,23 @@ export async function recallLastCompletedOrderForKds(
   }
 }
 
-/** Allowed forward transitions for KDS advance (not including complete). */
-const STATUS_TRANSITIONS: Record<'preparing' | 'ready', OrderStatus[]> = {
+/** Allowed KDS status transitions (complete is separate). */
+const STATUS_TRANSITIONS: Record<'confirmed' | 'preparing' | 'ready', OrderStatus[]> = {
+  // Flow skips preparing: confirmed → ready when all lines made.
   preparing: ['confirmed'],
-  ready: ['preparing'],
+  ready: ['confirmed', 'preparing'],
+  // Demote when barista un-crosses a line after ready.
+  confirmed: ['ready'],
 };
 
 /**
- * Advance an open order to preparing or ready.
+ * Advance or demote an open order status for KDS.
  * Returns null when the order is missing / wrong café / invalid transition.
  */
 export async function advanceOrderStatusForKds(
   orderId: string,
   cafeId: string,
-  nextStatus: 'preparing' | 'ready',
+  nextStatus: 'confirmed' | 'preparing' | 'ready',
 ): Promise<NormalisedOrder | null> {
   if (!UUID_RE.test(orderId)) return null;
   const fromStatuses = STATUS_TRANSITIONS[nextStatus];

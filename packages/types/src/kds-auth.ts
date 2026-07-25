@@ -47,7 +47,8 @@ export interface KdsConfigResponse {
 }
 
 export interface KdsAdvanceStatusRequest {
-  status: 'preparing' | 'ready';
+  /** preparing / ready advance; confirmed demotes from ready when lines un-crossed. */
+  status: 'confirmed' | 'preparing' | 'ready';
 }
 
 export interface KdsAdvanceStatusResponse {

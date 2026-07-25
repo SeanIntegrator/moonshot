@@ -1,5 +1,10 @@
-import { useRef, useState, type TransitionEvent } from 'react';
-import { deriveFlowLine, type KdsConfig, type NormalisedOrder } from '@moonshot/types';
+import { useEffect, useRef, useState, type TransitionEvent } from 'react';
+import {
+  deriveFlowLine,
+  type KdsAdvanceStatusRequest,
+  type KdsConfig,
+  type NormalisedOrder,
+} from '@moonshot/types';
 import { MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +33,7 @@ type OrderCardProps = {
   dismissing: boolean;
   onComplete: (orderId: string) => void;
   onExited: (orderId: string) => void;
+  onSetStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
 };
 
 const HEADER_BY_KIND: Record<FlowTicketKind, string> = {
@@ -36,15 +42,21 @@ const HEADER_BY_KIND: Record<FlowTicketKind, string> = {
   pickup: 'bg-[#3d3554]',
 };
 
+/** Soft forest green when every line is crossed / order is ready for pickup. */
+const HEADER_READY = 'bg-[#2f4f3e]';
+
 const TIMER_BY_TONE: Record<TimerTone, string> = {
   green: 'border-transparent bg-[#4a6080] text-[#e8eef5]',
   amber: 'border-transparent bg-[#5c6a9a] text-[#eef0f8]',
   red: 'border-transparent bg-[#6b4a72] text-[#f5eef6]',
 };
 
+const TIMER_READY =
+  'border-transparent bg-[#3d6b52] text-[#e8f5ee] tracking-wide';
+
 /**
- * Full-bleed 1px rule that replaces a normal row border.
- * Label is absolute so type size does not inflate the divider box.
+ * Full-bleed dashed rule between drink/food sections.
+ * Fixed-height band keeps FOOD ONLY clear of the ticket header.
  */
 function FoodDivider({
   only,
@@ -54,9 +66,15 @@ function FoodDivider({
   className?: string;
 }) {
   return (
-    <div role="separator" className={cn('relative z-10 h-px w-full', className)}>
-      <div className="absolute inset-x-0 top-0 h-px bg-border" aria-hidden />
-      <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2.5 text-sm font-bold tracking-[0.12em] text-muted-foreground uppercase">
+    <div
+      role="separator"
+      className={cn('relative z-10 flex h-8 w-full items-center justify-center', className)}
+    >
+      <div
+        className="absolute inset-x-0 top-1/2 h-0 -translate-y-1/2 border-t-2 border-dashed border-muted-foreground/40"
+        aria-hidden
+      />
+      <span className="relative bg-card px-2.5 text-base font-bold tracking-[0.12em] text-muted-foreground uppercase">
         {only ? 'FOOD ONLY' : 'FOOD'}
       </span>
     </div>
@@ -69,6 +87,7 @@ export function OrderCard({
   dismissing,
   onComplete,
   onExited,
+  onSetStatus,
 }: OrderCardProps) {
   const kind = deriveTicketKind(order);
   const timer = useOrderTimer(order, kdsConfig);
@@ -81,6 +100,9 @@ export function OrderCard({
   }));
   const drinks = lines.filter((l) => !l.view.isFood);
   const foods = lines.filter((l) => l.view.isFood);
+  const lineIds = lines.map((l) => l.item.id);
+  const allMade = lineIds.length > 0 && lineIds.every((id) => madeIds.has(id));
+  const showReadyChrome = allMade || order.status === 'ready';
   const showCustomer =
     kind === 'pickup' &&
     kdsConfig.display.showCustomerNameInHeader &&
@@ -95,6 +117,19 @@ export function OrderCard({
     .join('|');
 
   useEqualizeShotColumnWidth(bodyRef, shotContentKey);
+
+  useEffect(() => {
+    if (lineIds.length === 0) return;
+    if (order.status === 'completed' || order.status === 'cancelled') return;
+
+    if (allMade && order.status !== 'ready') {
+      onSetStatus(order.id, 'ready');
+      return;
+    }
+    if (!allMade && order.status === 'ready') {
+      onSetStatus(order.id, 'confirmed');
+    }
+  }, [allMade, lineIds.length, onSetStatus, order.id, order.status]);
 
   function toggleMade(lineId: string): void {
     setMadeIds((prev) => {
@@ -124,7 +159,7 @@ export function OrderCard({
         <div
           className={cn(
             'flex w-full items-center gap-2 px-4 py-3 text-[#e8eef2]',
-            HEADER_BY_KIND[kind],
+            showReadyChrome ? HEADER_READY : HEADER_BY_KIND[kind],
           )}
         >
           <button
@@ -143,11 +178,11 @@ export function OrderCard({
             </div>
             <Badge
               className={cn(
-                'h-auto shrink-0 rounded-full px-3.5 py-1 text-[1.3rem] font-bold tabular-nums leading-snug',
-                TIMER_BY_TONE[timer.tone],
+                'h-auto shrink-0 rounded-full px-3.5 py-1 text-[1.3rem] font-bold leading-snug',
+                showReadyChrome ? TIMER_READY : cn('tabular-nums', TIMER_BY_TONE[timer.tone]),
               )}
             >
-              {timer.display}
+              {showReadyChrome ? 'READY' : timer.display}
             </Badge>
           </button>
 
@@ -175,10 +210,7 @@ export function OrderCard({
         </div>
 
         <CardContent className="flex flex-col p-0" ref={bodyRef}>
-          {drinks.length === 0 && foods.length > 0 ? (
-            // Pull first food up so its qty bar meets the full-bleed rule.
-            <FoodDivider only className="-mb-px" />
-          ) : null}
+          {drinks.length === 0 && foods.length > 0 ? <FoodDivider only /> : null}
 
           {drinks.map(({ item, view }, i) => (
             <DrinkRow
@@ -192,10 +224,7 @@ export function OrderCard({
             />
           ))}
 
-          {foods.length > 0 && drinks.length > 0 ? (
-            // Collapse toward normal row gap; qty bar on first food meets the rule.
-            <FoodDivider only={false} className="-mt-px -mb-px" />
-          ) : null}
+          {foods.length > 0 && drinks.length > 0 ? <FoodDivider only={false} /> : null}
 
           {foods.map(({ item, view }) => (
             <FoodRow

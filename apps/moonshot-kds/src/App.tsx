@@ -40,6 +40,7 @@ export function App() {
     finalizeDismiss,
     recallLast,
     recalling,
+    setStatus,
   } = useKdsOrders({
     session,
     onSessionExpired: clearExpiredSession,
@@ -126,6 +127,7 @@ export function App() {
               dismissingIds={dismissingIds}
               onComplete={complete}
               onExited={finalizeDismiss}
+              onSetStatus={setStatus}
             />
           ) : (
             <p className="text-sm text-muted-foreground">Loading board config…</p>
