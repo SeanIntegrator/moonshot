@@ -1,4 +1,5 @@
 import type { FlowLineView } from '@moonshot/types';
+import { Fragment } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatAllergenLabel } from './formatAllergen.js';
@@ -10,6 +11,26 @@ type DrinkRowProps = {
   made: boolean;
   onToggleMade: () => void;
 };
+
+/** Shot tags are joined with ` · ` upstream — split for 2px-gap bracket rendering. */
+function ShotBracketLabel({ label, color }: { label: string; color: string }) {
+  const parts = label.split(' · ');
+  return (
+    <span
+      className="flow-strike inline-flex items-baseline gap-[2px] font-mono text-xl font-bold tracking-wide uppercase whitespace-nowrap"
+      style={{ color }}
+    >
+      <span>[</span>
+      {parts.map((part, i) => (
+        <Fragment key={`${part}-${i}`}>
+          {i > 0 ? <span>·</span> : null}
+          <span>{part}</span>
+        </Fragment>
+      ))}
+      <span>]</span>
+    </span>
+  );
+}
 
 export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: DrinkRowProps) {
   const hasMods = view.milk != null || view.syrups.length > 0;
@@ -51,12 +72,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
           <div className="flex items-baseline gap-1.5 whitespace-nowrap">
             <span className="flow-strike text-2xl font-bold">{itemName}</span>
             {view.shotLabel ? (
-              <span
-                className="flow-strike font-mono text-xl font-bold tracking-wide uppercase whitespace-nowrap"
-                style={{ color: view.beanAccent }}
-              >
-                {`[ ${view.shotLabel} ]`}
-              </span>
+              <ShotBracketLabel label={view.shotLabel} color={view.beanAccent} />
             ) : null}
           </div>
           {view.sizeLabel ? (
@@ -68,9 +84,9 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
       </div>
 
       {hasMods ? (
-        <div className="ml-[clamp(16px,4vw,32px)] flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden py-[calc(0.55rem+8px)]">
+        <div className="ml-[clamp(28px,5.5vw,44px)] flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden py-[calc(0.55rem+8px)]">
           {view.milk ? (
-            <span className="mr-4 inline-flex min-w-32 shrink-0 items-stretch overflow-hidden rounded-md">
+            <span className="mr-4 inline-flex min-w-32 shrink-0 items-stretch overflow-hidden rounded-[2px]">
               {view.milk.temperature ? (
                 <em className="inline-flex items-center bg-[#c8cdd4] px-2 py-2.5 text-[1.15rem] font-semibold italic leading-tight whitespace-nowrap text-[#1a1a1a]">
                   {view.milk.temperature}
@@ -93,7 +109,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
             <Badge
               key={`${s.label}-${i}`}
               variant="outline"
-              className="h-auto min-w-20 shrink-0 justify-center rounded-full border px-2.5 py-1 text-[1.15rem] font-normal leading-tight whitespace-nowrap"
+              className="h-auto min-w-20 shrink-0 justify-center rounded-full border-[0.5px] px-2.5 py-1 text-[1.15rem] font-normal leading-tight whitespace-nowrap"
               style={{
                 borderColor: s.colorHex ?? '#4a3f6b',
                 background: `color-mix(in srgb, ${s.colorHex ?? '#4a3f6b'} 20%, transparent)`,

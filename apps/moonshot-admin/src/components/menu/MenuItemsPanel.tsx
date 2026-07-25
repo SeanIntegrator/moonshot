@@ -6,6 +6,7 @@ import type {
   NormalisedMenuItem,
 } from '@moonshot/types';
 import {
+  defaultAllowNoMilk,
   DRINK_ARCHETYPE_SLOT_GROUP_NAMES,
   isDrinkArchetypeId,
 } from '@moonshot/types';

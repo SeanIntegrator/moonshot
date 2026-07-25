@@ -102,31 +102,35 @@ export function App() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-full px-5 py-4 pb-6">
-        <AppHeader
-          cafeName={session.cafeName}
-          cafeSlug={session.cafeSlug}
-          username={session.username}
-          recalling={recalling}
-          onRecall={recallLast}
-          onLogout={logout}
-        />
-        {error ? (
-          <Alert variant="destructive" className="mt-3">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        {kdsConfig ? (
-          <FlowBoard
-            orders={orders}
-            kdsConfig={kdsConfig}
-            dismissingIds={dismissingIds}
-            onComplete={complete}
-            onExited={finalizeDismiss}
+      <div className="min-h-full">
+        <div className="sticky top-0 z-50 border-b border-border/60 bg-background/95 px-5 pt-4 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/85">
+          <AppHeader
+            cafeName={session.cafeName}
+            cafeSlug={session.cafeSlug}
+            username={session.username}
+            recalling={recalling}
+            onRecall={recallLast}
+            onLogout={logout}
           />
-        ) : (
-          <p className="mt-3 text-sm text-muted-foreground">Loading board config…</p>
-        )}
+          {error ? (
+            <Alert variant="destructive" className="mt-3">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+        </div>
+        <div className="px-5 pt-4 pb-6">
+          {kdsConfig ? (
+            <FlowBoard
+              orders={orders}
+              kdsConfig={kdsConfig}
+              dismissingIds={dismissingIds}
+              onComplete={complete}
+              onExited={finalizeDismiss}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">Loading board config…</p>
+          )}
+        </div>
       </div>
     </TooltipProvider>
   );

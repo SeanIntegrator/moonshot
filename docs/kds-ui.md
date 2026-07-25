@@ -7,7 +7,7 @@ Kitchen Display System styling lives in `apps/moonshot-kds` only — not a share
 - **shadcn/ui** with **Base UI** primitives (`components.json` style: `base-nova`)
 - **Tailwind CSS v4** via `@tailwindcss/vite`
 - **Dark** theme by default (`class="dark"` on `<html>`)
-- Neutral base color + Geist Variable
+- Cool grey board (`--background`) with a slightly lighter ticket surface (`--card`) + Geist Variable
 
 Prebuilt components under `src/components/ui/` (Button, Input, Label, Card, Alert, Badge, Separator, DropdownMenu, Tooltip) power login, shell chrome, ticket chrome, recall, and per-order menus.
 

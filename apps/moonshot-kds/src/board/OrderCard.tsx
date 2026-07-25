@@ -107,12 +107,12 @@ export function OrderCard({
   return (
     <div
       className={cn(
-        'mb-3 max-h-[2000px] overflow-hidden transition-[max-height,opacity,margin,border-width] duration-300 ease-in-out',
+        'mb-8 max-h-[2000px] overflow-hidden transition-[max-height,opacity,margin,border-width] duration-300 ease-in-out',
         dismissing && 'pointer-events-none mb-0 max-h-0 border-0 opacity-0',
       )}
       onTransitionEnd={handleTransitionEnd}
     >
-      <Card className="w-full gap-0 overflow-hidden rounded-[10px] bg-[#0e1116] py-0 ring-[#1c2229]">
+      <Card className="w-full gap-0 overflow-hidden rounded-[10px] bg-card py-0 shadow-[0_2px_10px_rgba(0,0,0,0.28)] ring-1 ring-black/20">
         <div
           className={cn(
             'flex w-full items-center gap-2 px-4 py-3 text-[#e8eef2]',
@@ -149,8 +149,8 @@ export function OrderCard({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
-                  className="shrink-0 text-[#e8eef2] hover:bg-white/10 hover:text-[#e8eef2]"
+                  size="icon"
+                  className="size-11 shrink-0 rounded-[6px] border-2 border-transparent bg-white/3 text-[#e8eef2] hover:bg-white/15 hover:text-[#e8eef2] [&_svg]:size-5"
                   aria-label="Order actions"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}

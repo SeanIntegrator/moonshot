@@ -28,7 +28,7 @@ export function FlowBoard({
   }
 
   return (
-    <div className="mt-4 flex flex-col items-stretch">
+    <div className="flex flex-col items-stretch">
       {orders.map((order) => (
         <OrderCard
           key={order.id}
