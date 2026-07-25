@@ -74,7 +74,7 @@ Everything here is real and worth doing, but none of it blocks C&B going live. K
  [API] Stripe refunds (currently paid-cancel only flags refundPending).
  [API] [Chore] Redis Socket.io adapter for multi-instance safety (needed before scaling beyond one node).
  [API] [Chore] Break up menu.ts inline SQL; split oversized admin-api.ts / menu panels.
- [Order-ahead] Multi-reward picker; profile prefs; pickup reschedule.
+ [Order-ahead] Multi-reward picker (done: type-aware apply, cheapest matching line, Applicable/Other split when one of many fits); profile prefs; pickup reschedule.
  [KDS] Audio alerts; offline resilience (Service Worker + IndexedDB).
  [Cross-cutting] Menu engineering report tool (separate, opt-in product).
  [Chore] Fix docs/READMEs that overstate current state (KDS "PWA", Admin "pre-seeded only").

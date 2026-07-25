@@ -3,6 +3,7 @@
  */
 
 import type { IsoDateTime } from './order.js';
+import { isDrinkMenuCategory, isFoodMenuCategory } from './menu.js';
 
 export type LoyaltyTransactionType =
   | 'stamp_earned'
@@ -21,7 +22,10 @@ export interface LoyaltyTransaction {
   createdAt: IsoDateTime;
 }
 
-export type RewardType = 'free_coffee' | string;
+/** Known checkout-redeemable reward kinds (issuance may still only create free_coffee). */
+export type KnownLoyaltyRewardType = 'free_coffee' | 'free_pastry';
+
+export type RewardType = KnownLoyaltyRewardType | string;
 
 export interface LoyaltyReward {
   id: string;
@@ -33,6 +37,59 @@ export interface LoyaltyReward {
   createdAt: IsoDateTime;
   /** Issuance metadata / POS correlation — optional */
   metadata?: Record<string, unknown>;
+}
+
+/** Minimal line shape for applicability / discount (client cart or resolved order lines). */
+export type LoyaltyDiscountLine = {
+  category: string;
+  unitPriceMinor: number;
+};
+
+export function isKnownLoyaltyRewardType(value: string): value is KnownLoyaltyRewardType {
+  return value === 'free_coffee' || value === 'free_pastry';
+}
+
+function lineMatchesRewardType(rewardType: string, category: string): boolean {
+  if (rewardType === 'free_coffee') return isDrinkMenuCategory(category);
+  if (rewardType === 'free_pastry') return isFoodMenuCategory(category);
+  return false;
+}
+
+/** Whether the basket has at least one line the reward can apply to. */
+export function isLoyaltyRewardApplicable(
+  rewardType: string,
+  lines: ReadonlyArray<Pick<LoyaltyDiscountLine, 'category'>>,
+): boolean {
+  return lines.some((line) => lineMatchesRewardType(rewardType, line.category));
+}
+
+/**
+ * Free-item discount: cheapest unit price among matching lines (0 if none).
+ * Custom drink sections count for free_coffee; food / *food* for free_pastry.
+ */
+export function computeLoyaltyRewardDiscountMinor(
+  rewardType: string,
+  lines: ReadonlyArray<LoyaltyDiscountLine>,
+): number {
+  let min: number | null = null;
+  for (const line of lines) {
+    if (!lineMatchesRewardType(rewardType, line.category)) continue;
+    if (min == null || line.unitPriceMinor < min) min = line.unitPriceMinor;
+  }
+  return min ?? 0;
+}
+
+/** Customer-facing reward title on checkout / rewards list. */
+export function loyaltyRewardLabel(
+  rewardType: string,
+  cafeRewardDescription?: string | null,
+): string {
+  if (rewardType === 'free_pastry') return 'Free pastry';
+  if (rewardType === 'free_coffee') {
+    const custom = cafeRewardDescription?.trim();
+    return custom || 'Free drink';
+  }
+  return cafeRewardDescription?.trim() || 'Reward';
 }
 
 /** GET /loyalty/me — café loyalty settings + cache snapshot */

@@ -11,6 +11,7 @@ import {
 import { fetchOrderWithItems } from './orders/order-read.js';
 import { resolveOrderLinesWithModifiers } from './order-modifiers.js';
 import { applyRewardDiscountToTotal } from './loyalty/apply-checkout-reward-pricing.js';
+import { findUnredeemedRewardById } from './loyalty/repository.js';
 import { getStripeConnectAccountId, isStripeConnectReady } from './payments/cafe-payment-config.js';
 import { getStripeOrNull } from './payments/stripe-client.js';
 import { createStripeCheckoutSessionDirectCharge } from './payments/stripe-checkout.js';
@@ -89,10 +90,25 @@ export async function createStripeCheckoutOrderResponse(params: {
     lines,
   });
 
+  let rewardType: string | null = null;
+  if (redeemRewardId && userId) {
+    const reward = await findUnredeemedRewardById({
+      pool,
+      cafeId,
+      userId,
+      rewardId: redeemRewardId,
+    });
+    if (!reward) {
+      throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Reward not found or already redeemed');
+    }
+    rewardType = reward.rewardType;
+  }
+
   const { totalMinor, discountMinor } = applyRewardDiscountToTotal({
     subtotalMinor,
     lines: resolvedLines,
     redeemRewardId,
+    rewardType,
   });
 
   const order = await insertPendingOrderWithResolvedLines({

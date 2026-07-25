@@ -77,7 +77,7 @@ Migrations: `012_menu_modifier_library.sql`, `020_menu_sections.sql`, `021_drink
 
 Order checkout resolves prices server-side: size absolute base + modifier deltas. When `waiveMilkSurcharge` is set, Milks deltas are forced to 0. Free options use `priceMinor: 0`; customer UI hides `£0.00` tags via `formatPriceTag`.
 
-Loyalty free-drink rewards treat every non-food / non-extras section as a drink (including custom sections).
+Loyalty free-drink rewards treat every non-food / non-extras section as a drink (including custom sections). Free-pastry rewards apply to food sections only. Checkout discounts the **cheapest** matching unit price; inapplicable rewards stay visible with a disabled toggle.
 
 ## Admin UI
 

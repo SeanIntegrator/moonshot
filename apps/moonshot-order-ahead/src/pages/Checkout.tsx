@@ -1,4 +1,8 @@
-import type { LoyaltySummaryResponse, OrderType } from '@moonshot/types';
+import type { LoyaltyReward, LoyaltySummaryResponse, OrderType } from '@moonshot/types';
+import {
+  isLoyaltyRewardApplicable,
+  loyaltyRewardLabel,
+} from '@moonshot/types';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   Box,
@@ -8,7 +12,7 @@ import {
   ToggleButton,
   Typography,
 } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AllergyChecklist } from '../components/AllergyChecklist.js';
 import { CheckoutOrderSummary } from '../components/CheckoutOrderSummary.js';
@@ -38,6 +42,29 @@ function stampsUntilRewardCopy(summary: LoyaltySummaryResponse): string {
   return `${remaining} more stamps until your next reward`;
 }
 
+function renderRewardRows(params: {
+  rewards: LoyaltyReward[];
+  selectedRewardId: string | null;
+  categoryLines: { category: string }[];
+  cafeRewardDescription: string | null | undefined;
+  onSelect: (rewardId: string | null) => void;
+}) {
+  const { rewards, selectedRewardId, categoryLines, cafeRewardDescription, onSelect } = params;
+  return rewards.map((reward) => {
+    const applicable = isLoyaltyRewardApplicable(reward.rewardType, categoryLines);
+    const applied = selectedRewardId === reward.id;
+    return (
+      <RewardRow
+        key={reward.id}
+        description={loyaltyRewardLabel(reward.rewardType, cafeRewardDescription)}
+        applied={applied}
+        disabled={!applicable}
+        onToggle={(next) => onSelect(next ? reward.id : null)}
+      />
+    );
+  });
+}
+
 export function Checkout() {
   const navigate = useNavigate();
   const cafePath = useCafePath();
@@ -53,7 +80,7 @@ export function Checkout() {
   const [error, setError] = useState<string | null>(null);
   const [allergyMode, setAllergyMode] = useState<'none' | 'allergies'>('none');
   const [checkoutAllergens, setCheckoutAllergens] = useState<string[]>([]);
-  const [applyReward, setApplyReward] = useState(false);
+  const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   /** True once we clear the cart and head to confirmed — blocks empty-cart → menu bounce. */
   const [leavingToConfirmed, setLeavingToConfirmed] = useState(false);
@@ -69,11 +96,41 @@ export function Checkout() {
     }
   }, [lines.length, navigate, cafePath, submitting, redirecting, leavingToConfirmed]);
 
+  const categoryLines = useMemo(() => {
+    if (!menu?.items) return [] as { category: string }[];
+    const out: { category: string }[] = [];
+    for (const line of lines) {
+      const item = menu.items.find((i) => i.id === line.menuItemId);
+      if (item) out.push({ category: item.category });
+    }
+    return out;
+  }, [lines, menu?.items]);
+
+  const { applicableRewards, otherRewards, splitSections } = useMemo(() => {
+    const applicable = rewards.filter((r) =>
+      isLoyaltyRewardApplicable(r.rewardType, categoryLines),
+    );
+    const other = rewards.filter((r) => !isLoyaltyRewardApplicable(r.rewardType, categoryLines));
+    return {
+      applicableRewards: applicable,
+      otherRewards: other,
+      splitSections: rewards.length > 1 && applicable.length === 1,
+    };
+  }, [rewards, categoryLines]);
+
+  useEffect(() => {
+    if (!selectedRewardId) return;
+    if (!applicableRewards.some((r) => r.id === selectedRewardId)) {
+      setSelectedRewardId(null);
+    }
+  }, [selectedRewardId, applicableRewards]);
+
+  const selectedReward = rewards.find((r) => r.id === selectedRewardId) ?? null;
+
   const { pricedLines, discountMinor, totalMinor, itemCount } = useCheckoutPricing({
     lines,
     menuItems: menu?.items,
-    applyReward,
-    hasRewards: rewards.length > 0,
+    rewardType: selectedReward?.rewardType ?? null,
   });
 
   async function placeOrder(): Promise<void> {
@@ -89,7 +146,7 @@ export function Checkout() {
       const data = await createCustomerOrder({
         customerName: name,
         orderType: ORDER_TYPE,
-        redeemRewardId: applyReward && rewards[0] ? rewards[0].id : undefined,
+        redeemRewardId: selectedRewardId ?? undefined,
         pickupDelayMinutes: pickupTimeEnabled ? pickupDelayMinutes : undefined,
         items: lines.map((l) => ({
           menuItemId: l.menuItemId,
@@ -145,6 +202,14 @@ export function Checkout() {
   if (menuLoading && !menu) {
     return <CheckoutPageSkeleton />;
   }
+
+  const cafeRewardDescription = summary?.rewardDescription;
+  const rewardRowProps = {
+    selectedRewardId,
+    categoryLines,
+    cafeRewardDescription,
+    onSelect: setSelectedRewardId,
+  };
 
   return (
     <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -220,25 +285,41 @@ export function Checkout() {
             <AllergyChecklist selected={checkoutAllergens} onChange={setCheckoutAllergens} />
           )}
 
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
-            Rewards
-          </Typography>
           {isSignedIn && loyaltyEnabled && summary && rewards.length > 0 ? (
-            <RewardRow
-              description="1 free drink available"
-              applied={applyReward}
-              onToggle={setApplyReward}
-            />
+            splitSections ? (
+              <>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+                  Applicable rewards
+                </Typography>
+                {renderRewardRows({ ...rewardRowProps, rewards: applicableRewards })}
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 2, mb: 0.5 }}>
+                  Other rewards
+                </Typography>
+                {renderRewardRows({ ...rewardRowProps, rewards: otherRewards })}
+              </>
+            ) : (
+              <>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+                  Rewards
+                </Typography>
+                {renderRewardRows({ ...rewardRowProps, rewards })}
+              </>
+            )
           ) : (
-            <Typography variant="body2" color="text.secondary">
-              {!loyaltyEnabled
-                ? 'Loyalty is not enabled for this café.'
-                : !isSignedIn
-                  ? 'Sign in to earn stamps and redeem rewards.'
-                  : summary
-                    ? stampsUntilRewardCopy(summary)
-                    : 'Earn stamps with this order.'}
-            </Typography>
+            <>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+                Rewards
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {!loyaltyEnabled
+                  ? 'Loyalty is not enabled for this café.'
+                  : !isSignedIn
+                    ? 'Sign in to earn stamps and redeem rewards.'
+                    : summary
+                      ? stampsUntilRewardCopy(summary)
+                      : 'Earn stamps with this order.'}
+              </Typography>
+            </>
           )}
         </Box>
 
@@ -279,7 +360,7 @@ export function Checkout() {
             </Box>
             <span>{formatMoney(totalMinor)} →</span>
           </Button>
-          {loyaltyEnabled && isSignedIn && !applyReward && (
+          {loyaltyEnabled && isSignedIn && !selectedRewardId && (
             <Typography
               variant="caption"
               color="success.main"

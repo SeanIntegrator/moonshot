@@ -1,5 +1,4 @@
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Box, Switch, Typography } from '@mui/material';
 
 type Props = {
@@ -22,6 +21,7 @@ export function RewardRow({ description, applied, onToggle, disabled }: Props) {
         justifyContent: 'space-between',
         gap: 1,
         mt: 1,
+        opacity: disabled && !applied ? 0.55 : 1,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
@@ -30,8 +30,15 @@ export function RewardRow({ description, applied, onToggle, disabled }: Props) {
           {description}
         </Typography>
       </Box>
+      <Typography
+        variant="body2"
+        fontWeight={600}
+        color={applied ? 'success.main' : 'text.secondary'}
+        sx={{ flexShrink: 0 }}
+      >
+        {applied ? 'Applied' : 'Apply'}
+      </Typography>
       <Switch checked={applied} onChange={(e) => onToggle(e.target.checked)} disabled={disabled} size="small" />
-      <ChevronRightIcon fontSize="small" color="disabled" />
     </Box>
   );
 }

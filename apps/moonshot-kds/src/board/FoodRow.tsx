@@ -49,7 +49,7 @@ export function FoodRow({ itemName, quantity, view, made, onToggleMade }: FoodRo
       <div className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 py-[calc(0.55rem+8px)]">
         {view.allergens.length > 0 ? (
           <span className="flow-strike flow-allergen">
-            {view.allergens.map(formatAllergenLabel).join(', ')}
+            {`Allergy ${view.allergens.map(formatAllergenLabel).join(', ')}`}
           </span>
         ) : null}
         {view.notes?.trim() ? (

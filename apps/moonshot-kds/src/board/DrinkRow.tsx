@@ -10,6 +10,8 @@ type DrinkRowProps = {
   view: FlowLineView;
   made: boolean;
   onToggleMade: () => void;
+  /** Drop bottom border when a FOOD divider provides the shared rule below. */
+  hideBottomBorder?: boolean;
 };
 
 /** Shot tags are joined with ` · ` upstream — split for 2px-gap bracket rendering. */
@@ -32,7 +34,14 @@ function ShotBracketLabel({ label, color }: { label: string; color: string }) {
   );
 }
 
-export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: DrinkRowProps) {
+export function DrinkRow({
+  itemName,
+  quantity,
+  view,
+  made,
+  onToggleMade,
+  hideBottomBorder = false,
+}: DrinkRowProps) {
   const hasMods = view.milk != null || view.syrups.length > 0;
   const qtyMulti = quantity > 1;
 
@@ -41,7 +50,8 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
       type="button"
       data-flow-row="drink"
       className={cn(
-        'grid w-full cursor-pointer items-stretch gap-0 border-b border-border bg-transparent px-4 text-left text-card-foreground outline-none last:border-b-0 [-webkit-tap-highlight-color:transparent]',
+        'grid w-full cursor-pointer items-stretch gap-0 bg-transparent px-4 text-left text-card-foreground outline-none [-webkit-tap-highlight-color:transparent]',
+        !hideBottomBorder && 'border-b border-border last:border-b-0',
         hasMods
           ? 'grid-cols-[var(--flow-shot-col-width,minmax(10rem,auto))_minmax(9rem,auto)_minmax(0,1fr)]'
           : 'grid-cols-[var(--flow-shot-col-width,minmax(10rem,auto))_minmax(0,1fr)]',
@@ -124,7 +134,7 @@ export function DrinkRow({ itemName, quantity, view, made, onToggleMade }: Drink
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 py-[calc(0.55rem+8px)]">
         {view.allergens.length > 0 ? (
           <span className="flow-strike flow-allergen">
-            {view.allergens.map(formatAllergenLabel).join(', ')}
+            {`Allergy ${view.allergens.map(formatAllergenLabel).join(', ')}`}
           </span>
         ) : null}
         {view.notes?.trim() ? (

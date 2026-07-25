@@ -114,12 +114,23 @@ type OrderNowProps = {
 export function OrderNowButton({ onClick }: OrderNowProps) {
   return (
     <Button
-      variant="outlined"
+      variant="contained"
       fullWidth
       onClick={onClick}
       startIcon={<LocalCafeIcon fontSize="small" />}
       endIcon={<ChevronRightIcon fontSize="small" />}
-      sx={{ mt: 2, py: 1.75, fontSize: '1.05rem' }}
+      sx={(theme) => ({
+        mt: 2,
+        py: 1.75,
+        fontSize: '1.05rem',
+        // Hero sits on cafe.heroBg — never use outlined/primary (dark-on-dark).
+        bgcolor: theme.palette.cafe.heroText,
+        color: theme.palette.cafe.heroBg,
+        '&:hover': {
+          bgcolor: theme.palette.cafe.heroText,
+          filter: 'brightness(0.92)',
+        },
+      })}
     >
       Order now
     </Button>

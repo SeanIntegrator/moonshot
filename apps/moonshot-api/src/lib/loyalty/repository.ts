@@ -200,3 +200,22 @@ export async function listUnredeemedRewards(params: {
     created_at: Date;
   }>;
 }
+
+/** Unredeemed reward owned by this user at this café, or null. */
+export async function findUnredeemedRewardById(params: {
+  pool: Pool | PoolClient;
+  cafeId: string;
+  userId: string;
+  rewardId: string;
+}): Promise<{ id: string; rewardType: string } | null> {
+  const res = await params.pool.query<{ id: string; reward_type: string }>(
+    `SELECT id, reward_type
+     FROM loyalty_rewards
+     WHERE id = $1 AND cafe_id = $2 AND user_id = $3 AND redeemed_at IS NULL
+     LIMIT 1`,
+    [params.rewardId, params.cafeId, params.userId],
+  );
+  const row = res.rows[0];
+  if (!row) return null;
+  return { id: row.id, rewardType: row.reward_type };
+}

@@ -5,6 +5,7 @@ import { ApiHttpError } from '../http-errors.js';
 import type { OrderRowDb } from '../order-map.js';
 import { consumeRewardForOrder } from '../loyalty/consume-reward-for-order.js';
 import { applyRewardDiscountToTotal } from '../loyalty/apply-checkout-reward-pricing.js';
+import { findUnredeemedRewardById } from '../loyalty/repository.js';
 import { resolveOrderLinesWithModifiers, type ResolvedOrderLine } from '../order-modifiers.js';
 import {
   assertCustomerName,
@@ -57,10 +58,25 @@ export async function createGuestPayInStoreOrder(params: {
     lines,
   });
 
+  let rewardType: string | null = null;
+  if (redeemRewardId && userId) {
+    const reward = await findUnredeemedRewardById({
+      pool,
+      cafeId,
+      userId,
+      rewardId: redeemRewardId,
+    });
+    if (!reward) {
+      throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Reward not found or already redeemed');
+    }
+    rewardType = reward.rewardType;
+  }
+
   const { totalMinor, discountMinor } = applyRewardDiscountToTotal({
     subtotalMinor,
     lines: resolvedLines,
     redeemRewardId,
+    rewardType,
   });
 
   const order = await insertOrderWithResolvedLines({

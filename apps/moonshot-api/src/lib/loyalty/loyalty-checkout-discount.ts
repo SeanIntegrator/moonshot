@@ -1,16 +1,28 @@
-import { isDrinkMenuCategory } from '@moonshot/types';
+import {
+  computeLoyaltyRewardDiscountMinor,
+  type LoyaltyDiscountLine,
+} from '@moonshot/types';
 import type { ResolvedOrderLine } from '../order-modifiers.js';
 
+function toDiscountLines(lines: ResolvedOrderLine[]): LoyaltyDiscountLine[] {
+  return lines.map((line) => ({
+    category: line.category,
+    unitPriceMinor: line.unitPriceMinor,
+  }));
+}
+
 /**
- * Free-drink reward: discount equals the highest unit price among drink lines.
- * Clamped by caller to subtotal. Custom sections (ube, pandan, …) count as drinks;
- * food / extras do not.
+ * Loyalty reward discount for checkout — cheapest matching unit price.
+ * free_coffee → drinks (incl. custom sections); free_pastry → food.
  */
+export function computeLoyaltyCheckoutDiscountMinor(
+  rewardType: string,
+  lines: ResolvedOrderLine[],
+): number {
+  return computeLoyaltyRewardDiscountMinor(rewardType, toDiscountLines(lines));
+}
+
+/** @deprecated Prefer computeLoyaltyCheckoutDiscountMinor with reward type. */
 export function computeFreeDrinkDiscountMinor(lines: ResolvedOrderLine[]): number {
-  let max = 0;
-  for (const line of lines) {
-    if (!isDrinkMenuCategory(line.category)) continue;
-    max = Math.max(max, line.unitPriceMinor);
-  }
-  return max;
+  return computeLoyaltyCheckoutDiscountMinor('free_coffee', lines);
 }

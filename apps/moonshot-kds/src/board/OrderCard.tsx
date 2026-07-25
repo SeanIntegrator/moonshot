@@ -10,7 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { DrinkRow } from './DrinkRow.js';
 import { FoodRow } from './FoodRow.js';
@@ -43,14 +42,23 @@ const TIMER_BY_TONE: Record<TimerTone, string> = {
   red: 'border-transparent bg-[#6b4a72] text-[#f5eef6]',
 };
 
-function FoodDivider({ only }: { only: boolean }) {
+/**
+ * Full-bleed 1px rule that replaces a normal row border.
+ * Label is absolute so type size does not inflate the divider box.
+ */
+function FoodDivider({
+  only,
+  className,
+}: {
+  only: boolean;
+  className?: string;
+}) {
   return (
-    <div className="flex items-center gap-2.5 px-4 py-2" role="separator">
-      <Separator className="w-auto flex-1" />
-      <span className="shrink-0 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
+    <div role="separator" className={cn('relative z-10 h-px w-full', className)}>
+      <div className="absolute inset-x-0 top-0 h-px bg-border" aria-hidden />
+      <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2.5 text-sm font-bold tracking-[0.12em] text-muted-foreground uppercase">
         {only ? 'FOOD ONLY' : 'FOOD'}
       </span>
-      <Separator className="w-auto flex-1" />
     </div>
   );
 }
@@ -167,9 +175,12 @@ export function OrderCard({
         </div>
 
         <CardContent className="flex flex-col p-0" ref={bodyRef}>
-          {drinks.length === 0 && foods.length > 0 ? <FoodDivider only /> : null}
+          {drinks.length === 0 && foods.length > 0 ? (
+            // Pull first food up so its qty bar meets the full-bleed rule.
+            <FoodDivider only className="-mb-px" />
+          ) : null}
 
-          {drinks.map(({ item, view }) => (
+          {drinks.map(({ item, view }, i) => (
             <DrinkRow
               key={item.id}
               itemName={item.itemName}
@@ -177,10 +188,14 @@ export function OrderCard({
               view={view}
               made={madeIds.has(item.id)}
               onToggleMade={() => toggleMade(item.id)}
+              hideBottomBorder={foods.length > 0 && i === drinks.length - 1}
             />
           ))}
 
-          {foods.length > 0 && drinks.length > 0 ? <FoodDivider only={false} /> : null}
+          {foods.length > 0 && drinks.length > 0 ? (
+            // Collapse toward normal row gap; qty bar on first food meets the rule.
+            <FoodDivider only={false} className="-mt-px -mb-px" />
+          ) : null}
 
           {foods.map(({ item, view }) => (
             <FoodRow
