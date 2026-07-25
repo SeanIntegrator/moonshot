@@ -22,6 +22,7 @@ import { OrderConfirmed } from './pages/OrderConfirmed.js';
 import { OrderDetail } from './pages/OrderDetail.js';
 import { Profile } from './pages/Profile.js';
 import { Rewards } from './pages/Rewards.js';
+import { pageContentWidthSx } from './theme/pageLayout.js';
 
 function pathToNavValue(pathname: string): number {
   const segments = pathname.split('/').filter(Boolean);
@@ -119,8 +120,7 @@ export function App() {
             borderTop: 1,
             borderColor: 'divider',
             borderRadius: 0,
-            maxWidth: 600,
-            mx: 'auto',
+            ...pageContentWidthSx,
           }}
         >
           <BottomNavigation

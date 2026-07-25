@@ -5,6 +5,7 @@ import {
   MENU_TEMPLATE_CATEGORIES,
   MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR,
   MENU_TEMPLATE_DRINK_ARCHETYPE,
+  defaultAllowNoMilk,
   platformDrinkArchetypeConfig,
   type AdminSaveMenuTemplateRequest,
   type AdminSaveMenuTemplateResponse,
@@ -313,10 +314,10 @@ export async function applyMenuTemplate(
       const archetypeId = MENU_TEMPLATE_DRINK_ARCHETYPE[drink.templateKey];
       const resolved = resolveArchetypeGroups(archetypeId, effectiveConfig, libraryByName);
       // Tea / iced americano always; americano only among low-milk-hot drinks.
-      const allowNoMilk =
-        archetypeId === 'tea' ||
-        archetypeId === 'low-milk-iced' ||
-        drink.templateKey === 'americano';
+      const allowNoMilk = defaultAllowNoMilk(archetypeId, {
+        templateKey: drink.templateKey,
+        name: drink.name,
+      });
 
       // Insert first so we have an item id, then copy the canonical template into
       // café-scoped storage. Café replaces never mutate template/drinks/*.

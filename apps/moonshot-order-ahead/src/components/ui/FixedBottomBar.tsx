@@ -1,6 +1,10 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { styled } from '@mui/material/styles';
+import {
+  PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX,
+  PAGE_CONTENT_MAX_WIDTH_PX,
+} from '../../theme/pageLayout.js';
 
 /** Fixed bottom dock (item detail add-to-cart, etc.) — surface from theme. */
 export const FixedBottomBar = styled(Box)(({ theme }) => ({
@@ -8,7 +12,7 @@ export const FixedBottomBar = styled(Box)(({ theme }) => ({
   bottom: 0,
   left: 0,
   right: 0,
-  maxWidth: 600,
+  maxWidth: '100%',
   marginLeft: 'auto',
   marginRight: 'auto',
   paddingLeft: theme.spacing(2),
@@ -21,6 +25,9 @@ export const FixedBottomBar = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
   alignItems: 'center',
   zIndex: theme.zIndex.appBar,
+  [`@media (min-width:${PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX}px)`]: {
+    maxWidth: PAGE_CONTENT_MAX_WIDTH_PX,
+  },
 })) as typeof Box;
 
 /** Full-bleed primary cart CTA bar (menu floating checkout). */

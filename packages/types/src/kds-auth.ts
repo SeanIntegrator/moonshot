@@ -37,6 +37,11 @@ export interface KdsCompleteOrderResponse {
   order: NormalisedOrder;
 }
 
+/** Same shape as complete — recalled order is back on the open board as `confirmed`. */
+export interface KdsRecallLastOrderResponse {
+  order: NormalisedOrder;
+}
+
 export interface KdsConfigResponse {
   kdsConfig: KdsConfig;
 }

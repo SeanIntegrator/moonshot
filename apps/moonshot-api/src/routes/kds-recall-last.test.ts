@@ -4,33 +4,22 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-/**
- * Regression guard for the KDS `Done` happy + degraded paths:
- *   - completing the order is the *primary* request; failure here returns 500
- *   - loyalty and ETA recompute are *post-success* side effects; failures here
- *     must be swallowed so the kitchen never sees `Done` fail after the order
- *     row has already moved to `completed`.
- *
- * We mock the data-access + side-effect modules and mount only the KDS router.
- */
-
-const completeOrderForKds = vi.hoisted(() => vi.fn());
-const applyLoyaltyAfterKdsComplete = vi.hoisted(() => vi.fn());
+const recallLastCompletedOrderForKds = vi.hoisted(() => vi.fn());
 const recomputePickupEtasForCafe = vi.hoisted(() => vi.fn());
 const emitKdsServerToClient = vi.hoisted(() => vi.fn());
 const emitCustomerServerToClient = vi.hoisted(() => vi.fn());
 const poolQuery = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/orders/order-kds.js', () => ({
-  completeOrderForKds,
+  completeOrderForKds: vi.fn(),
   listOpenOrdersForKds: vi.fn(),
-  recallLastCompletedOrderForKds: vi.fn(),
+  recallLastCompletedOrderForKds,
   advanceOrderStatusForKds: vi.fn(),
   stretchOrderEtaForKds: vi.fn(),
 }));
 
 vi.mock('../lib/loyalty-after-kds-complete.js', () => ({
-  applyLoyaltyAfterKdsComplete,
+  applyLoyaltyAfterKdsComplete: vi.fn(),
 }));
 
 vi.mock('../lib/pickup-eta.js', () => ({
@@ -87,7 +76,7 @@ function kdsToken(): string {
   );
 }
 
-function mockOrder(): NormalisedOrder {
+function mockRecalledOrder(): NormalisedOrder {
   return {
     id: ORDER_ID,
     cafeId: CAFE_ID,
@@ -97,18 +86,18 @@ function mockOrder(): NormalisedOrder {
     items: [],
     notes: null,
     orderType: 'takeaway',
-    status: 'completed',
+    status: 'confirmed',
     paymentStatus: 'unpaid',
     totalMinor: 350,
     currency: 'GBP',
     pickup: {
       quotedPickupTime: null,
       pickupTime: null,
-      completedAt: '2026-05-18T12:00:00.000Z',
+      completedAt: null,
       etaMode: 'auto',
     },
     createdAt: '2026-05-18T12:00:00.000Z',
-    updatedAt: '2026-05-18T12:00:00.000Z',
+    updatedAt: '2026-05-18T12:05:00.000Z',
     posOrderId: null,
     editToken: null,
     parentOrderId: null,
@@ -116,7 +105,6 @@ function mockOrder(): NormalisedOrder {
 }
 
 async function appWithKdsRouter() {
-  /* Dynamic import so the mocks above are honoured by the module under test. */
   const { kdsRouter } = await import('./kds.js');
   const { errorHandler } = await import('../middleware/error-handler.js');
   const app = express();
@@ -126,86 +114,73 @@ async function appWithKdsRouter() {
   return app;
 }
 
-describe('POST /api/v1/kds/orders/:orderId/complete', () => {
+describe('POST /api/v1/kds/orders/recall-last', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.JWT_SECRET = 'kds-complete-test-secret';
+    process.env.JWT_SECRET = 'kds-recall-test-secret';
     poolQuery.mockResolvedValue({ rows: [{ id: CAFE_ID, kds_config: {} }] });
   });
 
-  it('returns 200 and the completed order on the happy path', async () => {
-    const order = mockOrder();
-    completeOrderForKds.mockResolvedValue(order);
-    applyLoyaltyAfterKdsComplete.mockResolvedValue(undefined);
+  it('returns 200 and reopens the last completed order', async () => {
+    const order = mockRecalledOrder();
+    recallLastCompletedOrderForKds.mockResolvedValue(order);
     recomputePickupEtasForCafe.mockResolvedValue(undefined);
 
     const app = await appWithKdsRouter();
     const res = await request(app)
-      .post(`${API_VERSION_PREFIX}/kds/orders/${ORDER_ID}/complete`)
+      .post(`${API_VERSION_PREFIX}/kds/orders/recall-last`)
       .set('Authorization', `Bearer ${kdsToken()}`);
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.data.order.id).toBe(ORDER_ID);
-    expect(emitKdsServerToClient).toHaveBeenCalled();
-    expect(emitCustomerServerToClient).toHaveBeenCalled();
-    expect(applyLoyaltyAfterKdsComplete).toHaveBeenCalled();
+    expect(res.body.data.order.status).toBe('confirmed');
+    expect(emitKdsServerToClient).toHaveBeenCalledWith(CAFE_ID, {
+      type: 'kds:order:new',
+      order,
+    });
+    expect(emitCustomerServerToClient).toHaveBeenCalledWith(ORDER_ID, {
+      type: 'customerOrderStatusUpdated',
+      orderId: ORDER_ID,
+      cafeId: CAFE_ID,
+      status: 'confirmed',
+    });
     expect(recomputePickupEtasForCafe).toHaveBeenCalled();
   });
 
-  it('still returns 200 when applyLoyaltyAfterKdsComplete throws', async () => {
-    completeOrderForKds.mockResolvedValue(mockOrder());
-    applyLoyaltyAfterKdsComplete.mockRejectedValue(new Error('loyalty ledger blew up'));
-    recomputePickupEtasForCafe.mockResolvedValue(undefined);
-
-    const app = await appWithKdsRouter();
-    const res = await request(app)
-      .post(`${API_VERSION_PREFIX}/kds/orders/${ORDER_ID}/complete`)
-      .set('Authorization', `Bearer ${kdsToken()}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    expect(emitKdsServerToClient).toHaveBeenCalled();
-    expect(emitCustomerServerToClient).toHaveBeenCalled();
-  });
-
   it('still returns 200 when ETA recompute throws', async () => {
-    completeOrderForKds.mockResolvedValue(mockOrder());
-    applyLoyaltyAfterKdsComplete.mockResolvedValue(undefined);
+    recallLastCompletedOrderForKds.mockResolvedValue(mockRecalledOrder());
     recomputePickupEtasForCafe.mockRejectedValue(new Error('pickup eta down'));
 
     const app = await appWithKdsRouter();
     const res = await request(app)
-      .post(`${API_VERSION_PREFIX}/kds/orders/${ORDER_ID}/complete`)
+      .post(`${API_VERSION_PREFIX}/kds/orders/recall-last`)
       .set('Authorization', `Bearer ${kdsToken()}`);
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
   });
 
-  it('returns 500 if the primary completion itself errors', async () => {
-    completeOrderForKds.mockRejectedValue(new Error('db blip'));
+  it('returns 404 when there is nothing to recall', async () => {
+    recallLastCompletedOrderForKds.mockResolvedValue(null);
 
     const app = await appWithKdsRouter();
     const res = await request(app)
-      .post(`${API_VERSION_PREFIX}/kds/orders/${ORDER_ID}/complete`)
-      .set('Authorization', `Bearer ${kdsToken()}`);
-
-    expect(res.status).toBe(500);
-    expect(res.body.ok).toBe(false);
-  });
-
-  it('returns 404 when completeOrderForKds reports no rows updated', async () => {
-    completeOrderForKds.mockResolvedValue(null);
-
-    const app = await appWithKdsRouter();
-    const res = await request(app)
-      .post(`${API_VERSION_PREFIX}/kds/orders/${ORDER_ID}/complete`)
+      .post(`${API_VERSION_PREFIX}/kds/orders/recall-last`)
       .set('Authorization', `Bearer ${kdsToken()}`);
 
     expect(res.status).toBe(404);
     expect(res.body.ok).toBe(false);
-    expect(applyLoyaltyAfterKdsComplete).not.toHaveBeenCalled();
+    expect(emitKdsServerToClient).not.toHaveBeenCalled();
     expect(recomputePickupEtasForCafe).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 without a KDS token', async () => {
+    const app = await appWithKdsRouter();
+    const res = await request(app).post(`${API_VERSION_PREFIX}/kds/orders/recall-last`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.ok).toBe(false);
+    expect(recallLastCompletedOrderForKds).not.toHaveBeenCalled();
   });
 });

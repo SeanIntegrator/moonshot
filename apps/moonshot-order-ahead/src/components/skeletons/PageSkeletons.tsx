@@ -1,4 +1,5 @@
 import { Box, Container, Skeleton } from '@mui/material';
+import { pageContentWidthSx } from '../../theme/pageLayout.js';
 
 function MenuCardSkeleton() {
   return (
@@ -105,8 +106,6 @@ export function ItemDetailSkeleton() {
           bottom: 0,
           left: 0,
           right: 0,
-          maxWidth: 600,
-          mx: 'auto',
           px: 2,
           py: 1.5,
           borderTop: 1,
@@ -115,6 +114,7 @@ export function ItemDetailSkeleton() {
           gap: 1.5,
           alignItems: 'center',
           bgcolor: 'background.paper',
+          ...pageContentWidthSx,
         }}
       >
         <Skeleton variant="rounded" width={120} height={40} sx={{ borderRadius: 999 }} />

@@ -7,6 +7,7 @@ import {
   type KdsConfigResponse,
   type KdsLoginResponse,
   type KdsOrdersResponse,
+  type KdsRecallLastOrderResponse,
   type KdsStretchEtaResponse,
 } from '@moonshot/types';
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
@@ -16,6 +17,7 @@ import {
   advanceOrderStatusForKds,
   completeOrderForKds,
   listOpenOrdersForKds,
+  recallLastCompletedOrderForKds,
   stretchOrderEtaForKds,
 } from '../lib/orders/order-kds.js';
 import { applyLoyaltyAfterKdsComplete } from '../lib/loyalty-after-kds-complete.js';
@@ -96,6 +98,54 @@ kdsRouter.get('/config', requireKdsAuth, async (req, res) => {
     ok: true,
     data: { kdsConfig: cafe.kdsConfig } satisfies KdsConfigResponse,
   });
+});
+
+/**
+ * Instant recall: reopen the café's most recently completed order as `confirmed`.
+ * Registered before `/:orderId` routes so `recall-last` is not captured as an id.
+ */
+kdsRouter.post('/orders/recall-last', requireKdsAuth, async (req, res) => {
+  const cafeId = req.kdsUser!.cafeId;
+
+  let order;
+  try {
+    order = await recallLastCompletedOrderForKds(cafeId);
+  } catch (e) {
+    console.error('[kds.recall-last] DB error while recalling order', { cafeId, err: e });
+    throw e;
+  }
+
+  if (!order) {
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'No completed order to recall');
+  }
+
+  emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
+  emitCustomerServerToClient(order.id, {
+    type: 'customerOrderStatusUpdated',
+    orderId: order.id,
+    cafeId,
+    status: order.status,
+  });
+
+  try {
+    const cafeReload = await findCafeById(cafeId);
+    if (cafeReload) {
+      await recomputePickupEtasForCafe({
+        db: pool,
+        cafeId,
+        kdsConfig: cafeReload.kdsConfig,
+      });
+    }
+  } catch (e) {
+    console.error('[kds.recall-last] ETA recompute failure (swallowed)', {
+      cafeId,
+      orderId: order.id,
+      err: e,
+    });
+  }
+
+  const data: KdsRecallLastOrderResponse = { order };
+  return res.json({ ok: true, data });
 });
 
 kdsRouter.post('/orders/:orderId/status', requireKdsAuth, async (req, res) => {

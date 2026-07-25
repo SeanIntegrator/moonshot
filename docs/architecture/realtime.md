@@ -42,6 +42,7 @@ The raw order UUID alone is **not** sufficient — this avoids unauthenticated l
 | Pay-in-store `POST /orders` committed | `/kds` | `kds:order:new` |
 | Stripe `checkout.session.completed` (paid) | `/kds` | `kds:order:new` |
 | `POST /kds/orders/:id/complete` | `/kds` | `kds:order:removed` |
+| `POST /kds/orders/recall-last` | `/kds` | `kds:order:new` |
 | `POST /kds/orders/:id/status` | `/kds` | `kds:order:updated` |
 | Same status route | `/customer` room `customer:order:{id}` | `customerOrderStatusUpdated` |
 | Queue/ETA recompute (FIFO; skips `manual_override`) | `/kds` | `kds:eta:updated` |

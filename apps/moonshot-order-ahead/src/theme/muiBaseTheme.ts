@@ -1,4 +1,8 @@
 import { createTheme, type ThemeOptions } from '@mui/material/styles';
+import {
+  PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX,
+  PAGE_CONTENT_MAX_WIDTH_PX,
+} from './pageLayout.js';
 
 const defaultCafeLayout = {
   menuGrid: '2col' as const,
@@ -6,6 +10,8 @@ const defaultCafeLayout = {
   heroStyle: 'compact' as const,
   navStyle: 'bottom_bar' as const,
 };
+
+const pageConstraintMq = `@media (min-width:${PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX}px)`;
 
 /**
  * Functional default MUI system (components, density, typography scale).
@@ -50,6 +56,33 @@ export const baseMuiThemeOptions: ThemeOptions = {
     MuiCssBaseline: {
       styleOverrides: {
         body: { lineHeight: 1.5 },
+      },
+    },
+    // Default sm Container caps at 600px from the 600px breakpoint — leave tablets full-bleed.
+    MuiContainer: {
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          if (ownerState.disableGutters) return {};
+          return {
+            // Undo MUI's sm gutter bump; re-apply expanded gutters with the column.
+            [theme.breakpoints.up('sm')]: {
+              paddingLeft: theme.spacing(2),
+              paddingRight: theme.spacing(2),
+            },
+            [pageConstraintMq]: {
+              paddingLeft: theme.spacing(3),
+              paddingRight: theme.spacing(3),
+            },
+          };
+        },
+        maxWidthSm: ({ theme }) => ({
+          [theme.breakpoints.up('sm')]: {
+            maxWidth: '100%',
+          },
+          [pageConstraintMq]: {
+            maxWidth: PAGE_CONTENT_MAX_WIDTH_PX,
+          },
+        }),
       },
     },
     MuiButton: {

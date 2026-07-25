@@ -2,6 +2,7 @@ import './index.css';
 import type { FormEvent } from 'react';
 import { useCallback, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppHeader } from '@/components/AppHeader';
 import { LoginScreen } from '@/components/LoginScreen';
 import { FlowBoard } from './board/FlowBoard.js';
@@ -37,6 +38,8 @@ export function App() {
     dismissingIds,
     complete,
     finalizeDismiss,
+    recallLast,
+    recalling,
   } = useKdsOrders({
     session,
     onSessionExpired: clearExpiredSession,
@@ -98,29 +101,33 @@ export function App() {
   }
 
   return (
-    <div className="min-h-full px-5 py-4 pb-6">
-      <AppHeader
-        cafeName={session.cafeName}
-        cafeSlug={session.cafeSlug}
-        username={session.username}
-        onLogout={logout}
-      />
-      {error ? (
-        <Alert variant="destructive" className="mt-3">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-      {kdsConfig ? (
-        <FlowBoard
-          orders={orders}
-          kdsConfig={kdsConfig}
-          dismissingIds={dismissingIds}
-          onComplete={complete}
-          onExited={finalizeDismiss}
+    <TooltipProvider>
+      <div className="min-h-full px-5 py-4 pb-6">
+        <AppHeader
+          cafeName={session.cafeName}
+          cafeSlug={session.cafeSlug}
+          username={session.username}
+          recalling={recalling}
+          onRecall={recallLast}
+          onLogout={logout}
         />
-      ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Loading board config…</p>
-      )}
-    </div>
+        {error ? (
+          <Alert variant="destructive" className="mt-3">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {kdsConfig ? (
+          <FlowBoard
+            orders={orders}
+            kdsConfig={kdsConfig}
+            dismissingIds={dismissingIds}
+            onComplete={complete}
+            onExited={finalizeDismiss}
+          />
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">Loading board config…</p>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

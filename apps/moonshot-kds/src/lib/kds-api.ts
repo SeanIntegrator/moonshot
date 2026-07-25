@@ -6,6 +6,7 @@ import {
   type KdsLoginRequest,
   type KdsLoginResponse,
   type KdsOrdersResponse,
+  type KdsRecallLastOrderResponse,
 } from '@moonshot/types';
 import { getApiBaseUrl } from './runtime-config.js';
 
@@ -93,5 +94,21 @@ export async function kdsCompleteOrder(
   }
   const json = await parseEnvelope<KdsCompleteOrderResponse>(res);
   if (!json.ok) throw new Error(json.error ?? 'Complete failed');
+  return json.data;
+}
+
+export async function kdsRecallLastOrder(token: string): Promise<KdsRecallLastOrderResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/kds/orders/recall-last`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    throw new Error('SESSION_EXPIRED');
+  }
+  const json = await parseEnvelope<KdsRecallLastOrderResponse>(res);
+  if (!json.ok) throw new Error(json.error ?? 'Recall failed');
   return json.data;
 }

@@ -71,24 +71,27 @@ stateDiagram-v2
   confirmed --> completed: POST_complete
   preparing --> completed: POST_complete
   ready --> completed: POST_complete
+  completed --> confirmed: POST_recall_last
 ```
 
 | Method | Path | Body |
 |--------|------|------|
 | `POST` | `/api/v1/kds/orders/:orderId/status` | `{ status: "preparing" \| "ready" }` |
 | `POST` | `/api/v1/kds/orders/:orderId/complete` | (existing) |
+| `POST` | `/api/v1/kds/orders/recall-last` | reopen latest `completed` → `confirmed` |
 
 Flow board interaction (iteration 1):
 
 - Tap a **line** → local-only strikethrough (not synced).
 - Tap the **header** → `POST .../complete` (emits `customerOrderCompleted` for order-ahead).
+- Top-bar **Recall** → `POST .../recall-last` (emits `kds:order:new` + `customerOrderStatusUpdated`).
 
 Emits:
 
 - `kds:order:updated` (full order) on status advance
+- `kds:order:new` on recall-last
 - `customerOrderStatusUpdated` `{ orderId, cafeId, status }`
 - `customerOrderCompleted` on Done
-
 ## ETA stretch
 
 | Method | Path | Body |

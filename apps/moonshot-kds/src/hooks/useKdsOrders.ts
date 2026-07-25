@@ -5,7 +5,7 @@ import {
 } from '@moonshot/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type Socket, io } from 'socket.io-client';
-import { getApiBaseUrl, kdsCompleteOrder, kdsFetchOrders } from '../lib/kds-api.js';
+import { getApiBaseUrl, kdsCompleteOrder, kdsFetchOrders, kdsRecallLastOrder } from '../lib/kds-api.js';
 import type { KdsSession } from '../lib/kds-session.js';
 
 function sortOrders(orders: NormalisedOrder[]): NormalisedOrder[] {
@@ -22,11 +22,14 @@ export function useKdsOrders(params: {
   dismissingIds: ReadonlySet<string>;
   complete: (orderId: string) => void;
   finalizeDismiss: (orderId: string) => void;
+  recallLast: () => void;
+  recalling: boolean;
 } {
   const { session, onSessionExpired } = params;
   const [orders, setOrders] = useState<NormalisedOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(() => new Set());
+  const [recalling, setRecalling] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const onExpiredRef = useRef(onSessionExpired);
   onExpiredRef.current = onSessionExpired;
@@ -92,6 +95,7 @@ export function useKdsOrders(params: {
       }
       setOrders([]);
       setDismissingIds(new Set());
+      setRecalling(false);
       return;
     }
 
@@ -192,5 +196,42 @@ export function useKdsOrders(params: {
     [session],
   );
 
-  return { orders, error, setError, dismissingIds, complete, finalizeDismiss };
+  const recallLast = useCallback((): void => {
+    if (!session || recalling) return;
+    setRecalling(true);
+    setError(null);
+
+    void kdsRecallLastOrder(session.token)
+      .then(({ order }) => {
+        setDismissingIds((prev) => {
+          if (!prev.has(order.id)) return prev;
+          const next = new Set(prev);
+          next.delete(order.id);
+          return next;
+        });
+        setOrders((prev) => sortOrders([...prev.filter((o) => o.id !== order.id), order]));
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.message === 'SESSION_EXPIRED') {
+          onExpiredRef.current(session);
+          setError('Session expired — please sign in again.');
+        } else {
+          setError(err instanceof Error ? err.message : 'Recall failed');
+        }
+      })
+      .finally(() => {
+        setRecalling(false);
+      });
+  }, [session, recalling]);
+
+  return {
+    orders,
+    error,
+    setError,
+    dismissingIds,
+    complete,
+    finalizeDismiss,
+    recallLast,
+    recalling,
+  };
 }

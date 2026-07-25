@@ -50,6 +50,46 @@ export async function completeOrderForKds(orderId: string, cafeId: string): Prom
   }
 }
 
+/**
+ * Reopen the café's most recently completed order as `confirmed` (just-placed on KDS).
+ * Returns null when no completed order exists for the café.
+ */
+export async function recallLastCompletedOrderForKds(
+  cafeId: string,
+): Promise<NormalisedOrder | null> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const upd = await client.query<OrderRowDb>(
+      `UPDATE orders
+       SET status = 'confirmed',
+           completed_at = NULL,
+           updated_at = NOW()
+       WHERE id = (
+         SELECT id
+         FROM orders
+         WHERE cafe_id = $1 AND status = 'completed'
+         ORDER BY completed_at DESC NULLS LAST, updated_at DESC
+         LIMIT 1
+       )
+         AND status = 'completed'
+       RETURNING ${ORDER_SELECT_COLUMNS}`,
+      [cafeId],
+    );
+
+    await client.query('COMMIT');
+
+    if (upd.rows.length === 0) return null;
+    return fetchOrderWithItems(pool, upd.rows[0]!.id, cafeId);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 /** Allowed forward transitions for KDS advance (not including complete). */
 const STATUS_TRANSITIONS: Record<'preparing' | 'ready', OrderStatus[]> = {
   preparing: ['confirmed'],

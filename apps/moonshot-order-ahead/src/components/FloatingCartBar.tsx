@@ -4,6 +4,7 @@ import { Box, Slide, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { formatMoney } from '../lib/format.js';
 import { useCafePath } from '../hooks/useCafePath.js';
+import { pageContentWidthSx } from '../theme/pageLayout.js';
 import { FloatingCartButton, FloatingClosedBanner } from './ui/FixedBottomBar.js';
 
 type Props = {
@@ -34,8 +35,7 @@ export function FloatingCartBar({
           left: 0,
           right: 0,
           zIndex: (t) => t.zIndex.appBar - 1,
-          maxWidth: 600,
-          mx: 'auto',
+          ...pageContentWidthSx,
         }}
       >
         {cafeClosed ? (

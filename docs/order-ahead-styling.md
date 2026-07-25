@@ -51,6 +51,7 @@ Use theme tokens (`'primary.main'`, `'divider'`, `'background.paper'`) or a styl
 
 - **`palette.cafe.*`** — surfaces and hero (`heroBg`, `heroText`, `textMuted`, …). Prefer these for hero/glass UI over ad-hoc white overlays; use `alpha(theme.palette.cafe.heroText, …)` when translucency is needed.
 - **`cafeLayout`** — layout enums from the café pack (`menuGrid`, `cardStyle`, `heroStyle`, `navStyle`). Prefer reading these when adding layout variants rather than hardcoding per page.
+- **Page column** — `Container maxWidth="sm"` and fixed chrome share `theme/pageLayout.ts`: full-bleed through tablet, then a 600px column + expanded gutters from **1024px** (not MUI’s default 600px `sm` media query). Use `pageContentWidthSx` for nav/cart/snackbar shells so they stay aligned.
 
 ## Interactive controls
 

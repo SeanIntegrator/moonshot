@@ -1,4 +1,5 @@
 import {
+  defaultAllowNoMilk,
   inferDrinkArchetypeFromName,
   platformDrinkArchetypeConfig,
   resolveCafeArchetypeRecipe,
@@ -9,6 +10,27 @@ import {
   resolveArchetypeGroups,
 } from './drink-archetype-resolve.js';
 import { applyMilkSurchargeWaiver } from './menu-map.js';
+
+describe('defaultAllowNoMilk', () => {
+  it('defaults tea and low-milk-iced on', () => {
+    expect(defaultAllowNoMilk('tea')).toBe(true);
+    expect(defaultAllowNoMilk('low-milk-iced')).toBe(true);
+  });
+
+  it('defaults americano on via template key or name; macchiato/cortado off', () => {
+    expect(defaultAllowNoMilk('low-milk-hot')).toBe(false);
+    expect(defaultAllowNoMilk('low-milk-hot', { templateKey: 'americano' })).toBe(true);
+    expect(defaultAllowNoMilk('low-milk-hot', { name: 'Americano' })).toBe(true);
+    expect(defaultAllowNoMilk('low-milk-hot', { templateKey: 'macchiato' })).toBe(false);
+    expect(defaultAllowNoMilk('low-milk-hot', { name: 'Macchiato' })).toBe(false);
+    expect(defaultAllowNoMilk('low-milk-hot', { name: 'Cortado' })).toBe(false);
+  });
+
+  it('defaults milk-forward drinks off', () => {
+    expect(defaultAllowNoMilk('milk-forward-hot')).toBe(false);
+    expect(defaultAllowNoMilk('espresso-neat')).toBe(false);
+  });
+});
 
 describe('inferDrinkArchetypeFromName', () => {
   it('matches iced drinks before hot namesakes', () => {

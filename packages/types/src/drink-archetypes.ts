@@ -276,3 +276,19 @@ export function inferDrinkArchetypeFromName(name: string): DrinkArchetypeId | nu
 export function waiveMilkSurchargeFromCharge(milkCharge: DrinkArchetypeMilkCharge): boolean {
   return milkCharge === 'waived';
 }
+
+/**
+ * Default for `allowNoMilk` when attaching an archetype (admin UI + template onboarding).
+ * Tea and low-milk iced always on; among low-milk-hot, only americano (macchiato/cortado stay off).
+ */
+export function defaultAllowNoMilk(
+  archetypeId: DrinkArchetypeId,
+  hints?: { templateKey?: string; name?: string },
+): boolean {
+  if (archetypeId === 'tea' || archetypeId === 'low-milk-iced') return true;
+  if (hints?.templateKey === 'americano') return true;
+  if (hints?.name != null && normaliseDrinkNameForArchetype(hints.name) === 'americano') {
+    return true;
+  }
+  return false;
+}

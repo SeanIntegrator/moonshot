@@ -23,6 +23,7 @@ import { formatMoney, formatShortDate } from '../lib/format.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
 import type { SnackbarLocationState } from '../lib/sign-in-to-order.js';
 import { useCart } from '../providers/CartProvider.js';
+import { pageContentWidthSx } from '../theme/pageLayout.js';
 
 export function Profile() {
   const { user, membership, loading, signOut, isSignedIn } = useAuth();
@@ -181,7 +182,7 @@ export function Profile() {
         autoHideDuration={3500}
         onClose={() => setToastMessage(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{ bottom: 72, width: '100%', maxWidth: 600, px: 2 }}
+        sx={{ bottom: 72, px: 2, ...pageContentWidthSx }}
       >
         <Alert
           severity="info"

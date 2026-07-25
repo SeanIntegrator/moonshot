@@ -27,7 +27,7 @@ Implementation is split under `src/lib/orders/` (`order-read`, `order-create`, `
 | `orders/order-create.ts` | Pay-in-store + pending checkout order insert |
 | `orders/order-checkout.ts` | Stripe session record, webhook confirm (`confirmOrderPaidFromStripeCheckout`) |
 | `orders/checkout-session-recovery.ts` | Browser return: lookup by session, retrieve from Stripe if pending, confirm + **`kds:order:new`** |
-| `orders/order-kds.ts` | `listOpenOrdersForKds`, `completeOrderForKds`; exports **`KDS_OPEN_ORDER_STATUSES`** |
+| `orders/order-kds.ts` | `listOpenOrdersForKds`, `completeOrderForKds`, `recallLastCompletedOrderForKds`; exports **`KDS_OPEN_ORDER_STATUSES`** |
 | `orders/order-customer.ts` | `listCustomerOrdersForUser`, `cancelOrderAtCafe` |
 | `orders/order-write-helpers.ts` | Shared line-item insert inside transactions |
 

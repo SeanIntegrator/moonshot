@@ -9,7 +9,7 @@ Kitchen Display System styling lives in `apps/moonshot-kds` only — not a share
 - **Dark** theme by default (`class="dark"` on `<html>`)
 - Neutral base color + Geist Variable
 
-Prebuilt components under `src/components/ui/` (Button, Input, Label, Card, Alert, Badge, Separator) power login, shell chrome, and ticket chrome.
+Prebuilt components under `src/components/ui/` (Button, Input, Label, Card, Alert, Badge, Separator, DropdownMenu, Tooltip) power login, shell chrome, ticket chrome, recall, and per-order menus.
 
 ## Custom Flow UI
 

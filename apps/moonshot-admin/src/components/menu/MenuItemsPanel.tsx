@@ -75,10 +75,6 @@ function emptyDraft(defaultCategory: string): DraftItem {
   };
 }
 
-function defaultAllowNoMilk(archetypeId: DrinkArchetypeId): boolean {
-  return archetypeId === 'tea' || archetypeId === 'low-milk-iced';
-}
-
 function applyArchetypeToDraft(
   draft: DraftItem,
   archetypeId: DrinkArchetypeId | null,
@@ -102,7 +98,8 @@ function applyArchetypeToDraft(
     ...draft,
     archetype: archetypeId,
     waiveMilkSurcharge: recipe.milkCharge === 'waived',
-    allowNoMilk: defaultAllowNoMilk(archetypeId),
+    // Name-aware: americano (low-milk-hot) defaults on; macchiato/cortado stay off.
+    allowNoMilk: defaultAllowNoMilk(archetypeId, { name: draft.name }),
     attachedGroupIds,
   };
 }

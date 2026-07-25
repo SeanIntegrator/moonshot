@@ -14,6 +14,7 @@ import { unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
+import { pageContentWidthSx } from '../theme/pageLayout.js';
 
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
   const hit = lines.find(
@@ -149,9 +150,8 @@ export function Menu() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         sx={{
           bottom: cafeClosed || cartQty > 0 ? 112 : 72,
-          width: '100%',
-          maxWidth: 600,
           px: 2,
+          ...pageContentWidthSx,
         }}
       >
         <Alert
