@@ -40,6 +40,16 @@ export function formatShortDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString([], { month: 'short', year: 'numeric' });
 }
 
+/** Day + month + year for order titles (“Ordered on 12 Mar 2026”). */
+export function formatOrderDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString([], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 /** "Good morning" / "Good afternoon" / "Good evening" */
 export function timeGreeting(date = new Date()): string {
   const h = date.getHours();

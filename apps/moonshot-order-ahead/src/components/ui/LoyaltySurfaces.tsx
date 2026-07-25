@@ -4,8 +4,19 @@ import ButtonBase, { type ButtonBaseProps } from '@mui/material/ButtonBase';
 import { alpha, styled } from '@mui/material/styles';
 import type { ComponentType } from 'react';
 
+/** Keep stamp grid phone-sized on tablet/desktop full-bleed layouts. */
+const LOYALTY_CARD_MAX_WIDTH_PX = 400;
+
+const loyaltyCardWidth = {
+  width: '100%',
+  maxWidth: LOYALTY_CARD_MAX_WIDTH_PX,
+  marginLeft: 'auto',
+  marginRight: 'auto',
+} as const;
+
 /** Hero loyalty card shell — glass surfaces derived from cafe.heroText. */
 export const LoyaltyHeroShell = styled(Box)(({ theme }) => ({
+  ...loyaltyCardWidth,
   backgroundColor: alpha(theme.palette.cafe.heroText, 0.08),
   border: `1px solid ${alpha(theme.palette.cafe.heroText, 0.14)}`,
   borderRadius: theme.shape.borderRadius * 1.5,
@@ -15,6 +26,7 @@ export const LoyaltyHeroShell = styled(Box)(({ theme }) => ({
 
 /** Standard loyalty card shell. */
 export const LoyaltyCardShell = styled(Box)(({ theme }) => ({
+  ...loyaltyCardWidth,
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.shape.borderRadius * 1.5,
   padding: theme.spacing(2),

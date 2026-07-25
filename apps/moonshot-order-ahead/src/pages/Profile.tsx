@@ -1,4 +1,5 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import type { NormalisedOrder } from '@moonshot/types';
 import {
   Alert,
   Avatar,
@@ -13,15 +14,16 @@ import {
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { ProfileStatCard } from '../components/ProfileStatCard.js';
+import { RecentOrderCard } from '../components/RecentOrderCard.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { SignedOutPanel } from '../components/SignedOutPanel.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
-import { formatMoney, formatShortDate } from '../lib/format.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
+import { formatShortDate } from '../lib/format.js';
 import type { SnackbarLocationState } from '../lib/sign-in-to-order.js';
+import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useCart } from '../providers/CartProvider.js';
 import { pageContentWidthSx } from '../theme/pageLayout.js';
 
@@ -41,6 +43,12 @@ export function Profile() {
     setToastMessage(state.snackbar);
     navigate('.', { replace: true, state: null });
   }, [location.state, navigate]);
+
+  const handleReorder = (order: NormalisedOrder) => {
+    if (!orderingAvailable) return;
+    reorderFromOrder(order, upsertLine);
+    navigate(cafePath('/checkout'));
+  };
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
@@ -131,42 +139,12 @@ export function Profile() {
                 }
               />
               {recent.slice(0, 3).map((o) => (
-                <Box
+                <RecentOrderCard
                   key={o.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    py: 1.25,
-                    borderBottom: 1,
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: 'action.hover', flexShrink: 0 }} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" fontWeight={600}>
-                      {o.items.map((i) => i.itemName).join(' + ')}
-                    </Typography>
-                    <Link
-                      component="button"
-                      variant="caption"
-                      color="text.secondary"
-                      underline="hover"
-                      disabled={!orderingAvailable}
-                      onClick={() => {
-                        if (!orderingAvailable) return;
-                        reorderFromOrder(o, upsertLine);
-                        navigate(cafePath('/checkout'));
-                      }}
-                      sx={{ opacity: orderingAvailable ? 1 : 0.4 }}
-                    >
-                      Reorder →
-                    </Link>
-                  </Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {formatMoney(o.totalMinor, o.currency)}
-                  </Typography>
-                </Box>
+                  order={o}
+                  orderingAvailable={orderingAvailable}
+                  onReorder={handleReorder}
+                />
               ))}
             </Box>
           )}
