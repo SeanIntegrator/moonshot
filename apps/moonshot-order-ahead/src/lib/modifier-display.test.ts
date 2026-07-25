@@ -44,6 +44,7 @@ const menuItem: NormalisedMenuItem = {
   tags: [],
   archetype: null,
   waiveMilkSurcharge: false,
+  allowNoMilk: false,
 };
 
 describe('isStandardModifierVariant', () => {

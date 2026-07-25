@@ -7,7 +7,7 @@ import { buildGuestTrackingTokenIfNeeded } from '../../lib/customer-socket-token
 import { ApiHttpError } from '../../lib/http-errors.js';
 import { createGuestPayInStoreOrder } from '../../lib/orders/order-create.js';
 import { emitKdsServerToClient } from '../../realtime/kds-events.js';
-import { optionalCustomerAuth } from '../../middleware/optional-customer-auth.js';
+import { requireCustomerAuth } from '../../middleware/require-customer-auth.js';
 import { recomputePickupEtasForCafe } from '../../lib/pickup-eta.js';
 import { pool } from '../../db.js';
 import { createStripeCheckoutOrderResponse } from '../../lib/orders-checkout-service.js';
@@ -17,7 +17,7 @@ import { resolveRequestedPickupNotBefore } from '../../lib/requested-pickup.js';
 
 export const createOrderRouter: IRouter = Router();
 
-createOrderRouter.post('/', optionalCustomerAuth, async (req, res) => {
+createOrderRouter.post('/', requireCustomerAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
   const body = req.body as Record<string, unknown>;
 

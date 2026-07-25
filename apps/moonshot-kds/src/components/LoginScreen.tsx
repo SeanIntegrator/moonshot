@@ -46,7 +46,6 @@ export function LoginScreen({ form, error, onChange, onSubmit }: LoginScreenProp
                 autoComplete="username"
                 value={form.cafeSlug}
                 onChange={(e) => onChange({ ...form, cafeSlug: e.target.value })}
-                placeholder="e.g. clay-and-bean"
                 required
               />
             </div>
@@ -75,10 +74,6 @@ export function LoginScreen({ form, error, onChange, onSubmit }: LoginScreenProp
               Sign in
             </Button>
           </form>
-          <p className="text-xs text-muted-foreground">
-            Set <code className="rounded bg-muted px-1 py-0.5">VITE_API_URL</code> to your API
-            origin (no <code className="rounded bg-muted px-1 py-0.5">/api/v1</code> suffix).
-          </p>
         </CardContent>
       </Card>
     </div>

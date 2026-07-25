@@ -47,6 +47,7 @@ function toDraft(item: NormalisedMenuItem, library: CafeModifierGroup[]): DraftI
     sizes: item.sizes ?? [],
     archetype: item.archetype ?? null,
     waiveMilkSurcharge: item.waiveMilkSurcharge ?? false,
+    allowNoMilk: item.allowNoMilk ?? false,
     attachedGroupIds: item.modifierGroups.filter((g) => libraryIds.has(g.id)).map((g) => g.id),
   };
 }
@@ -69,8 +70,13 @@ function emptyDraft(defaultCategory: string): DraftItem {
     tags: [],
     archetype: null,
     waiveMilkSurcharge: false,
+    allowNoMilk: false,
     attachedGroupIds: [],
   };
+}
+
+function defaultAllowNoMilk(archetypeId: DrinkArchetypeId): boolean {
+  return archetypeId === 'tea' || archetypeId === 'low-milk-iced';
 }
 
 function applyArchetypeToDraft(
@@ -80,7 +86,7 @@ function applyArchetypeToDraft(
   library: CafeModifierGroup[],
 ): DraftItem {
   if (!archetypeId || !recipe) {
-    return { ...draft, archetype: null, waiveMilkSurcharge: false };
+    return { ...draft, archetype: null, waiveMilkSurcharge: false, allowNoMilk: false };
   }
   const byName = new Map(library.map((g) => [g.name, g]));
   const attachedGroupIds: string[] = [];
@@ -88,13 +94,15 @@ function applyArchetypeToDraft(
     const groupName = DRINK_ARCHETYPE_SLOT_GROUP_NAMES[slot];
     const group = byName.get(groupName);
     if (!group) continue;
-    if (slot === 'syrup' && group.options.length === 0) continue;
+    // Match API resolveArchetypeGroups: skip empty optional groups (syrups, toppings, …).
+    if (group.options.length === 0) continue;
     attachedGroupIds.push(group.id);
   }
   return {
     ...draft,
     archetype: archetypeId,
     waiveMilkSurcharge: recipe.milkCharge === 'waived',
+    allowNoMilk: defaultAllowNoMilk(archetypeId),
     attachedGroupIds,
   };
 }
@@ -180,6 +188,7 @@ export function MenuItemsPanel({
         modifierGroupIds: draft.attachedGroupIds,
         archetype: draft.archetype,
         waiveMilkSurcharge: draft.waiveMilkSurcharge,
+        allowNoMilk: draft.allowNoMilk,
       };
       const updated = draft.id
         ? await patchMenuItem(token, cafeSlug, draft.id, body)
@@ -417,16 +426,31 @@ export function MenuItemsPanel({
               const g = library.find((x) => x.id === id);
               return g?.name === 'Milks' || g?.name === 'Milk';
             }) && (
-              <FormControlLabel
-                sx={{ mt: 1 }}
-                control={
-                  <Switch
-                    checked={draft.waiveMilkSurcharge}
-                    onChange={(e) => update({ waiveMilkSurcharge: e.target.checked })}
+              <>
+                <FormControlLabel
+                  sx={{ mt: 1 }}
+                  control={
+                    <Switch
+                      checked={draft.waiveMilkSurcharge}
+                      onChange={(e) => update({ waiveMilkSurcharge: e.target.checked })}
+                    />
+                  }
+                  label="Waive alt-milk surcharge on this item"
+                />
+                {(draft.archetype === 'low-milk-hot' ||
+                  draft.archetype === 'low-milk-iced' ||
+                  draft.archetype === 'tea') && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={draft.allowNoMilk}
+                        onChange={(e) => update({ allowNoMilk: e.target.checked })}
+                      />
+                    }
+                    label="Allow no milk (black americano / tea)"
                   />
-                }
-                label="Waive alt-milk surcharge on this item"
-              />
+                )}
+              </>
             )}
           </Box>
         )}

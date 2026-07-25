@@ -5,10 +5,13 @@ import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import { BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
+import { RequireAuth } from './components/RequireAuth.js';
 import { RequireFeature } from './components/RequireFeature.js';
+import { useAuth } from './hooks/useAuth.js';
 import { useCafePath } from './hooks/useCafePath.js';
 import { useCafeFeatures } from './hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from './hooks/useCafeOpenStatus.js';
+import { SIGN_IN_TO_ORDER_MESSAGE } from './lib/sign-in-to-order.js';
 import { PageTransition } from './page-transition/index.js';
 import { Checkout } from './pages/Checkout.js';
 import { CheckoutRestore } from './pages/CheckoutRestore.js';
@@ -41,6 +44,7 @@ export function App() {
   const cafePath = useCafePath();
   const { loyaltyEnabled } = useCafeFeatures();
   const { orderingAvailable } = useCafeOpenStatus();
+  const { isSignedIn } = useAuth();
   const navValue = pathToNavValue(location.pathname);
 
   const hideNav =
@@ -60,7 +64,9 @@ export function App() {
               path="/order"
               element={
                 <RequireFeature feature="orderAhead">
-                  <Menu />
+                  <RequireAuth>
+                    <Menu />
+                  </RequireAuth>
                 </RequireFeature>
               }
             />
@@ -68,7 +74,9 @@ export function App() {
               path="/order/item/:menuItemId"
               element={
                 <RequireFeature feature="orderAhead">
-                  <ItemDetail />
+                  <RequireAuth>
+                    <ItemDetail />
+                  </RequireAuth>
                 </RequireFeature>
               }
             />
@@ -76,7 +84,9 @@ export function App() {
               path="/checkout"
               element={
                 <RequireFeature feature="orderAhead">
-                  <Checkout />
+                  <RequireAuth>
+                    <Checkout />
+                  </RequireAuth>
                 </RequireFeature>
               }
             />
@@ -120,6 +130,12 @@ export function App() {
               if (v === 0) navigate(cafePath('/'));
               else if (v === 1) {
                 if (!orderingAvailable) return;
+                if (!isSignedIn) {
+                  navigate(cafePath('/profile'), {
+                    state: { snackbar: SIGN_IN_TO_ORDER_MESSAGE },
+                  });
+                  return;
+                }
                 navigate(cafePath('/order'));
               } else if (v === 2) {
                 if (!loyaltyEnabled) return;

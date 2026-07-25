@@ -103,7 +103,15 @@ export interface NormalisedMenuItem {
    * (display + checkout). Typical for low-milk drinks (americano, tea).
    */
   waiveMilkSurcharge: boolean;
+  /**
+   * When true, a synthetic “No milk” option is injected into the Milks group
+   * for this item (americano, iced americano, tea). Off for macchiato etc.
+   */
+  allowNoMilk: boolean;
 }
+
+/** Stable id for the synthetic “No milk” option injected when `allowNoMilk` is set. */
+export const NO_MILK_OPTION_ID = '00000000-0000-4000-8000-00000000a001';
 
 /** Café-scoped reusable modifier section (Milks, Syrups, Toppings) — admin library shape */
 export interface CafeModifierGroup extends NormalisedModifierGroup {

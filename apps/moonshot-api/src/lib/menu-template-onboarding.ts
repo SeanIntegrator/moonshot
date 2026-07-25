@@ -312,6 +312,11 @@ export async function applyMenuTemplate(
         : MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR;
       const archetypeId = MENU_TEMPLATE_DRINK_ARCHETYPE[drink.templateKey];
       const resolved = resolveArchetypeGroups(archetypeId, effectiveConfig, libraryByName);
+      // Tea / iced americano always; americano only among low-milk-hot drinks.
+      const allowNoMilk =
+        archetypeId === 'tea' ||
+        archetypeId === 'low-milk-iced' ||
+        drink.templateKey === 'americano';
 
       // Insert first so we have an item id, then copy the canonical template into
       // café-scoped storage. Café replaces never mutate template/drinks/*.
@@ -319,8 +324,8 @@ export async function applyMenuTemplate(
         `INSERT INTO menu_items (
           cafe_id, name, description, price_minor, currency, category, subcategory,
           image_url, is_available, tags, modifier_groups, sizes, sort_order,
-          archetype, waive_milk_surcharge
-        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, NULL, TRUE, $7::text[], $8::jsonb, $9::jsonb, $10, $11, $12)
+          archetype, waive_milk_surcharge, allow_no_milk
+        ) VALUES ($1, $2, $3, $4, 'GBP', $5, $6, NULL, TRUE, $7::text[], $8::jsonb, $9::jsonb, $10, $11, $12, $13)
         RETURNING id`,
         [
           cafeId,
@@ -335,6 +340,7 @@ export async function applyMenuTemplate(
           sortOrder++,
           archetypeId,
           resolved.waiveMilkSurcharge,
+          allowNoMilk,
         ],
       );
       const itemId = rows[0]!.id;

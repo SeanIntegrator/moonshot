@@ -4,6 +4,7 @@ import type {
   NormalisedMenuItem,
   NormalisedModifierGroup,
 } from '@moonshot/types';
+import { NO_MILK_OPTION_ID } from '@moonshot/types';
 
 export const SIZE_MODIFIER_GROUP_ID = '__item_size__';
 
@@ -24,6 +25,7 @@ export type MenuItemRow = {
   sizes: unknown;
   archetype: string | null;
   waive_milk_surcharge: boolean;
+  allow_no_milk: boolean;
 };
 
 export type ModifierGroupRow = {
@@ -140,6 +142,43 @@ export function applyMilkSurchargeWaiver(
   });
 }
 
+/**
+ * When allowNoMilk is set, inject a synthetic “No milk” option (default)
+ * so black americano / tea can be ordered without picking a milk type.
+ */
+export function applyAllowNoMilk(
+  groups: NormalisedModifierGroup[],
+  allowNoMilk: boolean,
+): NormalisedModifierGroup[] {
+  if (!allowNoMilk) return groups;
+  return groups.map((g) => {
+    if (g.name !== 'Milks' && g.name !== 'Milk') return g;
+    const withoutSynthetic = g.options.filter((o) => o.id !== NO_MILK_OPTION_ID);
+    const alreadyHasNamed = withoutSynthetic.some(
+      (o) => o.name.trim().toLowerCase() === 'no milk',
+    );
+    const options = alreadyHasNamed
+      ? withoutSynthetic.map((o) =>
+          o.name.trim().toLowerCase() === 'no milk'
+            ? { ...o, isDefault: true, priceMinor: 0 }
+            : { ...o, isDefault: false },
+        )
+      : [
+          {
+            id: NO_MILK_OPTION_ID,
+            posOptionId: null,
+            name: 'No milk',
+            priceMinor: 0,
+            isDefault: true,
+            colorHex: null,
+            chipLabel: null,
+          },
+          ...withoutSynthetic.map((o) => ({ ...o, isDefault: false })),
+        ];
+    return { ...g, options };
+  });
+}
+
 export function mapMenuItemRow(
   row: MenuItemRow,
   attachedGroups: NormalisedModifierGroup[] = [],
@@ -147,7 +186,11 @@ export function mapMenuItemRow(
   const embedded = parseEmbeddedGroups(row.modifier_groups);
   const merged = mergeModifierGroups(attachedGroups, embedded);
   const waiveMilkSurcharge = row.waive_milk_surcharge === true;
-  const groups = applyMilkSurchargeWaiver(merged, waiveMilkSurcharge);
+  const allowNoMilk = row.allow_no_milk === true;
+  const groups = applyAllowNoMilk(
+    applyMilkSurchargeWaiver(merged, waiveMilkSurcharge),
+    allowNoMilk,
+  );
 
   return {
     id: row.id,
@@ -166,6 +209,7 @@ export function mapMenuItemRow(
     tags: row.tags ?? [],
     archetype: row.archetype ?? null,
     waiveMilkSurcharge,
+    allowNoMilk,
   };
 }
 

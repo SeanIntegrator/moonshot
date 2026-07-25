@@ -41,6 +41,14 @@ function parseWaiveMilk(body: Record<string, unknown>): boolean | undefined {
   return body.waiveMilkSurcharge;
 }
 
+function parseAllowNoMilk(body: Record<string, unknown>): boolean | undefined {
+  if (!('allowNoMilk' in body)) return undefined;
+  if (typeof body.allowNoMilk !== 'boolean') {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'allowNoMilk must be a boolean');
+  }
+  return body.allowNoMilk;
+}
+
 async function loadMergedItem(db: Pool, cafeId: string, itemId: string): Promise<NormalisedMenuItem | null> {
   const map = await fetchMenuItemsByIds(db, cafeId, [itemId]);
   return map.get(itemId) ?? null;
@@ -88,13 +96,14 @@ export async function createMenuItem(
   const modifierGroupIds = parseModifierGroupIds(body) ?? [];
   const archetype = parseArchetype(body) ?? null;
   const waiveMilkSurcharge = parseWaiveMilk(body) ?? false;
+  const allowNoMilk = parseAllowNoMilk(body) ?? false;
 
   const { rows } = await db.query<{ id: string }>(
     `INSERT INTO menu_items (
       cafe_id, pos_item_id, name, description, price_minor, currency, category, subcategory,
       image_url, emoji, is_available, tags, modifier_groups, sizes, sort_order,
-      archetype, waive_milk_surcharge
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13::jsonb, $14, $15, $16)
+      archetype, waive_milk_surcharge, allow_no_milk
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12::jsonb, $13::jsonb, $14, $15, $16, $17)
     RETURNING id`,
     [
       cafeId,
@@ -113,6 +122,7 @@ export async function createMenuItem(
       sortOrder,
       archetype,
       waiveMilkSurcharge,
+      allowNoMilk,
     ],
   );
 
@@ -143,6 +153,7 @@ export async function patchMenuItem(
   const modifierGroupIds = parseModifierGroupIds(body);
   const archetype = parseArchetype(body);
   const waiveMilkSurcharge = parseWaiveMilk(body);
+  const allowNoMilk = parseAllowNoMilk(body);
 
   const optionalString = (key: string, col: string) => {
     if (key in body) {
@@ -197,6 +208,10 @@ export async function patchMenuItem(
   if (waiveMilkSurcharge !== undefined) {
     sets.push(`waive_milk_surcharge = $${i++}`);
     values.push(waiveMilkSurcharge);
+  }
+  if (allowNoMilk !== undefined) {
+    sets.push(`allow_no_milk = $${i++}`);
+    values.push(allowNoMilk);
   }
 
   if (sets.length === 0 && modifierGroupIds === undefined) {

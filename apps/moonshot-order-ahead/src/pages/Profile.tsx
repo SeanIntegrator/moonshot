@@ -1,14 +1,17 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
+  Alert,
   Avatar,
   Box,
   Button,
   Container,
   Divider,
   Link,
+  Snackbar,
   Typography,
 } from '@mui/material';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { ProfileStatCard } from '../components/ProfileStatCard.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { SignedOutPanel } from '../components/SignedOutPanel.js';
@@ -18,6 +21,7 @@ import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { formatMoney, formatShortDate } from '../lib/format.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
+import type { SnackbarLocationState } from '../lib/sign-in-to-order.js';
 import { useCart } from '../providers/CartProvider.js';
 
 export function Profile() {
@@ -25,8 +29,17 @@ export function Profile() {
   const { recent } = useActiveOrders();
   const cafePath = useCafePath();
   const navigate = useNavigate();
+  const location = useLocation();
   const { upsertLine } = useCart();
   const { orderingAvailable } = useCafeOpenStatus();
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const state = location.state as SnackbarLocationState | null;
+    if (!state?.snackbar) return;
+    setToastMessage(state.snackbar);
+    navigate('.', { replace: true, state: null });
+  }, [location.state, navigate]);
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
@@ -34,7 +47,7 @@ export function Profile() {
         <Typography color="text.secondary">Checking session…</Typography>
       )}
 
-      {!loading && !isSignedIn && <SignedOutPanel onContinueGuest={() => navigate(cafePath('/order'))} />}
+      {!loading && !isSignedIn && <SignedOutPanel />}
 
       {!loading && isSignedIn && user && (
         <>
@@ -162,6 +175,30 @@ export function Profile() {
           </Button>
         </>
       )}
+
+      <Snackbar
+        open={toastMessage != null}
+        autoHideDuration={3500}
+        onClose={() => setToastMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ bottom: 72, width: '100%', maxWidth: 600, px: 2 }}
+      >
+        <Alert
+          severity="info"
+          variant="outlined"
+          sx={{
+            width: '100%',
+            alignItems: 'center',
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            borderColor: 'divider',
+            boxShadow: 3,
+            '& .MuiAlert-icon': { color: 'info.main' },
+          }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

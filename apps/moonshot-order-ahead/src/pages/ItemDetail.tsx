@@ -124,7 +124,7 @@ export function ItemDetail() {
         <MenuItemImage
           src={item.imageUrl}
           alt={item.name}
-          height={220}
+          height={{ xs: 220, sm: '25vh' }}
           borderRadius={0}
           loading="eager"
           fetchPriority="high"

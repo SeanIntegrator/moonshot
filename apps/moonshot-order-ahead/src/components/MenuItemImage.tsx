@@ -6,13 +6,15 @@ import {
   watchMenuImage,
 } from '../lib/menu-image-cache.js';
 
+type ResponsiveHeight = number | string | { xs?: number | string; sm?: number | string; md?: number | string };
+
 type Props = {
   src: string | null | undefined;
   alt: string;
   /** CSS aspect-ratio value, e.g. "3 / 2" or "1" */
   aspectRatio?: string;
   width?: number | string;
-  height?: number | string;
+  height?: ResponsiveHeight;
   borderRadius?: number | string;
   loading?: 'lazy' | 'eager';
   fetchPriority?: 'high' | 'low' | 'auto';

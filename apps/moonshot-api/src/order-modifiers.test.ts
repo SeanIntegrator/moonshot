@@ -41,6 +41,7 @@ function flatWhiteItem(): NormalisedMenuItem {
     tags: [],
     archetype: null,
     waiveMilkSurcharge: false,
+    allowNoMilk: false,
   };
 }
 

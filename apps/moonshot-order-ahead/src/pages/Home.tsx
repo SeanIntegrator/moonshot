@@ -25,6 +25,7 @@ import { useCafe } from '../hooks/useCafe.js';
 import { firstName, formatFromPrice, formatMoney, timeGreeting } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
+import { SIGN_IN_TO_ORDER_MESSAGE } from '../lib/sign-in-to-order.js';
 import { defaultSelectionsForItem, findWhyNotTryItem } from '../lib/why-not-try.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
@@ -44,6 +45,16 @@ export function Home() {
   const cafePath = useCafePath();
   const { upsertLine } = useCart();
   const [qrOpen, setQrOpen] = useState(false);
+
+  function goToOrderOrSignIn(path: '/order' | '/checkout' = '/order') {
+    if (!isSignedIn) {
+      navigate(cafePath('/profile'), {
+        state: { snackbar: SIGN_IN_TO_ORDER_MESSAGE },
+      });
+      return;
+    }
+    navigate(cafePath(path));
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -136,7 +147,7 @@ export function Home() {
         {activeOrder ? (
           <CurrentOrderCard order={activeOrder} />
         ) : orderingAvailable ? (
-          <OrderNowButton onClick={() => navigate(cafePath('/order'))} />
+          <OrderNowButton onClick={() => goToOrderOrSignIn('/order')} />
         ) : (
           <Typography variant="body2" sx={{ mt: 2, opacity: 0.85 }}>
             {!orderAheadEnabled
@@ -154,6 +165,12 @@ export function Home() {
             menu={menu}
             orderingAvailable={orderingAvailable}
             onOrder={() => {
+              if (!isSignedIn) {
+                navigate(cafePath('/profile'), {
+                  state: { snackbar: SIGN_IN_TO_ORDER_MESSAGE },
+                });
+                return;
+              }
               reorderFromOrder(usualOrder, upsertLine);
               navigate(cafePath('/checkout'));
             }}
@@ -165,6 +182,12 @@ export function Home() {
             item={whyNotTryItem}
             orderingAvailable={orderingAvailable}
             onOrder={() => {
+              if (!isSignedIn) {
+                navigate(cafePath('/profile'), {
+                  state: { snackbar: SIGN_IN_TO_ORDER_MESSAGE },
+                });
+                return;
+              }
               const { sizeId, modifiers } = defaultSelectionsForItem(whyNotTryItem);
               upsertLine({
                 menuItemId: whyNotTryItem.id,
