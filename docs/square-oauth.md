@@ -1,6 +1,6 @@
-# Square OAuth, token refresh, and order webhooks
+# Square OAuth, token refresh, catalog sync, and order webhooks
 
-Connects a café's Square seller account during admin onboarding, imports the Item Library into Moonshot Postgres, keeps OAuth tokens fresh via a scheduled refresh job, and ingests till/POS tickets through an app-level webhook.
+Connects a café's Square seller account during admin onboarding, imports the Item Library into Moonshot Postgres, keeps the menu in sync via `catalog.version.updated` + Admin Sync + daily cron, refreshes OAuth tokens on a schedule, and ingests till/POS tickets through an app-level webhook.
 
 Clay & Bean cutover from any hand-wired legacy token remains a separate step (roadmap M3).
 
@@ -23,10 +23,11 @@ flowchart TD
   Refresh --> Obtain["ObtainToken refresh_token"]
   Obtain --> Store
 
-  SquareWH["Square order.* events"] --> WH["POST /webhooks/square"]
+  SquareWH["Square order.* + catalog.version.updated"] --> WH["POST /webhooks/square"]
   WH --> Verify["HMAC + webhook_events claim"]
   Verify --> Route["merchant_id → cafe"]
   Route --> Ingress["persistPosOrderEvent + KDS emit"]
+  Route --> CatSync["debounce → SearchCatalog → upsert menu"]
 ```
 
 ## Decision record
@@ -47,7 +48,9 @@ flowchart TD
 | `POST` | `/admin/connect/square/disconnect` | Admin JWT | Revoke + delete |
 | `POST` | `/admin/onboarding/menu-pos-import` | Admin JWT | Catalog → normalise → Postgres |
 | `POST` | `/internal/pos/refresh-tokens` | `CRON_SECRET` | Refresh due Square access tokens |
-| `POST` | `/webhooks/square` | Square HMAC | Order ingress (raw body) |
+| `POST` | `/internal/pos/sync-catalogs` | `CRON_SECRET` | Safety-net catalog sync (stale >1 day) |
+| `POST` | `/admin/menu/sync-pos` | Admin JWT | Force Square → Moonshot menu sync |
+| `POST` | `/webhooks/square` | Square HMAC | Order ingress + catalog sync enqueue |
 
 ## Token storage
 
@@ -98,8 +101,21 @@ Set the same `CRON_SECRET` on the API service and the cron caller. Optional head
    - `order.created`
    - `order.updated`
    - `order.fulfillment.updated`
+   - `catalog.version.updated`
 
-### Runtime
+### Catalog sync (Square → Moonshot)
+
+Square is source of truth for items, prices, categories, modifier lists, availability, and **images**. Moonshot Flow prep groups stay as an overlay.
+
+1. `catalog.version.updated` enqueues a **debounced** (~45s) sync per café.
+2. Incremental `SearchCatalogObjects(begin_time=cursor)` (or full List on first sync / Admin force).
+3. Upsert by `pos_item_id` / `pos_group_id`; Square images override Moonshot `image_url` when present; soft-delete when Square deletes.
+4. Admin **Sync from Square** calls `POST /admin/menu/sync-pos`.
+5. Daily cron: `POST /internal/pos/sync-catalogs` with `CRON_SECRET` (missed webhooks).
+
+Cursor lives on `pos_connections.catalog_sync_cursor` / `catalog_last_synced_at`.
+
+### Order runtime
 
 1. Verify `x-square-hmacsha256-signature` over `{notificationUrl}{rawBody}`.
 2. Claim `webhook_events` with `provider = square` and Square `event_id` (idempotent).

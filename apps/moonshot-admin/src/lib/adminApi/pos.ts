@@ -9,12 +9,23 @@ export type SquareConnectStatus = {
   locationId: string | null;
   tokenExpiresAt: string | null;
   status: string | null;
+  catalogLastSyncedAt: string | null;
+  catalogSyncStatus: string | null;
+  catalogSyncError: string | null;
   locations: SquareConnectLocation[];
 };
 
 export type SquareOnboardResponse = {
   url: string;
   scopes: string[];
+};
+
+export type PosCatalogSyncResult = {
+  cafeId: string;
+  upsertedItems: number;
+  softDeletedItems: number;
+  upsertedGroups: number;
+  lastSyncedAt: string;
 };
 
 export async function startSquareConnect(token: string): Promise<SquareOnboardResponse> {
@@ -36,6 +47,25 @@ export async function getSquareConnectStatus(token: string): Promise<SquareConne
   const envelope = await parseEnvelope<SquareConnectStatus>(res);
   if (!envelope.ok) {
     throw new Error(envelope.error || `Square status failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
+export async function syncPosMenuFromSquare(
+  token: string,
+  opts?: { forceFull?: boolean },
+): Promise<PosCatalogSyncResult> {
+  const res = await fetch(apiUrl('/admin/menu/sync-pos'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ forceFull: opts?.forceFull === true }),
+  });
+  const envelope = await parseEnvelope<PosCatalogSyncResult>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Menu sync failed (${res.status})`);
   }
   return envelope.data;
 }

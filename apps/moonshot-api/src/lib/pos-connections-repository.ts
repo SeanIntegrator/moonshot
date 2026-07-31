@@ -6,6 +6,8 @@ type Db = Pool | PoolClient;
 
 export type PosConnectionStatus = 'active' | 'needs_reauth' | 'revoked';
 
+export type CatalogSyncStatus = 'idle' | 'syncing' | 'error';
+
 export type PosConnectionRow = {
   id: string;
   cafe_id: string;
@@ -20,6 +22,10 @@ export type PosConnectionRow = {
   last_refreshed_at: Date;
   connected_at: Date;
   updated_at: Date;
+  catalog_sync_cursor: Date | null;
+  catalog_last_synced_at: Date | null;
+  catalog_sync_status: CatalogSyncStatus;
+  catalog_sync_error: string | null;
 };
 
 /** Decrypted tokens — never log these. */
@@ -36,6 +42,10 @@ export type PosConnectionSecrets = {
   status: PosConnectionStatus;
   lastRefreshedAt: Date;
   connectedAt: Date;
+  catalogSyncCursor: Date | null;
+  catalogLastSyncedAt: Date | null;
+  catalogSyncStatus: CatalogSyncStatus;
+  catalogSyncError: string | null;
 };
 
 export type UpsertPosConnectionInput = {
@@ -86,6 +96,10 @@ function mapRow(row: PosConnectionRow): PosConnectionSecrets {
     status: row.status,
     lastRefreshedAt: row.last_refreshed_at,
     connectedAt: row.connected_at,
+    catalogSyncCursor: row.catalog_sync_cursor ?? null,
+    catalogLastSyncedAt: row.catalog_last_synced_at ?? null,
+    catalogSyncStatus: row.catalog_sync_status ?? 'idle',
+    catalogSyncError: row.catalog_sync_error ?? null,
   };
   if (mapped.status === 'active') {
     alertIfPosTokenStale(mapped);
@@ -160,21 +174,37 @@ export async function getPosConnectionPublicStatus(
   locationId: string | null;
   tokenExpiresAt: string | null;
   status: PosConnectionStatus | null;
+  catalogLastSyncedAt: string | null;
+  catalogSyncStatus: CatalogSyncStatus | null;
+  catalogSyncError: string | null;
 } | null> {
   const { rows } = await db.query<{
     merchant_id: string;
     location_id: string | null;
     access_token_expires_at: Date;
     status: PosConnectionStatus;
+    catalog_last_synced_at: Date | null;
+    catalog_sync_status: CatalogSyncStatus;
+    catalog_sync_error: string | null;
   }>(
-    `SELECT merchant_id, location_id, access_token_expires_at, status
+    `SELECT merchant_id, location_id, access_token_expires_at, status,
+            catalog_last_synced_at, catalog_sync_status, catalog_sync_error
      FROM pos_connections
      WHERE cafe_id = $1 AND provider = $2 AND status <> 'revoked'
      LIMIT 1`,
     [cafeId, provider],
   );
   if (!rows[0]) {
-    return { connected: false, merchantId: null, locationId: null, tokenExpiresAt: null, status: null };
+    return {
+      connected: false,
+      merchantId: null,
+      locationId: null,
+      tokenExpiresAt: null,
+      status: null,
+      catalogLastSyncedAt: null,
+      catalogSyncStatus: null,
+      catalogSyncError: null,
+    };
   }
   return {
     connected: rows[0].status === 'active',
@@ -182,6 +212,9 @@ export async function getPosConnectionPublicStatus(
     locationId: rows[0].location_id,
     tokenExpiresAt: rows[0].access_token_expires_at.toISOString(),
     status: rows[0].status,
+    catalogLastSyncedAt: rows[0].catalog_last_synced_at?.toISOString() ?? null,
+    catalogSyncStatus: rows[0].catalog_sync_status ?? 'idle',
+    catalogSyncError: rows[0].catalog_sync_error ?? null,
   };
 }
 
@@ -297,4 +330,71 @@ export async function updateTokensAfterRefresh(
     throw new Error(`pos_connections row missing for cafe ${input.cafeId} / ${input.provider}`);
   }
   return mapRow(rows[0]);
+}
+
+export async function markCatalogSyncing(
+  db: Db,
+  cafeId: string,
+  provider: PosProvider = POS_PROVIDERS.square,
+): Promise<void> {
+  await db.query(
+    `UPDATE pos_connections
+     SET catalog_sync_status = 'syncing', catalog_sync_error = NULL, updated_at = NOW()
+     WHERE cafe_id = $1 AND provider = $2`,
+    [cafeId, provider],
+  );
+}
+
+export async function markCatalogSyncSuccess(
+  db: Db,
+  cafeId: string,
+  cursor: Date,
+  provider: PosProvider = POS_PROVIDERS.square,
+): Promise<void> {
+  await db.query(
+    `UPDATE pos_connections SET
+       catalog_sync_cursor = $1,
+       catalog_last_synced_at = NOW(),
+       catalog_sync_status = 'idle',
+       catalog_sync_error = NULL,
+       updated_at = NOW()
+     WHERE cafe_id = $2 AND provider = $3`,
+    [cursor, cafeId, provider],
+  );
+}
+
+export async function markCatalogSyncError(
+  db: Db,
+  cafeId: string,
+  message: string,
+  provider: PosProvider = POS_PROVIDERS.square,
+): Promise<void> {
+  await db.query(
+    `UPDATE pos_connections SET
+       catalog_sync_status = 'error',
+       catalog_sync_error = $1,
+       updated_at = NOW()
+     WHERE cafe_id = $2 AND provider = $3`,
+    [message.slice(0, 2000), cafeId, provider],
+  );
+}
+
+/** Active Square connections whose catalog has not synced in the given interval (safety net). */
+export async function listConnectionsNeedingCatalogSync(
+  db: Db,
+  provider: PosProvider = POS_PROVIDERS.square,
+  olderThanInterval = '1 day',
+): Promise<PosConnectionSecrets[]> {
+  const { rows } = await db.query<PosConnectionRow>(
+    `SELECT * FROM pos_connections
+     WHERE provider = $1
+       AND status = 'active'
+       AND (
+         catalog_last_synced_at IS NULL
+         OR catalog_last_synced_at < NOW() - ($2::text)::interval
+       )
+     ORDER BY catalog_last_synced_at ASC NULLS FIRST`,
+    [provider, olderThanInterval],
+  );
+  return rows.map(mapRow);
 }

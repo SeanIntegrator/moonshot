@@ -23,6 +23,13 @@ export type CatalogNormaliseResult = {
   groupsByPosId: Map<string, ImportModifierGroup>;
   /** posGroupId → role for KDS sync + chip palette. */
   roleHints: Map<string, ModifierRoleHint>;
+  /** Square item ids marked deleted/archived in this snapshot (for soft-delete). */
+  deletedPosItemIds: string[];
+};
+
+export type CatalogNormaliseOptions = {
+  /** When true, include deleted/archived items as `isAvailable: false`. */
+  includeDeletedItems?: boolean;
 };
 
 function moneyToMinor(amount: bigint | number | null | undefined): number {
@@ -176,7 +183,17 @@ function normaliseModifierList(
 export function normaliseSquareCatalog(
   cafeId: string,
   snapshot: SquareCatalogSnapshot,
+  options: CatalogNormaliseOptions = {},
 ): CatalogNormaliseResult {
+  const includeDeletedItems = options.includeDeletedItems === true;
+
+  const imageUrlById = new Map<string, string>();
+  for (const img of snapshot.images ?? []) {
+    if (!img.id || img.isDeleted) continue;
+    const url = img.imageData?.url?.trim();
+    if (url) imageUrlById.set(img.id, url);
+  }
+
   const listMeta = snapshot.modifierLists.map((l) => ({
     posGroupId: l.id,
     name: l.modifierListData?.name?.trim() ?? '',
@@ -195,34 +212,41 @@ export function normaliseSquareCatalog(
 
   const categoryNameById = new Map<string, string>();
   for (const cat of snapshot.categories) {
+    if (cat.isDeleted) continue;
     const name = cat.categoryData?.name?.trim();
     if (name && cat.id) categoryNameById.set(cat.id, name);
   }
 
   const usedSectionKeys = new Set<string>();
   const items: NormalisedMenuItem[] = [];
+  const deletedPosItemIds: string[] = [];
 
   for (const itemObj of snapshot.items) {
-    if (itemObj.isDeleted) continue;
     const data = itemObj.itemData;
-    if (!data || data.isArchived) continue;
-    const name = data.name?.trim();
-    if (!name) continue;
+    const name = data?.name?.trim();
+    const isGone = Boolean(itemObj.isDeleted || data?.isArchived);
+
+    if (isGone) {
+      if (itemObj.id) deletedPosItemIds.push(itemObj.id);
+      if (!includeDeletedItems || !name || !itemObj.id) continue;
+    } else if (!data || !name) {
+      continue;
+    }
 
     let categoryKey = 'hot_drinks';
-    const catRefs = data.categories ?? [];
+    const catRefs = data?.categories ?? [];
     const firstCatId =
       catRefs[0] && typeof catRefs[0] === 'object' && 'id' in catRefs[0]
         ? (catRefs[0] as { id?: string }).id
-        : (data.categoryId ?? undefined);
+        : (data?.categoryId ?? undefined);
     if (firstCatId && categoryNameById.has(firstCatId)) {
       categoryKey = mapCategoryToSectionKey(categoryNameById.get(firstCatId)!);
-    } else if (data.categoryId && categoryNameById.has(data.categoryId)) {
+    } else if (data?.categoryId && categoryNameById.has(data.categoryId)) {
       categoryKey = mapCategoryToSectionKey(categoryNameById.get(data.categoryId)!);
     }
     usedSectionKeys.add(categoryKey);
 
-    const variationObjs = (data.variations ?? []).filter(
+    const variationObjs = (data?.variations ?? []).filter(
       (v): v is CatalogObject.ItemVariation => v.type === 'ITEM_VARIATION' && !v.isDeleted,
     );
     const sizes: NormalisedItemSize[] = [];
@@ -255,7 +279,7 @@ export function normaliseSquareCatalog(
     }
 
     const itemGroups: NormalisedModifierGroup[] = [];
-    for (const info of data.modifierListInfo ?? []) {
+    for (const info of data?.modifierListInfo ?? []) {
       if (info.enabled === false) continue;
       const base = groupsByPosId.get(info.modifierListId);
       if (!base) continue;
@@ -296,18 +320,28 @@ export function normaliseSquareCatalog(
       });
     }
 
+    const imageIds = data?.imageIds ?? [];
+    let imageUrl: string | null = null;
+    for (const imageId of imageIds) {
+      const url = imageUrlById.get(imageId);
+      if (url) {
+        imageUrl = url;
+        break;
+      }
+    }
+
     items.push({
       id: randomUUID(),
       posItemId: itemObj.id,
       name,
-      description: stripHtml(data.descriptionPlaintext ?? data.description),
+      description: stripHtml(data?.descriptionPlaintext ?? data?.description),
       priceMinor,
       currency,
       category: categoryKey,
       subcategory: null,
-      imageUrl: null,
+      imageUrl,
       emoji: null,
-      isAvailable: true,
+      isAvailable: !isGone,
       sizes,
       modifierGroups: itemGroups,
       tags: [],
@@ -326,5 +360,6 @@ export function normaliseSquareCatalog(
     },
     groupsByPosId,
     roleHints,
+    deletedPosItemIds,
   };
 }

@@ -67,6 +67,9 @@ adminConnectSquareRouter.get('/status', requireAdminAuth, async (req, res) => {
       locationId: status?.locationId ?? null,
       tokenExpiresAt: status?.tokenExpiresAt ?? null,
       status: status?.status ?? null,
+      catalogLastSyncedAt: status?.catalogLastSyncedAt ?? null,
+      catalogSyncStatus: status?.catalogSyncStatus ?? null,
+      catalogSyncError: status?.catalogSyncError ?? null,
       locations,
     },
   });

@@ -13,6 +13,7 @@ import {
   kdsCompleteOrder,
   kdsFetchOrders,
   kdsRecallLastOrder,
+  kdsRecallOrder,
 } from '../lib/kds-api.js';
 import type { KdsSession } from '../lib/kds-session.js';
 
@@ -169,6 +170,7 @@ export function useKdsOrders(params: {
   finalizeDismiss: (orderId: string) => void;
   recallLast: () => void;
   recalling: boolean;
+  recallOrder: (orderId: string) => Promise<void>;
   setStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
 } {
   const { session, onSessionExpired } = params;
@@ -176,6 +178,7 @@ export function useKdsOrders(params: {
   const [error, setError] = useState<string | null>(null);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(() => new Set());
   const [recalling, setRecalling] = useState(false);
+  const recallingIdsRef = useRef<Set<string>>(new Set());
   const socketRef = useRef<Socket | null>(null);
   const onExpiredRef = useRef(onSessionExpired);
   onExpiredRef.current = onSessionExpired;
@@ -410,6 +413,38 @@ export function useKdsOrders(params: {
       });
   }, [session, recalling]);
 
+  const recallOrder = useCallback(
+    async (orderId: string): Promise<void> => {
+      if (!session) return;
+      if (recallingIdsRef.current.has(orderId)) return;
+
+      recallingIdsRef.current.add(orderId);
+      setError(null);
+
+      try {
+        const { order } = await kdsRecallOrder(session.token, orderId);
+        setDismissingIds((prev) => {
+          if (!prev.has(order.id)) return prev;
+          const next = new Set(prev);
+          next.delete(order.id);
+          return next;
+        });
+        setOrders((prev) => sortOrders([...prev.filter((o) => o.id !== order.id), order]));
+      } catch (err) {
+        if (err instanceof Error && err.message === 'SESSION_EXPIRED') {
+          onExpiredRef.current(session);
+          setError('Session expired — please sign in again.');
+        } else {
+          setError(err instanceof Error ? err.message : 'Recall failed');
+        }
+        throw err;
+      } finally {
+        recallingIdsRef.current.delete(orderId);
+      }
+    },
+    [session],
+  );
+
   const setStatus = useCallback(
     (orderId: string, status: KdsAdvanceStatusRequest['status']): void => {
       if (!session) return;
@@ -429,6 +464,7 @@ export function useKdsOrders(params: {
     finalizeDismiss,
     recallLast,
     recalling,
+    recallOrder,
     setStatus,
   };
 }

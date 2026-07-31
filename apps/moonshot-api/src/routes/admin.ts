@@ -22,6 +22,7 @@ import {
 import { adminConnectSquareRouter } from './admin-connect-square.js';
 import { adminOnboardingRouter } from './admin-onboarding.js';
 import { stripeConnectCallbacksRouter } from './stripe-connect-callbacks.js';
+import { runCatalogSyncForCafe } from '../lib/pos-adapters/square/catalog-sync.js';
 
 export const adminRouter: Router = Router();
 
@@ -142,4 +143,25 @@ adminRouter.get('/payments/stripe/status', requireAdminAuth, async (req, res) =>
   const cafeId = req.adminUser!.cafeId;
   const data: AdminStripeAccountStatusResponse = await syncAdminStripeAccountStatus(cafeId);
   return res.json({ ok: true, data });
+});
+
+/**
+ * Pull Square Catalog deltas into Postgres (Square is source of truth).
+ * Body optional: `{ forceFull?: boolean }` for a full re-list instead of incremental Search.
+ */
+adminRouter.post('/menu/sync-pos', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const forceFull = body.forceFull === true;
+  try {
+    const data = await runCatalogSyncForCafe(cafeId, { forceFull });
+    return res.json({ ok: true, data });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Catalog sync failed';
+    return res.status(502).json({
+      ok: false,
+      error: message,
+      code: ApiErrorCode.VALIDATION,
+    });
+  }
 });

@@ -1,17 +1,11 @@
-import { Undo2 } from 'lucide-react';
+import { History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 type AppHeaderProps = {
   cafeName: string;
   cafeSlug: string;
   username: string;
-  recalling?: boolean;
-  onRecall: () => void;
+  onOpenRecentOrders: () => void;
   onLogout: () => void;
 };
 
@@ -19,8 +13,7 @@ export function AppHeader({
   cafeName,
   cafeSlug,
   username,
-  recalling = false,
-  onRecall,
+  onOpenRecentOrders,
   onLogout,
 }: AppHeaderProps) {
   return (
@@ -30,23 +23,10 @@ export function AppHeader({
         <span className="hidden text-sm text-muted-foreground sm:inline">
           {cafeName} ({cafeSlug}) — {username}
         </span>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                aria-label="Recall last order"
-                disabled={recalling}
-                onClick={onRecall}
-              />
-            }
-          >
-            <Undo2 />
-          </TooltipTrigger>
-          <TooltipContent>Recall last order</TooltipContent>
-        </Tooltip>
+        <Button type="button" variant="outline" size="sm" onClick={onOpenRecentOrders}>
+          <History className="size-4" />
+          Recent orders
+        </Button>
         <Button type="button" variant="outline" size="sm" onClick={onLogout}>
           Sign out
         </Button>

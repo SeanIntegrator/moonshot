@@ -55,7 +55,7 @@ Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe-provi
 
 Owners choose **Connect my menu with Square** or **Continue with template**.
 
-- **Square:** OAuth connect → pick location → `POST /admin/onboarding/menu-pos-import`. Details: [square-oauth.md](./square-oauth.md).
+- **Square:** OAuth connect → pick location → `POST /admin/onboarding/menu-pos-import`. After import, Square stays source of truth via catalog webhooks + Admin Sync ([square-oauth.md](./square-oauth.md)).
 - **Template:** toggle categories (Hot drinks and Milks are always on; **Food** is present but off by default), tick drinks/milks/syrups, edit names/prices before save.
 
 Custom specialty sections (e.g. Ube) are added later from the dashboard Items tab.

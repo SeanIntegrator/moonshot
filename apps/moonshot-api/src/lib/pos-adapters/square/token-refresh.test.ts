@@ -51,6 +51,10 @@ function conn(overrides: Partial<PosConnectionSecrets> = {}): PosConnectionSecre
     status: 'active',
     lastRefreshedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     connectedAt: new Date(),
+    catalogSyncCursor: null,
+    catalogLastSyncedAt: null,
+    catalogSyncStatus: 'idle',
+    catalogSyncError: null,
     ...overrides,
   };
 }

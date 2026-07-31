@@ -77,6 +77,29 @@ describe('parseSquareWebhookEnvelope', () => {
     });
   });
 
+  it('extracts catalog.version.updated without an order id', () => {
+    const env = parseSquareWebhookEnvelope({
+      merchant_id: 'MERCHANT1',
+      type: 'catalog.version.updated',
+      event_id: 'ev-cat-1',
+      data: {
+        type: 'catalog_version',
+        id: '',
+        object: {
+          catalog_version: {
+            updated_at: '2026-07-01T12:00:00Z',
+          },
+        },
+      },
+    });
+    expect(env).toEqual({
+      eventId: 'ev-cat-1',
+      merchantId: 'MERCHANT1',
+      type: 'catalog.version.updated',
+      orderId: null,
+    });
+  });
+
   it('returns null when required fields missing', () => {
     expect(parseSquareWebhookEnvelope({ type: 'order.created' })).toBeNull();
   });

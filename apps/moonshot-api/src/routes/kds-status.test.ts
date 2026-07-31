@@ -11,6 +11,8 @@ const emitCustomerServerToClient = vi.hoisted(() => vi.fn());
 vi.mock('../lib/orders/order-kds.js', () => ({
   completeOrderForKds: vi.fn(),
   listOpenOrdersForKds: vi.fn(),
+  listRecentCompletedOrdersForKds: vi.fn(),
+  recallCompletedOrderForKds: vi.fn(),
   recallLastCompletedOrderForKds: vi.fn(),
   advanceOrderStatusForKds,
   stretchOrderEtaForKds: vi.fn(),

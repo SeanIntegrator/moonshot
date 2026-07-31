@@ -161,7 +161,7 @@ export async function persistNormalisedMenuCatalog(
   };
 }
 
-async function upsertModifierGroup(
+export async function upsertModifierGroup(
   client: PoolClient,
   cafeId: string,
   group: ImportModifierGroup,
@@ -287,8 +287,8 @@ async function insertCatalogItem(
        archetype, waive_milk_surcharge, allow_no_milk, synced_at
      ) VALUES (
        $1, $2, $3, $4, $5, $6, $7, $8,
-       NULL, TRUE, $9::text[], '[]'::jsonb, $10::jsonb, $11,
-       $12, $13, $14, NOW()
+       $9, TRUE, $10::text[], '[]'::jsonb, $11::jsonb, $12,
+       $13, $14, $15, NOW()
      )
      RETURNING id`,
     [
@@ -300,6 +300,7 @@ async function insertCatalogItem(
       item.currency || 'GBP',
       item.category,
       item.subcategory,
+      item.imageUrl ?? null,
       item.tags,
       JSON.stringify(item.sizes),
       args.itemSort,
@@ -345,7 +346,7 @@ async function reconcileOrphanSeededGroups(
 }
 
 /** Append Square list names into café KDS classification so chips still resolve. */
-async function syncKdsModifierClassification(
+export async function syncKdsModifierClassification(
   client: PoolClient,
   cafeId: string,
   opts: PersistCatalogOptions,

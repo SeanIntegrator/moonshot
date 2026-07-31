@@ -8,6 +8,7 @@ import type { PoolClient } from 'pg';
 import { persistNormalisedMenuCatalog } from '../menu-persist-catalog.js';
 import {
   getPosConnection,
+  markCatalogSyncSuccess,
   updatePosConnectionLocation,
 } from '../pos-connections-repository.js';
 import { createSquarePosAdapter } from '../pos-adapters/square/index.js';
@@ -67,9 +68,11 @@ export const posImportMenuProvisioner: MenuProvisioner<PosMenuProvisionPayload> 
       throw new MenuProvisionError(message, 502, 'VALIDATION');
     }
 
-    return persistNormalisedMenuCatalog(client, cafeId, menu, {
+    const result = await persistNormalisedMenuCatalog(client, cafeId, menu, {
       groupsByPosId: adapter.lastGroupsByPosId,
       roleHints: adapter.lastRoleHints,
     });
+    await markCatalogSyncSuccess(client, cafeId, new Date(), POS_PROVIDERS.square);
+    return result;
   },
 };

@@ -9,6 +9,8 @@ import {
   type KdsLoginResponse,
   type KdsOrdersResponse,
   type KdsRecallLastOrderResponse,
+  type KdsRecallOrderResponse,
+  type KdsRecentOrdersResponse,
 } from '@moonshot/types';
 import { getApiBaseUrl } from './runtime-config.js';
 
@@ -65,6 +67,21 @@ export async function kdsFetchOrders(token: string): Promise<KdsOrdersResponse> 
   return json.data;
 }
 
+export async function kdsFetchRecentOrders(token: string): Promise<KdsRecentOrdersResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/kds/orders/recent`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    throw new Error('SESSION_EXPIRED');
+  }
+  const json = await parseEnvelope<KdsRecentOrdersResponse>(res);
+  if (!json.ok) throw new Error(json.error ?? 'Failed to load recent orders');
+  return json.data;
+}
+
 export async function kdsFetchConfig(token: string): Promise<KdsConfigResponse> {
   const base = getApiBaseUrl();
   if (!base) throw new Error('VITE_API_URL is not set');
@@ -111,6 +128,25 @@ export async function kdsRecallLastOrder(token: string): Promise<KdsRecallLastOr
     throw new Error('SESSION_EXPIRED');
   }
   const json = await parseEnvelope<KdsRecallLastOrderResponse>(res);
+  if (!json.ok) throw new Error(json.error ?? 'Recall failed');
+  return json.data;
+}
+
+export async function kdsRecallOrder(
+  token: string,
+  orderId: string,
+): Promise<KdsRecallOrderResponse> {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error('VITE_API_URL is not set');
+  const url = `${base}${API_VERSION_PREFIX}/kds/orders/${encodeURIComponent(orderId)}/recall`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    throw new Error('SESSION_EXPIRED');
+  }
+  const json = await parseEnvelope<KdsRecallOrderResponse>(res);
   if (!json.ok) throw new Error(json.error ?? 'Recall failed');
   return json.data;
 }

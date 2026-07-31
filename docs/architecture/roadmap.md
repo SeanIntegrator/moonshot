@@ -46,6 +46,7 @@ The OAuth step. Built and debugged against C&B specifically. Feature + one criti
  [x] [API] Create the app-level webhook subscription (one notification URL, one signature key) and verify signatures. Done when: events from any connected café hit one endpoint, tagged by merchant_id, and bad signatures are rejected.
  [x] [Admin] Add the front-door buttons: "Connect my menu with Square" (Square adapter) vs "Continue with template" (manual adapter). Done when: each routes to the correct onboarding path.
  [x] [API] [Admin] Wire "Import menu from POS": OAuth token → Catalog API → Square adapter → normalise → Postgres. Done when: the currently-dead import button pulls a café's live Square menu in.
+ [x] [API] [Admin] Keep Square catalogue in sync after import: `catalog.version.updated` → incremental Search upsert (images included) + Admin Sync now + daily safety cron. Done when: Square Dashboard menu edits appear in Admin without re-onboarding.
  [ ] [API] [Cross-cutting] C&B migration: retire the hand-wired token and any legacy per-location webhook, cut C&B over to OAuth, confirm no duplicate order events. Done when: C&B runs entirely through the OAuth connection with dedup verified.
 M4 — Loyalty, review nudge & launch features
 

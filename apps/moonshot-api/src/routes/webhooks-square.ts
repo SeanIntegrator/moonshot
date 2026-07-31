@@ -5,10 +5,12 @@ import {
   fetchSquareOrder,
   mapSquareEnvelopeToWebhookEvent,
 } from '../lib/pos-adapters/square/order-normalise.js';
+import { enqueueCatalogSync } from '../lib/pos-adapters/square/catalog-sync.js';
 import { ensureFreshSquareAccessToken } from '../lib/pos-adapters/square/token-refresh.js';
 import {
   parseSquareWebhookEnvelope,
   rawBodyToString,
+  SQUARE_CATALOG_WEBHOOK_TYPE,
   verifySquareWebhookRequest,
 } from '../lib/pos-adapters/square/webhook.js';
 import { findCafeIdByMerchantId } from '../lib/pos-connections-repository.js';
@@ -23,7 +25,7 @@ const PROVIDER = 'square';
 
 /**
  * App-level Square webhooks: verify HMAC → claim event_id → merchant_id → café →
- * retrieve order → persist + KDS emit.
+ * catalog debounce sync and/or order retrieve + persist + KDS emit.
  */
 export async function handleSquareWebhook(req: Request, res: Response): Promise<void> {
   const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY?.trim();
@@ -84,7 +86,6 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
 
   try {
     if (!cafeId) {
-      // Unknown sandbox / unrelated merchant — ACK so Square does not retry-storm.
       console.info('[square-webhook] ignored_unknown_merchant', {
         merchantId: envelope.merchantId,
         type: envelope.type,
@@ -96,6 +97,17 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
         eventId: envelope.eventId,
       });
       void res.json({ received: true, ignored: true, reason: 'unknown_merchant' });
+      return;
+    }
+
+    if (envelope.type === SQUARE_CATALOG_WEBHOOK_TYPE) {
+      enqueueCatalogSync(cafeId);
+      await completeWebhookProcessing({
+        client: pool,
+        provider: PROVIDER,
+        eventId: envelope.eventId,
+      });
+      void res.json({ received: true, kind: 'catalog_sync_enqueued' });
       return;
     }
 

@@ -44,6 +44,8 @@ export {
   getSquareConnectStatus,
   importPosMenu,
   startSquareConnect,
+  syncPosMenuFromSquare,
+  type PosCatalogSyncResult,
   type SquareConnectLocation,
   type SquareConnectStatus,
   type SquareOnboardResponse,

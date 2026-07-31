@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppHeader } from '@/components/AppHeader';
 import { LoginScreen } from '@/components/LoginScreen';
 import { FlowBoard } from './board/FlowBoard.js';
+import { RecentOrdersDialog } from './board/RecentOrdersDialog.js';
 import { useKdsConfig } from './hooks/useKdsConfig.js';
 import { useKdsOrders } from './hooks/useKdsOrders.js';
 import { kdsLogin } from './lib/kds-api.js';
@@ -19,6 +20,7 @@ export function App() {
   const [session, setSession] = useState<KdsSession | null>(() => loadKdsSession());
   const [loginForm, setLoginForm] = useState({ cafeSlug: '', username: '', password: '' });
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [recentOpen, setRecentOpen] = useState(false);
 
   const clearExpiredSession = useCallback((current: KdsSession): void => {
     setLoginForm((f) => ({
@@ -38,8 +40,7 @@ export function App() {
     dismissingIds,
     complete,
     finalizeDismiss,
-    recallLast,
-    recalling,
+    recallOrder,
     setStatus,
   } = useKdsOrders({
     session,
@@ -88,6 +89,7 @@ export function App() {
     setOrdersError(null);
     setConfigError(null);
     setLoginError(null);
+    setRecentOpen(false);
   }
 
   if (!session) {
@@ -109,8 +111,7 @@ export function App() {
             cafeName={session.cafeName}
             cafeSlug={session.cafeSlug}
             username={session.username}
-            recalling={recalling}
-            onRecall={recallLast}
+            onOpenRecentOrders={() => setRecentOpen(true)}
             onLogout={logout}
           />
           {error ? (
@@ -133,6 +134,17 @@ export function App() {
             <p className="text-sm text-muted-foreground">Loading board config…</p>
           )}
         </div>
+
+        {kdsConfig ? (
+          <RecentOrdersDialog
+            open={recentOpen}
+            onOpenChange={setRecentOpen}
+            token={session.token}
+            kdsConfig={kdsConfig}
+            onRecall={recallOrder}
+            onSessionExpired={() => clearExpiredSession(session)}
+          />
+        ) : null}
       </div>
     </TooltipProvider>
   );

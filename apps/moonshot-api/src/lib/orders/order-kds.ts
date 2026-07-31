@@ -50,6 +50,64 @@ export async function completeOrderForKds(orderId: string, cafeId: string): Prom
   }
 }
 
+const RECENT_COMPLETED_DEFAULT_LIMIT = 20;
+
+/**
+ * Recently completed orders for the KDS Recent orders dialog (newest first).
+ */
+export async function listRecentCompletedOrdersForKds(
+  cafeId: string,
+  limit = RECENT_COMPLETED_DEFAULT_LIMIT,
+): Promise<NormalisedOrder[]> {
+  const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 50);
+  const ordersRes = await pool.query<OrderRowDb>(
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
+     WHERE cafe_id = $1 AND status = 'completed'
+     ORDER BY completed_at DESC NULLS LAST, updated_at DESC
+     LIMIT $2`,
+    [cafeId, safeLimit],
+  );
+
+  return normalisedOrdersFromRows(pool, ordersRes.rows);
+}
+
+/**
+ * Reopen a specific completed order as `confirmed` (just-placed on KDS).
+ * Returns null when the order is missing, wrong café, or not completed.
+ */
+export async function recallCompletedOrderForKds(
+  orderId: string,
+  cafeId: string,
+): Promise<NormalisedOrder | null> {
+  if (!UUID_RE.test(orderId)) return null;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const upd = await client.query<OrderRowDb>(
+      `UPDATE orders
+       SET status = 'confirmed',
+           completed_at = NULL,
+           updated_at = NOW()
+       WHERE id = $1 AND cafe_id = $2 AND status = 'completed'
+       RETURNING ${ORDER_SELECT_COLUMNS}`,
+      [orderId, cafeId],
+    );
+
+    await client.query('COMMIT');
+
+    if (upd.rows.length === 0) return null;
+    return fetchOrderWithItems(pool, orderId, cafeId);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 /**
  * Reopen the café's most recently completed order as `confirmed` (just-placed on KDS).
  * Returns null when no completed order exists for the café.

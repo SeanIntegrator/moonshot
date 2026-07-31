@@ -78,6 +78,8 @@ export const SQUARE_ORDER_WEBHOOK_TYPES = new Set([
   'order.fulfillment.updated',
 ]);
 
+export const SQUARE_CATALOG_WEBHOOK_TYPE = 'catalog.version.updated';
+
 export type SquareWebhookEnvelope = {
   eventId: string;
   merchantId: string;

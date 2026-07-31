@@ -8,7 +8,10 @@ import {
   type KdsLoginResponse,
   type KdsOrdersResponse,
   type KdsRecallLastOrderResponse,
+  type KdsRecallOrderResponse,
+  type KdsRecentOrdersResponse,
   type KdsStretchEtaResponse,
+  type NormalisedOrder,
 } from '@moonshot/types';
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
@@ -17,6 +20,8 @@ import {
   advanceOrderStatusForKds,
   completeOrderForKds,
   listOpenOrdersForKds,
+  listRecentCompletedOrdersForKds,
+  recallCompletedOrderForKds,
   recallLastCompletedOrderForKds,
   stretchOrderEtaForKds,
 } from '../lib/orders/order-kds.js';
@@ -29,6 +34,37 @@ import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 
 export const kdsRouter: Router = Router();
+
+/**
+ * After a successful recall: notify KDS + customer sockets and recompute ETAs.
+ * ETA failures are swallowed so the kitchen still gets the reopened ticket.
+ */
+async function emitAfterRecall(cafeId: string, order: NormalisedOrder, logTag: string): Promise<void> {
+  emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
+  emitCustomerServerToClient(order.id, {
+    type: 'customerOrderStatusUpdated',
+    orderId: order.id,
+    cafeId,
+    status: order.status,
+  });
+
+  try {
+    const cafeReload = await findCafeById(cafeId);
+    if (cafeReload) {
+      await recomputePickupEtasForCafe({
+        db: pool,
+        cafeId,
+        kdsConfig: cafeReload.kdsConfig,
+      });
+    }
+  } catch (e) {
+    console.error(`[${logTag}] ETA recompute failure (swallowed)`, {
+      cafeId,
+      orderId: order.id,
+      err: e,
+    });
+  }
+}
 
 kdsRouter.post('/auth/login', async (req, res) => {
   const body = req.body as Record<string, unknown>;
@@ -88,6 +124,17 @@ kdsRouter.get('/orders', requireKdsAuth, async (req, res) => {
   return res.json({ ok: true, data });
 });
 
+/**
+ * Recently completed orders for the Recent orders dialog.
+ * Registered before `/:orderId` routes so `recent` is not captured as an id.
+ */
+kdsRouter.get('/orders/recent', requireKdsAuth, async (req, res) => {
+  const cafeId = req.kdsUser!.cafeId;
+  const orders = await listRecentCompletedOrdersForKds(cafeId);
+  const data: KdsRecentOrdersResponse = { orders };
+  return res.json({ ok: true, data });
+});
+
 kdsRouter.get('/config', requireKdsAuth, async (req, res) => {
   const cafeId = req.kdsUser!.cafeId;
   const cafe = await findCafeById(cafeId);
@@ -119,32 +166,37 @@ kdsRouter.post('/orders/recall-last', requireKdsAuth, async (req, res) => {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'No completed order to recall');
   }
 
-  emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
-  emitCustomerServerToClient(order.id, {
-    type: 'customerOrderStatusUpdated',
-    orderId: order.id,
-    cafeId,
-    status: order.status,
-  });
-
-  try {
-    const cafeReload = await findCafeById(cafeId);
-    if (cafeReload) {
-      await recomputePickupEtasForCafe({
-        db: pool,
-        cafeId,
-        kdsConfig: cafeReload.kdsConfig,
-      });
-    }
-  } catch (e) {
-    console.error('[kds.recall-last] ETA recompute failure (swallowed)', {
-      cafeId,
-      orderId: order.id,
-      err: e,
-    });
-  }
+  await emitAfterRecall(cafeId, order, 'kds.recall-last');
 
   const data: KdsRecallLastOrderResponse = { order };
+  return res.json({ ok: true, data });
+});
+
+/**
+ * Recall a specific completed order back onto the board as `confirmed`.
+ */
+kdsRouter.post('/orders/:orderId/recall', requireKdsAuth, async (req, res) => {
+  const cafeId = req.kdsUser!.cafeId;
+  const orderId = typeof req.params.orderId === 'string' ? req.params.orderId : '';
+  if (!orderId.trim()) {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'orderId is required');
+  }
+
+  let order;
+  try {
+    order = await recallCompletedOrderForKds(orderId, cafeId);
+  } catch (e) {
+    console.error('[kds.recall] DB error while recalling order', { cafeId, orderId, err: e });
+    throw e;
+  }
+
+  if (!order) {
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found or not recallable');
+  }
+
+  await emitAfterRecall(cafeId, order, 'kds.recall');
+
+  const data: KdsRecallOrderResponse = { order };
   return res.json({ ok: true, data });
 });
 

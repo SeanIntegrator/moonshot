@@ -13,8 +13,14 @@ const fixturePath = join(
 );
 
 function loadFixture(): SquareCatalogSnapshot {
-  const raw = JSON.parse(readFileSync(fixturePath, 'utf8')) as SquareCatalogSnapshot;
-  return raw;
+  const raw = JSON.parse(readFileSync(fixturePath, 'utf8')) as Partial<SquareCatalogSnapshot>;
+  return {
+    items: raw.items ?? [],
+    categories: raw.categories ?? [],
+    modifierLists: raw.modifierLists ?? [],
+    images: raw.images ?? [],
+    latestTime: raw.latestTime ?? new Date().toISOString(),
+  };
 }
 
 describe('catalog-normalise', () => {
@@ -70,7 +76,45 @@ describe('catalog-normalise', () => {
       },
     };
     snapshot.items.push(archived);
-    const { menu } = normaliseSquareCatalog('cafe-1', snapshot);
+    const { menu, deletedPosItemIds } = normaliseSquareCatalog('cafe-1', snapshot);
     expect(menu.items.find((i) => i.posItemId === 'ITEM_GONE')).toBeUndefined();
+    expect(deletedPosItemIds).toContain('ITEM_GONE');
+  });
+
+  it('maps CatalogImage onto item imageUrl', () => {
+    const snapshot = loadFixture();
+    snapshot.images = [
+      {
+        type: 'IMAGE',
+        id: 'IMG_1',
+        isDeleted: false,
+        imageData: { url: 'https://square-cdn.example/latte.jpg' },
+      },
+    ];
+    const latte = snapshot.items.find((i) => i.id === 'ITEM_LATTE');
+    if (latte?.itemData) {
+      latte.itemData.imageIds = ['IMG_1'];
+    }
+    const { menu } = normaliseSquareCatalog('cafe-1', snapshot);
+    expect(menu.items.find((i) => i.posItemId === 'ITEM_LATTE')?.imageUrl).toBe(
+      'https://square-cdn.example/latte.jpg',
+    );
+    expect(menu.items.find((i) => i.posItemId === 'ITEM_AMERICANO')?.imageUrl ?? null).toBeNull();
+  });
+
+  it('includes deleted items as unavailable when includeDeletedItems is set', () => {
+    const snapshot = loadFixture();
+    snapshot.items.push({
+      type: 'ITEM',
+      id: 'ITEM_DEL',
+      isDeleted: true,
+      itemData: { name: 'Deleted Latte', variations: [] },
+    });
+    const { menu, deletedPosItemIds } = normaliseSquareCatalog('cafe-1', snapshot, {
+      includeDeletedItems: true,
+    });
+    expect(deletedPosItemIds).toContain('ITEM_DEL');
+    const del = menu.items.find((i) => i.posItemId === 'ITEM_DEL');
+    expect(del?.isAvailable).toBe(false);
   });
 });

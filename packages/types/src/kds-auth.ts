@@ -42,6 +42,16 @@ export interface KdsRecallLastOrderResponse {
   order: NormalisedOrder;
 }
 
+/** Recently completed orders for the KDS Recent orders dialog. */
+export interface KdsRecentOrdersResponse {
+  orders: NormalisedOrder[];
+}
+
+/** Recall a specific completed order by id — same shape as recall-last. */
+export interface KdsRecallOrderResponse {
+  order: NormalisedOrder;
+}
+
 export interface KdsConfigResponse {
   kdsConfig: KdsConfig;
 }

@@ -24,6 +24,8 @@ const poolQuery = vi.hoisted(() => vi.fn());
 vi.mock('../lib/orders/order-kds.js', () => ({
   completeOrderForKds,
   listOpenOrdersForKds: vi.fn(),
+  listRecentCompletedOrdersForKds: vi.fn(),
+  recallCompletedOrderForKds: vi.fn(),
   recallLastCompletedOrderForKds: vi.fn(),
   advanceOrderStatusForKds: vi.fn(),
   stretchOrderEtaForKds: vi.fn(),

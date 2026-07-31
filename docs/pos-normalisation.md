@@ -6,20 +6,23 @@ When adding Square, SumUp, Lightspeed, or Epos adapters:
 
 1. **Keep secrets and HTTP in the adapter** — `PosAdapter.fetchMenu`, `verifyWebhookSignature`, `parseWebhook`.
 2. **Map provider fields → `NormalisedMenuItem`** — internal UUIDs for rows you control; use `posItemId` / `posOptionId` / `pos_group_id` when you need a stable external key for sync/dedupe.
-3. **Persist ingress separately** — use `persistNormalisedMenuCatalog` (onboarding) or `persistPosOrderEvent` (order webhooks); avoid embedding SQL in provider SDK wrappers.
+3. **Persist ingress separately** — use `persistNormalisedMenuCatalog` (onboarding) or `syncNormalisedMenuCatalog` / `persistPosOrderEvent` (ongoing sync); avoid embedding SQL in provider SDK wrappers.
+
 4. **Modifiers** — map provider modifier sets into `NormalisedModifierGroup[]`; order lines still snapshot selections as `NormalisedOrderLineModifier[]` with `groupId` / `optionId` for KDS clarity.
-5. **Onboarding import** — POS catalogue ingress uses `getMenuProvisioner('pos')` → `PosAdapter.fetchMenu` → `persistNormalisedMenuCatalog`. Template onboarding uses `getMenuProvisioner('template')`.
+5. **Onboarding import** — POS catalogue ingress uses `getMenuProvisioner('pos')` → `PosAdapter.fetchMenu` → `persistNormalisedMenuCatalog`. Ongoing sync uses `syncNormalisedMenuCatalog`. Template onboarding uses `getMenuProvisioner('template')`.
 
-## Square adapter (live for onboarding import)
+## Square adapter (live for onboarding import + catalog sync)
 
-See [square-oauth.md](./square-oauth.md) for OAuth, token storage, and Admin UX.
+See [square-oauth.md](./square-oauth.md) for OAuth, token storage, webhooks, and Admin Sync UX.
 
 ### Decision: Square owns items + modifiers; Moonshot layers prep
 
 | Source | What it owns |
 |--------|----------------|
-| Square Catalog | Items (name, price, sizes/variations, category), modifier lists (milks, syrups, etc.) with Square's names |
+| Square Catalog | Items (name, price, sizes/variations, category, availability), modifier lists (milks, syrups, etc.) with Square's names, **images** (`CatalogImage` → `image_url`) |
 | Moonshot | Flow prep groups Square cannot express: Shots, Beans, Milk Temperature, Milk Texture, Ice Level, Toppings — attached via `inferDrinkArchetypeFromName` + `slotFilter` (never milk/syrup slots) |
+
+**Owned fields on sync upsert** (Square wins when present): `name`, `description`, `price_minor`, `currency`, `category` / section, `sizes`, Square-linked modifier attachments, `is_available`, `image_url` (only when Square supplies an image — never wipe a café upload if Square has none). Soft-delete sets `is_available = false` (no hard delete). Moonshot-only: Flow prep attachments (`pos_group_id IS NULL`), archetype / allow-no-milk flags on existing rows, custom tags.
 
 Square list names are **not renamed**. Import appends them into `cafes.kds_config.modifierClassification` so KDS chip matching still works.
 
