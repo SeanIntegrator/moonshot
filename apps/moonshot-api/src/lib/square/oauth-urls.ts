@@ -136,7 +136,8 @@ export function buildSquareAuthorizeUrl(cafeId: string): { url: string; state: s
   const url = new URL(`${host}/oauth2/authorize`);
   url.searchParams.set('client_id', applicationId);
   url.searchParams.set('scope', SQUARE_OAUTH_SCOPES.join(' '));
-  url.searchParams.set('session', 'false');
+  // Sandbox only supports session=true; production requires session=false.
+  url.searchParams.set('session', env === 'production' ? 'false' : 'true');
   url.searchParams.set('state', state);
   url.searchParams.set('redirect_uri', redirectUri);
   return { url: url.toString(), state };

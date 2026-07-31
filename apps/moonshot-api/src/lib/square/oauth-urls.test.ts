@@ -65,11 +65,31 @@ describe('square oauth-urls', () => {
     expect(parsed.pathname).toBe('/oauth2/authorize');
     expect(parsed.searchParams.get('client_id')).toBe('sq0idp-test');
     expect(parsed.searchParams.get('scope')).toContain('ITEMS_READ');
+    expect(parsed.searchParams.get('session')).toBe('true');
     expect(parsed.searchParams.get('redirect_uri')).toContain('/connect/square/return');
     expect(verifySquareConnectState(parsed.searchParams.get('state') ?? '')?.cafeId).toBe(
       'cafe-uuid-1',
     );
     expect(verifySquareConnectState(state)?.cafeId).toBe('cafe-uuid-1');
+  });
+
+  it('uses session=false for production authorize URL', () => {
+    stash([
+      'JWT_SECRET',
+      'SQUARE_APPLICATION_ID',
+      'SQUARE_ENVIRONMENT',
+      'SQUARE_OAUTH_REDIRECT_URL',
+    ]);
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.SQUARE_APPLICATION_ID = 'sq0idp-prod';
+    process.env.SQUARE_ENVIRONMENT = 'production';
+    process.env.SQUARE_OAUTH_REDIRECT_URL =
+      'https://api.example.com/api/v1/admin/connect/square/return';
+
+    const { url } = buildSquareAuthorizeUrl('cafe-uuid-1');
+    const parsed = new URL(url);
+    expect(parsed.origin).toBe('https://connect.squareup.com');
+    expect(parsed.searchParams.get('session')).toBe('false');
   });
 
   it('normalises origin-only admin redirect to /onboarding/import-pos', () => {
