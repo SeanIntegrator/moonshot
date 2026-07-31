@@ -85,14 +85,14 @@
 
 .dark {
     /* Cool grey board: page chrome slightly darker than ticket surfaces */
-    --background: oklch(0.24 0.014 250);
+    --background: oklch(0.28 0.012 250);
     --foreground: oklch(0.96 0.01 250);
-    --card: oklch(0.30 0.014 250);
+    --card: oklch(0.32 0.012 250);
     --card-foreground: oklch(0.96 0.01 250);
-    --popover: oklch(0.30 0.014 250);
+    --popover: oklch(0.32 0.012 250);
     --popover-foreground: oklch(0.96 0.01 250);
     --primary: oklch(0.92 0.01 250);
-    --primary-foreground: oklch(0.24 0.014 250);
+    --primary-foreground: oklch(0.28 0.012 250);
     --secondary: oklch(0.34 0.014 250);
     --secondary-foreground: oklch(0.96 0.01 250);
     --muted: oklch(0.34 0.014 250);
@@ -108,7 +108,7 @@
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.30 0.014 250);
+    --sidebar: oklch(0.32 0.012 250);
     --sidebar-foreground: oklch(0.96 0.01 250);
     --sidebar-primary: oklch(0.488 0.243 264.376);
     --sidebar-primary-foreground: oklch(0.985 0 0);

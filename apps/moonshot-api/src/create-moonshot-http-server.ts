@@ -18,7 +18,9 @@ import { mediaRouter } from './routes/media.js';
 import { menuRouter } from './routes/menu.js';
 import { ordersRouter } from './routes/orders/index.js';
 import { loyaltyRouter } from './routes/loyalty.js';
+import { internalPosRouter } from './routes/internal-pos.js';
 import { stripeWebhookRouter } from './routes/webhooks-stripe.js';
+import { squareWebhookRouter } from './routes/webhooks-square.js';
 
 export type MoonshotHttpPack = {
   app: express.Application;
@@ -54,7 +56,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
     cors({
       origin: corsOrigin,
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Cafe-Slug'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Cafe-Slug', 'X-Cron-Secret'],
     }),
   );
 
@@ -62,6 +64,12 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
     `${API_VERSION_PREFIX}/webhooks/stripe`,
     express.raw({ type: 'application/json', limit: '2mb' }),
     stripeWebhookRouter,
+  );
+
+  app.use(
+    `${API_VERSION_PREFIX}/webhooks/square`,
+    express.raw({ type: 'application/json', limit: '2mb' }),
+    squareWebhookRouter,
   );
 
   app.use(express.json({ limit: '1mb' }));
@@ -91,6 +99,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   app.use(`${API_VERSION_PREFIX}/orders`, ordersRouter);
   app.use(`${API_VERSION_PREFIX}/loyalty`, loyaltyRouter);
   app.use(`${API_VERSION_PREFIX}/kds`, kdsRouter);
+  app.use(`${API_VERSION_PREFIX}/internal/pos`, internalPosRouter);
 
   app.use(errorHandler);
 

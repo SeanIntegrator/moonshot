@@ -6,7 +6,7 @@ When adding Square, SumUp, Lightspeed, or Epos adapters:
 
 1. **Keep secrets and HTTP in the adapter** — `PosAdapter.fetchMenu`, `verifyWebhookSignature`, `parseWebhook`.
 2. **Map provider fields → `NormalisedMenuItem`** — internal UUIDs for rows you control; use `posItemId` / `posOptionId` / `pos_group_id` when you need a stable external key for sync/dedupe.
-3. **Persist ingress separately** — use `persistNormalisedMenuCatalog` (onboarding) or a small order-ingress service; avoid embedding SQL in provider SDK wrappers.
+3. **Persist ingress separately** — use `persistNormalisedMenuCatalog` (onboarding) or `persistPosOrderEvent` (order webhooks); avoid embedding SQL in provider SDK wrappers.
 4. **Modifiers** — map provider modifier sets into `NormalisedModifierGroup[]`; order lines still snapshot selections as `NormalisedOrderLineModifier[]` with `groupId` / `optionId` for KDS clarity.
 5. **Onboarding import** — POS catalogue ingress uses `getMenuProvisioner('pos')` → `PosAdapter.fetchMenu` → `persistNormalisedMenuCatalog`. Template onboarding uses `getMenuProvisioner('template')`.
 

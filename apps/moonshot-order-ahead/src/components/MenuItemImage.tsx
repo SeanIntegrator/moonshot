@@ -43,8 +43,12 @@ export function MenuItemImage({
   onReadyChange,
 }: Props) {
   const url = src?.trim() || null;
-  const [loaded, setLoaded] = useState(() => getMenuImageStatus(url) === 'loaded');
-  const [failed, setFailed] = useState(false);
+  // Seed from cache so a known-error URL does not mount <img> (and double-fetch) on first paint.
+  const [loaded, setLoaded] = useState(() => {
+    const status = getMenuImageStatus(url);
+    return status === 'loaded' || status === 'error';
+  });
+  const [failed, setFailed] = useState(() => getMenuImageStatus(url) === 'error');
   const imgRef = useRef<HTMLImageElement>(null);
   const onReadyRef = useRef(onReadyChange);
   onReadyRef.current = onReadyChange;
@@ -65,6 +69,19 @@ export function MenuItemImage({
       setFailed(false);
       notify(true);
       return;
+    }
+
+    // Cached error: keep <img> unmounted while watchMenuImage retries via Image().
+    if (cached === 'error') {
+      setLoaded(true);
+      setFailed(true);
+      notify(true);
+      return watchMenuImage(url, () => {
+        const next = getMenuImageStatus(url);
+        setLoaded(next === 'loaded' || next === 'error');
+        setFailed(next === 'error');
+        notify(true);
+      });
     }
 
     setLoaded(false);

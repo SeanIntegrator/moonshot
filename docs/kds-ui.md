@@ -15,6 +15,8 @@ Prebuilt components under `src/components/ui/` (Button, Input, Label, Card, Aler
 
 Domain ticket layout (shot columns, milk wraps, allergen hazard stripes) stays app-local Tailwind + thin CSS helpers in `src/index.css`. For new interactive custom pieces, prefer composing **Base UI** / shadcn primitives under `components/ui` rather than inventing a parallel CSS system.
 
+**Ready chrome** is line-driven (`allMade`) so promote and demote are optimistic both ways; status POSTs are debounced (~250ms) and idempotent in `useKdsOrders`. **Timer** badges use `d` / `h` / `m` (no seconds). **Food strip** is a muted slate-blue accent between drinks and food rows.
+
 ## Adding components
 
 From `apps/moonshot-kds`:

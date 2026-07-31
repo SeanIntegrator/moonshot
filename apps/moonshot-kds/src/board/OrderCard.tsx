@@ -54,7 +54,7 @@ const TIMER_BY_TONE: Record<TimerTone, string> = {
 const TIMER_READY =
   'border-transparent bg-[#3d6b52] text-[#e8f5ee] tracking-wide';
 
-/** Cream strip only — separates drinks from food; food rows stay on the dark card. */
+/** Muted slate-blue strip — separates drinks from food; food rows stay on the dark card. */
 function FoodStrip({
   only,
   expanded,
@@ -69,7 +69,7 @@ function FoodStrip({
       type="button"
       aria-expanded={expanded}
       aria-label={expanded ? 'Collapse food items' : 'Expand food items'}
-      className="relative flex w-full cursor-pointer items-center justify-center bg-[#f2efe8] px-4 py-1.5 text-[#3d4450] outline-none [-webkit-tap-highlight-color:transparent]"
+      className="relative flex w-full cursor-pointer items-center justify-center bg-[#3a4555] px-4 py-1.5 text-[#a8b4c4] outline-none [-webkit-tap-highlight-color:transparent]"
       onClick={onToggle}
     >
       <span className="text-base font-bold tracking-[0.12em] uppercase">
@@ -96,9 +96,15 @@ export function OrderCard({
 }: OrderCardProps) {
   const kind = deriveTicketKind(order);
   const timer = useOrderTimer(order, kdsConfig);
-  const [madeIds, setMadeIds] = useState<Set<string>>(() => new Set());
+  const lineIdsKey = order.items.map((i) => i.id).join('|');
+  const [madeIds, setMadeIds] = useState<Set<string>>(() =>
+    order.status === 'ready' ? new Set(order.items.map((i) => i.id)) : new Set(),
+  );
   const [foodExpanded, setFoodExpanded] = useState(true);
   const bodyRef = useRef<HTMLDivElement>(null);
+  // Prevents socket/poll refreshes from overwriting in-progress barista line toggles.
+  const userEditedMadeRef = useRef(false);
+  const prevOrderIdRef = useRef(order.id);
 
   const lines = order.items.map((item) => ({
     item,
@@ -108,7 +114,8 @@ export function OrderCard({
   const foods = lines.filter((l) => l.view.isFood);
   const lineIds = lines.map((l) => l.item.id);
   const allMade = lineIds.length > 0 && lineIds.every((id) => madeIds.has(id));
-  const showReadyChrome = allMade || order.status === 'ready';
+  // Ready chrome is line-driven so demote (un-cross) is instant, not waiting on API.
+  const showReadyChrome = allMade;
   const showCustomer =
     kind === 'pickup' &&
     kdsConfig.display.showCustomerNameInHeader &&
@@ -124,20 +131,40 @@ export function OrderCard({
 
   useEqualizeShotColumnWidth(bodyRef, shotContentKey);
 
+  // Seed madeIds from server status when the card mounts or the order id changes,
+  // and when a refresh arrives before the barista has edited lines locally.
+  useEffect(() => {
+    if (prevOrderIdRef.current !== order.id) {
+      prevOrderIdRef.current = order.id;
+      userEditedMadeRef.current = false;
+    }
+    if (userEditedMadeRef.current) return;
+
+    const ids = lineIdsKey.length > 0 ? lineIdsKey.split('|') : [];
+    if (order.status === 'ready' && ids.length > 0) {
+      setMadeIds(new Set(ids));
+    } else {
+      setMadeIds(new Set());
+    }
+  }, [order.id, order.status, lineIdsKey]);
+
   useEffect(() => {
     if (lineIds.length === 0) return;
     if (order.status === 'completed' || order.status === 'cancelled') return;
 
-    if (allMade && order.status !== 'ready') {
+    // Already in sync — avoid redundant POSTs after seeding madeIds from status.
+    if (allMade && order.status === 'ready') return;
+    if (!allMade && order.status !== 'ready') return;
+
+    if (allMade) {
       onSetStatus(order.id, 'ready');
       return;
     }
-    if (!allMade && order.status === 'ready') {
-      onSetStatus(order.id, 'confirmed');
-    }
+    onSetStatus(order.id, 'confirmed');
   }, [allMade, lineIds.length, onSetStatus, order.id, order.status]);
 
   function toggleMade(lineId: string): void {
+    userEditedMadeRef.current = true;
     setMadeIds((prev) => {
       const next = new Set(prev);
       if (next.has(lineId)) next.delete(lineId);
@@ -161,7 +188,7 @@ export function OrderCard({
       )}
       onTransitionEnd={handleTransitionEnd}
     >
-      <Card className="w-full gap-0 overflow-hidden rounded-[10px] bg-card py-0 shadow-[0_2px_10px_rgba(0,0,0,0.28)] ring-1 ring-black/20">
+      <Card className="w-full gap-0 overflow-hidden rounded-[10px] bg-card py-0 shadow-[0_4px_24px_8px_rgba(0,0,0,0.38)] ring-1 ring-black/20">
         <div
           className={cn(
             'flex w-full items-center gap-2 px-4 py-3 text-[#e8eef2]',
@@ -184,7 +211,7 @@ export function OrderCard({
             </div>
             <Badge
               className={cn(
-                'h-auto shrink-0 rounded-full px-3.5 py-1 text-[1.3rem] font-bold leading-snug',
+                'h-auto shrink-0 rounded-full px-3.5 py-1 text-[1.15rem] font-bold leading-snug',
                 showReadyChrome ? TIMER_READY : cn('tabular-nums', TIMER_BY_TONE[timer.tone]),
               )}
             >

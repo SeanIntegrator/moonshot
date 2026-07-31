@@ -49,8 +49,31 @@ export type UpsertPosConnectionInput = {
   scopes: string[];
 };
 
+/** Alert when last refresh is older than this, or the access token is already expired. */
+export const POS_TOKEN_STALE_ALERT_MS = 8 * 24 * 60 * 60 * 1000;
+
+/** Refresh when expiry or last refresh falls inside this window. */
+export const POS_TOKEN_REFRESH_WITHIN_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Structured log when a loaded token looks abandoned — never includes token values. */
+export function alertIfPosTokenStale(conn: PosConnectionSecrets): void {
+  const now = Date.now();
+  const lastRefreshAge = now - conn.lastRefreshedAt.getTime();
+  const expired = conn.accessTokenExpiresAt.getTime() <= now;
+  if (!expired && lastRefreshAge < POS_TOKEN_STALE_ALERT_MS) return;
+  console.error('[pos] stale_token_alert', {
+    cafeId: conn.cafeId,
+    provider: conn.provider,
+    merchantId: conn.merchantId,
+    status: conn.status,
+    accessTokenExpiresAt: conn.accessTokenExpiresAt.toISOString(),
+    lastRefreshedAt: conn.lastRefreshedAt.toISOString(),
+    expired,
+  });
+}
+
 function mapRow(row: PosConnectionRow): PosConnectionSecrets {
-  return {
+  const mapped: PosConnectionSecrets = {
     id: row.id,
     cafeId: row.cafe_id,
     provider: row.provider as PosProvider,
@@ -64,6 +87,10 @@ function mapRow(row: PosConnectionRow): PosConnectionSecrets {
     lastRefreshedAt: row.last_refreshed_at,
     connectedAt: row.connected_at,
   };
+  if (mapped.status === 'active') {
+    alertIfPosTokenStale(mapped);
+  }
+  return mapped;
 }
 
 /**
@@ -207,4 +234,67 @@ export async function findCafeIdByMerchantId(
     [provider, merchantId],
   );
   return rows[0]?.cafe_id ?? null;
+}
+
+/**
+ * Active Square connections whose access token expires within 7 days,
+ * or whose last refresh is older than 7 days (belt-and-braces).
+ */
+export async function listConnectionsNeedingRefresh(
+  db: Db,
+  provider: PosProvider = POS_PROVIDERS.square,
+): Promise<PosConnectionSecrets[]> {
+  const { rows } = await db.query<PosConnectionRow>(
+    `SELECT * FROM pos_connections
+     WHERE provider = $1
+       AND status = 'active'
+       AND (
+         access_token_expires_at < NOW() + ($2::text)::interval
+         OR last_refreshed_at < NOW() - ($2::text)::interval
+       )
+     ORDER BY access_token_expires_at ASC`,
+    [provider, '7 days'],
+  );
+  return rows.map(mapRow);
+}
+
+export type UpdateTokensAfterRefreshInput = {
+  cafeId: string;
+  provider: PosProvider;
+  accessToken: string;
+  /** Square may rotate the refresh token; keep previous when omitted. */
+  refreshToken?: string;
+  accessTokenExpiresAt: Date;
+};
+
+export async function updateTokensAfterRefresh(
+  db: Db,
+  input: UpdateTokensAfterRefreshInput,
+): Promise<PosConnectionSecrets> {
+  const accessEnc = encryptSecret(input.accessToken);
+  const refreshEnc =
+    input.refreshToken !== undefined ? encryptSecret(input.refreshToken) : null;
+
+  const { rows } = await db.query<PosConnectionRow>(
+    `UPDATE pos_connections SET
+       access_token_encrypted = $1,
+       refresh_token_encrypted = COALESCE($2, refresh_token_encrypted),
+       access_token_expires_at = $3,
+       last_refreshed_at = NOW(),
+       status = 'active',
+       updated_at = NOW()
+     WHERE cafe_id = $4 AND provider = $5
+     RETURNING *`,
+    [
+      accessEnc,
+      refreshEnc,
+      input.accessTokenExpiresAt,
+      input.cafeId,
+      input.provider,
+    ],
+  );
+  if (!rows[0]) {
+    throw new Error(`pos_connections row missing for cafe ${input.cafeId} / ${input.provider}`);
+  }
+  return mapRow(rows[0]);
 }

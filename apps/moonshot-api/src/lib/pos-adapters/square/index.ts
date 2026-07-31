@@ -2,7 +2,15 @@ import type { NormalisedMenu, PosAdapter, WebhookRequestLike } from '@moonshot/t
 import { fetchSquareCatalog } from './catalog-fetch.js';
 import { normaliseSquareCatalog } from './catalog-normalise.js';
 import type { SquareClientEnvironment } from './client.js';
+import {
+  fetchSquareOrder,
+  mapSquareEnvelopeToWebhookEvent,
+} from './order-normalise.js';
 import type { ModifierRoleHint } from './role-hints.js';
+import {
+  parseSquareWebhookEnvelope,
+  verifySquareWebhookRequest,
+} from './webhook.js';
 
 export type SquareAdapterConfig = {
   cafeId: string;
@@ -18,8 +26,7 @@ export type SquarePosAdapter = PosAdapter & {
 };
 
 /**
- * Square POS adapter — Catalog fetch + normalise.
- * Webhook methods are stubs until the M3 webhook follow-up.
+ * Square POS adapter — Catalog fetch + order webhook parse/verify.
  */
 export function createSquarePosAdapter(config: SquareAdapterConfig): SquarePosAdapter {
   let lastRoleHints = new Map<string, ModifierRoleHint>();
@@ -44,17 +51,46 @@ export function createSquarePosAdapter(config: SquareAdapterConfig): SquarePosAd
       return result.menu;
     },
 
-    // Order webhooks — follow-up (roadmap M3 line 46).
-    async parseWebhook(_req: WebhookRequestLike) {
-      return {
-        kind: 'ignored' as const,
+    async parseWebhook(req: WebhookRequestLike) {
+      let body: unknown = req.body;
+      if (body == null && req.rawBody) {
+        const raw =
+          typeof req.rawBody === 'string'
+            ? req.rawBody
+            : Buffer.from(req.rawBody).toString('utf8');
+        body = JSON.parse(raw);
+      }
+      const envelope = parseSquareWebhookEnvelope(body);
+      if (!envelope) {
+        return {
+          kind: 'ignored' as const,
+          cafeId: config.cafeId,
+          reason: 'invalid_envelope',
+        };
+      }
+
+      let order: Record<string, unknown> | null = null;
+      if (envelope.orderId) {
+        try {
+          order = await fetchSquareOrder({
+            accessToken: config.accessToken,
+            orderId: envelope.orderId,
+            environment: config.environment,
+          });
+        } catch {
+          order = null;
+        }
+      }
+
+      return mapSquareEnvelopeToWebhookEvent({
         cafeId: config.cafeId,
-        reason: 'Square order webhooks not wired yet',
-      };
+        envelope,
+        order,
+      });
     },
 
-    verifyWebhookSignature(_req: WebhookRequestLike): boolean {
-      return false;
+    verifyWebhookSignature(req: WebhookRequestLike): boolean {
+      return verifySquareWebhookRequest(req);
     },
   };
 }

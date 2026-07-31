@@ -14,7 +14,7 @@ export type TimerTone = 'green' | 'amber' | 'red';
 export interface OrderTimerState {
   /** Signed seconds remaining (negative = past due). */
   remainingSeconds: number;
-  /** Absolute value display like `3:09` or `160:16`. */
+  /** Absolute value display like `3m`, `1h 15m`, or `2d 3h 15m`. */
   display: string;
   tone: TimerTone;
   pastDue: boolean;
@@ -50,11 +50,18 @@ export function orderDeadlineMs(order: NormalisedOrder, kind: FlowTicketKind): n
   return (Number.isFinite(created) ? created : Date.now()) + POS_SLA_MS;
 }
 
-function formatClock(totalSeconds: number): string {
+/** Format absolute duration as days / hours / minutes (no seconds). */
+export function formatDuration(totalSeconds: number): string {
   const abs = Math.abs(totalSeconds);
-  const mins = Math.floor(abs / 60);
-  const secs = abs % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const days = Math.floor(abs / 86_400);
+  const hours = Math.floor((abs % 86_400) / 3_600);
+  const mins = Math.floor((abs % 3_600) / 60);
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (mins > 0 || parts.length === 0) parts.push(`${mins}m`);
+  return parts.join(' ');
 }
 
 export function computeOrderTimer(
@@ -76,7 +83,7 @@ export function computeOrderTimer(
 
   return {
     remainingSeconds,
-    display: formatClock(remainingSeconds),
+    display: formatDuration(remainingSeconds),
     tone,
     pastDue,
   };
