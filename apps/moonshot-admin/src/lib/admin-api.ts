@@ -44,4 +44,5 @@ export {
   getSquareConnectStatus,
   importPosMenu,
   startSquareConnect,
+  type SquareConnectStatus,
 } from './adminApi/pos.js';

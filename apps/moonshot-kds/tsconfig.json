@@ -7,7 +7,6 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "types": ["vite/client", "node"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
