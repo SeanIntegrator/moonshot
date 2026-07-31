@@ -76,10 +76,27 @@ export function watchMenuImage(url: string, onChange: () => void): () => void {
     listeners.set(url, set);
   }
   set.add(onChange);
+
+  // Prefetch may finish between MenuItemImage's status check and this subscribe.
+  const prior = cache.get(url);
+  if (prior?.status === 'error') {
+    cache.delete(url);
+  }
   void loadUrl(url);
+
+  const status = cache.get(url)?.status;
+  if (status === 'loaded' || status === 'error') {
+    onChange();
+  }
 
   return () => {
     set!.delete(onChange);
     if (set!.size === 0) listeners.delete(url);
   };
+}
+
+/** @internal Vitest-only — module cache is otherwise session-lifetime. */
+export function __resetMenuImageCacheForTests(): void {
+  cache.clear();
+  listeners.clear();
 }

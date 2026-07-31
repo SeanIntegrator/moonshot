@@ -2,7 +2,6 @@ import { Box, Skeleton } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import {
   getMenuImageStatus,
-  isMenuImageReady,
   watchMenuImage,
 } from '../lib/menu-image-cache.js';
 
@@ -44,8 +43,9 @@ export function MenuItemImage({
   onReadyChange,
 }: Props) {
   const url = src?.trim() || null;
-  const [loaded, setLoaded] = useState(() => isMenuImageReady(url));
-  const [failed, setFailed] = useState(() => getMenuImageStatus(url) === 'error');
+  const [loaded, setLoaded] = useState(() => getMenuImageStatus(url) === 'loaded');
+  const [failed, setFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const onReadyRef = useRef(onReadyChange);
   onReadyRef.current = onReadyChange;
 
@@ -66,12 +66,6 @@ export function MenuItemImage({
       notify(true);
       return;
     }
-    if (cached === 'error') {
-      setLoaded(true);
-      setFailed(true);
-      notify(true);
-      return;
-    }
 
     setLoaded(false);
     setFailed(false);
@@ -83,6 +77,15 @@ export function MenuItemImage({
       setFailed(next === 'error');
       notify(true);
     });
+  }, [url]);
+
+  // Browser-cached images can be complete before onLoad is attached (no event fires).
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!url || !img?.complete || img.naturalWidth === 0) return;
+    setLoaded(true);
+    setFailed(false);
+    onReadyRef.current?.(true);
   }, [url]);
 
   const showImage = Boolean(url) && !failed;
@@ -104,17 +107,16 @@ export function MenuItemImage({
       {showImage && (
         <Box
           component="img"
+          ref={imgRef}
           src={url!}
           alt={alt}
           loading={loading}
           decoding="async"
           fetchPriority={fetchPriority}
-          onLoad={(e) => {
-            // Cached images can fire before effect subscribe; mark ready immediately.
-            if (e.currentTarget.complete) {
-              setLoaded(true);
-              onReadyRef.current?.(true);
-            }
+          onLoad={() => {
+            setLoaded(true);
+            setFailed(false);
+            onReadyRef.current?.(true);
           }}
           onError={() => {
             setFailed(true);
