@@ -136,7 +136,7 @@ export async function syncNormalisedMenuCatalog(
   if (deletedIds.length > 0) {
     const { rowCount } = await client.query(
       `UPDATE menu_items
-       SET is_available = FALSE, synced_at = NOW(), updated_at = NOW()
+       SET is_available = FALSE, synced_at = NOW()
        WHERE cafe_id = $1 AND pos_item_id = ANY($2::text[])`,
       [cafeId, deletedIds],
     );
@@ -185,7 +185,7 @@ async function upsertCatalogItem(
         `UPDATE menu_items SET
            name = $1, description = $2, price_minor = $3, currency = $4,
            category = $5, subcategory = $6, sizes = $7::jsonb,
-           image_url = $8, is_available = $9, synced_at = NOW(), updated_at = NOW()
+           image_url = $8, is_available = $9, synced_at = NOW()
          WHERE id = $10 AND cafe_id = $11`,
         [
           item.name,
@@ -206,7 +206,7 @@ async function upsertCatalogItem(
         `UPDATE menu_items SET
            name = $1, description = $2, price_minor = $3, currency = $4,
            category = $5, subcategory = $6, sizes = $7::jsonb,
-           is_available = $8, synced_at = NOW(), updated_at = NOW()
+           is_available = $8, synced_at = NOW()
          WHERE id = $9 AND cafe_id = $10`,
         [
           item.name,
