@@ -19,12 +19,14 @@ import {
   createAdminStripeOnboardingLink,
   syncAdminStripeAccountStatus,
 } from '../lib/admin-stripe-service.js';
+import { adminConnectSquareRouter } from './admin-connect-square.js';
 import { adminOnboardingRouter } from './admin-onboarding.js';
 import { stripeConnectCallbacksRouter } from './stripe-connect-callbacks.js';
 
 export const adminRouter: Router = Router();
 
 adminRouter.use('/onboarding', adminOnboardingRouter);
+adminRouter.use('/connect/square', adminConnectSquareRouter);
 
 adminRouter.post('/auth/login', async (req, res) => {
   const body = req.body as Record<string, unknown>;

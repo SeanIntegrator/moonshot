@@ -1,0 +1,173 @@
+{
+  "items": [
+    {
+      "type": "ITEM",
+      "id": "ITEM_LATTE",
+      "isDeleted": false,
+      "itemData": {
+        "name": "Latte",
+        "description": "Espresso with steamed milk",
+        "categories": [{ "id": "CAT_HOT" }],
+        "variations": [
+          {
+            "type": "ITEM_VARIATION",
+            "id": "VAR_LATTE_REG",
+            "isDeleted": false,
+            "itemVariationData": {
+              "name": "Regular",
+              "pricingType": "FIXED_PRICING",
+              "priceMoney": { "amount": 350, "currency": "GBP" }
+            }
+          }
+        ],
+        "modifierListInfo": [
+          {
+            "modifierListId": "LIST_MILKS",
+            "enabled": true,
+            "minSelectedModifiers": 1,
+            "maxSelectedModifiers": 1
+          },
+          {
+            "modifierListId": "LIST_SYRUPS",
+            "enabled": true,
+            "minSelectedModifiers": 0,
+            "maxSelectedModifiers": 3
+          }
+        ]
+      }
+    },
+    {
+      "type": "ITEM",
+      "id": "ITEM_AMERICANO",
+      "isDeleted": false,
+      "itemData": {
+        "name": "Americano",
+        "categories": [{ "id": "CAT_HOT" }],
+        "variations": [
+          {
+            "type": "ITEM_VARIATION",
+            "id": "VAR_AM_S",
+            "isDeleted": false,
+            "itemVariationData": {
+              "name": "Small",
+              "pricingType": "FIXED_PRICING",
+              "priceMoney": { "amount": 300, "currency": "GBP" }
+            }
+          },
+          {
+            "type": "ITEM_VARIATION",
+            "id": "VAR_AM_L",
+            "isDeleted": false,
+            "itemVariationData": {
+              "name": "Large",
+              "pricingType": "FIXED_PRICING",
+              "priceMoney": { "amount": 350, "currency": "GBP" }
+            }
+          }
+        ],
+        "modifierListInfo": [
+          {
+            "modifierListId": "LIST_MILKS",
+            "enabled": true,
+            "minSelectedModifiers": 0,
+            "maxSelectedModifiers": 1
+          }
+        ]
+      }
+    },
+    {
+      "type": "ITEM",
+      "id": "ITEM_COOKIE",
+      "isDeleted": false,
+      "itemData": {
+        "name": "Oat cookie",
+        "categories": [{ "id": "CAT_FOOD" }],
+        "variations": [
+          {
+            "type": "ITEM_VARIATION",
+            "id": "VAR_COOKIE",
+            "isDeleted": false,
+            "itemVariationData": {
+              "name": "Regular",
+              "pricingType": "FIXED_PRICING",
+              "priceMoney": { "amount": 220, "currency": "GBP" }
+            }
+          }
+        ],
+        "modifierListInfo": []
+      }
+    }
+  ],
+  "categories": [
+    {
+      "type": "CATEGORY",
+      "id": "CAT_HOT",
+      "isDeleted": false,
+      "categoryData": { "name": "Hot drinks" }
+    },
+    {
+      "type": "CATEGORY",
+      "id": "CAT_FOOD",
+      "isDeleted": false,
+      "categoryData": { "name": "Food" }
+    }
+  ],
+  "modifierLists": [
+    {
+      "type": "MODIFIER_LIST",
+      "id": "LIST_MILKS",
+      "isDeleted": false,
+      "modifierListData": {
+        "name": "Milk Options",
+        "selectionType": "SINGLE",
+        "minSelectedModifiers": 1,
+        "maxSelectedModifiers": 1,
+        "modifiers": [
+          {
+            "type": "MODIFIER",
+            "id": "MOD_WHOLE",
+            "isDeleted": false,
+            "modifierData": {
+              "name": "Whole",
+              "onByDefault": true,
+              "priceMoney": { "amount": 0, "currency": "GBP" }
+            }
+          },
+          {
+            "type": "MODIFIER",
+            "id": "MOD_OAT",
+            "isDeleted": false,
+            "modifierData": {
+              "name": "Oat",
+              "onByDefault": false,
+              "priceMoney": { "amount": 50, "currency": "GBP" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "MODIFIER_LIST",
+      "id": "LIST_SYRUPS",
+      "isDeleted": false,
+      "modifierListData": {
+        "name": "Syrups",
+        "selectionType": "MULTIPLE",
+        "minSelectedModifiers": 0,
+        "maxSelectedModifiers": 3,
+        "modifiers": [
+          {
+            "type": "MODIFIER",
+            "id": "MOD_VANILLA",
+            "isDeleted": false,
+            "modifierData": {
+              "name": "Vanilla",
+              "onByDefault": false,
+              "priceMoney": { "amount": 30, "currency": "GBP" }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

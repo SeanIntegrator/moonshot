@@ -104,6 +104,21 @@ describe('resolveArchetypeGroups', () => {
     expect(result.groupIds).toEqual(['milks', 'shots']);
     expect(result.waiveMilkSurcharge).toBe(true);
   });
+
+  it('filters to prep slots only (Square import layering)', () => {
+    const result = resolveArchetypeGroups(
+      'milk-forward-hot',
+      platformDrinkArchetypeConfig(),
+      library,
+      {
+        slotFilter: ['shots', 'beans', 'milk_temperature', 'milk_texture', 'ice_level', 'toppings'],
+      },
+    );
+    expect(result.groupIds).toEqual(['shots', 'temp', 'texture', 'beans']);
+    expect(result.groupIds).not.toContain('milks');
+    expect(result.groupIds).not.toContain('syrups');
+    expect(result.waiveMilkSurcharge).toBe(false);
+  });
 });
 
 describe('applyMilkSurchargeWaiver', () => {

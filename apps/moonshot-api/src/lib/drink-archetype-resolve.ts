@@ -24,11 +24,18 @@ export function resolveArchetypeGroups(
   archetypeId: DrinkArchetypeId,
   cafeConfig: CafeDrinkArchetypeConfig | null | undefined,
   libraryByName: Map<string, LibraryGroupRef>,
+  opts?: { slotFilter?: ReadonlySet<DrinkArchetypeSlot> | readonly DrinkArchetypeSlot[] },
 ): { groupIds: string[]; waiveMilkSurcharge: boolean; slots: DrinkArchetypeSlot[] } {
   const recipe = resolveCafeArchetypeRecipe(archetypeId, cafeConfig);
   const groupIds: string[] = [];
+  const filter = opts?.slotFilter
+    ? opts.slotFilter instanceof Set
+      ? opts.slotFilter
+      : new Set(opts.slotFilter)
+    : null;
 
   for (const slot of recipe.slots) {
+    if (filter && !filter.has(slot)) continue;
     const groupName = DRINK_ARCHETYPE_SLOT_GROUP_NAMES[slot];
     const group = libraryByName.get(groupName);
     if (!group) continue;

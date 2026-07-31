@@ -90,6 +90,13 @@ export function OnboardingWizard() {
     setStep((prev) => Math.max(prev, 3));
   }, [stripeReturnNotice]);
 
+  // Square OAuth may land on /onboarding if redirect URL is origin-only — send to import page.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('squareConnect')) return;
+    navigate(`/onboarding/import-pos?${params.toString()}`, { replace: true });
+  }, [navigate]);
+
   if (!session) return null;
 
   const orderUrl = `${getOrderAheadBaseUrl()}/${session.cafe.slug}`;

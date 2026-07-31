@@ -19,6 +19,7 @@ import {
   resolveArchetypeGroups,
 } from './drink-archetype-resolve.js';
 import { copyTemplateDrinkImageToCafeItem } from './menu-image-storage.js';
+import { MILK_CHIP, SYRUP_CHIP, type ChipMeta } from './menu-chip-palette.js';
 import { setMenuItemModifierGroups } from './menu-modifier-library.js';
 import {
   ensureFlowPrepModifierGroups,
@@ -47,28 +48,6 @@ const DRINK_DEF_BY_KEY = new Map(
   MENU_TEMPLATE_CATEGORIES.flatMap((c) => c.drinks ?? []).map((d) => [d.key, d] as const),
 );
 const CATEGORY_KEYS = new Set(MENU_TEMPLATE_CATEGORIES.map((c) => c.key));
-
-const MILK_CHIP: Record<string, { colorHex: string; chipLabel: string }> = {
-  whole: { colorHex: '#f5f0e8', chipLabel: 'WM' },
-  skinny: { colorHex: '#fafafa', chipLabel: 'Sk' },
-  oat: { colorHex: '#e8dcc8', chipLabel: 'Oa' },
-  almond: { colorHex: '#f4a6b8', chipLabel: 'Al' },
-  coconut: { colorHex: '#ffffff', chipLabel: 'Co' },
-  soy: { colorHex: '#f5e6a8', chipLabel: 'So' },
-  cashew: { colorHex: '#e8d4b8', chipLabel: 'Ca' },
-};
-
-const SYRUP_CHIP: Record<string, { colorHex: string; chipLabel: string }> = {
-  vanilla: { colorHex: '#f5e6c8', chipLabel: 'Va' },
-  caramel: { colorHex: '#c68642', chipLabel: 'Ca' },
-  hazelnut: { colorHex: '#8b5a2b', chipLabel: 'Ha' },
-  'white-chocolate': { colorHex: '#f0ebe3', chipLabel: 'WC' },
-  strawberry: { colorHex: '#f4a6b8', chipLabel: 'St' },
-  raspberry: { colorHex: '#d4507a', chipLabel: 'Ra' },
-  blueberry: { colorHex: '#4a6fa5', chipLabel: 'Bl' },
-  'salted-caramel': { colorHex: '#b8860b', chipLabel: 'SC' },
-  honey: { colorHex: '#f0b429', chipLabel: 'Ho' },
-};
 
 function validateRequest(body: AdminSaveMenuTemplateRequest): void {
   if (!Array.isArray(body.categories) || body.categories.length === 0) {
@@ -173,7 +152,7 @@ async function findModifierGroupId(
 
 function buildModifierOptions(
   modifiers: AdminSaveMenuTemplateRequest['categories'][number]['modifiers'],
-  chipMap: Record<string, { colorHex: string; chipLabel: string }>,
+  chipMap: Record<string, ChipMeta>,
   /** When true (milks), fall back to the first enabled option if none is marked default. */
   requireDefault = false,
 ) {

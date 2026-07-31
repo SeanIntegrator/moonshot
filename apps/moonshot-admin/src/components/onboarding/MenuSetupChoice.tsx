@@ -13,16 +13,16 @@ export function MenuSetupChoice({ onEditTemplate, onImportPos, onBack }: Props) 
         Set up your menu
       </Typography>
       <Typography variant="body2" color="text.secondary" paragraph>
-        Start from our café template or import your existing catalogue from a POS. You can always
+        Connect Square to pull your live catalogue, or start from our café template. You can always
         edit items later in the dashboard.
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <Button variant="contained" size="large" fullWidth onClick={onEditTemplate} sx={{ py: 1.5 }}>
-          Edit template
+        <Button variant="contained" size="large" fullWidth onClick={onImportPos} sx={{ py: 1.5 }}>
+          Connect my menu with Square
         </Button>
-        <Button variant="outlined" size="large" fullWidth onClick={onImportPos} sx={{ py: 1.5 }}>
-          Import from POS
+        <Button variant="outlined" size="large" fullWidth onClick={onEditTemplate} sx={{ py: 1.5 }}>
+          Continue with template
         </Button>
       </Box>
 

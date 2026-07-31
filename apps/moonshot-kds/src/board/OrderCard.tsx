@@ -5,7 +5,7 @@ import {
   type KdsConfig,
   type NormalisedOrder,
 } from '@moonshot/types';
-import { MoreVertical } from 'lucide-react';
+import { ChevronDown, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -54,30 +54,35 @@ const TIMER_BY_TONE: Record<TimerTone, string> = {
 const TIMER_READY =
   'border-transparent bg-[#3d6b52] text-[#e8f5ee] tracking-wide';
 
-/**
- * Full-bleed dashed rule between drink/food sections.
- * Fixed-height band keeps FOOD ONLY clear of the ticket header.
- */
-function FoodDivider({
+/** Cream strip only — separates drinks from food; food rows stay on the dark card. */
+function FoodStrip({
   only,
-  className,
+  expanded,
+  onToggle,
 }: {
   only: boolean;
-  className?: string;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   return (
-    <div
-      role="separator"
-      className={cn('relative z-10 flex h-8 w-full items-center justify-center', className)}
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-label={expanded ? 'Collapse food items' : 'Expand food items'}
+      className="relative flex w-full cursor-pointer items-center justify-center bg-[#f2efe8] px-4 py-1.5 text-[#3d4450] outline-none [-webkit-tap-highlight-color:transparent]"
+      onClick={onToggle}
     >
-      <div
-        className="absolute inset-x-0 top-1/2 h-0 -translate-y-1/2 border-t-2 border-dashed border-muted-foreground/40"
-        aria-hidden
-      />
-      <span className="relative bg-card px-2.5 text-base font-bold tracking-[0.12em] text-muted-foreground uppercase">
+      <span className="text-base font-bold tracking-[0.12em] uppercase">
         {only ? 'FOOD ONLY' : 'FOOD'}
       </span>
-    </div>
+      <ChevronDown
+        aria-hidden
+        className={cn(
+          'absolute right-3 size-5 shrink-0 transition-transform duration-200',
+          expanded && 'rotate-180',
+        )}
+      />
+    </button>
   );
 }
 
@@ -92,6 +97,7 @@ export function OrderCard({
   const kind = deriveTicketKind(order);
   const timer = useOrderTimer(order, kdsConfig);
   const [madeIds, setMadeIds] = useState<Set<string>>(() => new Set());
+  const [foodExpanded, setFoodExpanded] = useState(true);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const lines = order.items.map((item) => ({
@@ -210,8 +216,6 @@ export function OrderCard({
         </div>
 
         <CardContent className="flex flex-col p-0" ref={bodyRef}>
-          {drinks.length === 0 && foods.length > 0 ? <FoodDivider only /> : null}
-
           {drinks.map(({ item, view }, i) => (
             <DrinkRow
               key={item.id}
@@ -224,18 +228,27 @@ export function OrderCard({
             />
           ))}
 
-          {foods.length > 0 && drinks.length > 0 ? <FoodDivider only={false} /> : null}
-
-          {foods.map(({ item, view }) => (
-            <FoodRow
-              key={item.id}
-              itemName={item.itemName}
-              quantity={item.quantity}
-              view={view}
-              made={madeIds.has(item.id)}
-              onToggleMade={() => toggleMade(item.id)}
-            />
-          ))}
+          {foods.length > 0 ? (
+            <>
+              <FoodStrip
+                only={drinks.length === 0}
+                expanded={foodExpanded}
+                onToggle={() => setFoodExpanded((prev) => !prev)}
+              />
+              {foodExpanded
+                ? foods.map(({ item, view }) => (
+                    <FoodRow
+                      key={item.id}
+                      itemName={item.itemName}
+                      quantity={item.quantity}
+                      view={view}
+                      made={madeIds.has(item.id)}
+                      onToggleMade={() => toggleMade(item.id)}
+                    />
+                  ))
+                : null}
+            </>
+          ) : null}
         </CardContent>
       </Card>
     </div>

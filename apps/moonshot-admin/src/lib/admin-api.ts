@@ -40,3 +40,8 @@ export {
   adminSaveMenuTemplate,
   checkSlugAvailable,
 } from './adminApi/onboarding.js';
+export {
+  getSquareConnectStatus,
+  importPosMenu,
+  startSquareConnect,
+} from './adminApi/pos.js';

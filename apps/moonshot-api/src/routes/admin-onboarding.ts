@@ -6,7 +6,6 @@ import {
   type AdminOnboardingStatusResponse,
   type AdminRegisterResponse,
   type AdminSaveMenuTemplateRequest,
-  type AdminSaveMenuTemplateResponse,
   type SlugAvailableResponse,
 } from '@moonshot/types';
 import { buildAdminLoginResponse } from '../lib/admin-auth-tokens.js';
@@ -14,7 +13,7 @@ import { normalizeCafeSlugInput, validateCafeSlug } from '../lib/cafe-slug.js';
 import { ProvisionCafeError, isCafeSlugAvailable, provisionCafe } from '../lib/cafe-provisioning.js';
 import { findCafeById } from '../lib/cafes-repository.js';
 import { hashKdsPassword } from '../lib/kds-password.js';
-import { applyMenuTemplate, MenuTemplateError } from '../lib/menu-template-onboarding.js';
+import { MenuTemplateError } from '../lib/menu-template-onboarding.js';
 import { getMenuProvisioner, MenuProvisionError } from '../lib/menu-provisioners/index.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
@@ -107,7 +106,7 @@ adminOnboardingRouter.post('/menu-template', requireAdminAuth, async (req, res) 
   try {
     await client.query('BEGIN');
     const provisioner = getMenuProvisioner(MENU_PROVISION_SOURCES.template);
-    const data: AdminSaveMenuTemplateResponse = await provisioner.apply(client, cafeId, body);
+    const data = await provisioner.apply(client, cafeId, body);
     await client.query('COMMIT');
     return res.status(201).json({ ok: true, data });
   } catch (err) {
@@ -117,6 +116,43 @@ adminOnboardingRouter.post('/menu-template', requireAdminAuth, async (req, res) 
         err instanceof MenuProvisionError && err.code === 'NOT_IMPLEMENTED'
           ? ApiErrorCode.CONFIG
           : err.code;
+      return res.status(err.status).json({
+        ok: false,
+        error: err.message,
+        code,
+      });
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+});
+
+adminOnboardingRouter.post('/menu-pos-import', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+  const body = req.body as Record<string, unknown>;
+  const provider = typeof body.provider === 'string' ? body.provider : '';
+  const locationId = typeof body.locationId === 'string' ? body.locationId : null;
+
+  if (provider !== 'square') {
+    return res.status(400).json({
+      ok: false,
+      error: 'provider must be "square"',
+      code: ApiErrorCode.VALIDATION,
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const provisioner = getMenuProvisioner(MENU_PROVISION_SOURCES.pos);
+    const data = await provisioner.apply(client, cafeId, { provider: 'square', locationId });
+    await client.query('COMMIT');
+    return res.status(201).json({ ok: true, data });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    if (err instanceof MenuProvisionError) {
+      const code = err.code === 'NOT_IMPLEMENTED' ? ApiErrorCode.CONFIG : err.code;
       return res.status(err.status).json({
         ok: false,
         error: err.message,

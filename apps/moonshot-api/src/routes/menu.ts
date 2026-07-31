@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { ApiErrorCode } from '@moonshot/types';
-import type { PosProvider } from '@moonshot/types';
 import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 import {
@@ -13,7 +12,6 @@ import {
 import { fetchMenuForCafe } from '../lib/menu-fetch.js';
 import { ensureSystemMenuSections, listMenuSectionsForCafe } from '../lib/menu-sections.js';
 import { UUID_RE } from '../lib/uuid.js';
-import { getPosAdapter } from '../lib/pos-adapters/index.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { menuItemImageUpload } from '../middleware/menu-item-image-upload.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';
@@ -42,9 +40,9 @@ menuRouter.get('/manage', requireMenuMutationAuth, async (req, res) => {
   return res.json({ ok: true, data: menu });
 });
 
+// Customer menu always reads Postgres — POS adapters are for sync/ingress only.
 menuRouter.get('/', async (req, res) => {
-  const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
-  const menu = await adapter.fetchMenu(req.cafe!.cafeId);
+  const menu = await fetchMenuForCafe(pool, req.cafe!.cafeId, true);
   res.set('Cache-Control', 'public, max-age=300');
   return res.json({ ok: true, data: menu });
 });
@@ -106,8 +104,7 @@ menuRouter.get('/:segment', async (req, res) => {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Unknown category');
   }
 
-  const adapter = getPosAdapter(req.cafe!.posProvider as PosProvider, req.cafe!.posConfig);
-  const menu = await adapter.fetchMenu(cafeId);
+  const menu = await fetchMenuForCafe(pool, cafeId, true);
   const filtered = {
     ...menu,
     items: menu.items.filter((item) => item.category === segment),

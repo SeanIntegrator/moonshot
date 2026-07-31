@@ -10,7 +10,7 @@ type DrinkRowProps = {
   view: FlowLineView;
   made: boolean;
   onToggleMade: () => void;
-  /** Drop bottom border when a FOOD divider provides the shared rule below. */
+  /** Drop bottom border when the cream FOOD strip sits directly below. */
   hideBottomBorder?: boolean;
 };
 

@@ -1,4 +1,4 @@
-import type { AdminSaveMenuTemplateRequest, AdminSaveMenuTemplateResponse } from './menu-template.js';
+import type { AdminSaveMenuTemplateRequest } from './menu-template.js';
 import type { PosProvider } from './pos.js';
 
 /** How a café's initial menu is created during onboarding. */
@@ -12,14 +12,21 @@ export const MENU_PROVISION_SOURCES = {
 export type MenuProvisionSource =
   (typeof MENU_PROVISION_SOURCES)[keyof typeof MENU_PROVISION_SOURCES];
 
-export type MenuProvisionResult = AdminSaveMenuTemplateResponse;
+/** Shared result shape for template and POS onboarding provisioners. */
+export interface MenuProvisionResult {
+  itemCount: number;
+  groupCount?: number;
+  milksGroupId?: string | null;
+  syrupsGroupId?: string | null;
+}
 
 /** Template onboarding — checkbox selections + editable fields. */
 export type TemplateMenuProvisionPayload = AdminSaveMenuTemplateRequest;
 
-/** Reserved for POS catalogue import (Square OAuth, location id, etc.). */
+/** POS catalogue import (Square OAuth, optional location id). */
 export interface PosMenuProvisionPayload {
   provider: PosProvider;
+  locationId?: string | null;
 }
 
 export type MenuProvisionPayloadBySource = {

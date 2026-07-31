@@ -12,7 +12,7 @@ flowchart TD
   Register --> JWT[Admin JWT]
   JWT --> Wizard[/onboarding wizard]
   Wizard --> KDS[KDS credentials]
-  Wizard --> Menu[Starter menu template]
+  Wizard --> Menu[Menu: Square or template]
   Wizard --> Stripe[Stripe optional]
   Wizard --> Live[order.app/slug]
 ```
@@ -33,6 +33,10 @@ flowchart TD
 | `GET` | `/admin/onboarding/status` | Admin JWT | `completed`, `hasKdsUser`, `hasMenuItem` |
 | `POST` | `/admin/onboarding/kds-users` | Admin JWT | Create/update KDS login for café |
 | `POST` | `/admin/onboarding/menu-template` | Admin JWT | Apply starter drink/milk/syrup template (transactional) |
+| `POST` | `/admin/onboarding/menu-pos-import` | Admin JWT | Import menu from connected Square (Catalog → Postgres) |
+| `POST` | `/admin/connect/square/onboard` | Admin JWT | Start Square OAuth (authorize URL) |
+| `GET` | `/admin/connect/square/return` | Public (signed state) | Square OAuth code exchange |
+| `GET` | `/admin/connect/square/status` | Admin JWT | Square connection + locations |
 | `POST` | `/admin/onboarding/complete` | Admin JWT | Set `features.onboarding_completed_at` |
 
 ## Default policy for new cafés
@@ -47,24 +51,24 @@ Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe-provi
 - `kds_config`: seed template from migration `001_initial_schema.sql`, with `cafeId` set to row UUID
 - Modifier library (`Milks`, `Syrups`, Flow prep, Ice Level, Toppings) seeded at signup; system menu sections (`hot_drinks`, `cold_drinks`, `food` disabled) created; platform drink-archetype recipes written to `drink_archetype_config`; onboarding step 3 applies the owner’s template selections
 
-## Starter menu template (onboarding step 3)
+## Starter menu (onboarding step 3)
 
-Owners choose **Edit template** or **Import from POS** (POS import UI is stubbed; API provisioner returns not-implemented).
+Owners choose **Connect my menu with Square** or **Continue with template**.
 
-Template path: toggle categories (Hot drinks and Milks are always on; **Food** is present but off by default with “No current food items”), tick individual drinks/milks/syrups, and edit names, descriptions, and prices before save. Custom specialty sections (e.g. Ube) are added later from the dashboard Items tab.
+- **Square:** OAuth connect → pick location → `POST /admin/onboarding/menu-pos-import`. Details: [square-oauth.md](./square-oauth.md).
+- **Template:** toggle categories (Hot drinks and Milks are always on; **Food** is present but off by default), tick drinks/milks/syrups, edit names/prices before save.
+
+Custom specialty sections (e.g. Ube) are added later from the dashboard Items tab.
 
 ### Menu provisioning layer
 
-Onboarding menu creation goes through **menu provisioners** (parallel to `PosAdapter` for runtime catalogue reads):
-
 | Source | Provisioner | Payload | Persistence |
 |--------|-------------|---------|-------------|
-| `template` | `templateMenuProvisioner` | `AdminSaveMenuTemplateRequest` | `applyMenuTemplate` today |
-| `pos` | `posImportMenuProvisioner` | `PosMenuProvisionPayload` | `PosAdapter.fetchMenu` → shared menu write helper (planned) |
+| `template` | `templateMenuProvisioner` | `AdminSaveMenuTemplateRequest` | `applyMenuTemplate` |
+| `pos` | `posImportMenuProvisioner` | `PosMenuProvisionPayload` | Square `fetchMenu` → `persistNormalisedMenuCatalog` |
 
 `POST /admin/onboarding/menu-template` delegates to `getMenuProvisioner('template')`.
-
-POS import will share the same menu persistence path as template provisioning once provider OAuth is wired (stub removed until then).
+`POST /admin/onboarding/menu-pos-import` delegates to `getMenuProvisioner('pos')`.
 
 `POST /admin/onboarding/menu-template` runs in a transaction:
 
@@ -97,7 +101,7 @@ Pinned in each app's `vite.config.ts` (`strictPort: true` — restart `pnpm dev`
 | Order-ahead | 5176 | `http://localhost:5176` |
 | API | 3000 | `http://localhost:3000` |
 
-Local `.env` examples: admin `VITE_ORDER_AHEAD_BASE_URL=http://localhost:5176`, API `STRIPE_CONNECT_ADMIN_REDIRECT_URL=http://localhost:5174/onboarding`.
+Local `.env` examples: admin `VITE_ORDER_AHEAD_BASE_URL=http://localhost:5176`, API `STRIPE_CONNECT_ADMIN_REDIRECT_URL=http://localhost:5174/onboarding`, Square vars in [square-oauth.md](./square-oauth.md).
 
 ## Deployment env vars
 
