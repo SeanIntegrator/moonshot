@@ -28,20 +28,8 @@ const PROVIDER = 'square';
  * catalog debounce sync and/or order retrieve + persist + KDS emit.
  */
 export async function handleSquareWebhook(req: Request, res: Response): Promise<void> {
-  // #region agent log
-  console.info('[square-webhook] hit', {
-    hasSigKey: Boolean(process.env.SQUARE_WEBHOOK_SIGNATURE_KEY?.trim()),
-    notifUrlSet: Boolean(process.env.SQUARE_WEBHOOK_NOTIFICATION_URL?.trim()),
-    bodyIsBuffer: Buffer.isBuffer(req.body),
-  });
-  fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H1',location:'webhooks-square.ts:entry',message:'square webhook hit',data:{hasSigKey:Boolean(process.env.SQUARE_WEBHOOK_SIGNATURE_KEY?.trim()),notifUrlSet:Boolean(process.env.SQUARE_WEBHOOK_NOTIFICATION_URL?.trim()),bodyIsBuffer:Buffer.isBuffer(req.body),contentType:req.headers['content-type']??null},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY?.trim();
   if (!signatureKey) {
-    // #region agent log
-    console.info('[square-webhook] reject_no_sig_key');
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H1',location:'webhooks-square.ts:no-sig-key',message:'reject 503 missing signature key',data:{},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     void res.status(503).json({ ok: false, error: 'Square webhook not configured' });
     return;
   }
@@ -56,14 +44,6 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
     rawBody,
   });
   if (!verified) {
-    // #region agent log
-    console.info('[square-webhook] reject_bad_signature', {
-      rawBodyLen: rawBody.length,
-      hasSigHeader: Boolean(req.headers['x-square-hmacsha256-signature']),
-      notifUrl: process.env.SQUARE_WEBHOOK_NOTIFICATION_URL?.trim() || '(default)',
-    });
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H2',location:'webhooks-square.ts:bad-sig',message:'reject 403 bad signature',data:{rawBodyLen:rawBody.length,hasSigHeader:Boolean(req.headers['x-square-hmacsha256-signature'])},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     void res.status(403).send('Invalid Square webhook signature');
     return;
   }
@@ -78,10 +58,6 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
 
   const envelope = parseSquareWebhookEnvelope(body);
   if (!envelope) {
-    // #region agent log
-    console.info('[square-webhook] reject_bad_envelope');
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H2',location:'webhooks-square.ts:bad-envelope',message:'reject 400 missing envelope fields',data:{bodyKeys:body&&typeof body==='object'?Object.keys(body as object):[]},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     void res.status(400).send('Missing event_id or merchant_id');
     return;
   }
@@ -92,17 +68,6 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
     envelope.merchantId,
   );
 
-  // #region agent log
-  console.info('[square-webhook] resolved', {
-    type: envelope.type,
-    eventId: envelope.eventId,
-    merchantId: envelope.merchantId,
-    cafeId,
-    isCatalog: envelope.type === SQUARE_CATALOG_WEBHOOK_TYPE,
-  });
-  fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H3',location:'webhooks-square.ts:resolved',message:'envelope parsed and merchant looked up',data:{type:envelope.type,eventId:envelope.eventId,merchantId:envelope.merchantId,cafeId,isCatalog:envelope.type===SQUARE_CATALOG_WEBHOOK_TYPE},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
   const claim = await claimWebhookForProcessing({
     client: pool,
     provider: PROVIDER,
@@ -111,10 +76,6 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
   });
 
   if (claim.kind === 'duplicate_processed') {
-    // #region agent log
-    console.info('[square-webhook] duplicate', { eventId: envelope.eventId, type: envelope.type });
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H3',location:'webhooks-square.ts:duplicate',message:'skipped duplicate webhook',data:{eventId:envelope.eventId,type:envelope.type},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     void res.json({ received: true, duplicate: true });
     return;
   }
@@ -130,9 +91,6 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
         type: envelope.type,
         eventId: envelope.eventId,
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H3',location:'webhooks-square.ts:unknown-merchant',message:'ignored unknown merchant',data:{merchantId:envelope.merchantId,type:envelope.type},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       await completeWebhookProcessing({
         client: pool,
         provider: PROVIDER,
@@ -143,14 +101,6 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
     }
 
     if (envelope.type === SQUARE_CATALOG_WEBHOOK_TYPE) {
-      // #region agent log
-      console.info('[square-webhook] enqueue_catalog_sync', {
-        cafeId,
-        eventId: envelope.eventId,
-        debounceMs: 45_000,
-      });
-      fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H4',location:'webhooks-square.ts:enqueue-catalog',message:'enqueue catalog sync from webhook',data:{cafeId,eventId:envelope.eventId,debounceMs:45000},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       enqueueCatalogSync(cafeId);
       await completeWebhookProcessing({
         client: pool,

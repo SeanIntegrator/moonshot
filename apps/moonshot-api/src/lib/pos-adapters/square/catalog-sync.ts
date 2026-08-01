@@ -59,10 +59,6 @@ export function enqueueCatalogSync(
     existing.forceFull = existing.forceFull || forceFull;
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H4',location:'catalog-sync.ts:enqueue',message:'catalog sync enqueued',data:{cafeId,immediate:Boolean(opts?.immediate),forceFull,hadPending:Boolean(existing),debounceMs:DEBOUNCE_MS},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
   if (opts?.immediate) {
     pendingByCafe.delete(cafeId);
     void runCatalogSyncForCafe(cafeId, { forceFull: forceFull || existing?.forceFull });
@@ -73,9 +69,6 @@ export function enqueueCatalogSync(
     forceFull: forceFull || Boolean(existing?.forceFull),
     timer: setTimeout(() => {
       pendingByCafe.delete(cafeId);
-      // #region agent log
-      fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H4',location:'catalog-sync.ts:debounce-fire',message:'debounce timer fired → run sync',data:{cafeId,forceFull:entry.forceFull},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       void runCatalogSyncForCafe(cafeId, { forceFull: entry.forceFull });
     }, DEBOUNCE_MS),
   };
@@ -112,10 +105,6 @@ export async function runCatalogSyncForCafe(
     const environment = resolveSquareEnvironment();
     const forceFull = opts?.forceFull === true || !conn.catalogSyncCursor;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H4',location:'catalog-sync.ts:run-start',message:'catalog sync run starting',data:{cafeId,forceFull,hasCursor:Boolean(conn.catalogSyncCursor),cursorIso:conn.catalogSyncCursor?.toISOString()??null,status:conn.status},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
     const snapshot = forceFull
       ? await fetchSquareCatalog({
           accessToken: conn.accessToken,
@@ -151,18 +140,6 @@ export async function runCatalogSyncForCafe(
     const cursor = new Date(snapshot.latestTime);
     await markCatalogSyncSuccess(db, cafeId, cursor, POS_PROVIDERS.square);
 
-    // #region agent log
-    console.info('[pos] catalog_sync_success', {
-      cafeId,
-      forceFull,
-      upsertedItems: result.upsertedItems,
-      softDeletedItems: result.softDeletedItems,
-      itemCount: normalised.menu.items.length,
-      latestTime: snapshot.latestTime,
-    });
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H5',location:'catalog-sync.ts:run-success',message:'catalog sync succeeded',data:{cafeId,forceFull,upsertedItems:result.upsertedItems,softDeletedItems:result.softDeletedItems,itemCount:normalised.menu.items.length,latestTime:snapshot.latestTime},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
     return {
       cafeId,
       upsertedItems: result.upsertedItems,
@@ -174,9 +151,6 @@ export async function runCatalogSyncForCafe(
     const message = err instanceof Error ? err.message : String(err);
     await markCatalogSyncError(db, cafeId, message, POS_PROVIDERS.square);
     console.error('[pos] catalog_sync_failed', { cafeId, message });
-    // #region agent log
-    fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H4',location:'catalog-sync.ts:run-failed',message:'catalog sync failed',data:{cafeId,error:message},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     throw err;
   } finally {
     inFlight.delete(cafeId);
