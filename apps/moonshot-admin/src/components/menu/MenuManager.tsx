@@ -80,6 +80,45 @@ export function MenuManager({ cafeSlug, token }: Props) {
 
   const softReload = useCallback(() => load('soft'), [load]);
 
+  // Webhook sync updates Postgres in the background; poll so Admin reflects it without Sync.
+  useEffect(() => {
+    if (!ready || squareStatus?.connected !== true) return;
+
+    let cancelled = false;
+    const knownSyncedAt = { current: squareStatus.catalogLastSyncedAt };
+
+    const tick = async () => {
+      try {
+        const next = await getSquareConnectStatus(token);
+        if (cancelled) return;
+        const prev = knownSyncedAt.current;
+        const changed =
+          Boolean(next.catalogLastSyncedAt) && next.catalogLastSyncedAt !== prev;
+        // #region agent log
+        fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'post-fix',hypothesisId:'H5',location:'MenuManager.tsx:poll',message:'square status poll',data:{prev,next:next.catalogLastSyncedAt,changed,status:next.catalogSyncStatus},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (!changed) {
+          setSquareStatus(next);
+          return;
+        }
+        knownSyncedAt.current = next.catalogLastSyncedAt;
+        setSquareStatus(next);
+        setSyncNotice('Menu updated from Square');
+        softReload();
+      } catch {
+        // ignore transient poll errors
+      }
+    };
+
+    const id = window.setInterval(() => {
+      void tick();
+    }, 10_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [ready, squareStatus?.connected, squareStatus?.catalogLastSyncedAt, softReload, token]);
+
   async function handleSyncFromSquare(): Promise<void> {
     setSyncing(true);
     setSyncNotice(null);

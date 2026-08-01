@@ -152,6 +152,14 @@ export async function runCatalogSyncForCafe(
     await markCatalogSyncSuccess(db, cafeId, cursor, POS_PROVIDERS.square);
 
     // #region agent log
+    console.info('[pos] catalog_sync_success', {
+      cafeId,
+      forceFull,
+      upsertedItems: result.upsertedItems,
+      softDeletedItems: result.softDeletedItems,
+      itemCount: normalised.menu.items.length,
+      latestTime: snapshot.latestTime,
+    });
     fetch('http://127.0.0.1:7550/ingest/aeac030f-2b8e-426f-a680-6b143f7948fb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a0012c'},body:JSON.stringify({sessionId:'a0012c',runId:'pre-fix',hypothesisId:'H5',location:'catalog-sync.ts:run-success',message:'catalog sync succeeded',data:{cafeId,forceFull,upsertedItems:result.upsertedItems,softDeletedItems:result.softDeletedItems,itemCount:normalised.menu.items.length,latestTime:snapshot.latestTime},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
 
