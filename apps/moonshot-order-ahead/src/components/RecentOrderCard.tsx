@@ -3,6 +3,7 @@ import { Box, Button, Typography } from '@mui/material';
 import { formatMoney, formatOrderDate, modifierSummary } from '../lib/format.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { MenuItemImage } from './MenuItemImage.js';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 
 type Props = {
   order: NormalisedOrder;
@@ -14,16 +15,7 @@ export function RecentOrderCard({ order, orderingAvailable, onReorder }: Props) 
   const { menu } = useMenu();
 
   return (
-    <Box
-      sx={{
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 1.25,
-        bgcolor: 'background.paper',
-        p: 1.5,
-        mb: 1.5,
-      }}
-    >
+    <SurfaceCard sx={{ p: 1.5, mb: 1.5 }}>
       <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
         Ordered on {formatOrderDate(order.createdAt)}
       </Typography>
@@ -70,6 +62,6 @@ export function RecentOrderCard({ order, orderingAvailable, onReorder }: Props) 
           Reorder {formatMoney(order.totalMinor, order.currency)}
         </Button>
       </Box>
-    </Box>
+    </SurfaceCard>
   );
 }

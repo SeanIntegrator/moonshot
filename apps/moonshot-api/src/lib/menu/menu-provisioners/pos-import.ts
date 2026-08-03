@@ -1,18 +1,13 @@
-import {
-  MENU_PROVISION_SOURCES,
-  POS_PROVIDERS,
-  type MenuProvisionResult,
-  type PosMenuProvisionPayload,
-} from '@moonshot/types';
+import { MENU_PROVISION_SOURCES, POS_PROVIDERS, type MenuProvisionResult, type PosMenuProvisionPayload } from '@moonshot/domain';
 import type { PoolClient } from 'pg';
 import { persistNormalisedMenuCatalog } from '../menu-persist-catalog.js';
 import {
   getPosConnection,
   markCatalogSyncSuccess,
   updatePosConnectionLocation,
-} from '../pos-connections-repository.js';
-import { createSquarePosAdapter } from '../pos-adapters/square/index.js';
-import { resolveSquareEnvironment } from '../square/oauth-urls.js';
+} from '../../pos-connections-repository.js';
+import { createSquarePosAdapter } from '../../pos-adapters/square/index.js';
+import { resolveSquareEnvironment } from '../../square/oauth-urls.js';
 import { MenuProvisionError } from './errors.js';
 import type { MenuProvisioner } from './types.js';
 

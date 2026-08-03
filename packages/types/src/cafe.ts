@@ -2,9 +2,9 @@
  * Café config, feature flags, theme tokens, and KDS display config.
  */
 
-import type { FeatureFlagKey } from './feature-flags.js';
-import type { PosProvider } from './pos.js';
-import type { CafeHours } from './cafe-hours.js';
+import type { CafeHours } from './cafe-hours-contract.js';
+import type { FeatureFlagKey } from './feature-flags-contract.js';
+import type { PosProvider } from './pos-contract.js';
 
 export type BaseThemeId = 'heritage' | 'botanical' | 'minimal' | 'bold' | 'classic';
 
@@ -31,6 +31,11 @@ export interface CafeThemeTypography {
   bodyFamily: string;
   headingWeight: number;
   bodyWeight: number;
+  /**
+   * Google Fonts (or similar) stylesheet URLs to inject when this theme is active.
+   * Empty when fonts are already system stacks or loaded elsewhere.
+   */
+  webfontUrls?: string[];
 }
 
 export type MenuGridLayout = '2col' | '3col' | 'list';
@@ -50,8 +55,6 @@ export interface CafeTheme {
   colors: CafeThemeColors;
   typography: CafeThemeTypography;
   layout: CafeThemeLayout;
-  /** Optional nested component tokens */
-  components?: Record<string, Record<string, string | number>>;
 }
 
 export interface LoyaltyFeatureConfig {
@@ -117,7 +120,7 @@ export interface MilkColorConfig {
 
 /**
  * KDS milk colour chips + bean badges — stored on cafés.kds_config;
- * board UI derives KdsPrep client-side via deriveLinePrep (see packages/types/kds.ts).
+ * board UI derives KdsPrep client-side via deriveLinePrep (see @moonshot/domain).
  */
 export interface BeanBadgeStyle {
   label: string;

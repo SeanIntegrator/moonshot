@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
-import { POS_PROVIDERS, type PosProvider } from '@moonshot/types';
+import type { PosProvider } from '@moonshot/types';
+import { POS_PROVIDERS } from '@moonshot/domain';
 import { decryptSecret, encryptSecret } from './crypto/secret-box.js';
 
 type Db = Pool | PoolClient;

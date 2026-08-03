@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  deriveFlowLine,
-  type KdsConfig,
-  type NormalisedOrder,
-} from '@moonshot/types';
+import type { KdsConfig, NormalisedOrder } from '@moonshot/types';
+import { deriveFlowLine } from '@moonshot/domain';
 import { ChevronDown, History, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';

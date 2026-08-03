@@ -1,4 +1,4 @@
-import { UK_FSA_ALLERGEN_SET } from '@moonshot/types';
+import { UK_FSA_ALLERGEN_SET } from '@moonshot/domain';
 
 /**
  * Normalises and validates declared allergen codes per line item.

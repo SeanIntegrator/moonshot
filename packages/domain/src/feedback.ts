@@ -5,7 +5,7 @@
  * types here are the extension contract for Phase B of docs/feedback-prompt-flow.md.
  */
 
-import type { IsoDateTime } from './order.js';
+import type { IsoDateTime } from '@moonshot/types';
 
 export type ReviewSentiment = 'positive' | 'negative';
 

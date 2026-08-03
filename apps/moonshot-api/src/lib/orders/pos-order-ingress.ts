@@ -1,4 +1,5 @@
-import type { NormalisedOrder, NormalisedOrderItem, NormalisedWebhookEvent } from '@moonshot/types';
+import type { NormalisedOrder, NormalisedOrderItem } from '@moonshot/types';
+import type { NormalisedWebhookEvent } from '@moonshot/domain';
 import type { Pool, PoolClient } from 'pg';
 import { pool } from '../../db.js';
 import type { OrderRowDb } from '../order-map.js';

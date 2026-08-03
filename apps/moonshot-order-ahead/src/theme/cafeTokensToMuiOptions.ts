@@ -1,25 +1,15 @@
 import type { CafeTheme } from '@moonshot/types';
 import type { ThemeOptions } from '@mui/material/styles';
+import { radiiFromCardStyle } from './radii.js';
 
-function borderRadiusFromCardStyle(cardStyle: CafeTheme['layout']['cardStyle']): number {
-  switch (cardStyle) {
-    case 'sharp':
-      return 4;
-    case 'pill':
-      return 999;
-    case 'rounded':
-    default:
-      return 12;
-  }
-}
-
-/** Maps resolved `CafeTheme` tokens into a MUI `ThemeOptions` layer merged on top of `baseMuiTheme`. */
+/** Maps resolved `CafeTheme` tokens into a MUI `ThemeOptions` layer merged on top of structural theme. */
 export function cafeTokensToMuiOptions(tokens: CafeTheme): ThemeOptions {
   const { colors, typography, layout } = tokens;
-  const radius = borderRadiusFromCardStyle(layout.cardStyle);
+  const radii = radiiFromCardStyle(layout.cardStyle);
 
   return {
-    shape: { borderRadius: radius },
+    shape: { borderRadius: radii.card },
+    radii,
     palette: {
       primary: { main: colors.primary, contrastText: colors.primaryContrast },
       secondary: { main: colors.secondary, contrastText: colors.text },

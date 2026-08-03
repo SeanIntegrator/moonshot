@@ -1,5 +1,6 @@
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import { Box, Switch, Typography } from '@mui/material';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 
 type Props = {
   description: string;
@@ -10,11 +11,9 @@ type Props = {
 
 export function RewardRow({ description, applied, onToggle, disabled }: Props) {
   return (
-    <Box
+    <SurfaceCard
       sx={{
-        border: 1,
         borderColor: applied ? 'success.main' : 'divider',
-        borderRadius: 1.25,
         p: 1.5,
         display: 'flex',
         alignItems: 'center',
@@ -39,6 +38,6 @@ export function RewardRow({ description, applied, onToggle, disabled }: Props) {
         {applied ? 'Applied' : 'Apply'}
       </Typography>
       <Switch checked={applied} onChange={(e) => onToggle(e.target.checked)} disabled={disabled} size="small" />
-    </Box>
+    </SurfaceCard>
   );
 }

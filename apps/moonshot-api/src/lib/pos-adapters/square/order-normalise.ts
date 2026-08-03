@@ -1,11 +1,5 @@
-import type {
-  NormalisedOrder,
-  NormalisedOrderItem,
-  NormalisedOrderLineModifier,
-  NormalisedWebhookEvent,
-  OrderType,
-  PaymentStatus,
-} from '@moonshot/types';
+import type { NormalisedOrder, NormalisedOrderItem, NormalisedOrderLineModifier, OrderType, PaymentStatus } from '@moonshot/types';
+import type { NormalisedWebhookEvent } from '@moonshot/domain';
 import { createSquareClient, type SquareClientEnvironment } from './client.js';
 import { SQUARE_ORDER_WEBHOOK_TYPES, type SquareWebhookEnvelope } from './webhook.js';
 

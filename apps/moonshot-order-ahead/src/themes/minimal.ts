@@ -25,6 +25,9 @@ export const minimalTheme: CafeTheme = {
     bodyFamily: '"Inter", system-ui, sans-serif',
     headingWeight: 600,
     bodyWeight: 400,
+    webfontUrls: [
+      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+    ],
   },
   layout: {
     menuGrid: '3col',

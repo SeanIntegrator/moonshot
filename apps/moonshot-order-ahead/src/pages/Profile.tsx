@@ -87,16 +87,7 @@ export function Profile() {
           </SurfaceCard>
 
           <SectionHead eyebrow="Account" title="Your details" />
-          <Box
-            sx={{
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1.25,
-              overflow: 'hidden',
-              mb: 3,
-              bgcolor: 'background.paper',
-            }}
-          >
+          <SurfaceCard sx={{ overflow: 'hidden', mb: 3 }}>
             {(
               [
                 ['Name', user.displayName ?? '—'],
@@ -126,7 +117,7 @@ export function Profile() {
                 {i < arr.length - 1 && <Divider />}
               </Box>
             ))}
-          </Box>
+          </SurfaceCard>
 
           {recent.length > 0 && (
             <Box sx={{ mb: 3 }}>

@@ -1,10 +1,4 @@
-import {
-  MENU_IMAGE_ALLOWED_MIME_TYPES,
-  MENU_IMAGE_THUMBNAIL_HEIGHT,
-  MENU_IMAGE_THUMBNAIL_WIDTH,
-  MENU_IMAGE_WEBP_QUALITY,
-  type MenuImageMimeType,
-} from '@moonshot/types';
+import { MENU_IMAGE_ALLOWED_MIME_TYPES, MENU_IMAGE_THUMBNAIL_HEIGHT, MENU_IMAGE_THUMBNAIL_WIDTH, MENU_IMAGE_WEBP_QUALITY, type MenuImageMimeType } from '@moonshot/domain';
 import { fileTypeFromBuffer } from 'file-type';
 import sharp from 'sharp';
 

@@ -1,9 +1,9 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
-import { adminRedirectWithStripeQuery } from '../lib/admin-stripe-connect-urls.js';
+import { adminRedirectWithStripeQuery } from '../lib/admin/admin-stripe-connect-urls.js';
 import {
   handleStripeConnectRefresh,
   handleStripeConnectReturn,
-} from '../lib/admin-stripe-service.js';
+} from '../lib/admin/admin-stripe-service.js';
 
 async function stripeConnectReturn(req: Request, res: Response, next: NextFunction): Promise<void> {
   const state = typeof req.query.state === 'string' ? req.query.state : '';

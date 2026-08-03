@@ -1,6 +1,7 @@
 /**
- * Keys into `cafes.features` JSONB — use for end-to-end type narrowing.
- * Values are feature-specific objects or `null` when disabled.
+ * Keys into `cafes.features` JSONB — pure contract for Café / API types.
+ * `FeatureFlagKeys` const also lives here so `FeatureFlagKey` cannot drift;
+ * `@moonshot/domain` re-exports it for app convenience.
  */
 
 export const FeatureFlagKeys = {

@@ -3,8 +3,11 @@
  * `NormalisedOrder` + `KdsConfig` (board UI plan consumes these).
  */
 
-import type { KdsConfig } from './cafe.js';
-import type { NormalisedOrderItem, NormalisedOrderLineModifier } from './order.js';
+import type {
+  KdsConfig,
+  NormalisedOrderItem,
+  NormalisedOrderLineModifier,
+} from '@moonshot/types';
 
 export type KdsChipShape = 'square' | 'round';
 
@@ -357,7 +360,7 @@ export function deriveFlowLine(item: NormalisedOrderItem, config: KdsConfig): Fl
       const bg =
         milkColorFromMod(milkMod, config.milkColors ?? {}) ??
         milkMod.colorHex?.trim() ??
-        '#e8dcc8';
+        '#f7f4ee';
       milk = {
         name: milkMod.optionName.trim(),
         bg,

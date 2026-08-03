@@ -6,9 +6,9 @@ import {
 } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import type { Pool, PoolClient } from 'pg';
-import { ApiHttpError } from './http-errors.js';
-import { syncFoodSectionKeys } from './pos-catalog/menu-catalog-upsert.js';
-import { UUID_RE } from './uuid.js';
+import { ApiHttpError } from '../http-errors.js';
+import { syncFoodSectionKeys } from '../pos-catalog/menu-catalog-upsert.js';
+import { UUID_RE } from '../uuid.js';
 
 type Db = Pool | PoolClient;
 
@@ -159,7 +159,7 @@ export async function createMenuSection(
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'label is required');
   }
 
-  let key =
+  const key =
     typeof body.key === 'string' && body.key.trim()
       ? slugifyMenuSectionKey(body.key)
       : slugifyMenuSectionKey(label);

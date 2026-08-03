@@ -1,4 +1,5 @@
-import { API_VERSION_PREFIX, type NormalisedOrder } from '@moonshot/types';
+import type { NormalisedOrder } from '@moonshot/types';
+import { API_VERSION_PREFIX } from '@moonshot/domain';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
@@ -39,7 +40,7 @@ vi.mock('../db.js', () => ({
   pool: { query: vi.fn() },
 }));
 
-vi.mock('../lib/cafe-map.js', () => ({
+vi.mock('../lib/cafe/cafe-map.js', () => ({
   mapCafeRow: (row: { kds_config: unknown; id: string }) => ({
     cafeId: row.id,
     kdsConfig: { ...(row.kds_config as object), cafeId: row.id },

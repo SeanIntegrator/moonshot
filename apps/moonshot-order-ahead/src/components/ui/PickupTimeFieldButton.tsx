@@ -8,7 +8,7 @@ export const PickupTimeFieldButton = styled(ButtonBase)(({ theme }) => ({
   textAlign: 'left',
   padding: theme.spacing(1.5),
   border: `1px solid ${theme.palette.divider}`,
-  borderRadius: theme.shape.borderRadius * 1.25,
+  borderRadius: theme.radii.control,
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1.5),

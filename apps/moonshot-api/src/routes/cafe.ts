@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { cafeOpenStatus } from '@moonshot/types';
-import { activeFeatureKeys } from '../lib/cafe-map.js';
+import { cafeOpenStatus } from '@moonshot/domain';
+import { activeFeatureKeys } from '../lib/cafe/cafe-map.js';
 import { toPublicCafe } from '../lib/to-public-cafe.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 

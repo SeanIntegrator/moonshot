@@ -1,4 +1,5 @@
-import { ADMIN_SOCKET_NAMESPACE, type AdminServerToClientEvent } from '@moonshot/types';
+import type { AdminServerToClientEvent } from '@moonshot/types';
+import { ADMIN_SOCKET_NAMESPACE } from '@moonshot/domain';
 import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { getApiBaseUrl } from '../lib/admin-api.js';

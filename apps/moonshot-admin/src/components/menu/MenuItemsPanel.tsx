@@ -1,15 +1,6 @@
-import type {
-  CafeMenuSection,
-  CafeModifierGroup,
-  DrinkArchetypeDef,
-  DrinkArchetypeId,
-  NormalisedMenuItem,
-} from '@moonshot/types';
-import {
-  defaultAllowNoMilk,
-  DRINK_ARCHETYPE_SLOT_GROUP_NAMES,
-  isDrinkArchetypeId,
-} from '@moonshot/types';
+import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
+import type { DrinkArchetypeDef, DrinkArchetypeId } from '@moonshot/domain';
+import { defaultAllowNoMilk, DRINK_ARCHETYPE_SLOT_GROUP_NAMES, isDrinkArchetypeId } from '@moonshot/domain';
 import {
   Alert,
   Box,

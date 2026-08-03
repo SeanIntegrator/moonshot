@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { timingSafeEqual } from 'node:crypto';
 import { ApiErrorCode } from '@moonshot/types';
+import { config } from '../lib/config.js';
 
 function fail(res: Response, status: number, message: string): void {
   void res.status(status).json({
@@ -32,7 +33,7 @@ function secretsEqual(a: string, b: string): boolean {
  * Not admin JWT.
  */
 export function requireCronSecret(req: Request, res: Response, next: NextFunction): void {
-  const expected = process.env.CRON_SECRET?.trim();
+  const expected = config.cronSecret;
   if (!expected) {
     void res.status(503).json({
       ok: false,

@@ -1,24 +1,11 @@
-/** Client-side slug helpers — mirror server rules in cafe-slug.ts */
+/** Client-side slug helpers — shared rules from `@moonshot/types`. */
 
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const RESERVED = new Set(['admin', 'api', 'kds', 'signup', 'login', 'www', 'order', 'app', 'health']);
+import { slugifyCafeName, validateCafeSlugMessage } from '@moonshot/domain';
 
-export function slugifyCafeName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
-}
+export { slugifyCafeName };
 
 export function validateSlugClient(slug: string): string | null {
-  const s = slug.trim().toLowerCase();
-  if (s.length < 3) return 'At least 3 characters';
-  if (s.length > 40) return 'At most 40 characters';
-  if (!SLUG_RE.test(s)) return 'Lowercase letters, numbers, and hyphens only';
-  if (RESERVED.has(s)) return 'This URL is reserved';
-  return null;
+  return validateCafeSlugMessage(slug);
 }
 
 export function getPasswordStrength(password: string): 'weak' | 'fair' | 'strong' {

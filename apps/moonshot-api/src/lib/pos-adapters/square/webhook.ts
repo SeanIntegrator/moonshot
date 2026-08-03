@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { WebhookRequestLike } from '@moonshot/types';
+import type { WebhookRequestLike } from '@moonshot/domain';
 
 /**
  * Square signs `{notificationUrl}{rawBody}` with HMAC-SHA-256 (base64).

@@ -4,8 +4,9 @@
  */
 
 import type { CatalogObject } from 'square';
-import type { MenuSectionKind, PosCatalogSection } from '@moonshot/types';
-import { slugifyMenuSectionKey } from '../../menu-sections.js';
+import type { MenuSectionKind } from '@moonshot/types';
+import type { PosCatalogSection } from '@moonshot/domain';
+import { slugifyMenuSectionKey } from '../../menu/menu-sections.js';
 
 const FOOD_NAME_RE =
   /\b(food|pastr\w*|baker\w*|snack\w*|cake\w*|sandwich\w*|bagel\w*|croissant\w*|scone\w*|toast\w*|muffin\w*|cookie\w*)\b/i;

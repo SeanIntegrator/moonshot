@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/types';
+import { resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/domain';
 import { resolvePosCatalogItemImage } from './menu-item-default-image.js';
 
 describe('resolveMenuTemplateDrinkKeyByExactName', () => {

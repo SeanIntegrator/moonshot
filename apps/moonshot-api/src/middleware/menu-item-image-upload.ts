@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import multer from 'multer';
-import { MENU_IMAGE_MAX_UPLOAD_BYTES } from '@moonshot/types';
+import { MENU_IMAGE_MAX_UPLOAD_BYTES } from '@moonshot/domain';
 
 const upload = multer({
   storage: multer.memoryStorage(),

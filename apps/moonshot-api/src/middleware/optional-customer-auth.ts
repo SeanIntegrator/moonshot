@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import type { NextFunction, Request, Response } from 'express';
 import { ApiErrorCode } from '@moonshot/types';
+import { config } from '../lib/config.js';
 
 /**
  * If `Authorization: Bearer` is absent, continues with `req.customerUserId` unset.
@@ -12,7 +13,7 @@ export function optionalCustomerAuth(req: Request, res: Response, next: NextFunc
     next();
     return;
   }
-  const secret = process.env.JWT_SECRET;
+  const secret = config.jwtSecret;
   if (!secret) {
     res.status(500).json({
       ok: false,

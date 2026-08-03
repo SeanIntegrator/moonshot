@@ -1,128 +1,100 @@
 # Moonshot — Progress
 
-_Last updated: July 2026_
+_Last updated: August 2026_
 
-## What we set out to do
-
-Establish a **thin end-to-end happy path** between order-ahead, API, and KDS so a real order appears live in the kitchen and completion feedback reaches the customer, including on Railway.
+Concise changelog of what is **shipped now**. For routes and sequences see [current/http-surface.md](current/http-surface.md) and [current/flows.md](current/flows.md).
 
 ---
 
-## What is now working in production
+## Shipped
 
-### Order creation paths (`POST /api/v1/orders`)
+### Order-ahead → API → KDS happy path
 
-- **`pay_in_store`** (when `features.order_ahead.paymentProvider` is `pay_in_store`): **`confirmed` / `unpaid`**, **`kds:order:new`** immediately, **modifier validation** against `menu_items.modifier_groups`, FIFO **pickup ETA** + socket broadcasts.
-- **`stripe`** (default in seed cafés): requires **Stripe Connect** ready (`chargesEnabled`). Order created **`pending` / `unpaid`**, response includes **`checkoutUrl`**. **`checkout.session.completed`** webhook confirms **`paid` / `confirmed`**, then **KDS** + ETA. Guests get **`trackingToken`** when `JWT_SECRET` is set and `user_id` is null.
+- **`POST /orders`**: `pay_in_store` (immediate KDS) or **`stripe`** Checkout (KDS after webhook / checkout-session recovery).
+- Modifier validation + snapshots on `order_items.modifiers`; FIFO pickup ETA floored by `requested_pickup_not_before`.
+- Customer **`/customer`** sockets + polling; KDS complete → loyalty + ETA; guest **`trackingToken`**.
 
-### Modifier support
+### Stripe Connect + checkout
 
-- Client sends `{ groupId, optionId }[]` per line; server resolves names/prices, snapshots **`NormalisedOrderLineModifier`** (group + option dimensions) on `order_items.modifiers`.
+- Admin Connect onboarding link / status / return+refresh callbacks.
+- **`POST /webhooks/stripe`** (`checkout.session.completed`, `account.updated`) with `webhook_events` idempotency.
+- Multi-tenant return URLs via **`ORDER_AHEAD_BASE_URL`**; recovery via **`GET /orders/checkout-session/:sessionId`**.
+- Auto-switch café to `paymentProvider: stripe` when Connect `chargesEnabled`.
 
-### Stripe Connect + webhooks
+### Square POS (OAuth, catalog, webhooks)
 
-- Admin **`POST /admin/payments/stripe/onboarding-link`** + **`GET /admin/payments/stripe/status`**, Express connected accounts, **direct Checkout** on the connected account.
-- **`POST /api/v1/webhooks/stripe`** with signature verification + **`webhook_events`** idempotency; **`payment_sessions`** table stores checkout metadata.
-- **Multi-tenant return URLs:** platform **`ORDER_AHEAD_BASE_URL`** + café slug → `/{slug}/checkout/restore?checkout_session_id=…` (see [stripe-checkout-return.md](stripe-checkout-return.md)).
-- **Checkout recovery:** `GET /orders/checkout-session/:sessionId` confirms from Stripe when the webhook has not run yet (local dev / redirect race) and emits **`kds:order:new`** idempotently.
-- **Auto-switch to stripe:** when Connect sync sees **`chargesEnabled`**, cafés still on **`pay_in_store`** flip to **`paymentProvider: stripe`**.
+- Admin **Square OAuth** (`/admin/connect/square/*`); tokens encrypted in **`pos_connections`**.
+- Onboarding **menu-pos-import** + Admin **`POST /admin/menu/sync-pos`**; catalog webhooks + daily safety cron (`/internal/pos/sync-catalogs`).
+- Token refresh cron (`/internal/pos/refresh-tokens`).
+- **`POST /webhooks/square`** → signature verify → catalog debounce sync and/or order normalise → **`persistPosOrderEvent`** → KDS emit.
+- Manual POS adapter still available for template-only cafés.
 
-### KDS + customer realtime
+### KDS Flow board
 
-- KDS JWT **90 days**; HTTP **401** clears session in the KDS PWA (`SESSION_EXPIRED`).
-- **`kds:eta:updated`** and **`customerEtaUpdated`** emitted after queue changes.
-- **`customerReviewEligible`** may fire after the third **on-time** completed app order when review nudge is enabled (simple counter MVP on `cafe_users`).
+- **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — not a thin skeleton.
+- Status advance (`preparing` / `ready`), ETA stretch, **`GET /kds/config`**.
+- **Recent orders** (`GET /kds/orders/recent`) + **recall** (`POST …/recall`, `…/recall-last`).
 
-### Loyalty MVP + ledger
+### Menu & café ops
 
-- On KDS complete, signed-in **app** orders append **`loyalty_transactions`** (**`stamp_earned`**) when loyalty is enabled, update **`cafe_users.loyalty_card_progress`** (punch-card position; authoritative history in the ledger), issue **`loyalty_rewards`** at threshold rollover, and increment **`total_orders` / `on_time_completed_orders`** only when a **new** stamp ledger row is inserted (idempotent on KDS retries).
-- **`ensureCafeMembership`** on order create + before loyalty writes — fixes missing **`cafe_users`** rows for new cafés.
-- Order-ahead **`LoyaltyProvider`** centralises loyalty state; Home / Checkout / Order detail call **`refresh()`** after navigation or KDS completion socket.
-- Ops backfill: **`pnpm replay:order-loyalty`** when KDS Done succeeded but stamps did not land.
-- **`GET /api/v1/loyalty/me`**, transactions, rewards list, and reward redeem routes for the order-ahead profile.
-- Review prompt: third **on-time** completed app order may emit **`customerReviewEligible`** when review nudge is enabled.
-- New memberships get a **6-digit numeric `loyalty_display_id`** per café (migration 010); existing hex IDs are preserved.
-- New self-service cafés provision with **loyalty enabled by default** (10 stamps, free drink).
-- **Pickup delay:** `POST /orders` accepts **`pickupDelayMinutes`**; stored as **`orders.requested_pickup_not_before`**; live ETA = max(FIFO, not-before).
-- **Opening hours:** `cafes.hours` weekly JSON; Admin editor; Home caption + Order Now gate via `cafeOpenStatus`.
-- **Tracker reliability:** order detail always polls while active; subscribe ack + completion reload catch missed sockets. Home / Profile active lists subscribe to the same customer rooms (optimistic remove on `customerOrderCompleted`) with a 30s poll fallback.
-- **KDS API (M2 contracts):** modifier chip fields on read (`isDefault`); `category` on order lines; `deriveFlowLine` + `deriveLinePrep`; Flow prep groups seeded; `GET /kds/config`; preparing/ready status advance + `customerOrderStatusUpdated`; barista ETA stretch (`eta_mode`) without FIFO clobber. Flow board UI iteration 1 shipped — [architecture/kds-board.md](architecture/kds-board.md).
+- Menu CRUD, images (upload / default / media proxy), **modifier groups**, **menu sections** (hierarchy + POS category ids), **drink archetypes**.
+- Opening hours (`cafes.hours`); Admin settings PATCH for features / KDS config.
 
-### Backend refactor (Pass A + B, May 2026)
+### Loyalty
 
-- **KDS Done** never returns 500 for post-success loyalty or ETA failures (order already `completed`).
-- **`cafes-repository`** centralises café SELECT columns; global **`errorHandler`** returns **`Internal error`** for unknown 500s (structured logs server-side).
-- **`orders/`** module split (read / create / checkout / KDS / customer); import those modules directly (no barrel).
-- **`admin-settings-service`** owns settings PATCH merge + persist (route is thin like Stripe).
-- **`buildGuestTrackingTokenIfNeeded`** shared by create-order and checkout-session recovery.
-- See [architecture/api-modules.md](architecture/api-modules.md).
+- Ledger + punch card on KDS complete; redeem routes; order-ahead **`LoyaltyProvider`**.
+- New self-service cafés: **loyalty enabled by default** (10 stamps → free drink).
 
-### Operator tooling
+### Self-service onboarding + theme
 
-- **Admin** dashboard: order-ahead + KDS settings, **opening hours**, menu PATCH edits, **Stripe onboarding card**.
+- Marketing → admin signup → wizard (KDS user, Square or template menu, optional Stripe).
+- Order-ahead **theme system**: structural + café packs (`heritage`, etc.), radii, webfonts, `cafeLayout`.
 
-### CORS / origins
+### Shared packages & realtime
 
-- **`CORS_ORIGINS`** allowlist for Express + Socket.io in production; see `apps/moonshot-api/.env.example` for **Stripe-related env vars** (API only).
-
-### Documentation layout
-
-- **`docs/README.md`** hub; **`docs/pos-normalisation.md`** for future POS providers; **`docs/architecture/realtime.md`** updated for ETA + review event.
+- Workspaces: **`@moonshot/types`**, **`@moonshot/domain`**, **`@moonshot/web-runtime`**.
+- Socket.io namespaces: **`/kds`**, **`/customer`**, **`/admin`**.
 
 ### Deployed on Railway
 
-| Service | URL |
+| Service | Notes |
 |---|---|
-| `moonshot-api` | `moonshotapi-production.up.railway.app` |
-| `moonshot-kds` | `moonshot-kds-production.up.railway.app` |
-| `moonshot-order-ahead` | `moonshotorder-ahead-production.up.railway.app` |
-| `moonshot-admin` | `moonshot-admin-production.up.railway.app` |
+| `moonshot-api` | HTTP + sockets |
+| `moonshot-kds` | Flow board PWA shell |
+| `moonshot-order-ahead` | Customer app |
+| `moonshot-admin` | Owner console |
+| `moonshot-marketing` | Public marketing / signup entry |
 
-Set **`CORS_ORIGINS`** to the three HTTPS front-end origins (comma-separated). Add Stripe keys + webhook URL to **`moonshot-api`**. Replace with custom domains by updating env vars only.
+Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`moonshot-api`** only.
 
 ---
 
 ## Known snags
 
-1. **Seed cafés default to `stripe`** — `POST /orders` fails with *payments not ready* until Stripe onboarding completes; switch to **`pay_in_store`** in admin for local pay-in-store-only dev (or complete Connect — sync auto-switches provider).
-2. **Order-ahead UI is routing-complete for production shells** — Home / Order / Checkout / Order detail / Rewards / Profile with **`CartProvider`** (sessionStorage), **`ActiveOrdersProvider`**, **`LoyaltyProvider`**, feature gating, and **`src/api/*`** wrappers; polish is ongoing.
-3. **Stripe refunds on cancel** — customer cancel updates **`orders.status`** only; **`refundPending: true`** signals paid orders until Stripe refund work ships.
-4. **Stripe incremental / merge checkout (F3)** — not implemented; only initial **Checkout Session** per order.
-5. **Admin** — still no invite flow or café theme editor; Stripe card is minimal; menu CRUD exists.
-6. **Bootstrap uses sync scrypt** — fine for CLI only.
-7. **Home open hours** — `cafes.hours` + Admin editor; Home shows open/closed caption and blocks Order Now when closed.
+1. Seed / Stripe cafés fail `POST /orders` until Connect is ready (or switch to `pay_in_store`).
+2. Stripe cancel does not refund — paid → `refundPending: true`.
+3. No incremental / merge Stripe checkout (F3).
+4. Admin invites, audit trail, and café theme editor still missing.
+5. Feedback is socket eligibility MVP only — no `feedback_responses` HTTP yet.
 
 ---
 
-## Still planned
+## Next
 
-| Initiative | Notes |
-|------------|-------|
-| Stripe incremental / merge checkout (F3) | Only initial Checkout Session per order today |
-| Stripe refunds on cancel | Cancel sets status; paid → `refundPending: true` |
-| POS adapters (Square, etc.) | Manual adapter only — [pos-normalisation.md](pos-normalisation.md) |
-| Explicit preparing/ready on KDS | API shipped; Flow board uses header→complete for now |
-| KDS milk/chip prep UI | Flow board iteration 1 shipped (`deriveFlowLine`) |
-| Feedback HTTP + drawer (Phase B) | Socket eligibility MVP shipped; [feedback-prompt-flow.md](feedback-prompt-flow.md) |
-| Admin invites / audit / theme editor | Self-service signup shipped; invites remain planned |
-
----
-
-## Next steps
-
-1. KDS **iteration 2**: recall / hold, synced line made-state, layout grouping, preparing/ready chrome.
-2. **Order merge** + incremental Stripe sessions + refunds.
-3. **POS adapter implementations** using [pos-normalisation.md](pos-normalisation.md).
-4. Admin **invites**, audit trail, theme editor.
-5. **Feedback persistence** (`feedback_responses`) and review drawer.
+1. Stripe **refunds** + optional **order merge** / incremental sessions.
+2. KDS **hold**, synced line made-state, `layout.columns` grouping, preparing/ready chrome polish.
+3. Feedback persistence + order-ahead review drawer.
+4. Admin invites / audit / theme editor.
+5. C&B production cutover verification (OAuth-only, no duplicate POS events).
 
 ---
 
 ## Related docs
 
-- [docs/README.md](README.md) — documentation index
-- [architecture/realtime.md](architecture/realtime.md) — Socket auth model
-- [current/http-surface.md](current/http-surface.md) — routes + CORS
-- [current/flows.md](current/flows.md) — shipped vs planned flows
-- [schema-draft.md](schema-draft.md) — schema
-- [pos-normalisation.md](pos-normalisation.md) — future POS mapping
+- [docs/README.md](README.md)
+- [architecture/realtime.md](architecture/realtime.md)
+- [current/http-surface.md](current/http-surface.md)
+- [current/flows.md](current/flows.md)
+- [schema-draft.md](schema-draft.md)
+- [pos-normalisation.md](pos-normalisation.md)
+- [square-oauth.md](square-oauth.md)

@@ -1,4 +1,4 @@
-import { API_VERSION_PREFIX } from '@moonshot/types';
+import { API_VERSION_PREFIX } from '@moonshot/domain';
 import { getApiBaseUrl, getCafeSlug, setStoredToken } from './api.js';
 
 export type GoogleCredentialResponse = { credential: string; select_by?: string };

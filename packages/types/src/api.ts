@@ -2,7 +2,7 @@
  * HTTP API envelope and auth claims shared by moonshotApi and clients.
  */
 
-import type { FeatureFlagKey } from './feature-flags.js';
+import type { FeatureFlagKey } from './feature-flags-contract.js';
 
 /** Stable machine-readable API error codes */
 export const ApiErrorCode = {

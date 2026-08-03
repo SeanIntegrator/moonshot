@@ -9,20 +9,21 @@ import {
   findActiveAdminUsersByEmailNormalized,
   getAdminUserWithCafeById,
   touchAdminUserLogin,
-} from '../lib/admin-users-repository.js';
-import { buildAdminLoginResponse } from '../lib/admin-auth-tokens.js';
+} from '../lib/admin/admin-users-repository.js';
+import { buildAdminLoginResponse } from '../lib/admin/admin-auth-tokens.js';
 import { findCafeById } from '../lib/cafes-repository.js';
-import { patchAdminCafeSettings } from '../lib/admin-settings-service.js';
+import { patchAdminCafeSettings } from '../lib/admin/admin-settings-service.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
 import {
   createAdminStripeOnboardingLink,
   syncAdminStripeAccountStatus,
-} from '../lib/admin-stripe-service.js';
+} from '../lib/admin/admin-stripe-service.js';
 import { adminConnectSquareRouter } from './admin-connect-square.js';
 import { adminOnboardingRouter } from './admin-onboarding.js';
 import { stripeConnectCallbacksRouter } from './stripe-connect-callbacks.js';
 import { runCatalogSyncForCafe } from '../lib/pos-adapters/square/catalog-sync.js';
+import { adminLoginBodySchema, parseBody } from '../lib/validation/auth-bodies.js';
 
 export const adminRouter: Router = Router();
 
@@ -30,17 +31,15 @@ adminRouter.use('/onboarding', adminOnboardingRouter);
 adminRouter.use('/connect/square', adminConnectSquareRouter);
 
 adminRouter.post('/auth/login', async (req, res) => {
-  const body = req.body as Record<string, unknown>;
-  const email = typeof body.email === 'string' ? body.email.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-
-  if (!email || !password) {
+  const parsed = parseBody(adminLoginBodySchema, req.body);
+  if (!parsed.ok) {
     return res.status(400).json({
       ok: false,
       error: 'email and password are required',
       code: ApiErrorCode.VALIDATION,
     });
   }
+  const { email, password } = parsed.data;
 
   const candidates = await findActiveAdminUsersByEmailNormalized(email);
   if (candidates.length !== 1) {

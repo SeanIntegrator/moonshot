@@ -1,7 +1,4 @@
-import {
-  MENU_PROVISION_SOURCES,
-  type MenuProvisionSource,
-} from '@moonshot/types';
+import { MENU_PROVISION_SOURCES, type MenuProvisionSource } from '@moonshot/domain';
 import { posImportMenuProvisioner } from './pos-import.js';
 import { templateMenuProvisioner } from './template.js';
 import type { MenuProvisioner } from './types.js';

@@ -11,7 +11,7 @@ export const PressableCard = styled(Box)(({ theme }) => ({
   display: 'block',
   textDecoration: 'none',
   color: 'inherit',
-  borderRadius: theme.shape.borderRadius * 1.25,
+  borderRadius: theme.radii.card,
   overflow: 'hidden',
   WebkitTapHighlightColor: 'transparent',
   transition: 'transform 180ms cubic-bezier(0.4, 0, 0.2, 1)',

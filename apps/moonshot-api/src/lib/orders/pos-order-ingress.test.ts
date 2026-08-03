@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { NormalisedWebhookEvent } from '@moonshot/types';
+import type { NormalisedWebhookEvent } from '@moonshot/domain';
 
 const { emitKdsServerToClient, fetchOrderWithItems } = vi.hoisted(() => ({
   emitKdsServerToClient: vi.fn(),

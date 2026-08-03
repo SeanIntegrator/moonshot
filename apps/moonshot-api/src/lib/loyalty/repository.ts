@@ -1,4 +1,4 @@
-import type { LoyaltyTransaction, LoyaltyTransactionType } from '@moonshot/types';
+import type { LoyaltyTransaction, LoyaltyTransactionType } from '@moonshot/domain';
 import type { Pool, PoolClient } from 'pg';
 
 export async function insertStampEarnIfAbsent(params: {

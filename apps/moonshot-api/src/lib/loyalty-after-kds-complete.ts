@@ -1,7 +1,7 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import { pool } from '../db.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
-import { ensureCafeMembership } from './cafe-membership.js';
+import { ensureCafeMembership } from './cafe/cafe-membership.js';
 import { findCafeById } from './cafes-repository.js';
 import { fetchOrderWithItems } from './orders/order-read.js';
 import { applyLedgerStampAndRewards } from './loyalty/apply-ledger-on-complete.js';

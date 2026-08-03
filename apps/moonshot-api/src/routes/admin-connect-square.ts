@@ -1,6 +1,6 @@
 import type { Router } from 'express';
 import { Router as createRouter } from 'express';
-import { ApiErrorCode, POS_PROVIDERS } from '@moonshot/types';
+import { POS_PROVIDERS } from '@moonshot/domain';
 import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 import {

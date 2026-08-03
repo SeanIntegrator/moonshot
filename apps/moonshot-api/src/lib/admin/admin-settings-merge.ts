@@ -8,7 +8,8 @@ import type {
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
 } from '@moonshot/types';
-import { hhMmToMinutes, normalizeCafeHours, toHhMm, WEEKDAY_KEYS } from '@moonshot/types';
+import { WEEKDAY_KEYS } from '@moonshot/types';
+import { hhMmToMinutes, normalizeCafeHours, toHhMm } from '@moonshot/domain';
 
 const DEFAULT_LOYALTY: LoyaltyFeatureConfig = {
   enabled: true,

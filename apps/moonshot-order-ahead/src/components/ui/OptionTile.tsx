@@ -16,7 +16,7 @@ export const OptionTile: ComponentType<OptionTileProps> = styled(ButtonBase, {
   width: '100%',
   textAlign: 'left',
   padding: theme.spacing(1.25),
-  borderRadius: theme.shape.borderRadius * 1.25,
+  borderRadius: theme.radii.control,
   border: `1px solid ${selected ? theme.palette.text.primary : theme.palette.divider}`,
   backgroundColor: selected ? theme.palette.action.selected : theme.palette.background.paper,
   color: theme.palette.text.primary,

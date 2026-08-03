@@ -20,7 +20,7 @@ export const LoyaltyHeroShell = styled(Box)(({ theme }) => ({
   ...loyaltyCardWidth,
   backgroundColor: alpha(theme.palette.cafe.heroText, 0.08),
   border: `1px solid ${alpha(theme.palette.cafe.heroText, 0.14)}`,
-  borderRadius: theme.shape.borderRadius * 1.5,
+  borderRadius: theme.radii.card,
   padding: theme.spacing(1.5),
   marginTop: theme.spacing(2),
 })) as typeof Box;
@@ -29,7 +29,7 @@ export const LoyaltyHeroShell = styled(Box)(({ theme }) => ({
 export const LoyaltyCardShell = styled(Box)(({ theme }) => ({
   ...loyaltyCardWidth,
   ...surfaceCardChrome(theme),
-  borderRadius: theme.shape.borderRadius * 1.5,
+  borderRadius: theme.radii.card,
   padding: theme.spacing(2),
 })) as typeof Box;
 

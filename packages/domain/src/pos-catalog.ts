@@ -8,7 +8,7 @@ import type {
   MenuSectionKind,
   NormalisedMenuItem,
   NormalisedModifierGroup,
-} from './menu.js';
+} from '@moonshot/types';
 
 /** Hint for chip palette + KDS modifierClassification sync. */
 export type ModifierRoleHint = 'milk' | 'syrup' | 'topping' | 'other';

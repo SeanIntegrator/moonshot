@@ -8,7 +8,7 @@ import {
   ensureSystemMenuSections,
   listMenuSectionsForCafe,
   updateMenuSection,
-} from '../lib/menu-sections.js';
+} from '../lib/menu/menu-sections.js';
 import { UUID_RE } from '../lib/uuid.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';

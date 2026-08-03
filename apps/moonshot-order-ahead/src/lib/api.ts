@@ -1,32 +1,11 @@
-import { API_VERSION_PREFIX, type ApiEnvelope } from '@moonshot/types';
+import { API_VERSION_PREFIX } from '@moonshot/domain';
+import { parseEnvelope, getPersistentToken, setPersistentToken } from '@moonshot/web-runtime';
 import { ConnectivityError } from './network-error.js';
 import { getApiBaseUrl } from './runtime-config.js';
 
 export { getApiBaseUrl };
 
 const TOKEN_KEY = 'moonshot_jwt';
-
-async function parseApiEnvelope<T>(res: Response): Promise<ApiEnvelope<T>> {
-  const contentType = res.headers.get('content-type') ?? '';
-  const text = await res.text();
-  const start = text.trimStart();
-  if (
-    contentType.includes('text/html') ||
-    start.startsWith('<') ||
-    start.toLowerCase().startsWith('<!doctype')
-  ) {
-    throw new Error(
-      'Server returned HTML instead of JSON. Set VITE_API_URL to the API origin (e.g. http://localhost:3000), not the Vite dev server URL.',
-    );
-  }
-  let parsed: unknown;
-  try {
-    parsed = text.length ? JSON.parse(text) : null;
-  } catch {
-    throw new Error('Invalid JSON from API');
-  }
-  return parsed as ApiEnvelope<T>;
-}
 
 export function getCafeSlug(): string {
   if (runtimeCafeSlug) return runtimeCafeSlug;
@@ -47,41 +26,13 @@ export function setRuntimeCafeSlug(slug: string | null): void {
   runtimeCafeSlug = slug;
 }
 
-function readTokenFrom(storage: Storage): string | null {
-  try {
-    return storage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeTokenTo(storage: Storage, token: string | null): void {
-  try {
-    if (token) storage.setItem(TOKEN_KEY, token);
-    else storage.removeItem(TOKEN_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
 /** Customer JWT — localStorage survives Stripe-hosted checkout redirects; sessionStorage is legacy fallback. */
 export function getStoredToken(): string | null {
-  const persistent = readTokenFrom(localStorage);
-  if (persistent) return persistent;
-
-  const legacy = readTokenFrom(sessionStorage);
-  if (legacy) {
-    writeTokenTo(localStorage, legacy);
-    writeTokenTo(sessionStorage, null);
-    return legacy;
-  }
-
-  return null;
+  return getPersistentToken(TOKEN_KEY);
 }
 
 export function setStoredToken(token: string | null): void {
-  writeTokenTo(localStorage, token);
-  writeTokenTo(sessionStorage, null);
+  setPersistentToken(TOKEN_KEY, token);
 }
 
 export function clearToken(): void {
@@ -113,7 +64,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     if (e instanceof Error && e.name === 'AbortError') throw e;
     throw new ConnectivityError();
   }
-  const json = await parseApiEnvelope<T>(res);
+  const json = await parseEnvelope<T>(res, 'throw');
   if (!json.ok) {
     throw new Error(json.error ?? 'Request failed');
   }

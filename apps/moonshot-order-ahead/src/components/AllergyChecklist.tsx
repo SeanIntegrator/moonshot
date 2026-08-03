@@ -1,5 +1,6 @@
-import { UK_FSA_ALLERGENS } from '@moonshot/types';
+import { UK_FSA_ALLERGENS } from '@moonshot/domain';
 import { Box, Checkbox, FormControlLabel, FormGroup, Typography } from '@mui/material';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 
 type Props = {
   selected: string[];
@@ -33,15 +34,7 @@ export function AllergyChecklist({ selected, onChange }: Props) {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
         Tap any that apply. We declare on the 14 UK allergens.
       </Typography>
-      <Box
-        sx={{
-          bgcolor: 'background.paper',
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1.25,
-          overflow: 'hidden',
-        }}
-      >
+      <SurfaceCard sx={{ overflow: 'hidden' }}>
         <FormGroup sx={{ m: 0 }}>
           {UK_FSA_ALLERGENS.map((code, index) => (
             <FormControlLabel
@@ -70,7 +63,7 @@ export function AllergyChecklist({ selected, onChange }: Props) {
             />
           ))}
         </FormGroup>
-      </Box>
+      </SurfaceCard>
     </Box>
   );
 }

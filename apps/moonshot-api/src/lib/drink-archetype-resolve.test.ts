@@ -1,15 +1,10 @@
-import {
-  defaultAllowNoMilk,
-  inferDrinkArchetypeFromName,
-  platformDrinkArchetypeConfig,
-  resolveCafeArchetypeRecipe,
-} from '@moonshot/types';
+import { defaultAllowNoMilk, inferDrinkArchetypeFromName, platformDrinkArchetypeConfig, resolveCafeArchetypeRecipe } from '@moonshot/domain';
 import { describe, expect, it } from 'vitest';
 import {
   libraryByNameFromGroups,
   resolveArchetypeGroups,
 } from './drink-archetype-resolve.js';
-import { applyMilkSurchargeWaiver } from './menu-map.js';
+import { applyMilkSurchargeWaiver } from './menu/menu-map.js';
 
 describe('defaultAllowNoMilk', () => {
   it('defaults tea and low-milk-iced on', () => {

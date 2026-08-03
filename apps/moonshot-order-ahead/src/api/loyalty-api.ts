@@ -1,8 +1,4 @@
-import type {
-  LoyaltyRewardsListResponse,
-  LoyaltySummaryResponse,
-  LoyaltyTransactionsResponse,
-} from '@moonshot/types';
+import type { LoyaltyRewardsListResponse, LoyaltySummaryResponse, LoyaltyTransactionsResponse } from '@moonshot/domain';
 import { apiFetch } from '../lib/api.js';
 
 export function fetchLoyaltySummary(): Promise<LoyaltySummaryResponse> {

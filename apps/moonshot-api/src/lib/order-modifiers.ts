@@ -8,8 +8,8 @@ import type {
   NormalisedOrderLineModifier,
 } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
-import { fetchMenuItemsByIds } from './menu-fetch.js';
-import { SIZE_MODIFIER_GROUP_ID } from './menu-map.js';
+import { fetchMenuItemsByIds } from './menu/menu-fetch.js';
+import { SIZE_MODIFIER_GROUP_ID } from './menu/menu-map.js';
 import { ApiHttpError } from './http-errors.js';
 import { parseDeclaredAllergens } from './declared-allergens.js';
 import type { Pool } from 'pg';

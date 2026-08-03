@@ -3,6 +3,7 @@ import {
   PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX,
   PAGE_CONTENT_MAX_WIDTH_PX,
 } from './pageLayout.js';
+import { radiiFromCardStyle } from './radii.js';
 import { surfaceCardChrome } from './surfaceCardChrome.js';
 
 const defaultCafeLayout = {
@@ -12,46 +13,29 @@ const defaultCafeLayout = {
   navStyle: 'bottom_bar' as const,
 };
 
+const defaultRadii = radiiFromCardStyle(defaultCafeLayout.cardStyle);
+
 const pageConstraintMq = `@media (min-width:${PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX}px)`;
 
 /**
- * Functional default MUI system (components, density, typography scale).
- * Café-specific colours/fonts are layered on via `createTheme(baseMuiTheme, cafeLayer)`.
+ * Structural MUI defaults only — density, type *scale*, component chrome.
+ * Palette and font *families* come exclusively from café theme packs via
+ * `createCafeMuiTheme` → `cafeTokensToMuiOptions`. No brand hex here.
  *
- * Component styleOverrides must use theme callbacks (not hex literals) so café palette
- * merges actually re-skin buttons, paper, chips, and toggle controls.
+ * Component styleOverrides must use theme callbacks so café merges re-skin UI.
  */
-export const baseMuiThemeOptions: ThemeOptions = {
-  shape: { borderRadius: 10 },
+export const structuralThemeOptions: ThemeOptions = {
+  shape: { borderRadius: defaultRadii.card },
+  radii: defaultRadii,
   cafeLayout: defaultCafeLayout,
   typography: {
-    fontFamily: '"Inter", system-ui, sans-serif',
-    h1: { fontSize: '1.75rem', fontWeight: 600, lineHeight: 1.2 },
-    h2: { fontSize: '1.35rem', fontWeight: 600, lineHeight: 1.25 },
-    h3: { fontSize: '1.15rem', fontWeight: 600, lineHeight: 1.3 },
+    // Families overwritten by café pack; sizes/line-heights stay structural.
+    h1: { fontSize: '1.75rem', lineHeight: 1.2 },
+    h2: { fontSize: '1.35rem', lineHeight: 1.25 },
+    h3: { fontSize: '1.15rem', lineHeight: 1.3 },
     body1: { fontSize: '1rem', lineHeight: 1.5 },
     body2: { fontSize: '0.875rem', lineHeight: 1.5 },
     button: { textTransform: 'none', fontWeight: 600 },
-  },
-  palette: {
-    mode: 'light',
-    primary: { main: '#0d1b3d', contrastText: '#ffffff' },
-    secondary: { main: '#334e85', contrastText: '#ffffff' },
-    background: { default: '#f4f7fc', paper: '#ffffff' },
-    text: { primary: '#111a30', secondary: '#5d6780' },
-    divider: '#dbe3f1',
-    success: { main: '#0f8c62' },
-    warning: { main: '#b97816' },
-    error: { main: '#dc2626' },
-    cafe: {
-      surface: '#f8fafd',
-      surfaceElevated: '#ffffff',
-      textMuted: '#5d6780',
-      textOnDark: '#f4f7ff',
-      border: '#dbe3f1',
-      heroBg: '#0d1b3d',
-      heroText: '#f4f7ff',
-    },
   },
   components: {
     MuiCssBaseline: {
@@ -65,7 +49,6 @@ export const baseMuiThemeOptions: ThemeOptions = {
         root: ({ theme, ownerState }) => {
           if (ownerState.disableGutters) return {};
           return {
-            // Undo MUI's sm gutter bump; re-apply expanded gutters with the column.
             [theme.breakpoints.up('sm')]: {
               paddingLeft: theme.spacing(2),
               paddingRight: theme.spacing(2),
@@ -90,7 +73,7 @@ export const baseMuiThemeOptions: ThemeOptions = {
       defaultProps: { variant: 'contained', disableElevation: true },
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: theme.shape.borderRadius * 1.2,
+          borderRadius: theme.radii.control,
           fontWeight: 700,
         }),
         containedPrimary: ({ theme }) => ({
@@ -108,7 +91,10 @@ export const baseMuiThemeOptions: ThemeOptions = {
     },
     MuiPaper: {
       styleOverrides: {
-        root: ({ theme }) => surfaceCardChrome(theme),
+        root: ({ theme }) => ({
+          ...surfaceCardChrome(theme),
+          borderRadius: theme.radii.card,
+        }),
       },
     },
     MuiLink: {
@@ -119,6 +105,7 @@ export const baseMuiThemeOptions: ThemeOptions = {
         root: ({ theme }) => ({
           fontWeight: 600,
           borderColor: theme.palette.divider,
+          borderRadius: theme.radii.control,
         }),
       },
     },
@@ -131,13 +118,22 @@ export const baseMuiThemeOptions: ThemeOptions = {
     },
     MuiToggleButton: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           textTransform: 'none',
           fontWeight: 600,
-        },
+          borderRadius: theme.radii.control,
+        }),
       },
     },
   },
 };
 
-export const baseMuiTheme = createTheme(baseMuiThemeOptions);
+/**
+ * Structural shell only — missing palette.cafe until a café pack is merged.
+ * Prefer `createCafeMuiTheme(null)` (heritage fallback) for renderable themes.
+ */
+export const structuralMuiTheme = createTheme(structuralThemeOptions);
+
+/** @deprecated Use `structuralMuiTheme` or `createCafeMuiTheme(null)`. */
+export const baseMuiTheme = structuralMuiTheme;
+export const baseMuiThemeOptions = structuralThemeOptions;

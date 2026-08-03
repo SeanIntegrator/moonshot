@@ -1,12 +1,13 @@
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import { Box, Button, Container, LinearProgress, Typography } from '@mui/material';
-import type { LoyaltySummaryResponse } from '@moonshot/types';
+import type { LoyaltySummaryResponse } from '@moonshot/domain';
 import { useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
 import { QrCard } from '../components/QrCard.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { SignedOutPanel } from '../components/SignedOutPanel.js';
+import { SurfaceCard } from '../components/ui/SurfaceCard.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafePath } from '../hooks/useCafePath.js';
@@ -77,12 +78,9 @@ export function Rewards() {
             <SectionHead title="Your rewards" />
             {rewardCards.length > 0 ? (
               rewardCards.map((reward) => (
-                <Box
+                <SurfaceCard
                   key={reward.id}
                   sx={{
-                    border: 1,
-                    borderColor: 'divider',
-                    borderRadius: 1.25,
                     p: 1.5,
                     mb: 1,
                     display: 'flex',
@@ -99,7 +97,7 @@ export function Rewards() {
                       Ready to redeem at checkout
                     </Typography>
                   </Box>
-                </Box>
+                </SurfaceCard>
               ))
             ) : (
               <Typography variant="body2" color="text.secondary">
@@ -144,12 +142,9 @@ export function Rewards() {
         <Box sx={{ mt: 3 }}>
           <SectionHead eyebrow="History" title="Redeemed" />
           {redeemed.map((t) => (
-            <Box
+            <SurfaceCard
               key={t.id}
               sx={{
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 1.25,
                 p: 1.5,
                 mb: 1,
                 display: 'flex',
@@ -162,7 +157,7 @@ export function Rewards() {
               <Typography variant="caption" color="text.secondary">
                 {formatShortDate(t.createdAt)}
               </Typography>
-            </Box>
+            </SurfaceCard>
           ))}
           {nextCursor && (
             <Button size="small" disabled={loadingMore} onClick={() => void loadMore()}>

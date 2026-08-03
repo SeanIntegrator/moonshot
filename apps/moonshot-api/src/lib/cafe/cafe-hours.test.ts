@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  cafeOpenStatus,
-  defaultWeekdayCafeHours,
-  emptyCafeHours,
-  normalizeCafeHours,
-} from '@moonshot/types';
+import { cafeOpenStatus, defaultWeekdayCafeHours, emptyCafeHours, normalizeCafeHours } from '@moonshot/domain';
 
 describe('cafeOpenStatus', () => {
   it('treats empty hours as closed', () => {

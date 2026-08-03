@@ -8,6 +8,7 @@ import {
   Divider,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { OrderStatusStepper } from '../components/OrderStatusStepper.js';
@@ -290,20 +291,18 @@ export function OrderDetail() {
               )}
 
               {showStampEarned && (
-                <Box
+                <SurfaceCard
                   sx={{
                     mt: 2,
                     p: 1.5,
-                    border: 1,
-                    borderColor: 'success.light',
-                    borderRadius: 1.25,
-                    bgcolor: 'success.50',
+                    borderColor: 'success.main',
+                    bgcolor: (t) => alpha(t.palette.success.main, 0.08),
                   }}
                 >
                   <Typography variant="body2" color="success.main" fontWeight={600}>
                     ★ Stamp earned — your loyalty card has been updated.
                   </Typography>
-                </Box>
+                </SurfaceCard>
               )}
             </Box>
 

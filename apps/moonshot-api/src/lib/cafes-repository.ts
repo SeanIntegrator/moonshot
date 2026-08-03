@@ -1,6 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
 import { pool as defaultPool } from '../db.js';
-import { mapCafeRow } from './cafe-map.js';
+import { mapCafeRow } from './cafe/cafe-map.js';
 import type { ResolvedCafe } from './resolved-cafe.js';
 
 type Executor = Pool | PoolClient;

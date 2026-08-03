@@ -1,5 +1,5 @@
 import type { NormalisedMenuItem, OrderLineModifierSelectionInput } from '@moonshot/types';
-import { computeLoyaltyRewardDiscountMinor } from '@moonshot/types';
+import { computeLoyaltyRewardDiscountMinor } from '@moonshot/domain';
 import { useMemo } from 'react';
 import type { CartLine } from '../providers/CartProvider.js';
 import { unitPriceForItem } from '../lib/menu-price-utils.js';

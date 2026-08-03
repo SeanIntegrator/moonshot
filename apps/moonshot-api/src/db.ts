@@ -1,12 +1,12 @@
 import pg from 'pg';
+import { config } from './lib/config.js';
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  console.warn('@moonshot/api: DATABASE_URL is not set — DB routes will fail until configured.');
+if (!config.databaseUrl) {
+  // Warning already emitted by loadConfig() in non-production.
 }
 
 export const pool = new pg.Pool({
-  connectionString,
+  connectionString: config.databaseUrl,
   max: 20,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,

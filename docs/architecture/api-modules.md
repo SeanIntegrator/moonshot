@@ -1,24 +1,27 @@
 # API module layout (`@moonshot/api`)
 
-Stable map of where persistence and orchestration live after the **Pass A + B** refactor (May 2026). Routes stay thin; business logic sits in `src/lib/`.
+Stable map of where persistence and orchestration live after the **Pass A + B** refactor and the later **`src/lib/` domain-folder** split (`menu/`, `cafe/`, `admin/`, `orders/`, `pos-adapters/`, …). Routes stay thin; business logic sits in `src/lib/`.
 
 ## HTTP assembly
 
 | Path | Role |
 |------|------|
-| `src/create-moonshot-http-server.ts` | Express app, routers, Socket.io, **global `errorHandler`** (last middleware) |
+| `src/create-moonshot-http-server.ts` | Express app, routers, Socket.io (`/kds`, `/customer`, `/admin`), **global `errorHandler`** (last middleware) |
 | `src/middleware/error-handler.ts` | Maps `ApiHttpError` → status envelope; unknown errors → **`Internal error`** + structured server log |
 | `src/middleware/cafe-context.ts` | Resolves café via `findCafeBySlug` from **`cafes-repository`** |
 
-## Café reads
+## Café reads & provisioning
 
 | Path | Role |
 |------|------|
-| `src/lib/cafes-repository.ts` | `CAFE_COLUMNS`, `findCafeById`, `findCafeBySlug`, `findCafesByStripeAccountId` — single source for full café row → `ResolvedCafe` |
+| `src/lib/cafes-repository.ts` | `CAFE_COLUMNS`, `findCafeById`, `findCafeBySlug`, `findCafesByStripeAccountId` — full café row → `ResolvedCafe` |
+| `src/lib/cafe/cafe-provisioning.ts` | Self-service signup defaults (`defaultNewCafeFeatures`, KDS config, modifier/section seed) |
+| `src/lib/cafe/cafe-membership.ts` | `ensureCafeMembership` — idempotent `cafe_users` insert |
+| `src/lib/cafe/cafe-map.ts` / hours helpers | Feature flags + open/closed helpers |
 
 ## Orders
 
-Implementation is split under `src/lib/orders/` (`order-read`, `order-create`, `order-checkout`, `order-kds`, `order-customer`, plus checkout recovery). Import those modules directly.
+Implementation is split under `src/lib/orders/` (`order-read`, `order-create`, `order-checkout`, `order-kds`, `order-customer`, plus checkout recovery and POS ingress). Import those modules directly.
 
 | Module | Responsibility |
 |--------|----------------|
@@ -27,17 +30,20 @@ Implementation is split under `src/lib/orders/` (`order-read`, `order-create`, `
 | `orders/order-create.ts` | Pay-in-store + pending checkout order insert |
 | `orders/order-checkout.ts` | Stripe session record, webhook confirm (`confirmOrderPaidFromStripeCheckout`) |
 | `orders/checkout-session-recovery.ts` | Browser return: lookup by session, retrieve from Stripe if pending, confirm + **`kds:order:new`** |
-| `orders/order-kds.ts` | `listOpenOrdersForKds`, `completeOrderForKds`, `recallLastCompletedOrderForKds`; exports **`KDS_OPEN_ORDER_STATUSES`** |
+| `orders/order-kds.ts` | Open/recent lists, complete, recall; exports **`KDS_OPEN_ORDER_STATUSES`** |
 | `orders/order-customer.ts` | `listCustomerOrdersForUser`, `cancelOrderAtCafe` |
+| `orders/pos-order-ingress.ts` | Square (etc.) webhook → persist normalised order + KDS emit |
 | `orders/order-write-helpers.ts` | Shared line-item insert inside transactions |
 
 Checkout orchestration (Stripe session creation) remains in `orders-checkout-service.ts`. Return URL building: **`order-checkout-env.ts`** (`checkoutUrlsForCafe`, **`ORDER_AHEAD_BASE_URL`**).
 
-## Café membership
+## Menu
 
 | Path | Role |
 |------|------|
-| `src/lib/cafe-membership.ts` | `ensureCafeMembership` — idempotent `cafe_users` insert; called on signed-in **`POST /orders`** and inside loyalty post-complete transaction |
+| `src/lib/menu/` | Admin CRUD, sections, images, catalog persist/sync, template onboarding, seed library |
+| `src/lib/menu/menu-provisioners/` | Template vs POS import strategies for onboarding |
+| `src/lib/drink-archetype-*.ts` | Resolve + apply café drink-type recipes |
 
 ## Loyalty
 
@@ -58,13 +64,15 @@ KDS route wraps `applyLoyaltyAfterKdsComplete` in try/catch so **Done** never 50
 | `src/config/CafeProvider.tsx` | Sets runtime café slug for **`X-Cafe-Slug`** before child effects (Stripe return) |
 | `src/pages/CheckoutRestore.tsx` | Stripe success redirect handler |
 
-## Admin services
+## Admin + POS services
 
 | Path | Role |
 |------|------|
-| `src/lib/admin-settings-service.ts` | `patchAdminCafeSettings` — merge features/KDS patches + persist |
-| `src/lib/admin-stripe-service.ts` | Connect onboarding link + account status sync |
-| `src/routes/admin.ts` | HTTP only: auth, settings PATCH, Stripe endpoints |
+| `src/lib/admin/admin-settings-service.ts` | `patchAdminCafeSettings` — merge features/KDS patches + persist |
+| `src/lib/admin/admin-stripe-service.ts` | Connect onboarding link + account status sync |
+| `src/lib/pos-connections-repository.ts` | Encrypted Square (etc.) OAuth rows |
+| `src/lib/pos-adapters/` | Manual + Square adapters (catalog sync, token refresh, webhooks) |
+| `src/routes/admin.ts` | HTTP only: auth, settings, Stripe, Square mount, sync-pos |
 
 ## Customer auth helpers
 

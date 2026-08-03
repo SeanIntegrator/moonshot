@@ -21,7 +21,7 @@ import {
   adminCreateKdsUser,
   adminSaveMenuTemplate,
 } from '../lib/admin-api.js';
-import type { AdminSaveMenuTemplateRequest } from '@moonshot/types';
+import type { AdminSaveMenuTemplateRequest } from '@moonshot/domain';
 import { getKdsBaseUrl, getOrderAheadBaseUrl } from '../lib/onboarding-utils.js';
 
 const STEPS = ['Welcome', 'Kitchen', 'Menu', 'Payments', 'Go live'];

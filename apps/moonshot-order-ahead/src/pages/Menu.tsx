@@ -1,5 +1,6 @@
-import type { MenuCategory } from '@moonshot/types';
+import type { MenuCategory, MenuGridLayout } from '@moonshot/types';
 import { Alert, Box, Container, Snackbar, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CategoryStrip } from '../components/CategoryStrip.js';
@@ -15,6 +16,18 @@ import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
 import { pageContentWidthSx } from '../theme/pageLayout.js';
+
+function menuGridTemplateColumns(menuGrid: MenuGridLayout): string {
+  switch (menuGrid) {
+    case '3col':
+      return 'repeat(3, 1fr)';
+    case 'list':
+      return '1fr';
+    case '2col':
+    default:
+      return '1fr 1fr';
+  }
+}
 
 function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: string): number {
   const hit = lines.find(
@@ -32,6 +45,7 @@ type MenuLocationState = {
 };
 
 export function Menu() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
@@ -45,6 +59,7 @@ export function Menu() {
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
   const cafeClosed = !isOpen;
   const cartQty = totalCartQty(lines);
+  const gridTemplateColumns = menuGridTemplateColumns(theme.cafeLayout.menuGrid);
 
   useEffect(() => {
     if (!locationState?.addedItemName) return;
@@ -136,7 +151,7 @@ export function Menu() {
                 <Box
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
+                    gridTemplateColumns,
                     gap: 1.25,
                   }}
                 >
@@ -152,7 +167,7 @@ export function Menu() {
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns,
                 gap: 1.25,
                 mt: 1,
               }}

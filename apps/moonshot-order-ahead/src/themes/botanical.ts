@@ -25,6 +25,9 @@ export const botanicalTheme: CafeTheme = {
     bodyFamily: '"Source Sans 3", system-ui, sans-serif',
     headingWeight: 600,
     bodyWeight: 400,
+    webfontUrls: [
+      'https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@400;500;600;700&display=swap',
+    ],
   },
   layout: {
     menuGrid: '2col',

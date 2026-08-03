@@ -1,5 +1,5 @@
 import type { Pool, PoolClient } from 'pg';
-import { POS_PROVIDERS } from '@moonshot/types';
+import { POS_PROVIDERS } from '@moonshot/domain';
 import { SquareError } from 'square';
 import {
   getPosConnection,

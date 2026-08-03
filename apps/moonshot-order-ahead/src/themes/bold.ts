@@ -25,6 +25,9 @@ export const boldTheme: CafeTheme = {
     bodyFamily: '"Work Sans", system-ui, sans-serif',
     headingWeight: 700,
     bodyWeight: 500,
+    webfontUrls: [
+      'https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;500;600;700&display=swap',
+    ],
   },
   layout: {
     menuGrid: '2col',

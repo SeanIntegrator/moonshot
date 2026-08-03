@@ -1,5 +1,6 @@
 import type { Cafe, CafeHours, CafeHoursInterval, WeekdayKey } from '@moonshot/types';
-import { WEEKDAY_KEYS, emptyCafeHours, toHhMm } from '@moonshot/types';
+import { WEEKDAY_KEYS } from '@moonshot/types';
+import { emptyCafeHours, toHhMm } from '@moonshot/domain';
 import {
   Alert,
   Box,

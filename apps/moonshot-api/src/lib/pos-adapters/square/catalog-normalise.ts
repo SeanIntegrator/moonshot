@@ -5,16 +5,9 @@
 
 import { randomUUID } from 'node:crypto';
 import type { CatalogObject } from 'square';
-import type {
-  NormalisedItemSize,
-  NormalisedMenuItem,
-  NormalisedModifierGroup,
-  NormalisedModifierOption,
-  PosCatalog,
-  PosCatalogModifierGroup,
-  ModifierRoleHint,
-} from '@moonshot/types';
-import { chipMetaForOptionName } from '../../menu-chip-palette.js';
+import type { NormalisedItemSize, NormalisedMenuItem, NormalisedModifierGroup, NormalisedModifierOption } from '@moonshot/types';
+import type { PosCatalog, PosCatalogModifierGroup, ModifierRoleHint } from '@moonshot/domain';
+import { chipMetaForOptionName } from '../../menu/menu-chip-palette.js';
 import type { SquareCatalogSnapshot } from './catalog-fetch.js';
 import {
   buildCatalogSections,

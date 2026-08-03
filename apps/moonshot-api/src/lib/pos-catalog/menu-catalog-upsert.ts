@@ -9,21 +9,12 @@
 
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
-import {
-  ApiErrorCode,
-  platformDrinkArchetypeConfig,
-  type MenuProvisionResult,
-  type MenuSectionKind,
-  type ModifierRoleHint,
-  type NormalisedMenuItem,
-  type PosCatalog,
-  type PosCatalogModifierGroup,
-  type PosCatalogSection,
-} from '@moonshot/types';
+import { ApiErrorCode, type MenuSectionKind, type NormalisedMenuItem } from '@moonshot/types';
+import { platformDrinkArchetypeConfig, type MenuProvisionResult, type ModifierRoleHint, type PosCatalog, type PosCatalogModifierGroup, type PosCatalogSection } from '@moonshot/domain';
 import { parseCafeDrinkArchetypeConfig } from '../drink-archetype-resolve.js';
-import { MenuProvisionError } from '../menu-provisioners/errors.js';
-import { setMenuItemModifierGroups } from '../menu-modifier-library.js';
-import { readMenuImageStorageConfig } from '../menu-image-storage.js';
+import { MenuProvisionError } from '../menu/menu-provisioners/errors.js';
+import { setMenuItemModifierGroups } from '../menu/menu-modifier-library.js';
+import { readMenuImageStorageConfig } from '../menu/menu-image-storage.js';
 import {
   parseExistingMenuItemImageState,
   resolvePosCatalogItemImage,

@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { ApiErrorCode, isDrinkArchetypeId } from '@moonshot/types';
+import { ApiErrorCode } from '@moonshot/types';
+import { isDrinkArchetypeId } from '@moonshot/domain';
 import { pool } from '../db.js';
 import {
   applyArchetypeToItems,

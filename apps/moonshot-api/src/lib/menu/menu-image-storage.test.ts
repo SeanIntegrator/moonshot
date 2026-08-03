@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import sharp from 'sharp';
-import {
-  cafeMenuItemImageKey,
-  menuImageObjectKeyFromPublicUrl,
-  menuTemplateDrinkImageUrl,
-} from '@moonshot/types';
+import { cafeMenuItemImageKey, menuImageObjectKeyFromPublicUrl, menuTemplateDrinkImageUrl } from '@moonshot/domain';
 import {
   copyTemplateDrinkImageToCafeItem,
   readMenuImageStorageConfig,

@@ -4,6 +4,7 @@ import type {
   NormalisedMenu,
   NormalisedMenuItem,
 } from '@moonshot/types';
+import type { CafeDrinkArchetypeConfig, DrinkArchetypeDef } from '@moonshot/domain';
 import { apiUrl, parseEnvelope } from './http.js';
 
 export async function fetchMenuForCafe(slug: string): Promise<NormalisedMenu> {
@@ -294,9 +295,9 @@ export async function deleteMenuSection(
 }
 
 export type DrinkArchetypeConfigPayload = {
-  recipes: Record<string, import('@moonshot/types').DrinkArchetypeDef>;
-  config: import('@moonshot/types').CafeDrinkArchetypeConfig;
-  catalogue: readonly import('@moonshot/types').DrinkArchetypeDef[];
+  recipes: Record<string, DrinkArchetypeDef>;
+  config: CafeDrinkArchetypeConfig;
+  catalogue: readonly DrinkArchetypeDef[];
 };
 
 export async function fetchDrinkArchetypes(
@@ -319,7 +320,7 @@ export async function fetchDrinkArchetypes(
 export async function patchDrinkArchetypes(
   token: string,
   cafeSlug: string,
-  config: import('@moonshot/types').CafeDrinkArchetypeConfig,
+  config: CafeDrinkArchetypeConfig,
 ): Promise<DrinkArchetypeConfigPayload> {
   const res = await fetch(apiUrl('/menu/drink-archetypes'), {
     method: 'PATCH',

@@ -3,10 +3,7 @@
  * POS photo wins; otherwise optional shared template default by exact name match.
  */
 import type { MenuItemImageSource } from '@moonshot/types';
-import {
-  menuTemplateDrinkImageUrl,
-  resolveMenuTemplateDrinkKeyByExactName,
-} from '@moonshot/types';
+import { menuTemplateDrinkImageUrl, resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/domain';
 
 export type ExistingMenuItemImageState = {
   imageUrl: string | null;

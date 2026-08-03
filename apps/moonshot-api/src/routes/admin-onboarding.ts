@@ -1,20 +1,14 @@
 import { Router } from 'express';
-import {
-  ApiErrorCode,
-  MENU_PROVISION_SOURCES,
-  type AdminCreateKdsUserResponse,
-  type AdminOnboardingStatusResponse,
-  type AdminRegisterResponse,
-  type AdminSaveMenuTemplateRequest,
-  type SlugAvailableResponse,
-} from '@moonshot/types';
-import { buildAdminLoginResponse } from '../lib/admin-auth-tokens.js';
+import { ApiErrorCode, type AdminCreateKdsUserResponse, type AdminOnboardingStatusResponse, type AdminRegisterResponse, type SlugAvailableResponse } from '@moonshot/types';
+import { MENU_PROVISION_SOURCES, type AdminSaveMenuTemplateRequest } from '@moonshot/domain';
+import { buildAdminLoginResponse } from '../lib/admin/admin-auth-tokens.js';
+import { fetchAdminOnboardingChecklist } from '../lib/admin/onboarding-repository.js';
 import { normalizeCafeSlugInput, validateCafeSlug } from '../lib/cafe-slug.js';
-import { ProvisionCafeError, isCafeSlugAvailable, provisionCafe } from '../lib/cafe-provisioning.js';
+import { ProvisionCafeError, isCafeSlugAvailable, provisionCafe } from '../lib/cafe/cafe-provisioning.js';
 import { findCafeById } from '../lib/cafes-repository.js';
 import { hashKdsPassword } from '../lib/kds-password.js';
-import { MenuTemplateError } from '../lib/menu-template-onboarding.js';
-import { getMenuProvisioner, MenuProvisionError } from '../lib/menu-provisioners/index.js';
+import { MenuTemplateError } from '../lib/menu/menu-template-onboarding.js';
+import { getMenuProvisioner, MenuProvisionError } from '../lib/menu/menu-provisioners/index.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
 import { pool } from '../db.js';
@@ -80,20 +74,12 @@ adminOnboardingRouter.get('/status', requireAdminAuth, async (req, res) => {
 
   const features = cafe.features as { onboarding_completed_at?: string | null };
   const completed = Boolean(features.onboarding_completed_at);
-
-  const kdsRes = await pool.query<{ id: string }>(
-    `SELECT id FROM kds_users WHERE cafe_id = $1 AND is_active = TRUE LIMIT 1`,
-    [cafeId],
-  );
-  const menuRes = await pool.query<{ id: string }>(
-    `SELECT id FROM menu_items WHERE cafe_id = $1 AND is_available = TRUE LIMIT 1`,
-    [cafeId],
-  );
+  const checklist = await fetchAdminOnboardingChecklist(pool, cafeId);
 
   const data: AdminOnboardingStatusResponse = {
     completed,
-    hasKdsUser: kdsRes.rows.length > 0,
-    hasMenuItem: menuRes.rows.length > 0,
+    hasKdsUser: checklist.hasKdsUser,
+    hasMenuItem: checklist.hasMenuItem,
   };
   return res.json({ ok: true, data });
 });

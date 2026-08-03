@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 
 type Props = {
   displayId: string;
@@ -23,18 +24,14 @@ export function QrCard({ displayId, name, stamps, stampsPerReward = 10, size = 2
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
         Show at till
       </Typography>
-      <Box
+      <SurfaceCard
         sx={{
           display: 'inline-flex',
           p: 2,
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1.25,
-          bgcolor: 'background.paper',
         }}
       >
         <QRCodeSVG value={displayId} size={size} level="M" />
-      </Box>
+      </SurfaceCard>
       {subtitle && (
         <Typography variant="body2" fontWeight={600} sx={{ mt: 1.5 }}>
           {subtitle}

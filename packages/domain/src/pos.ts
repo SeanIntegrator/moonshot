@@ -5,8 +5,9 @@
  * `manual` (DB menu) is live. Keep the interface stable for onboarding POS import.
  */
 
-import type { NormalisedMenu } from './menu.js';
-import type { NormalisedOrder } from './order.js';
+import type { NormalisedMenu, NormalisedOrder, PosProvider } from '@moonshot/types';
+
+export type { PosProvider };
 
 /** Reserved for Phase 7 WhatsApp ingress — not a classic POS API */
 export const POS_PROVIDERS = {
@@ -16,9 +17,7 @@ export const POS_PROVIDERS = {
   lightspeed: 'lightspeed',
   manual: 'manual',
   whatsapp_n8n: 'whatsapp_n8n',
-} as const;
-
-export type PosProvider = (typeof POS_PROVIDERS)[keyof typeof POS_PROVIDERS];
+} as const satisfies Record<string, PosProvider>;
 
 /**
  * Minimal request surface for webhook signature verification + parsing

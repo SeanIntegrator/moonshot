@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
-import {
-  MENU_IMAGE_THUMBNAIL_HEIGHT,
-  MENU_IMAGE_THUMBNAIL_WIDTH,
-} from '@moonshot/types';
+import { MENU_IMAGE_THUMBNAIL_HEIGHT, MENU_IMAGE_THUMBNAIL_WIDTH } from '@moonshot/domain';
 import {
   buildMenuThumbnailWebp,
   detectMenuImageMime,

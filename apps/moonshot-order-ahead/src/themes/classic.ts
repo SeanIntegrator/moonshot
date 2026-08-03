@@ -25,6 +25,9 @@ export const classicTheme: CafeTheme = {
     bodyFamily: '"Lato", system-ui, sans-serif',
     headingWeight: 600,
     bodyWeight: 400,
+    webfontUrls: [
+      'https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Libre+Baskerville:wght@400;700&display=swap',
+    ],
   },
   layout: {
     menuGrid: '2col',

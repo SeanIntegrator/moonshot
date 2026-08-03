@@ -1,8 +1,6 @@
-import type { LoyaltyReward, LoyaltySummaryResponse, OrderType } from '@moonshot/types';
-import {
-  isLoyaltyRewardApplicable,
-  loyaltyRewardLabel,
-} from '@moonshot/types';
+import type { OrderType } from '@moonshot/types';
+import type { LoyaltyReward, LoyaltySummaryResponse } from '@moonshot/domain';
+import { isLoyaltyRewardApplicable, loyaltyRewardLabel } from '@moonshot/domain';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   Box,
@@ -21,6 +19,7 @@ import { PickupTimeChip } from '../components/PickupTimeChip.js';
 import { RewardRow } from '../components/RewardRow.js';
 import { CheckoutPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { SegmentedToggleGroup } from '../components/ui/SegmentedToggleGroup.js';
+import { SurfaceCard } from '../components/ui/SurfaceCard.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
@@ -242,12 +241,9 @@ export function Checkout() {
               variant="field"
             />
           ) : (
-            <Box
+            <SurfaceCard
               sx={{
                 p: 1.5,
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 1.25,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1.5,
@@ -265,7 +261,7 @@ export function Checkout() {
                   </Typography>
                 )}
               </Box>
-            </Box>
+            </SurfaceCard>
           )}
 
           <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>

@@ -1,4 +1,5 @@
-import { cafeOpenStatus, type CafeOpenStatus } from '@moonshot/types';
+import type { CafeOpenStatus } from '@moonshot/types';
+import { cafeOpenStatus } from '@moonshot/domain';
 import { useMemo } from 'react';
 import { useCafe } from './useCafe.js';
 import { useCafeFeatures } from './useCafeFeatures.js';

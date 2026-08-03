@@ -1,7 +1,4 @@
-import type {
-  MenuProvisionResult,
-  MenuProvisionSource,
-} from '@moonshot/types';
+import type { MenuProvisionResult, MenuProvisionSource } from '@moonshot/domain';
 import type { PoolClient } from 'pg';
 
 /** Strategy for creating a café's first menu during onboarding. */

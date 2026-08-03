@@ -4,11 +4,11 @@
  */
 
 import type { PoolClient } from 'pg';
-import type { PosCatalog } from '@moonshot/types';
+import type { PosCatalog } from '@moonshot/domain';
 import {
   upsertPosCatalog,
   type CatalogUpsertResult,
-} from './pos-catalog/menu-catalog-upsert.js';
+} from '../pos-catalog/menu-catalog-upsert.js';
 
 export type SyncCatalogResult = {
   upsertedItems: number;

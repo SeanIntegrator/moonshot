@@ -3,6 +3,7 @@ import { CheckoutLineRow } from './CheckoutLineRow.js';
 import type { PricedCartLine } from '../hooks/useCheckoutPricing.js';
 import type { CartLine } from '../providers/CartProvider.js';
 import { formatMoney } from '../lib/format.js';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 
 export function CheckoutOrderSummary(params: {
   pricedLines: PricedCartLine[];
@@ -24,12 +25,8 @@ export function CheckoutOrderSummary(params: {
         </Typography>
       </Box>
 
-      <Box
+      <SurfaceCard
         sx={{
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1.25,
-          bgcolor: 'background.paper',
           overflow: 'hidden',
           minHeight: pricedLines.length > 0 ? undefined : 120,
         }}
@@ -82,7 +79,7 @@ export function CheckoutOrderSummary(params: {
             {formatMoney(totalMinor)}
           </Typography>
         </Box>
-      </Box>
+      </SurfaceCard>
     </>
   );
 }

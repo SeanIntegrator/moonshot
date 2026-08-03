@@ -1,5 +1,5 @@
 import type { MenuItemImageSource, NormalisedMenuItem } from '@moonshot/types';
-import { resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/types';
+import { resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/domain';
 import {
   Alert,
   Box,

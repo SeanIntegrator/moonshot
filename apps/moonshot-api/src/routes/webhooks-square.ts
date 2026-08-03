@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { POS_PROVIDERS } from '@moonshot/types';
+import { POS_PROVIDERS } from '@moonshot/domain';
 import { pool } from '../db.js';
 import {
   fetchSquareOrder,

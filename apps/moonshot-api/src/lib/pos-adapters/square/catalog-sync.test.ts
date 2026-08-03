@@ -32,7 +32,7 @@ vi.mock('./catalog-fetch.js', () => ({
   searchSquareCatalogSince,
 }));
 
-vi.mock('../../menu-sync-catalog.js', () => ({
+vi.mock('../../menu/menu-sync-catalog.js', () => ({
   syncNormalisedMenuCatalog,
 }));
 
@@ -40,7 +40,7 @@ vi.mock('../../pos-catalog/menu-catalog-upsert.js', () => ({
   loadExistingPosCategoryKeys: vi.fn().mockResolvedValue(new Map()),
 }));
 
-vi.mock('../../menu-sync-notify.js', () => ({
+vi.mock('../../menu/menu-sync-notify.js', () => ({
   notifyMenuCatalogSynced: vi.fn(),
 }));
 

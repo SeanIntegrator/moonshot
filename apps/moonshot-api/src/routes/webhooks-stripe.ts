@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import Stripe from 'stripe';
 import { pool } from '../db.js';
 import { findCafeById, findCafesByStripeAccountId } from '../lib/cafes-repository.js';
+import { config } from '../lib/config.js';
 import { mergeStripeIntoPaymentConfig } from '../lib/payments/cafe-payment-config.js';
 import {
   claimStripeWebhookForProcessing,
@@ -11,12 +12,11 @@ import {
 } from '../lib/payments/repository.js';
 import { getStripeOrNull } from '../lib/payments/stripe-client.js';
 import { confirmOrderPaidFromStripeCheckout } from '../lib/orders/order-checkout.js';
-import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
-import { emitKdsServerToClient } from '../realtime/kds-events.js';
+import { notifyOrderReadyForKitchen } from '../lib/orders/order-lifecycle-notify.js';
 
 export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
   const stripe = getStripeOrNull();
-  const whSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  const whSecret = config.stripeWebhookSecret;
   if (!stripe || !whSecret) {
     void res.status(503).json({ ok: false, error: 'Stripe webhook not configured' });
     return;
@@ -91,16 +91,13 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
           throw new Error('confirmOrderPaidFromStripeCheckout returned null (order mismatch or not pending)');
         }
 
-        emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
-
         const cafe = await findCafeById(cafeId);
-        if (cafe) {
-          await recomputePickupEtasForCafe({
-            db: pool,
-            cafeId,
-            kdsConfig: cafe.kdsConfig,
-          });
-        }
+        await notifyOrderReadyForKitchen({
+          db: pool,
+          cafeId,
+          order,
+          kdsConfig: cafe?.kdsConfig,
+        });
         break;
       }
       case 'account.updated': {

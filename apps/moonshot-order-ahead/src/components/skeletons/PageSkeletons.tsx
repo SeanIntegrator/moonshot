@@ -1,15 +1,17 @@
 import { Box, Container, Skeleton } from '@mui/material';
 import { pageContentWidthSx } from '../../theme/pageLayout.js';
+import { sxRadius } from '../../theme/radii.js';
+import { SurfaceCard } from '../ui/SurfaceCard.js';
 
 function MenuCardSkeleton() {
   return (
-    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, overflow: 'hidden' }}>
+    <SurfaceCard sx={{ overflow: 'hidden' }}>
       <Skeleton variant="rectangular" sx={{ aspectRatio: '1', width: '100%' }} />
       <Box sx={{ p: 1.25, display: 'flex', justifyContent: 'space-between', gap: 0.5 }}>
         <Skeleton variant="text" width="60%" height={20} />
         <Skeleton variant="text" width={40} height={16} />
       </Box>
-    </Box>
+    </SurfaceCard>
   );
 }
 
@@ -18,12 +20,12 @@ export function MenuPageSkeleton() {
     <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, gap: 1 }}>
         <Skeleton variant="text" width={80} height={36} />
-        <Skeleton variant="rounded" width={120} height={32} sx={{ borderRadius: 999 }} />
+        <Skeleton variant="rounded" width={120} height={32} sx={{ borderRadius: sxRadius('pill') }} />
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1, py: 1.5 }}>
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} variant="rounded" width={72} height={32} sx={{ borderRadius: 999, flexShrink: 0 }} />
+          <Skeleton key={i} variant="rounded" width={72} height={32} sx={{ borderRadius: sxRadius('pill'), flexShrink: 0 }} />
         ))}
       </Box>
 
@@ -52,8 +54,8 @@ export function HomePageSkeleton() {
           </Box>
           <Skeleton variant="circular" width={36} height={36} />
         </Box>
-        <Skeleton variant="rounded" height={100} sx={{ borderRadius: 1.25, mb: 2 }} />
-        <Skeleton variant="rounded" height={56} sx={{ borderRadius: 1.25 }} />
+        <Skeleton variant="rounded" height={100} sx={{ borderRadius: sxRadius('card'), mb: 2 }} />
+        <Skeleton variant="rounded" height={56} sx={{ borderRadius: sxRadius('card') }} />
       </Box>
 
       <Box sx={{ px: 2, pt: 2 }}>
@@ -61,7 +63,7 @@ export function HomePageSkeleton() {
         <Skeleton variant="text" width={140} height={28} sx={{ mb: 1.5 }} />
         <Box sx={{ display: 'flex', gap: 1.5, overflow: 'hidden' }}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rounded" width={180} height={160} sx={{ borderRadius: 1.25, flexShrink: 0 }} />
+            <Skeleton key={i} variant="rounded" width={180} height={160} sx={{ borderRadius: sxRadius('card'), flexShrink: 0 }} />
           ))}
         </Box>
       </Box>
@@ -85,7 +87,7 @@ export function ItemDetailSkeleton() {
           <Skeleton variant="text" width={60} height={24} sx={{ mb: 1 }} />
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} variant="rounded" height={64} sx={{ borderRadius: 1.25 }} />
+              <Skeleton key={i} variant="rounded" height={64} sx={{ borderRadius: sxRadius('card') }} />
             ))}
           </Box>
         </Box>
@@ -94,7 +96,7 @@ export function ItemDetailSkeleton() {
           <Skeleton variant="text" width={80} height={24} sx={{ mb: 1 }} />
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} variant="rounded" width={88} height={32} sx={{ borderRadius: 999 }} />
+              <Skeleton key={i} variant="rounded" width={88} height={32} sx={{ borderRadius: sxRadius('pill') }} />
             ))}
           </Box>
         </Box>
@@ -117,7 +119,7 @@ export function ItemDetailSkeleton() {
           ...pageContentWidthSx,
         }}
       >
-        <Skeleton variant="rounded" width={120} height={40} sx={{ borderRadius: 999 }} />
+        <Skeleton variant="rounded" width={120} height={40} sx={{ borderRadius: sxRadius('pill') }} />
         <Skeleton variant="rounded" height={48} sx={{ flex: 1, borderRadius: 1 }} />
       </Box>
     </Box>
@@ -147,16 +149,16 @@ export function CheckoutPageSkeleton() {
             <Skeleton variant="text" width={100} height={24} />
             <Skeleton variant="text" width={60} height={20} />
           </Box>
-          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, overflow: 'hidden' }}>
+          <SurfaceCard sx={{ overflow: 'hidden' }}>
             <CheckoutLineSkeleton />
             <CheckoutLineSkeleton />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1.5, py: 1.25 }}>
               <Skeleton variant="text" width={48} height={24} />
               <Skeleton variant="text" width={64} height={24} />
             </Box>
-          </Box>
+          </SurfaceCard>
           <Skeleton variant="text" width={100} height={24} sx={{ mt: 3, mb: 1 }} />
-          <Skeleton variant="rounded" height={72} sx={{ borderRadius: 1.25 }} />
+          <Skeleton variant="rounded" height={72} sx={{ borderRadius: sxRadius('card') }} />
         </Box>
         <Skeleton variant="rounded" height={52} sx={{ mt: 2, borderRadius: 1 }} />
       </Container>

@@ -1,10 +1,5 @@
-import {
-  KDS_SOCKET_NAMESPACE,
-  type KdsAdvanceStatusRequest,
-  type KdsServerToClientEvent,
-  type NormalisedOrder,
-  type OrderStatus,
-} from '@moonshot/types';
+import type { KdsAdvanceStatusRequest, KdsServerToClientEvent, NormalisedOrder, OrderStatus } from '@moonshot/types';
+import { KDS_SOCKET_NAMESPACE } from '@moonshot/domain';
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { type Socket, io } from 'socket.io-client';
 import {

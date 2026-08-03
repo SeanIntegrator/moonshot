@@ -1,4 +1,4 @@
-import { CUSTOMER_SOCKET_NAMESPACE } from '@moonshot/types';
+import { CUSTOMER_SOCKET_NAMESPACE } from '@moonshot/domain';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import { getApiBaseUrl } from './api.js';

@@ -1,4 +1,5 @@
 import type { CafeThemeLayout } from '@moonshot/types';
+import type { CafeRadii } from './radii.js';
 
 /** Brand / surface colours not covered by standard MUI palette slots */
 export interface CafePaletteExtension {
@@ -21,9 +22,11 @@ declare module '@mui/material/styles' {
 
   interface Theme {
     cafeLayout: CafeThemeLayout;
+    radii: CafeRadii;
   }
   interface ThemeOptions {
     cafeLayout?: CafeThemeLayout;
+    radii?: CafeRadii;
   }
 }
 

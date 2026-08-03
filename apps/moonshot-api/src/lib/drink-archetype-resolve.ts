@@ -1,13 +1,4 @@
-import {
-  DRINK_ARCHETYPE_SLOT_GROUP_NAMES,
-  type CafeDrinkArchetypeConfig,
-  type DrinkArchetypeId,
-  type DrinkArchetypeSlot,
-  isDrinkArchetypeId,
-  isDrinkArchetypeSlot,
-  resolveCafeArchetypeRecipe,
-  waiveMilkSurchargeFromCharge,
-} from '@moonshot/types';
+import { DRINK_ARCHETYPE_SLOT_GROUP_NAMES, type CafeDrinkArchetypeConfig, type DrinkArchetypeId, type DrinkArchetypeSlot, isDrinkArchetypeId, isDrinkArchetypeSlot, resolveCafeArchetypeRecipe, waiveMilkSurchargeFromCharge } from '@moonshot/domain';
 
 export type LibraryGroupRef = {
   id: string;

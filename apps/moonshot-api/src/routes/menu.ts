@@ -9,9 +9,9 @@ import {
   setMenuItemUseDefaultImage,
   softHideMenuItem,
   uploadMenuItemImage,
-} from '../lib/menu-admin-service.js';
-import { fetchMenuForCafe } from '../lib/menu-fetch.js';
-import { ensureSystemMenuSections, listMenuSectionsForCafe } from '../lib/menu-sections.js';
+} from '../lib/menu/menu-admin-service.js';
+import { fetchMenuForCafe } from '../lib/menu/menu-fetch.js';
+import { ensureSystemMenuSections, listMenuSectionsForCafe } from '../lib/menu/menu-sections.js';
 import { UUID_RE } from '../lib/uuid.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { menuItemImageUpload } from '../middleware/menu-item-image-upload.js';

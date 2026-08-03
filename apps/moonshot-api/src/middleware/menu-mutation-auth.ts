@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiErrorCode, type JwtClaims } from '@moonshot/types';
+import { config } from '../lib/config.js';
 import { isMenuAdminEmail } from './auth.js';
 import { isAdminClaims } from './admin-auth.js';
 
@@ -27,7 +28,7 @@ export function requireMenuMutationAuth(req: Request, res: Response, next: NextF
     fail(res, 401, 'Missing or invalid Authorization header', ApiErrorCode.UNAUTHORIZED);
     return;
   }
-  const secret = process.env.JWT_SECRET;
+  const secret = config.jwtSecret;
   if (!secret) {
     fail(res, 500, 'Server JWT configuration missing', ApiErrorCode.CONFIG);
     return;

@@ -1,14 +1,5 @@
-import {
-  ApiErrorCode,
-  DRINK_ARCHETYPES,
-  type CafeDrinkArchetypeConfig,
-  type DrinkArchetypeDef,
-  type DrinkArchetypeId,
-  isDrinkArchetypeId,
-  platformDrinkArchetypeConfig,
-  resolveCafeArchetypeConfig,
-  resolveCafeArchetypeRecipe,
-} from '@moonshot/types';
+import { ApiErrorCode } from '@moonshot/types';
+import { DRINK_ARCHETYPES, type CafeDrinkArchetypeConfig, type DrinkArchetypeDef, type DrinkArchetypeId, isDrinkArchetypeId, platformDrinkArchetypeConfig, resolveCafeArchetypeConfig, resolveCafeArchetypeRecipe } from '@moonshot/domain';
 import type { Pool, PoolClient } from 'pg';
 import {
   libraryByNameFromGroups,
@@ -16,7 +7,7 @@ import {
   resolveArchetypeGroups,
 } from './drink-archetype-resolve.js';
 import { ApiHttpError } from './http-errors.js';
-import { setMenuItemModifierGroups } from './menu-modifier-library.js';
+import { setMenuItemModifierGroups } from './menu/menu-modifier-library.js';
 
 type Db = Pool | PoolClient;
 
@@ -142,7 +133,7 @@ export async function applyArchetypeToItems(
 
   // Lazily ensure Flow prep groups exist when an admin opts in.
   const { ensureFlowPrepModifierGroups, ensureIceAndToppingsModifierGroups } = await import(
-    './menu-seed-library.js'
+    './menu/menu-seed-library.js'
   );
   await ensureFlowPrepModifierGroups(db, cafeId);
   await ensureIceAndToppingsModifierGroups(db, cafeId);

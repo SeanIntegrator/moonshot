@@ -20,6 +20,7 @@ import {
   sleep,
   toUserFacingError,
 } from '../lib/network-error.js';
+import { applyThemeWebfonts } from '../theme/applyThemeWebfonts.js';
 import { createCafeMuiTheme } from '../theme/createCafeMuiTheme.js';
 import { getTheme } from '../themes/index.js';
 
@@ -122,6 +123,10 @@ export function CafeProvider({ children }: { children: ReactNode }) {
   }, [slug]);
 
   const muiTheme = useMemo(() => createCafeMuiTheme(theme), [theme]);
+
+  useEffect(() => {
+    applyThemeWebfonts(theme?.typography.webfontUrls ?? getTheme('heritage').typography.webfontUrls);
+  }, [theme]);
 
   const value = useMemo<CafeContextValue>(
     () => ({

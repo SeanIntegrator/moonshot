@@ -1,4 +1,4 @@
-import type { FlowLineView } from '@moonshot/types';
+import type { FlowLineView } from '@moonshot/domain';
 import { Fragment } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';

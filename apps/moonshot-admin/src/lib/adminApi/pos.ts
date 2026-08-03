@@ -1,4 +1,4 @@
-import type { MenuProvisionResult } from '@moonshot/types';
+import type { MenuProvisionResult } from '@moonshot/domain';
 import { apiUrl, parseEnvelope } from './http.js';
 
 export type SquareConnectLocation = { id: string; name: string };

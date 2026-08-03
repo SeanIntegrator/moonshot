@@ -2,6 +2,7 @@ import type { NormalisedMenu, NormalisedMenuItem, NormalisedOrder } from '@moons
 import { Box, Button, Typography } from '@mui/material';
 import { MenuItemImage } from './MenuItemImage.js';
 import { SectionHead } from './SectionHead.js';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 import { formatMoney, modifierSummary } from '../lib/format.js';
 import { isStandardModifierVariant } from '../lib/modifier-display.js';
 import { whyNotTryTotalMinor } from '../lib/why-not-try.js';
@@ -74,7 +75,7 @@ export function UsualSuggestCard(props: Props) {
   return (
     <Box sx={{ mb: 3 }}>
       <SectionHead title={title} />
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5 }}>
+      <SurfaceCard sx={{ p: 1.5 }}>
         {lines.map((li) => (
           <Box key={li.key} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>
             <MenuItemImage
@@ -118,7 +119,7 @@ export function UsualSuggestCard(props: Props) {
             Order →
           </Button>
         </Box>
-      </Box>
+      </SurfaceCard>
     </Box>
   );
 }

@@ -10,19 +10,22 @@
     "preview": "node scripts/write-runtime-config.mjs && vite preview",
     "start": "node scripts/write-runtime-config.mjs && vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@moonshot/types": "workspace:*",
-    "@mui/icons-material": "^6.4.7",
+    "@moonshot/web-runtime": "workspace:*",
+    "@mui/icons-material": "^6.5.0",
     "@mui/material": "^6.4.7",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.28.0",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.3",
+    "@moonshot/domain": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

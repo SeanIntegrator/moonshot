@@ -1,4 +1,4 @@
-import type { MenuCategory } from './menu.js';
+import type { MenuCategory } from '@moonshot/types';
 
 /** Stable keys for starter onboarding template rows — used by admin UI and API validation. */
 export type MenuTemplateDrinkKey =

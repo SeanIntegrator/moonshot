@@ -1,5 +1,6 @@
-import type { NormalisedMenu, PosAdapter, PosCatalog, WebhookRequestLike } from '@moonshot/types';
-import { posSectionsToCafeSections } from '@moonshot/types';
+import type { NormalisedMenu } from '@moonshot/types';
+import type { PosAdapter, PosCatalog, WebhookRequestLike } from '@moonshot/domain';
+import { posSectionsToCafeSections } from '@moonshot/domain';
 import { fetchSquareCatalog } from './catalog-fetch.js';
 import { normaliseSquareCatalog } from './catalog-normalise.js';
 import type { SquareClientEnvironment } from './client.js';

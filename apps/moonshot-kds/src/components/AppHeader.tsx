@@ -11,8 +11,8 @@ type AppHeaderProps = {
 
 export function AppHeader({
   cafeName,
-  cafeSlug,
-  username,
+  cafeSlug: _cafeSlug,
+  username: _username,
   onOpenRecentOrders,
   onLogout,
 }: AppHeaderProps) {

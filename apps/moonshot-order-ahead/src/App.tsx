@@ -2,7 +2,8 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
 import CardGiftcardOutlinedIcon from '@mui/icons-material/CardGiftcardOutlined';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
-import { BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
+import { BottomNavigation, BottomNavigationAction, Box, Paper } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
 import { RequireAuth } from './components/RequireAuth.js';
@@ -40,6 +41,7 @@ function pathToNavValue(pathname: string): number {
 }
 
 export function App() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const cafePath = useCafePath();
@@ -47,119 +49,127 @@ export function App() {
   const { orderingAvailable } = useCafeOpenStatus();
   const { isSignedIn } = useAuth();
   const navValue = pathToNavValue(location.pathname);
+  const topBar = theme.cafeLayout.navStyle === 'top_bar';
 
   const hideNav =
     /\/checkout/.test(location.pathname) ||
     /\/order\/item\//.test(location.pathname) ||
     /\/orders\//.test(location.pathname);
 
+  const nav = !hideNav && (
+    <Paper
+      component="nav"
+      square
+      elevation={3}
+      sx={{
+        position: 'fixed',
+        top: topBar ? 0 : 'auto',
+        bottom: topBar ? 'auto' : 0,
+        left: 0,
+        right: 0,
+        zIndex: (t) => t.zIndex.appBar,
+        borderTop: topBar ? 0 : 1,
+        borderBottom: topBar ? 1 : 0,
+        borderColor: 'divider',
+        borderRadius: 0,
+        ...pageContentWidthSx,
+      }}
+    >
+      <BottomNavigation
+        showLabels
+        value={navValue}
+        onChange={(_, v) => {
+          if (v === 0) navigate(cafePath('/'));
+          else if (v === 1) {
+            if (!orderingAvailable) return;
+            if (!isSignedIn) {
+              navigate(cafePath('/profile'), {
+                state: { snackbar: SIGN_IN_TO_ORDER_MESSAGE },
+              });
+              return;
+            }
+            navigate(cafePath('/order'));
+          } else if (v === 2) {
+            if (!loyaltyEnabled) return;
+            navigate(cafePath('/rewards'));
+          } else navigate(cafePath('/profile'));
+        }}
+      >
+        <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
+        <BottomNavigationAction
+          label="Order"
+          icon={<LocalCafeOutlinedIcon />}
+          disabled={!orderingAvailable}
+          sx={{ opacity: orderingAvailable ? 1 : 0.4 }}
+        />
+        <BottomNavigationAction
+          label="Rewards"
+          icon={<CardGiftcardOutlinedIcon />}
+          disabled={!loyaltyEnabled}
+          sx={{ opacity: loyaltyEnabled ? 1 : 0.4 }}
+        />
+        <BottomNavigationAction label="You" icon={<PersonOutlinedIcon />} />
+      </BottomNavigation>
+    </Paper>
+  );
+
   return (
     <>
       <GoogleOneTap />
+      {topBar && nav}
       {/* Tab bar stays outside so only page content cross-fades */}
-      <PageTransition>
-        {(loc) => (
-          <Routes location={loc}>
-            <Route path="/" element={<Home />} />
-            <Route
-              path="/order"
-              element={
-                <RequireFeature feature="orderAhead">
-                  <RequireAuth>
-                    <Menu />
-                  </RequireAuth>
-                </RequireFeature>
-              }
-            />
-            <Route
-              path="/order/item/:menuItemId"
-              element={
-                <RequireFeature feature="orderAhead">
-                  <RequireAuth>
-                    <ItemDetail />
-                  </RequireAuth>
-                </RequireFeature>
-              }
-            />
-            <Route
-              path="/checkout"
-              element={
-                <RequireFeature feature="orderAhead">
-                  <RequireAuth>
-                    <Checkout />
-                  </RequireAuth>
-                </RequireFeature>
-              }
-            />
-            <Route path="/checkout/restore" element={<CheckoutRestore />} />
-            <Route path="/orders/:orderId" element={<OrderDetail />} />
-            <Route path="/orders/:orderId/confirmed" element={<OrderConfirmed />} />
-            <Route
-              path="/rewards"
-              element={
-                <RequireFeature feature="loyalty">
-                  <Rewards />
-                </RequireFeature>
-              }
-            />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
-        )}
-      </PageTransition>
-      {!hideNav && (
-        <Paper
-          component="nav"
-          square
-          elevation={3}
-          sx={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: (t) => t.zIndex.appBar,
-            borderTop: 1,
-            borderColor: 'divider',
-            borderRadius: 0,
-            ...pageContentWidthSx,
-          }}
-        >
-          <BottomNavigation
-            showLabels
-            value={navValue}
-            onChange={(_, v) => {
-              if (v === 0) navigate(cafePath('/'));
-              else if (v === 1) {
-                if (!orderingAvailable) return;
-                if (!isSignedIn) {
-                  navigate(cafePath('/profile'), {
-                    state: { snackbar: SIGN_IN_TO_ORDER_MESSAGE },
-                  });
-                  return;
+      <Box sx={{ pt: topBar && !hideNav ? 7 : 0 }}>
+        <PageTransition>
+          {(loc) => (
+            <Routes location={loc}>
+              <Route path="/" element={<Home />} />
+              <Route
+                path="/order"
+                element={
+                  <RequireFeature feature="orderAhead">
+                    <RequireAuth>
+                      <Menu />
+                    </RequireAuth>
+                  </RequireFeature>
                 }
-                navigate(cafePath('/order'));
-              } else if (v === 2) {
-                if (!loyaltyEnabled) return;
-                navigate(cafePath('/rewards'));
-              } else navigate(cafePath('/profile'));
-            }}
-          >
-            <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
-            <BottomNavigationAction
-              label="Order"
-              icon={<LocalCafeOutlinedIcon />}
-              disabled={!orderingAvailable}
-              sx={{ opacity: orderingAvailable ? 1 : 0.4 }}
-            />
-            <BottomNavigationAction
-              label="Rewards"
-              icon={<CardGiftcardOutlinedIcon />}
-              disabled={!loyaltyEnabled}
-              sx={{ opacity: loyaltyEnabled ? 1 : 0.4 }}
-            />
-            <BottomNavigationAction label="You" icon={<PersonOutlinedIcon />} />
-          </BottomNavigation>
-        </Paper>
-      )}
+              />
+              <Route
+                path="/order/item/:menuItemId"
+                element={
+                  <RequireFeature feature="orderAhead">
+                    <RequireAuth>
+                      <ItemDetail />
+                    </RequireAuth>
+                  </RequireFeature>
+                }
+              />
+              <Route
+                path="/checkout"
+                element={
+                  <RequireFeature feature="orderAhead">
+                    <RequireAuth>
+                      <Checkout />
+                    </RequireAuth>
+                  </RequireFeature>
+                }
+              />
+              <Route path="/checkout/restore" element={<CheckoutRestore />} />
+              <Route path="/orders/:orderId" element={<OrderDetail />} />
+              <Route path="/orders/:orderId/confirmed" element={<OrderConfirmed />} />
+              <Route
+                path="/rewards"
+                element={
+                  <RequireFeature feature="loyalty">
+                    <Rewards />
+                  </RequireFeature>
+                }
+              />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
+          )}
+        </PageTransition>
+      </Box>
+      {!topBar && nav}
     </>
   );
 }

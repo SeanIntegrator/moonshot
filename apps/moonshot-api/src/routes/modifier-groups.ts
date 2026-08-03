@@ -7,7 +7,7 @@ import {
   deleteModifierGroup,
   listModifierGroupsForCafe,
   updateModifierGroup,
-} from '../lib/menu-modifier-library.js';
+} from '../lib/menu/menu-modifier-library.js';
 import { UUID_RE } from '../lib/uuid.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 import { requireMenuMutationAuth } from '../middleware/menu-mutation-auth.js';

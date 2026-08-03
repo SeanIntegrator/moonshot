@@ -1,46 +1,16 @@
-import {
-  API_VERSION_PREFIX,
-  type ApiEnvelope,
-  type KdsAdvanceStatusRequest,
-  type KdsAdvanceStatusResponse,
-  type KdsCompleteOrderResponse,
-  type KdsConfigResponse,
-  type KdsLoginRequest,
-  type KdsLoginResponse,
-  type KdsOrdersResponse,
-  type KdsRecallLastOrderResponse,
-  type KdsRecallOrderResponse,
-  type KdsRecentOrdersResponse,
-} from '@moonshot/types';
+import type { KdsAdvanceStatusRequest, KdsAdvanceStatusResponse, KdsCompleteOrderResponse, KdsConfigResponse, KdsLoginRequest, KdsLoginResponse, KdsOrdersResponse, KdsRecallLastOrderResponse, KdsRecallOrderResponse, KdsRecentOrdersResponse } from '@moonshot/types';
+import { API_VERSION_PREFIX } from '@moonshot/domain';
+import { parseEnvelope, requireApiBaseUrl } from '@moonshot/web-runtime';
 import { getApiBaseUrl } from './runtime-config.js';
 
 export { getApiBaseUrl };
 
-async function parseEnvelope<T>(res: Response): Promise<ApiEnvelope<T>> {
-  const contentType = res.headers.get('content-type') ?? '';
-  const text = await res.text();
-  const start = text.trimStart();
-  if (
-    contentType.includes('text/html') ||
-    start.startsWith('<') ||
-    start.toLowerCase().startsWith('<!doctype')
-  ) {
-    throw new Error(
-      'Server returned HTML. Set VITE_API_URL to the API origin (e.g. http://localhost:3000).',
-    );
-  }
-  let parsed: unknown;
-  try {
-    parsed = text.length ? JSON.parse(text) : null;
-  } catch {
-    throw new Error('Invalid JSON from API');
-  }
-  return parsed as ApiEnvelope<T>;
+function requireBase(): string {
+  return requireApiBaseUrl(import.meta.env.VITE_API_URL);
 }
 
 export async function kdsLogin(body: KdsLoginRequest): Promise<KdsLoginResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/auth/login`;
   const res = await fetch(url, {
     method: 'POST',
@@ -53,8 +23,7 @@ export async function kdsLogin(body: KdsLoginRequest): Promise<KdsLoginResponse>
 }
 
 export async function kdsFetchOrders(token: string): Promise<KdsOrdersResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/orders`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -68,8 +37,7 @@ export async function kdsFetchOrders(token: string): Promise<KdsOrdersResponse> 
 }
 
 export async function kdsFetchRecentOrders(token: string): Promise<KdsRecentOrdersResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/orders/recent`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -83,8 +51,7 @@ export async function kdsFetchRecentOrders(token: string): Promise<KdsRecentOrde
 }
 
 export async function kdsFetchConfig(token: string): Promise<KdsConfigResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/config`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -101,8 +68,7 @@ export async function kdsCompleteOrder(
   token: string,
   orderId: string,
 ): Promise<KdsCompleteOrderResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/orders/${encodeURIComponent(orderId)}/complete`;
   const res = await fetch(url, {
     method: 'POST',
@@ -117,8 +83,7 @@ export async function kdsCompleteOrder(
 }
 
 export async function kdsRecallLastOrder(token: string): Promise<KdsRecallLastOrderResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/orders/recall-last`;
   const res = await fetch(url, {
     method: 'POST',
@@ -136,8 +101,7 @@ export async function kdsRecallOrder(
   token: string,
   orderId: string,
 ): Promise<KdsRecallOrderResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/orders/${encodeURIComponent(orderId)}/recall`;
   const res = await fetch(url, {
     method: 'POST',
@@ -156,8 +120,7 @@ export async function kdsAdvanceOrderStatus(
   orderId: string,
   status: KdsAdvanceStatusRequest['status'],
 ): Promise<KdsAdvanceStatusResponse> {
-  const base = getApiBaseUrl();
-  if (!base) throw new Error('VITE_API_URL is not set');
+  const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/orders/${encodeURIComponent(orderId)}/status`;
   const res = await fetch(url, {
     method: 'POST',

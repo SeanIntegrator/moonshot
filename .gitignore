@@ -8,7 +8,7 @@ dist
 # Local env & secrets (templates like .env.example are tracked)
 .env
 .env.*
-env.example
+!.env.example
 
 # Logs & test output
 *.log

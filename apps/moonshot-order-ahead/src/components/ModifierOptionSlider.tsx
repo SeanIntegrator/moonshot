@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { formatModifierDelta } from '../lib/format.js';
 import { sortOptionsForSlider } from '../lib/modifier-slider-groups.js';
+import { sxRadius } from '../theme/radii.js';
 import { StepSliderLabelButton, StepSliderThumb, StepSliderTrack } from './ui/StepSliderParts.js';
 
 type Props = {
@@ -158,7 +159,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
             top: '50%',
             height: 4,
             mt: '-2px',
-            borderRadius: 999,
+            borderRadius: sxRadius('pill'),
             bgcolor: 'divider',
           }}
         />
@@ -171,7 +172,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
             height: 4,
             mt: '-2px',
             width: `${thumbPct}%`,
-            borderRadius: 999,
+            borderRadius: sxRadius('pill'),
             bgcolor: 'primary.main',
             pointerEvents: 'none',
           }}

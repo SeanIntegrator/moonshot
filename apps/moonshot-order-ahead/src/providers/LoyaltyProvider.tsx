@@ -1,4 +1,4 @@
-import type { LoyaltyReward, LoyaltySummaryResponse, LoyaltyTransaction } from '@moonshot/types';
+import type { LoyaltyReward, LoyaltySummaryResponse, LoyaltyTransaction } from '@moonshot/domain';
 import {
   createContext,
   useCallback,

@@ -1,5 +1,5 @@
 import type { NormalisedOrder } from '@moonshot/types';
-import type { Pool, PoolClient } from 'pg';
+import type { PoolClient } from 'pg';
 import { pool as defaultPool } from '../../db.js';
 import { mapOrderItemRow, mapOrderRow, type OrderItemRowDb, type OrderRowDb } from '../order-map.js';
 import { ORDER_ITEM_SELECT_COLUMNS, ORDER_SELECT_COLUMNS, UUID_RE } from './order-constants.js';

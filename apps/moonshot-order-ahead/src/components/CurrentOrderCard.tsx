@@ -8,6 +8,7 @@ import { getOrderStatusMeta } from '../lib/order-status.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { MenuItemImage } from './MenuItemImage.js';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 
 type Props = {
   order: NormalisedOrder;
@@ -23,18 +24,14 @@ export function CurrentOrderCard({ order }: Props) {
       : statusMeta.label;
 
   return (
-    <Box
+    <SurfaceCard
       component={RouterLink}
       to={cafePath(`/orders/${order.id}`)}
       sx={{
         display: 'block',
         textDecoration: 'none',
         color: 'text.primary',
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: (theme) => `${theme.shape.borderRadius}px`,
         overflow: 'hidden',
-        bgcolor: 'background.paper',
         mt: 2,
       }}
     >
@@ -103,7 +100,7 @@ export function CurrentOrderCard({ order }: Props) {
           </Box>
         </Box>
       </Box>
-    </Box>
+    </SurfaceCard>
   );
 }
 

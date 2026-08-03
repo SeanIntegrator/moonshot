@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiErrorCode, type AdminJwtClaims } from '@moonshot/types';
+import { config } from '../lib/config.js';
 
 function fail(res: Response, status: number, message: string, code: ApiErrorCode): void {
   void res.status(status).json({
@@ -29,7 +30,7 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
     fail(res, 401, 'Missing or invalid Authorization header', ApiErrorCode.UNAUTHORIZED);
     return;
   }
-  const secret = process.env.JWT_SECRET;
+  const secret = config.jwtSecret;
   if (!secret) {
     fail(res, 500, 'Server JWT configuration missing', ApiErrorCode.CONFIG);
     return;

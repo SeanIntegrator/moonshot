@@ -1,13 +1,5 @@
-import type {
-  AdminCreateKdsUserRequest,
-  AdminCreateKdsUserResponse,
-  AdminOnboardingStatusResponse,
-  AdminRegisterRequest,
-  AdminRegisterResponse,
-  AdminSaveMenuTemplateRequest,
-  AdminSaveMenuTemplateResponse,
-  SlugAvailableResponse,
-} from '@moonshot/types';
+import type { AdminCreateKdsUserRequest, AdminCreateKdsUserResponse, AdminOnboardingStatusResponse, AdminRegisterRequest, AdminRegisterResponse, SlugAvailableResponse } from '@moonshot/types';
+import type { AdminSaveMenuTemplateRequest, AdminSaveMenuTemplateResponse } from '@moonshot/domain';
 import { apiUrl, parseEnvelope } from './http.js';
 
 export async function checkSlugAvailable(slug: string): Promise<SlugAvailableResponse> {

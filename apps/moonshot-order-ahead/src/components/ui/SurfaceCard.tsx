@@ -8,5 +8,5 @@ import { surfaceCardChrome } from '../../theme/surfaceCardChrome.js';
  */
 export const SurfaceCard = styled(Box)(({ theme }) => ({
   ...surfaceCardChrome(theme),
-  borderRadius: theme.shape.borderRadius * 1.25,
+  borderRadius: theme.radii.card,
 })) as typeof Box;

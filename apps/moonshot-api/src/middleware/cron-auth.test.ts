@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { afterEach, describe, expect, it } from 'vitest';
+import { reloadConfig } from '../lib/config.js';
 import { requireCronSecret } from './cron-auth.js';
 
 function mockRes() {
@@ -21,9 +22,11 @@ function mockRes() {
 describe('requireCronSecret', () => {
   afterEach(() => {
     delete process.env.CRON_SECRET;
+    reloadConfig();
   });
 
   it('rejects when CRON_SECRET is missing', () => {
+    reloadConfig();
     const req = { headers: {} } as Request;
     const res = mockRes();
     let nextCalled = false;
@@ -36,6 +39,7 @@ describe('requireCronSecret', () => {
 
   it('rejects wrong bearer secret', () => {
     process.env.CRON_SECRET = 'correct-secret';
+    reloadConfig();
     const req = { headers: { authorization: 'Bearer wrong' } } as Request;
     const res = mockRes();
     let nextCalled = false;
@@ -48,6 +52,7 @@ describe('requireCronSecret', () => {
 
   it('accepts Bearer CRON_SECRET', () => {
     process.env.CRON_SECRET = 'correct-secret';
+    reloadConfig();
     const req = { headers: { authorization: 'Bearer correct-secret' } } as Request;
     const res = mockRes();
     let nextCalled = false;
@@ -59,6 +64,7 @@ describe('requireCronSecret', () => {
 
   it('accepts X-Cron-Secret', () => {
     process.env.CRON_SECRET = 'correct-secret';
+    reloadConfig();
     const req = { headers: { 'x-cron-secret': 'correct-secret' } } as Request;
     const res = mockRes();
     let nextCalled = false;

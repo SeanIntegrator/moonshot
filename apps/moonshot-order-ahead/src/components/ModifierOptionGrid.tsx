@@ -33,7 +33,7 @@ const OptionChip = styled(Chip, {
     transition: OPTION_TRANSITION,
   };
   return {
-    borderRadius: 999,
+    borderRadius: theme.radii.pill,
     ...surface,
     color: theme.palette.text.primary,
     fontWeight: 600,

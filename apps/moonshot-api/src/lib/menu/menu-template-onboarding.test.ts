@@ -1,8 +1,4 @@
-import {
-  MENU_TEMPLATE_CATEGORIES,
-  MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR,
-  type AdminSaveMenuTemplateRequest,
-} from '@moonshot/types';
+import { MENU_TEMPLATE_CATEGORIES, MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR, type AdminSaveMenuTemplateRequest } from '@moonshot/domain';
 import { describe, expect, it } from 'vitest';
 import { applyMenuTemplate, MenuTemplateError } from './menu-template-onboarding.js';
 

@@ -12,14 +12,16 @@ pnpm migrate
 
 ## Source layout (lib)
 
-Persistence is grouped by domain under `src/lib/`:
+Persistence is grouped by domain under `src/lib/` (folders such as `menu/`, `cafe/`, `admin/`, `orders/`, `pos-adapters/`):
 
 | Area | Entry / modules |
 |------|-----------------|
-| Cafés | `cafes-repository.ts` |
-| Orders | `orders/order-{read,create,checkout,kds,customer}.ts` (+ payment mode / parse helpers) |
+| Cafés | `cafes-repository.ts`, `cafe/` (provisioning, hours, map) |
+| Orders | `orders/order-{read,create,checkout,kds,customer}.ts` (+ POS ingress / payment helpers) |
+| Menu | `menu/` (admin, sections, sync, images, provisioners) |
 | Loyalty | `loyalty/`, `loyalty-after-kds-complete.ts` |
-| Admin | `admin-settings-service.ts`, `admin-stripe-service.ts` |
+| Admin | `admin/` (settings, Stripe, auth tokens, onboarding repo) |
+| POS | `pos-adapters/`, `pos-connections-repository.ts`, `pos-catalog/` |
 | Errors | `middleware/error-handler.ts` (registered last on the Express app) |
 
 See **`docs/architecture/api-modules.md`** for the full map.
@@ -50,15 +52,17 @@ Then sign in from `moonshot-kds` with the same slug and username.
 
 ## Realtime
 
-The HTTP server hosts **Socket.io** on two namespaces:
+The HTTP server hosts **Socket.io** on three namespaces:
 
 | Namespace | Client | Auth |
 |-----------|--------|------|
 | **`/kds`** | `moonshot-kds` | JWT from `POST /api/v1/kds/auth/login` in `auth.token` handshake only |
 | **`/customer`** | `moonshot-order-ahead` | After connect, emit `customer:subscribe` with `orderId` + **`authToken`**: guest **`trackingToken`** from `POST /orders`, or **Google session JWT** if the order row has `user_id` |
+| **`/admin`** | `moonshot-admin` | Admin JWT in handshake; café-scoped rooms (e.g. menu sync notify) |
 
 - **KDS**: `io('{API_ORIGIN}/kds', { auth: { token } })`. Events on **`kds:event`** (`KdsServerToClientEvent`).
 - **Customer**: `io('{API_ORIGIN}/customer')`. Events on **`customer:event`** (`CustomerServerToClientEvent`).
+- **Admin**: `io('{API_ORIGIN}/admin', { auth: { token } })`. Menu sync and related admin events.
 
 **Orders:** optional `Authorization` on `POST /api/v1/orders` links the row to the signed-in user; guests get **`trackingToken`** in the JSON response for subscribe.
 

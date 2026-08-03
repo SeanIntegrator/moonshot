@@ -1,5 +1,5 @@
+import type { PosProvider } from '@moonshot/types';
 import type { AdminSaveMenuTemplateRequest } from './menu-template.js';
-import type { PosProvider } from './pos.js';
 
 /** How a café's initial menu is created during onboarding. */
 export const MENU_PROVISION_SOURCES = {

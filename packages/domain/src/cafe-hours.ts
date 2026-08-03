@@ -1,34 +1,20 @@
 /**
  * Weekly opening hours for a café (local wall-clock in the café's timezone).
  * Empty day arrays mean closed that day. Missing/empty hours overall → closed.
+ *
+ * Shape contracts live in `@moonshot/types`; runtime helpers live here.
  */
 
-export type WeekdayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+import {
+  WEEKDAY_KEYS,
+  type CafeHours,
+  type CafeHoursInterval,
+  type CafeOpenStatus,
+  type WeekdayKey,
+} from '@moonshot/types';
 
-export const WEEKDAY_KEYS: readonly WeekdayKey[] = [
-  'mon',
-  'tue',
-  'wed',
-  'thu',
-  'fri',
-  'sat',
-  'sun',
-] as const;
-
-export interface CafeHoursInterval {
-  /** Local wall-clock `HH:mm` (24h). */
-  open: string;
-  /** Local wall-clock `HH:mm` (24h). Must be after `open` (same-day only). */
-  close: string;
-}
-
-export type CafeHours = Record<WeekdayKey, CafeHoursInterval[]>;
-
-export interface CafeOpenStatus {
-  isOpen: boolean;
-  /** Short Home caption, e.g. `Open · closes 4:00 pm` / `Closed · opens 8:00 am`. */
-  caption: string;
-}
+export type { CafeHours, CafeHoursInterval, CafeOpenStatus, WeekdayKey };
+export { WEEKDAY_KEYS };
 
 const HH_MM = /^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/;
 

@@ -3,7 +3,9 @@ import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { Box, Button, Container, ThemeProvider, Typography } from '@mui/material';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { ConnectivityError, isNetworkError, toUserFacingError } from '../lib/network-error.js';
-import { baseMuiTheme } from '../theme/muiBaseTheme.js';
+import { createCafeMuiTheme } from '../theme/createCafeMuiTheme.js';
+
+const fallbackTheme = createCafeMuiTheme(null);
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -13,7 +15,7 @@ function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }
   const message = toUserFacingError(error);
 
   return (
-    <ThemeProvider theme={baseMuiTheme}>
+    <ThemeProvider theme={fallbackTheme}>
       <Box
         sx={{
           minHeight: '100dvh',

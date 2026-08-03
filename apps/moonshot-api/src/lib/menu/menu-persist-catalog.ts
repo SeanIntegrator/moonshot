@@ -4,14 +4,14 @@
  */
 
 import type { PoolClient } from 'pg';
-import type { MenuProvisionResult, PosCatalog } from '@moonshot/types';
+import type { MenuProvisionResult, PosCatalog } from '@moonshot/domain';
 import {
   toMenuProvisionResult,
   upsertModifierGroup,
   upsertPosCatalog,
   syncKdsModifierClassification,
   type CatalogUpsertResult,
-} from './pos-catalog/menu-catalog-upsert.js';
+} from '../pos-catalog/menu-catalog-upsert.js';
 
 export {
   upsertModifierGroup,

@@ -1,4 +1,4 @@
-import type { FlowLineView } from '@moonshot/types';
+import type { FlowLineView } from '@moonshot/domain';
 import { cn } from '@/lib/utils';
 import type { FlowRowDensity } from './DrinkRow.js';
 import { formatAllergenLabel } from './formatAllergen.js';

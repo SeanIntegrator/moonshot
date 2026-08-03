@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyModifierListRole } from './pos-adapters/square/role-hints.js';
+import { classifyModifierListRole } from '../pos-adapters/square/role-hints.js';
 import { chipMetaForOptionName } from './menu-chip-palette.js';
 
 describe('Square import layering helpers', () => {
@@ -13,7 +13,13 @@ describe('Square import layering helpers', () => {
 
   it('name-matches chip colours for known milks and syrups', () => {
     expect(chipMetaForOptionName('Oat', 'milk').chipLabel).toBe('Oa');
-    expect(chipMetaForOptionName('Oat', 'milk').colorHex).toBe('#e8dcc8');
+    expect(chipMetaForOptionName('Oat', 'milk').colorHex).toBe('#f0e4d0');
+    expect(chipMetaForOptionName('Almond', 'milk').colorHex).toBe('#ff2d87');
+    expect(chipMetaForOptionName('Coconut', 'milk').colorHex).toBe('#1b3fe0');
+    expect(chipMetaForOptionName('Soy', 'milk').colorHex).toBe('#145a32');
+    expect(chipMetaForOptionName('Skinny', 'milk').colorHex).toBe('#e6001a');
+    expect(chipMetaForOptionName('Semi', 'milk').colorHex).toBe('#e6001a');
+    expect(chipMetaForOptionName('Whole', 'milk').colorHex).toBe('#f7f4ee');
     expect(chipMetaForOptionName('Vanilla', 'syrup').chipLabel).toBe('Va');
     expect(chipMetaForOptionName('Mystery Foam', 'other').chipLabel).toBe('My');
     expect(chipMetaForOptionName('Mystery Foam', 'other').colorHex).toBeNull();

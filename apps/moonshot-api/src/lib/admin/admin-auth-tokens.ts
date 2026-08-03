@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import type { AdminLoginResponse } from '@moonshot/types';
+import { config } from '../config.js';
 
 export function signAdminJwt(params: {
   adminUserId: string;
@@ -7,7 +8,7 @@ export function signAdminJwt(params: {
   cafeSlug: string;
   email: string;
 }): string {
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = config.jwtSecret;
   if (!jwtSecret) {
     throw new Error('Server JWT configuration missing');
   }

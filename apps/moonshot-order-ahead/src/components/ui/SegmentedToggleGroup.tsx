@@ -8,18 +8,18 @@ import { styled } from '@mui/material/styles';
 export const SegmentedToggleGroup = styled(ToggleButtonGroup)(({ theme }) => ({
   marginBottom: theme.spacing(1),
   backgroundColor: theme.palette.action.hover,
-  borderRadius: 999,
+  borderRadius: theme.radii.pill,
   padding: theme.spacing(0.5),
   border: 0,
   '& .MuiToggleButtonGroup-grouped': {
     border: 0,
-    borderRadius: '999px !important',
+    borderRadius: `${theme.radii.pill}px !important`,
     margin: 0,
     flex: 1,
   },
   '& .MuiToggleButton-root': {
     border: 0,
-    borderRadius: 999,
+    borderRadius: theme.radii.pill,
     paddingTop: theme.spacing(1),
     paddingBottom: theme.spacing(1),
     textTransform: 'none',

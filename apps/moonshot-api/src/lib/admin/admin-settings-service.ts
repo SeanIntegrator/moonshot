@@ -1,16 +1,16 @@
 import type { AdminSettingsResponse } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
-import { pool } from '../db.js';
-import { activeFeatureKeys, mapCafeRow } from './cafe-map.js';
-import { CAFE_COLUMNS, findCafeById } from './cafes-repository.js';
+import { pool } from '../../db.js';
+import { activeFeatureKeys, mapCafeRow } from '../cafe/cafe-map.js';
+import { CAFE_COLUMNS, findCafeById } from '../cafes-repository.js';
 import {
   mergeCafeFeatures,
   mergeKdsConfigSection,
   parseAdminSettingsPatchBody,
   validateCafeHoursPatch,
 } from './admin-settings-merge.js';
-import { ApiHttpError } from './http-errors.js';
-import { toPublicCafe } from './to-public-cafe.js';
+import { ApiHttpError } from '../http-errors.js';
+import { toPublicCafe } from '../to-public-cafe.js';
 
 export type AdminSettingsPatchInput = ReturnType<typeof parseAdminSettingsPatchBody>;
 

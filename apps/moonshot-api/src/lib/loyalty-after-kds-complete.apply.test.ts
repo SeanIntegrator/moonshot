@@ -11,7 +11,7 @@ vi.mock('../db.js', () => ({
   pool: { connect: poolConnect },
 }));
 
-vi.mock('./cafe-membership.js', () => ({
+vi.mock('./cafe/cafe-membership.js', () => ({
   ensureCafeMembership,
 }));
 

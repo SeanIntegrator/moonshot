@@ -1,12 +1,10 @@
+import type { CafeFeatures } from '@moonshot/types';
 import type {
-  CafeFeatures,
   LoyaltyReward,
   LoyaltySummaryResponse,
   LoyaltyTransactionsResponse,
   LoyaltyRewardsListResponse,
-  RedeemRewardResponse,
-  LoyaltyTransaction,
-} from '@moonshot/types';
+} from '@moonshot/domain';
 import { ApiErrorCode } from '@moonshot/types';
 import type { IRouter } from 'express';
 import { Router } from 'express';
@@ -16,9 +14,9 @@ import { requireCafeContext } from '../middleware/cafe-context.js';
 import {
   countUnredeemedRewards,
   fetchLoyaltyTransactionsPage,
-  insertRewardRedeemed,
   listUnredeemedRewards,
 } from '../lib/loyalty/repository.js';
+import { redeemLoyaltyReward } from '../lib/loyalty/redeem-reward.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 
 export const loyaltyRouter: IRouter = Router();
@@ -102,80 +100,7 @@ loyaltyRouter.post('/rewards/:rewardId/redeem', requireAuth, async (req, res) =>
   const userId = req.user!.userId;
   const rawId = req.params.rewardId;
   const rewardId = Array.isArray(rawId) ? rawId[0] : rawId;
-  if (!rewardId?.trim()) {
-    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'rewardId required');
-  }
 
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    const upd = await client.query<{
-      id: string;
-      cafe_id: string;
-      user_id: string;
-      reward_type: string;
-      redeemed_at: Date;
-      expires_at: Date | null;
-      metadata: unknown;
-      created_at: Date;
-    }>(
-      `UPDATE loyalty_rewards
-       SET redeemed_at = NOW()
-       WHERE id = $1 AND cafe_id = $2 AND user_id = $3 AND redeemed_at IS NULL
-       RETURNING id, cafe_id, user_id, reward_type, redeemed_at, expires_at, metadata, created_at`,
-      [rewardId.trim(), cafeId, userId],
-    );
-
-    if (upd.rows.length === 0) {
-      await client.query('ROLLBACK');
-      throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Reward not found or already redeemed');
-    }
-
-    const tx = await insertRewardRedeemed({
-      client,
-      cafeId,
-      userId,
-      rewardId: rewardId.trim(),
-    });
-
-    await client.query('COMMIT');
-
-    const r = upd.rows[0]!;
-    const reward: LoyaltyReward = {
-      id: r.id,
-      cafeId: r.cafe_id,
-      userId: r.user_id,
-      rewardType: r.reward_type,
-      redeemedAt: r.redeemed_at.toISOString(),
-      expiresAt: r.expires_at ? r.expires_at.toISOString() : null,
-      createdAt: r.created_at.toISOString(),
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
-    };
-
-    const transaction: LoyaltyTransaction = {
-      id: tx.id,
-      cafeId,
-      userId,
-      orderId: null,
-      transactionType: 'reward_redeemed',
-      stampsDelta: 0,
-      metadata: { rewardId: reward.id },
-      createdAt: tx.createdAt,
-    };
-
-    const data: RedeemRewardResponse = { reward, transaction };
-    return res.json({ ok: true, data });
-  } catch (e) {
-    /* Rollback is best-effort — if the connection is already broken, throwing
-     * here would hide the original error from the global handler. */
-    try {
-      await client.query('ROLLBACK');
-    } catch {
-      /* swallow secondary failure */
-    }
-    throw e;
-  } finally {
-    client.release();
-  }
+  const data = await redeemLoyaltyReward({ pool, cafeId, userId, rewardId: rewardId ?? '' });
+  return res.json({ ok: true, data });
 });

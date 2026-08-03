@@ -1,4 +1,4 @@
-import { POS_PROVIDERS } from '@moonshot/types';
+import { POS_PROVIDERS } from '@moonshot/domain';
 import type { Pool } from 'pg';
 import { pool } from '../../../db.js';
 import {
@@ -14,10 +14,10 @@ import {
   searchSquareCatalogSince,
 } from './catalog-fetch.js';
 import { normaliseSquareCatalog } from './catalog-normalise.js';
-import { syncNormalisedMenuCatalog } from '../../menu-sync-catalog.js';
+import { syncNormalisedMenuCatalog } from '../../menu/menu-sync-catalog.js';
 import { loadExistingPosCategoryKeys } from '../../pos-catalog/menu-catalog-upsert.js';
 import { resolveSquareEnvironment } from '../../square/oauth-urls.js';
-import { notifyMenuCatalogSynced } from '../../menu-sync-notify.js';
+import { notifyMenuCatalogSynced } from '../../menu/menu-sync-notify.js';
 
 const DEBOUNCE_MS = 45_000;
 

@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { ApiErrorCode } from '@moonshot/types';
-import { ApiHttpError } from './http-errors.js';
-import { parseAllowedOrigins } from './cors-origins.js';
+import { ApiHttpError } from '../http-errors.js';
+import { parseAllowedOrigins } from '../cors-origins.js';
 
 const STRIPE_CONNECT_STATE_PURPOSE = 'stripe_connect_state';
 

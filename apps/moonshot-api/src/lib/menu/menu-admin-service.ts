@@ -1,12 +1,8 @@
 import type { NormalisedMenuItem, NormalisedModifierGroup } from '@moonshot/types';
-import {
-  ApiErrorCode,
-  isDrinkArchetypeId,
-  menuTemplateDrinkImageUrl,
-  resolveMenuTemplateDrinkKeyByExactName,
-} from '@moonshot/types';
+import { ApiErrorCode } from '@moonshot/types';
+import { isDrinkArchetypeId, menuTemplateDrinkImageUrl, resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/domain';
 import type { Pool } from 'pg';
-import { ApiHttpError } from './http-errors.js';
+import { ApiHttpError } from '../http-errors.js';
 import { fetchMenuItemsByIds } from './menu-fetch.js';
 import {
   MenuImageValidationError,
@@ -19,7 +15,7 @@ import {
   enableMenuSectionByKey,
   ensureSystemMenuSections,
 } from './menu-sections.js';
-import { UUID_RE } from './uuid.js';
+import { UUID_RE } from '../uuid.js';
 
 function parseModifierGroupIds(body: Record<string, unknown>): string[] | undefined {
   if (!('modifierGroupIds' in body)) return undefined;

@@ -8,8 +8,8 @@ import type {
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
 } from './cafe.js';
-import type { CafeHours } from './cafe-hours.js';
-import type { FeatureFlagKey } from './feature-flags.js';
+import type { CafeHours } from './cafe-hours-contract.js';
+import type { FeatureFlagKey } from './feature-flags-contract.js';
 
 /** Partial updates merged server-side into existing `features` (only loyalty + order_ahead). */
 export interface AdminFeaturesPatch {

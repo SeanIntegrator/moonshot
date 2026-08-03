@@ -40,7 +40,7 @@ M3 — Square OAuth onboarding + C&B cutover
 
 The OAuth step. Built and debugged against C&B specifically. Feature + one critical Chore (the refresh job).
 
- [x] [API] Implement Square OAuth code flow: /connect/onboard, /connect/return, /connect/refresh. Done when: a café can authorise from Admin and land back with tokens stored. *(onboard + return shipped; refresh endpoint is the scheduled job follow-up)*
+ [x] [API] Implement Square OAuth code flow: /connect/onboard, /connect/return, token refresh cron. Done when: a café can authorise from Admin and land back with tokens stored; access tokens renew via `POST /internal/pos/refresh-tokens`.
  [x] [API] Store access + refresh tokens encrypted, per café. Done when: tokens are never in plaintext at rest and are keyed to the café.
  [x] [API] [Chore] Stand up a scheduled token-refresh job (renew every ≤7 days) with a stale-token alert if a token older than ~8 days is ever loaded. Done when: a café's connection survives past 30 days untouched. (This is the silent-killer bug — everything works for a month then dies without it. Treat it as launch-blocking, not optional.)
  [x] [API] Create the app-level webhook subscription (one notification URL, one signature key) and verify signatures. Done when: events from any connected café hit one endpoint, tagged by merchant_id, and bad signatures are rejected.

@@ -2,8 +2,11 @@
  * Loyalty stamps and rewards — ledger-first model aligned with schema-draft.
  */
 
-import type { IsoDateTime } from './order.js';
-import { isDrinkMenuCategory, isFoodMenuCategory } from './menu.js';
+import {
+  isDrinkMenuCategory,
+  isFoodMenuCategory,
+  type IsoDateTime,
+} from '@moonshot/types';
 
 export type LoyaltyTransactionType =
   | 'stamp_earned'

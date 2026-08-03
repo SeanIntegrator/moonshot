@@ -1,6 +1,6 @@
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { MenuTemplateDrinkKey } from '@moonshot/types';
+import type { MenuTemplateDrinkKey } from '@moonshot/domain';
 import {
   buildMenuThumbnailWebp,
   detectMenuImageMime,

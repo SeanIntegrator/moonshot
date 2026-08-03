@@ -1,16 +1,5 @@
-import type {
-  AdminMenuTemplateCategoryInput,
-  AdminMenuTemplateDrinkInput,
-  AdminMenuTemplateModifierInput,
-  AdminSaveMenuTemplateRequest,
-  MenuTemplateCategoryDef,
-  MenuTemplateDrinkDef,
-  MenuTemplateModifierDef,
-} from '@moonshot/types';
-import {
-  MENU_TEMPLATE_CATEGORIES,
-  MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR,
-} from '@moonshot/types';
+import type { AdminMenuTemplateCategoryInput, AdminMenuTemplateDrinkInput, AdminMenuTemplateModifierInput, AdminSaveMenuTemplateRequest, MenuTemplateCategoryDef, MenuTemplateDrinkDef, MenuTemplateModifierDef } from '@moonshot/domain';
+import { MENU_TEMPLATE_CATEGORIES, MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR } from '@moonshot/domain';
 
 export type MenuTemplateDrinkState = AdminMenuTemplateDrinkInput & {
   expanded?: boolean;

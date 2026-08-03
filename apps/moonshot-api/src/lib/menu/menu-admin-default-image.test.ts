@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Pool } from 'pg';
-import { ApiHttpError } from './http-errors.js';
+import { ApiHttpError } from '../http-errors.js';
 import { setMenuItemUseDefaultImage } from './menu-admin-service.js';
 
 vi.mock('./menu-fetch.js', () => ({

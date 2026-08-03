@@ -1,6 +1,7 @@
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import { Box, IconButton, Typography } from '@mui/material';
+import { sxRadius } from '../theme/radii.js';
 
 type Props = {
   value: number;
@@ -18,7 +19,7 @@ export function QuantityStepper({ value, onChange, min = 1, disabled = false }: 
         gap: 1.5,
         border: 1,
         borderColor: 'divider',
-        borderRadius: 999,
+        borderRadius: sxRadius('pill'),
         px: 1.5,
         py: 0.75,
         opacity: disabled ? 0.5 : 1,

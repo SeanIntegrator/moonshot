@@ -41,13 +41,14 @@ flowchart TD
 
 ## Default policy for new cafés
 
-Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe-provisioning.ts):
+Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe/cafe-provisioning.ts):
 
-- `pos_provider`: `manual`
+- `pos_provider`: `manual` (switches to Square after OAuth connect / POS import)
 - `theme_id`: `heritage`
 - `order_ahead.enabled`: `true`
 - `order_ahead.paymentProvider`: `pay_in_store` (switch to Stripe after Connect onboarding)
-- All other features: `null` (disabled)
+- `loyalty.enabled`: `true` (10 stamps → free drink; `doubleStampDays: []`)
+- Other feature blocks (`events`, `promotions`, `review_nudge`, `saved_orders`, `whatsapp_ordering`): `null` (disabled)
 - `kds_config`: seed template from migration `001_initial_schema.sql`, with `cafeId` set to row UUID
 - Modifier library (`Milks`, `Syrups`, Flow prep, Ice Level, Toppings) seeded at signup; system menu sections (`hot_drinks`, `cold_drinks`, `food` disabled) created; platform drink-archetype recipes written to `drink_archetype_config`; onboarding step 3 applies the owner’s template selections
 

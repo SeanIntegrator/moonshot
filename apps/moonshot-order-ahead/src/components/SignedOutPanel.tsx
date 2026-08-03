@@ -1,5 +1,5 @@
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
-import { Box, Button, Link, Typography } from '@mui/material';
+import { Box, Link, Typography } from '@mui/material';
 import { SignInButton } from './auth/SignInButton.js';
 
 type Props = {

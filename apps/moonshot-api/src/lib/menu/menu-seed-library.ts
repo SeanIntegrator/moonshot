@@ -1,10 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import {
-  MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR,
-  MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
-  MENU_TEMPLATE_SYRUP_PRICE_MINOR,
-} from '@moonshot/types';
+import { MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR, MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR, MENU_TEMPLATE_SYRUP_PRICE_MINOR } from '@moonshot/domain';
+import { chipMetaForOptionName } from './menu-chip-palette.js';
 
 type Db = Pool | PoolClient;
 
@@ -32,6 +29,19 @@ function opt(
     colorHex: opts.colorHex ?? null,
     chipLabel: opts.chipLabel ?? name.slice(0, 2),
   };
+}
+
+/** Milk options pull colours from the shared Rude Health–aligned palette. */
+function milkOpt(
+  name: string,
+  opts: { isDefault?: boolean; priceMinor?: number } = {},
+): SeedOption {
+  const chip = chipMetaForOptionName(name, 'milk');
+  return opt(name, {
+    ...opts,
+    colorHex: chip.colorHex,
+    chipLabel: chip.chipLabel,
+  });
 }
 
 /**
@@ -62,33 +72,13 @@ export async function seedDefaultModifierLibrary(
   const toppingsId = randomUUID();
 
   const milksOptions = [
-    opt('Whole', { isDefault: true, colorHex: '#f5f0e8', chipLabel: 'WM' }),
-    opt('Skinny', { colorHex: '#fafafa', chipLabel: 'Sk' }),
-    opt('Oat', {
-      priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
-      colorHex: '#e8dcc8',
-      chipLabel: 'Oa',
-    }),
-    opt('Almond', {
-      priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
-      colorHex: '#f4a6b8',
-      chipLabel: 'Al',
-    }),
-    opt('Coconut', {
-      priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
-      colorHex: '#ffffff',
-      chipLabel: 'Co',
-    }),
-    opt('Soy', {
-      priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
-      colorHex: '#f5e6a8',
-      chipLabel: 'So',
-    }),
-    opt('Cashew', {
-      priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
-      colorHex: '#e8d4b8',
-      chipLabel: 'Ca',
-    }),
+    milkOpt('Whole', { isDefault: true }),
+    milkOpt('Skinny'),
+    milkOpt('Oat', { priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR }),
+    milkOpt('Almond', { priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR }),
+    milkOpt('Coconut', { priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR }),
+    milkOpt('Soy', { priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR }),
+    milkOpt('Cashew', { priceMinor: MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR }),
   ];
 
   const syrupsOptions = [

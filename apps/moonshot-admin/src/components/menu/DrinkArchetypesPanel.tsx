@@ -1,11 +1,4 @@
-import {
-  DRINK_ARCHETYPE_SLOT_LABELS,
-  type CafeDrinkArchetypeConfig,
-  type DrinkArchetypeDef,
-  type DrinkArchetypeId,
-  type DrinkArchetypeMilkCharge,
-  type DrinkArchetypeSlot,
-} from '@moonshot/types';
+import { DRINK_ARCHETYPE_SLOT_LABELS, type CafeDrinkArchetypeConfig, type DrinkArchetypeDef, type DrinkArchetypeId, type DrinkArchetypeMilkCharge, type DrinkArchetypeSlot } from '@moonshot/domain';
 import {
   Alert,
   Box,

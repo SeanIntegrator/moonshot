@@ -4,16 +4,16 @@ import type {
   CafeFeatures,
 } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
-import { pool } from '../db.js';
-import { findCafeById } from './cafes-repository.js';
-import type { ResolvedCafe } from './resolved-cafe.js';
-import { ApiHttpError } from './http-errors.js';
+import { pool } from '../../db.js';
+import { findCafeById } from '../cafes-repository.js';
+import type { ResolvedCafe } from '../resolved-cafe.js';
+import { ApiHttpError } from '../http-errors.js';
 import {
   getStripeConnectAccountId,
   mergeStripeIntoPaymentConfig,
-} from './payments/cafe-payment-config.js';
-import { updateCafePaymentConfig } from './payments/repository.js';
-import { getStripeOrNull } from './payments/stripe-client.js';
+} from '../payments/cafe-payment-config.js';
+import { updateCafePaymentConfig } from '../payments/repository.js';
+import { getStripeOrNull } from '../payments/stripe-client.js';
 import {
   adminRedirectWithStripeQuery,
   buildStripeConnectCallbackUrl,
@@ -23,7 +23,7 @@ import {
   createStripeAccountOnboardingLink,
   createStripeExpressConnectedAccount,
   retrieveStripeConnectAccount,
-} from './payments/stripe-checkout.js';
+} from '../payments/stripe-checkout.js';
 
 async function loadCafeOrThrow(cafeId: string): Promise<ResolvedCafe> {
   const cafe = await findCafeById(cafeId);

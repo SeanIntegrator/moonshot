@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState, type TransitionEvent } from 'react';
-import {
-  deriveFlowLine,
-  type KdsAdvanceStatusRequest,
-  type KdsConfig,
-  type NormalisedOrder,
-} from '@moonshot/types';
+import type { KdsAdvanceStatusRequest, KdsConfig, NormalisedOrder } from '@moonshot/types';
+import { deriveFlowLine } from '@moonshot/domain';
 import { ChevronDown, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

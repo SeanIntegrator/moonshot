@@ -1,12 +1,12 @@
 import type { CafeFeatures, KdsConfig } from '@moonshot/types';
-import { defaultWeekdayCafeHours, platformDrinkArchetypeConfig } from '@moonshot/types';
+import { defaultWeekdayCafeHours, platformDrinkArchetypeConfig } from '@moonshot/domain';
 import type { PoolClient } from 'pg';
-import { pool } from '../db.js';
-import { hashKdsPassword } from './kds-password.js';
-import { validateCafeSlug } from './cafe-slug.js';
-import { findCafeBySlug } from './cafes-repository.js';
-import { seedDefaultModifierLibrary } from './menu-seed-library.js';
-import { ensureSystemMenuSections } from './menu-sections.js';
+import { pool } from '../../db.js';
+import { hashKdsPassword } from '../kds-password.js';
+import { validateCafeSlug } from '../cafe-slug.js';
+import { findCafeBySlug } from '../cafes-repository.js';
+import { seedDefaultModifierLibrary } from '../menu/menu-seed-library.js';
+import { ensureSystemMenuSections } from '../menu/menu-sections.js';
 
 /** Default `cafes.features` for self-service signups — pay-in-store until Stripe Connect. */
 export function defaultNewCafeFeatures(): CafeFeatures {

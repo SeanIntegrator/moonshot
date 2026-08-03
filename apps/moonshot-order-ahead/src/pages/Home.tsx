@@ -5,7 +5,7 @@ import {
   Link,
   Typography,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard.js';
@@ -33,6 +33,7 @@ import { useMenu } from '../providers/MenuProvider.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
 
 export function Home() {
+  const theme = useTheme();
   const { loading, error, cafe } = useCafe();
   const { orderAheadEnabled, loyaltyEnabled } = useCafeFeatures();
   const { user, membership, isSignedIn } = useAuth();
@@ -45,6 +46,9 @@ export function Home() {
   const cafePath = useCafePath();
   const { upsertLine } = useCart();
   const [qrOpen, setQrOpen] = useState(false);
+  const heroStyle = theme.cafeLayout.heroStyle;
+  const compactHero = heroStyle === 'compact';
+  const showHeroChrome = heroStyle !== 'none';
 
   function goToOrderOrSignIn(path: '/order' | '/checkout' = '/order') {
     if (!isSignedIn) {
@@ -98,20 +102,42 @@ export function Home() {
     <Container maxWidth="sm" sx={{ py: 0, pb: 10, px: 0 }}>
       <Box
         component="header"
-        sx={(theme) => ({
-          bgcolor: theme.palette.cafe.heroBg,
-          color: theme.palette.cafe.heroText,
-          px: 2,
-          pt: 2,
-          pb: 3,
-        })}
+        sx={
+          showHeroChrome
+            ? (t) => ({
+                bgcolor: t.palette.cafe.heroBg,
+                color: t.palette.cafe.heroText,
+                px: 2,
+                pt: compactHero ? 1.5 : 2,
+                pb: compactHero ? 1.5 : 3,
+              })
+            : {
+                px: 2,
+                pt: 2,
+                pb: 1.5,
+              }
+        }
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box>
-            <Typography variant="caption" sx={{ opacity: 0.75, color: 'inherit' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                opacity: showHeroChrome ? 0.75 : 1,
+                color: showHeroChrome ? 'inherit' : 'text.secondary',
+              }}
+            >
               {openCaption}
             </Typography>
-            <Typography variant="h4" component="h1" sx={{ color: 'inherit', mt: 0.5, fontWeight: 700 }}>
+            <Typography
+              variant={compactHero || !showHeroChrome ? 'h5' : 'h4'}
+              component="h1"
+              sx={{
+                color: showHeroChrome ? 'inherit' : 'text.primary',
+                mt: 0.5,
+                fontWeight: 700,
+              }}
+            >
               {greeting}, {name}.
             </Typography>
           </Box>
@@ -119,12 +145,19 @@ export function Home() {
             <Avatar
               src={user.avatarUrl ?? undefined}
               alt=""
-              sx={(theme) => ({
-                width: 36,
-                height: 36,
-                border: '1.5px solid',
-                borderColor: alpha(theme.palette.cafe.heroText, 0.3),
-              })}
+              sx={
+                showHeroChrome
+                  ? (t) => ({
+                      width: compactHero ? 32 : 36,
+                      height: compactHero ? 32 : 36,
+                      border: '1.5px solid',
+                      borderColor: alpha(t.palette.cafe.heroText, 0.3),
+                    })
+                  : {
+                      width: 36,
+                      height: 36,
+                    }
+              }
             >
               {name.charAt(0).toUpperCase()}
             </Avatar>
@@ -133,7 +166,7 @@ export function Home() {
 
         {canShowLiveLoyalty ? (
           <LoyaltyStampCard
-            variant="hero"
+            variant={showHeroChrome ? 'hero' : 'card'}
             filled={summary.stamps}
             total={summary.stampsPerReward}
             rewardsAvailable={summary.rewardsAvailable}
@@ -141,7 +174,7 @@ export function Home() {
             onRewardsClick={() => navigate(cafePath('/rewards'))}
           />
         ) : loyaltyEnabled ? (
-          <LoyaltyStampCard variant="hero" filled={0} total={10} />
+          <LoyaltyStampCard variant={showHeroChrome ? 'hero' : 'card'} filled={0} total={10} />
         ) : null}
 
         {activeOrder ? (
@@ -149,7 +182,14 @@ export function Home() {
         ) : orderingAvailable ? (
           <OrderNowButton onClick={() => goToOrderOrSignIn('/order')} />
         ) : (
-          <Typography variant="body2" sx={{ mt: 2, opacity: 0.85 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 2,
+              opacity: showHeroChrome ? 0.85 : 1,
+              color: showHeroChrome ? 'inherit' : 'text.secondary',
+            }}
+          >
             {!orderAheadEnabled
               ? 'Online ordering is not available for this café right now.'
               : `${openCaption}. Online ordering will be back when the café is open.`}

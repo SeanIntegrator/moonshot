@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { PosCatalog, NormalisedMenuItem } from '@moonshot/types';
+import type { NormalisedMenuItem } from '@moonshot/types';
+import type { PosCatalog } from '@moonshot/domain';
 import { syncNormalisedMenuCatalog } from './menu-sync-catalog.js';
 
 vi.mock('./pos-catalog/menu-catalog-upsert.js', async () => {

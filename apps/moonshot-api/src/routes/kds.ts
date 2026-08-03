@@ -11,9 +11,9 @@ import {
   type KdsRecallOrderResponse,
   type KdsRecentOrdersResponse,
   type KdsStretchEtaResponse,
-  type NormalisedOrder,
 } from '@moonshot/types';
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
+import { config } from '../lib/config.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { findKdsUserForLogin, touchKdsUserLogin } from '../lib/kds-users-repository.js';
 import {
@@ -25,58 +25,28 @@ import {
   recallLastCompletedOrderForKds,
   stretchOrderEtaForKds,
 } from '../lib/orders/order-kds.js';
-import { applyLoyaltyAfterKdsComplete } from '../lib/loyalty-after-kds-complete.js';
-import { recomputePickupEtasForCafe } from '../lib/pickup-eta.js';
+import {
+  notifyOrderCompleted,
+  notifyOrderRecalled,
+  notifyOrderStatusAdvanced,
+} from '../lib/orders/order-lifecycle-notify.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
 import { emitKdsServerToClient } from '../realtime/kds-events.js';
 import { requireKdsAuth } from '../middleware/kds-auth.js';
 import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
+import { kdsLoginBodySchema, parseBody } from '../lib/validation/auth-bodies.js';
 
 export const kdsRouter: Router = Router();
 
-/**
- * After a successful recall: notify KDS + customer sockets and recompute ETAs.
- * ETA failures are swallowed so the kitchen still gets the reopened ticket.
- */
-async function emitAfterRecall(cafeId: string, order: NormalisedOrder, logTag: string): Promise<void> {
-  emitKdsServerToClient(cafeId, { type: 'kds:order:new', order });
-  emitCustomerServerToClient(order.id, {
-    type: 'customerOrderStatusUpdated',
-    orderId: order.id,
-    cafeId,
-    status: order.status,
-  });
-
-  try {
-    const cafeReload = await findCafeById(cafeId);
-    if (cafeReload) {
-      await recomputePickupEtasForCafe({
-        db: pool,
-        cafeId,
-        kdsConfig: cafeReload.kdsConfig,
-      });
-    }
-  } catch (e) {
-    console.error(`[${logTag}] ETA recompute failure (swallowed)`, {
-      cafeId,
-      orderId: order.id,
-      err: e,
-    });
-  }
-}
-
 kdsRouter.post('/auth/login', async (req, res) => {
-  const body = req.body as Record<string, unknown>;
-  const cafeSlug = typeof body.cafeSlug === 'string' ? body.cafeSlug.trim() : '';
-  const username = typeof body.username === 'string' ? body.username.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-
-  if (!cafeSlug || !username || !password) {
+  const parsed = parseBody(kdsLoginBodySchema, req.body);
+  if (!parsed.ok) {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'cafeSlug, username, and password are required');
   }
+  const { cafeSlug, username, password } = parsed.data;
 
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = config.jwtSecret;
   if (!jwtSecret) {
     throw new ApiHttpError(500, ApiErrorCode.CONFIG, 'Server JWT configuration missing');
   }
@@ -166,7 +136,7 @@ kdsRouter.post('/orders/recall-last', requireKdsAuth, async (req, res) => {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'No completed order to recall');
   }
 
-  await emitAfterRecall(cafeId, order, 'kds.recall-last');
+  await notifyOrderRecalled({ db: pool, cafeId, order, logTag: 'kds.recall-last' });
 
   const data: KdsRecallLastOrderResponse = { order };
   return res.json({ ok: true, data });
@@ -194,7 +164,7 @@ kdsRouter.post('/orders/:orderId/recall', requireKdsAuth, async (req, res) => {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found or not recallable');
   }
 
-  await emitAfterRecall(cafeId, order, 'kds.recall');
+  await notifyOrderRecalled({ db: pool, cafeId, order, logTag: 'kds.recall' });
 
   const data: KdsRecallOrderResponse = { order };
   return res.json({ ok: true, data });
@@ -226,13 +196,7 @@ kdsRouter.post('/orders/:orderId/status', requireKdsAuth, async (req, res) => {
     );
   }
 
-  emitKdsServerToClient(cafeId, { type: 'kds:order:updated', order });
-  emitCustomerServerToClient(orderId, {
-    type: 'customerOrderStatusUpdated',
-    orderId,
-    cafeId,
-    status: order.status,
-  });
+  notifyOrderStatusAdvanced({ cafeId, order });
 
   const data: KdsAdvanceStatusResponse = { order };
   return res.json({ ok: true, data });
@@ -293,52 +257,7 @@ kdsRouter.post('/orders/:orderId/complete', requireKdsAuth, async (req, res) => 
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Order not found or not completable');
   }
 
-  /**
-   * Post-success side-effects must never fail the KDS request: the order row is
-   * already `completed`, the kitchen has moved on, and a 500 here would make
-   * "Done" look broken even though the work succeeded. Log + swallow.
-   */
-  emitKdsServerToClient(cafeId, { type: 'kds:order:removed', orderId });
-
-  const completedAt = order.pickup.completedAt;
-  if (completedAt) {
-    emitCustomerServerToClient(orderId, {
-      type: 'customerOrderCompleted',
-      orderId,
-      cafeId,
-      completedAt,
-      userId: order.customerId,
-    });
-  }
-
-  try {
-    await applyLoyaltyAfterKdsComplete({ cafeId, order });
-  } catch (e) {
-    console.error('[kds.complete] loyalty post-success failure (swallowed)', {
-      cafeId,
-      orderId,
-      customerId: order.customerId,
-      paymentStatus: order.paymentStatus,
-      err: e,
-    });
-  }
-
-  try {
-    const cafeReload = await findCafeById(cafeId);
-    if (cafeReload) {
-      await recomputePickupEtasForCafe({
-        db: pool,
-        cafeId,
-        kdsConfig: cafeReload.kdsConfig,
-      });
-    }
-  } catch (e) {
-    console.error('[kds.complete] ETA recompute failure (swallowed)', {
-      cafeId,
-      orderId,
-      err: e,
-    });
-  }
+  await notifyOrderCompleted({ db: pool, cafeId, order });
 
   const data: KdsCompleteOrderResponse = { order };
   return res.json({ ok: true, data });

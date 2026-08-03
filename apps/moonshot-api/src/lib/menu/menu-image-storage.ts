@@ -6,14 +6,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
-import {
-  cafeMenuItemImageKey,
-  menuImageObjectKeyFromPublicUrl,
-  menuTemplateDrinkImageKey,
-  newMenuItemImageVersion,
-  publicMenuImageUrl,
-  type MenuTemplateDrinkKey,
-} from '@moonshot/types';
+import { cafeMenuItemImageKey, menuImageObjectKeyFromPublicUrl, menuTemplateDrinkImageKey, newMenuItemImageVersion, publicMenuImageUrl, type MenuTemplateDrinkKey } from '@moonshot/domain';
 import { parseAllowedMenuImageObjectKey } from './menu-image-object-key.js';
 import {
   buildMenuThumbnailWebp,

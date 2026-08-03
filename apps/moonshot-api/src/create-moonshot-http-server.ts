@@ -1,9 +1,10 @@
 import { createServer } from 'node:http';
-import { API_VERSION_PREFIX } from '@moonshot/types';
+import { API_VERSION_PREFIX } from '@moonshot/domain';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { Server } from 'socket.io';
+import { config } from './lib/config.js';
 import { createCorsOriginValidator, parseAllowedOrigins } from './lib/cors-origins.js';
 import { attachCustomerSocketIO } from './realtime/customer-events.js';
 import { registerCustomerSocketHandlers } from './realtime/customer-socket.js';
@@ -12,6 +13,7 @@ import { registerAdminSocketHandlers } from './realtime/admin-socket.js';
 import { attachKdsSocketIO } from './realtime/kds-events.js';
 import { registerKdsSocketHandlers } from './realtime/kds-socket.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { requestLogger } from './middleware/request-logger.js';
 import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
 import { cafeRouter } from './routes/cafe.js';
@@ -34,8 +36,8 @@ export type MoonshotHttpPack = {
  * Single assembly point for HTTP + Socket.io (used by `index.ts` entrypoint and tests).
  */
 export function createMoonshotHttpServer(): MoonshotHttpPack {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const allowedOrigins = parseAllowedOrigins(process.env.CORS_ORIGINS);
+  const isProduction = config.isProduction;
+  const allowedOrigins = parseAllowedOrigins(config.corsOrigins);
   const corsOrigin = createCorsOriginValidator(allowedOrigins, isProduction);
 
   const app = express();
@@ -63,6 +65,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Cafe-Slug', 'X-Cron-Secret'],
     }),
   );
+  app.use(requestLogger);
 
   app.use(
     `${API_VERSION_PREFIX}/webhooks/stripe`,

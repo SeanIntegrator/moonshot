@@ -4,7 +4,7 @@
  * we only hint so the KDS board still recognises milks / syrups / toppings.
  */
 
-import type { ModifierRoleHint } from '@moonshot/types';
+import type { ModifierRoleHint } from '@moonshot/domain';
 
 export type { ModifierRoleHint };
 

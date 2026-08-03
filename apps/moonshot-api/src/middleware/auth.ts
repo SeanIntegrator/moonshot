@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiErrorCode, type JwtClaims } from '@moonshot/types';
+import { config } from '../lib/config.js';
 
 function fail(res: Response, status: number, message: string) {
   return res.status(status).json({
@@ -16,7 +17,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     void fail(res, 401, 'Missing or invalid Authorization header');
     return;
   }
-  const secret = process.env.JWT_SECRET;
+  const secret = config.jwtSecret;
   if (!secret) {
     void fail(res, 500, 'Server JWT configuration missing');
     return;
@@ -42,7 +43,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 /** True if JWT subject email is allowed to mutate menu (Phase 1: env list). */
 export function isMenuAdminEmail(email: string | undefined): boolean {
   if (!email) return false;
-  const raw = process.env.MENU_ADMIN_EMAILS ?? '';
+  const raw = config.menuAdminEmails ?? '';
   const allowed = raw
     .split(',')
     .map((s) => s.trim().toLowerCase())

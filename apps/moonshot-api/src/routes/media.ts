@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { ApiErrorCode } from '@moonshot/types';
 import { ApiHttpError } from '../lib/http-errors.js';
-import { parseAllowedMenuImageObjectKey } from '../lib/menu-image-object-key.js';
+import { parseAllowedMenuImageObjectKey } from '../lib/menu/menu-image-object-key.js';
 import {
   getMenuImageObject,
   MenuImageNotFoundError,
   MenuImageValidationError,
-} from '../lib/menu-image-storage.js';
+} from '../lib/menu/menu-image-storage.js';
 
 export const mediaRouter: Router = Router();
 

@@ -4,7 +4,14 @@ import jwt from 'jsonwebtoken';
 import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../db.js';
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
+import { config } from '../lib/config.js';
 import { ApiHttpError } from '../lib/http-errors.js';
+import {
+  ensureCafeUserMembership,
+  findCafeMembershipProfile,
+  findUserById,
+  upsertGoogleUser,
+} from '../lib/users-repository.js';
 import { isMenuAdminEmail, requireAuth } from '../middleware/auth.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
 
@@ -20,8 +27,8 @@ authRouter.post('/google', async (req, res) => {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'credential and cafeSlug are required');
   }
 
-  const audience = process.env.GOOGLE_CLIENT_ID;
-  const jwtSecret = process.env.JWT_SECRET;
+  const audience = config.googleClientId;
+  const jwtSecret = config.jwtSecret;
   if (!audience || !jwtSecret) {
     throw new ApiHttpError(500, ApiErrorCode.CONFIG, 'Server auth configuration missing');
   }
@@ -51,33 +58,15 @@ authRouter.post('/google', async (req, res) => {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Café not found');
   }
 
-  const userResult = await pool.query(
-    `INSERT INTO users (google_id, email, display_name, avatar_url)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (email) DO UPDATE
-     SET
-       google_id = COALESCE(EXCLUDED.google_id, users.google_id),
-       display_name = COALESCE(EXCLUDED.display_name, users.display_name),
-       avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url)
-     RETURNING id, email, display_name, avatar_url`,
-    [googleId, email, displayName, avatarUrl],
-  );
-
-  const user = userResult.rows[0] as {
-    id: string;
-    email: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  };
+  const user = await upsertGoogleUser(pool, {
+    googleId,
+    email,
+    displayName,
+    avatarUrl,
+  });
 
   const cafeId = cafe.cafeId;
-
-  await pool.query(
-    `INSERT INTO cafe_users (cafe_id, user_id)
-     VALUES ($1, $2)
-     ON CONFLICT DO NOTHING`,
-    [cafeId, user.id],
-  );
+  await ensureCafeUserMembership(pool, cafeId, user.id);
 
   const adminCafeIds = isMenuAdminEmail(email) ? [cafeId] : undefined;
 
@@ -113,30 +102,12 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
     throw new ApiHttpError(500, ApiErrorCode.INTERNAL, 'Missing user or café context');
   }
 
-  const userResult = await pool.query(
-    `SELECT id, email, display_name, avatar_url FROM users WHERE id = $1`,
-    [userId],
-  );
-  if (userResult.rows.length === 0) {
+  const u = await findUserById(pool, userId);
+  if (!u) {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'User not found');
   }
 
-  const u = userResult.rows[0] as {
-    id: string;
-    email: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  };
-
-  const membership = await pool.query(
-    `SELECT cu.loyalty_card_progress, cu.loyalty_display_id, cu.total_orders,
-            cu.on_time_completed_orders, cu.review_prompt_state, cu.first_visit,
-            (SELECT COUNT(*)::int FROM loyalty_rewards lr
-             WHERE lr.cafe_id = cu.cafe_id AND lr.user_id = cu.user_id AND lr.redeemed_at IS NOT NULL) AS free_drinks_redeemed
-     FROM cafe_users cu
-     WHERE cu.cafe_id = $1 AND cu.user_id = $2`,
-    [cafeId, userId],
-  );
+  const membership = await findCafeMembershipProfile(pool, cafeId, userId);
 
   const cafe = await findCafeById(cafeId);
   if (!cafe) {
@@ -157,18 +128,17 @@ authRouter.get('/me', requireAuth, requireCafeContext, async (req, res) => {
         slug: cafe.slug,
         name: cafe.name,
       },
-      membership:
-        membership.rows.length > 0
-          ? {
-              loyaltyCardProgress: membership.rows[0].loyalty_card_progress as number,
-              loyaltyDisplayId: membership.rows[0].loyalty_display_id as string,
-              totalOrders: membership.rows[0].total_orders as number,
-              onTimeCompletedOrders: membership.rows[0].on_time_completed_orders as number,
-              reviewPromptState: membership.rows[0].review_prompt_state as string,
-              firstVisit: membership.rows[0].first_visit as string,
-              freeDrinksRedeemed: membership.rows[0].free_drinks_redeemed as number,
-            }
-          : null,
+      membership: membership
+        ? {
+            loyaltyCardProgress: membership.loyalty_card_progress,
+            loyaltyDisplayId: membership.loyalty_display_id,
+            totalOrders: membership.total_orders,
+            onTimeCompletedOrders: membership.on_time_completed_orders,
+            reviewPromptState: membership.review_prompt_state,
+            firstVisit: membership.first_visit,
+            freeDrinksRedeemed: membership.free_drinks_redeemed,
+          }
+        : null,
     },
   });
 });

@@ -1,7 +1,4 @@
-import {
-  computeLoyaltyRewardDiscountMinor,
-  type LoyaltyDiscountLine,
-} from '@moonshot/types';
+import { computeLoyaltyRewardDiscountMinor, type LoyaltyDiscountLine } from '@moonshot/domain';
 import type { ResolvedOrderLine } from '../order-modifiers.js';
 
 function toDiscountLines(lines: ResolvedOrderLine[]): LoyaltyDiscountLine[] {

@@ -1,23 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
-import {
-  ApiErrorCode,
-  MENU_TEMPLATE_CATEGORIES,
-  MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR,
-  MENU_TEMPLATE_DRINK_ARCHETYPE,
-  defaultAllowNoMilk,
-  platformDrinkArchetypeConfig,
-  type AdminSaveMenuTemplateRequest,
-  type AdminSaveMenuTemplateResponse,
-  type MenuTemplateCategoryKey,
-  type MenuTemplateDrinkKey,
-  type MenuTemplateModifierKey,
-} from '@moonshot/types';
+import { ApiErrorCode } from '@moonshot/types';
+import { MENU_TEMPLATE_CATEGORIES, MENU_TEMPLATE_DEFAULT_DRINK_PRICE_MINOR, MENU_TEMPLATE_DRINK_ARCHETYPE, defaultAllowNoMilk, platformDrinkArchetypeConfig, type AdminSaveMenuTemplateRequest, type AdminSaveMenuTemplateResponse, type MenuTemplateCategoryKey, type MenuTemplateDrinkKey, type MenuTemplateModifierKey } from '@moonshot/domain';
 import {
   libraryByNameFromGroups,
   parseCafeDrinkArchetypeConfig,
   resolveArchetypeGroups,
-} from './drink-archetype-resolve.js';
+} from '../drink-archetype-resolve.js';
 import { copyTemplateDrinkImageToCafeItem } from './menu-image-storage.js';
 import { MILK_CHIP, SYRUP_CHIP, type ChipMeta } from './menu-chip-palette.js';
 import { setMenuItemModifierGroups } from './menu-modifier-library.js';

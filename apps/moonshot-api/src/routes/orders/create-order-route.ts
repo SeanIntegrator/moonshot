@@ -2,13 +2,13 @@ import type { CreateOrderResponse } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import type { IRouter } from 'express';
 import { Router } from 'express';
-import { ensureCafeMembership } from '../../lib/cafe-membership.js';
+import { ensureCafeMembership } from '../../lib/cafe/cafe-membership.js';
+import { config } from '../../lib/config.js';
 import { buildGuestTrackingTokenIfNeeded } from '../../lib/customer-socket-token.js';
 import { ApiHttpError } from '../../lib/http-errors.js';
 import { createGuestPayInStoreOrder } from '../../lib/orders/order-create.js';
-import { emitKdsServerToClient } from '../../realtime/kds-events.js';
+import { notifyOrderReadyForKitchen } from '../../lib/orders/order-lifecycle-notify.js';
 import { requireCustomerAuth } from '../../middleware/require-customer-auth.js';
-import { recomputePickupEtasForCafe } from '../../lib/pickup-eta.js';
 import { pool } from '../../db.js';
 import { createStripeCheckoutOrderResponse } from '../../lib/orders-checkout-service.js';
 import { parseCreateOrderBody } from '../../lib/orders/parse-create-order-body.js';
@@ -34,7 +34,7 @@ createOrderRouter.post('/', requireCustomerAuth, async (req, res) => {
     orderAhead: req.cafe!.features.order_ahead,
   });
 
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = config.jwtSecret;
 
   if (userId) {
     // Loyalty and order history need a cafe_users row; Google sign-in alone may not create one.
@@ -53,10 +53,10 @@ createOrderRouter.post('/', requireCustomerAuth, async (req, res) => {
       requestedPickupNotBefore,
     });
 
-    emitKdsServerToClient(cafeId, { type: 'kds:order:new', order: result.order });
-    await recomputePickupEtasForCafe({
+    await notifyOrderReadyForKitchen({
       db: pool,
       cafeId,
+      order: result.order,
       kdsConfig: req.cafe!.kdsConfig,
     });
 

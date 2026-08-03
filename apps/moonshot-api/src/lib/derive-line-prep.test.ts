@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_MODIFIER_CLASSIFICATION,
-  deriveFlowLine,
-  deriveLinePrep,
-  type KdsConfig,
-} from '@moonshot/types';
+import type { KdsConfig } from '@moonshot/types';
+import { DEFAULT_MODIFIER_CLASSIFICATION, deriveFlowLine, deriveLinePrep } from '@moonshot/domain';
 import type { NormalisedOrderItem } from '@moonshot/types';
 
 function baseConfig(overrides?: Partial<KdsConfig>): KdsConfig {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { API_VERSION_PREFIX } from '@moonshot/types';
+import { API_VERSION_PREFIX } from '@moonshot/domain';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createMoonshotHttpServer } from './create-moonshot-http-server.js';

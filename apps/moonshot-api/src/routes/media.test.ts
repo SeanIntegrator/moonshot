@@ -2,13 +2,13 @@ import { Readable } from 'node:stream';
 import express from 'express';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { API_VERSION_PREFIX } from '@moonshot/types';
+import { API_VERSION_PREFIX } from '@moonshot/domain';
 
 const getMenuImageObject = vi.fn();
 
-vi.mock('../lib/menu-image-storage.js', async () => {
-  const actual = await vi.importActual<typeof import('../lib/menu-image-storage.js')>(
-    '../lib/menu-image-storage.js',
+vi.mock('../lib/menu/menu-image-storage.js', async () => {
+  const actual = await vi.importActual<typeof import('../lib/menu/menu-image-storage.js')>(
+    '../lib/menu/menu-image-storage.js',
   );
   return {
     ...actual,
@@ -62,7 +62,7 @@ describe('mediaRouter', () => {
   });
 
   it('returns 404 when the object is missing', async () => {
-    const { MenuImageNotFoundError } = await import('../lib/menu-image-storage.js');
+    const { MenuImageNotFoundError } = await import('../lib/menu/menu-image-storage.js');
     getMenuImageObject.mockRejectedValue(new MenuImageNotFoundError());
 
     const app = await appWithMediaRouter();

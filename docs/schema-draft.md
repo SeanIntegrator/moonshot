@@ -1,8 +1,8 @@
-# Postgres schema (Phase 1 + planned v2)
+# Postgres schema (shipped through 027)
 
-Migrations live under `apps/moonshot-api/migrations/` (node-pg-migrate wrappers + `sql/` sources). Through **016** (`orders.eta_mode`; also `cafes.hours` in **014**, KDS modifier classification seed in **015**) the live schema covers cafés, users/memberships, menu + modifier library, orders/items, KDS users, admin users, payment/webhook tables, and loyalty ledger. Self-service **admin onboarding** provisions café + admin + optional KDS user + template menu without a separate schema phase.
+Migrations live under `apps/moonshot-api/migrations/` (node-pg-migrate wrappers + `sql/` sources). Ceiling: **027** (`menu_item_default_image`). Live schema covers cafés (hours, drink archetypes, loyalty counter), users/memberships, menu + modifier library + **menu sections** (hierarchy / POS category ids), orders/items, KDS users, admin users, payment/webhook tables, loyalty ledger, and **`pos_connections`** (Square OAuth + catalog sync cursors). Self-service **admin onboarding** provisions café + admin + optional KDS user + template or POS-imported menu.
 
-Sections below for **`feedback_responses`**, additional POS tables, etc. remain **planned v2** beyond what migrations create today.
+Sections below for **`feedback_responses`**, `events` / `promotions`, etc. remain **planned** beyond what migrations create today.
 
 ## Conventions
 
@@ -31,6 +31,7 @@ Implemented in Phase 1.
 | theme_overrides    | JSONB       | deep-merge overrides |
 | kds_config         | JSONB       | milk colours, timer thresholds, **eta: `{ base_prep_minutes, per_item_minutes }`**, layout |
 | drink_archetype_config | JSONB   | café drink-type recipes (slots + milk charge); see `docs/menu-management.md` |
+| hours              | JSONB       | weekly opening hours (**014**); wall-clock in `timezone` |
 | timezone           | TEXT        | default `Europe/London` |
 | owner_feedback_email | TEXT      | optional; used for negative-review path `mailto:` |
 | loyalty_display_counter | INTEGER  | **Phase 10** — next 6-digit `loyalty_display_id` for new `cafe_users` rows |
@@ -95,6 +96,8 @@ Implemented in Phase 1; **Phase 12** (`012_menu_modifier_library.sql`) adds `siz
 | category         | TEXT        | hot_drinks, cold_drinks, food, extras |
 | subcategory      | TEXT        | nullable (coffee, matcha, …) |
 | image_url        | TEXT        | |
+| image_source     | TEXT        | **027** — `pos` \| `upload` \| `template` (nullable) |
+| use_default_image| BOOLEAN     | **027** — when true, POS sync may apply template defaults |
 | emoji            | TEXT        | |
 | is_available      | BOOLEAN     | |
 | tags             | TEXT[]      | |
@@ -321,6 +324,55 @@ Append-only stamps / rewards; **`cafe_users.loyalty_card_progress`** is updated 
 Free-drink (or other) vouchers before redemption.
 
 **Created** in Phase 7 (`007_loyalty_ledger.sql`).
+
+---
+
+## `menu_sections` (**020**, hierarchy **025**)
+
+Café-scoped sections (Hot drinks / Cold drinks / Food / custom). `menu_items.category` stores the section **key**.
+
+| Column          | Type        | Notes |
+| --------------- | ----------- | ----- |
+| id              | UUID        | PK |
+| cafe_id         | UUID        | FK |
+| key             | TEXT        | unique per café |
+| label           | TEXT        | |
+| enabled         | BOOLEAN     | |
+| is_system       | BOOLEAN     | platform seeds (`hot_drinks`, `cold_drinks`, `food`) |
+| sort_order      | INTEGER     | |
+| parent_id       | UUID        | **025** — nullable FK → `menu_sections` (POS category trees) |
+| pos_category_id | TEXT        | **025** — external category id; unique per café when set |
+| kind            | TEXT        | **025** — `drink` \| `food` |
+| created_at      | TIMESTAMPTZ | |
+| updated_at      | TIMESTAMPTZ | |
+
+---
+
+## `pos_connections` (**023**, catalog cursors **024**)
+
+Square (and future POS) OAuth connections. Access/refresh tokens are **encrypted at the app layer** (AES-GCM), not plaintext.
+
+| Column                   | Type        | Notes |
+| ------------------------ | ----------- | ----- |
+| id                       | UUID        | PK |
+| cafe_id                  | UUID        | FK; unique with `provider` |
+| provider                 | TEXT        | e.g. `square` |
+| merchant_id              | TEXT        | unique with `provider` |
+| location_id              | TEXT        | nullable |
+| access_token_encrypted   | TEXT        | |
+| refresh_token_encrypted  | TEXT        | |
+| access_token_expires_at  | TIMESTAMPTZ | |
+| scopes                   | TEXT[]      | |
+| status                   | TEXT        | `active` \| `needs_reauth` \| `revoked` |
+| catalog_sync_cursor      | TIMESTAMPTZ | **024** |
+| catalog_last_synced_at   | TIMESTAMPTZ | **024** |
+| catalog_sync_status      | TEXT        | **024** — `idle` \| `syncing` \| `error` |
+| catalog_sync_error       | TEXT        | **024** |
+| last_refreshed_at        | TIMESTAMPTZ | |
+| connected_at             | TIMESTAMPTZ | |
+| updated_at               | TIMESTAMPTZ | |
+
+Also **023**: `modifier_groups.pos_group_id` for POS modifier-list sync/dedupe.
 
 ---
 

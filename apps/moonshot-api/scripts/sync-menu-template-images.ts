@@ -11,23 +11,16 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  MENU_IMAGE_THUMBNAIL_HEIGHT,
-  MENU_IMAGE_THUMBNAIL_WIDTH,
-  MENU_IMAGE_WEBP_QUALITY,
-  MENU_TEMPLATE_CATEGORIES,
-  menuTemplateDrinkImageKey,
-  type MenuTemplateDrinkKey,
-} from '@moonshot/types';
+import { MENU_IMAGE_THUMBNAIL_HEIGHT, MENU_IMAGE_THUMBNAIL_WIDTH, MENU_IMAGE_WEBP_QUALITY, MENU_TEMPLATE_CATEGORIES, menuTemplateDrinkImageKey, type MenuTemplateDrinkKey } from '@moonshot/domain';
 import sharp from 'sharp';
 import {
   isMenuImageStorageConfigured,
   uploadRawWebpObject,
-} from '../src/lib/menu-image-storage.js';
+} from '../src/lib/menu/menu-image-storage.js';
 import {
   loadMenuTemplateDrinkSourceWebp,
   resolveMenuTemplateDrinkSourcePath,
-} from '../src/lib/menu-template-image-sources.js';
+} from '../src/lib/menu/menu-template-image-sources.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'menu-template', 'drinks');
