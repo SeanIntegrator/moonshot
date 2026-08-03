@@ -23,6 +23,8 @@ const menuItem: NormalisedMenuItem = {
   category: 'hot_drinks',
   subcategory: null,
   imageUrl: null,
+  imageSource: null,
+  useDefaultImage: true,
   emoji: null,
   isAvailable: true,
   sizes: [

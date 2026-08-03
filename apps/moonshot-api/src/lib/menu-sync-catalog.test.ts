@@ -16,6 +16,17 @@ vi.mock('./menu-modifier-library.js', () => ({
   setMenuItemModifierGroups: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('./menu-image-storage.js', () => ({
+  readMenuImageStorageConfig: vi.fn(() => ({
+    bucket: 'b',
+    endpoint: 'https://s3.example',
+    region: 'auto',
+    accessKeyId: 'k',
+    secretAccessKey: 's',
+    publicBaseUrl: 'https://api.example.com/api/v1/media',
+  })),
+}));
+
 function item(overrides: Partial<NormalisedMenuItem> = {}): NormalisedMenuItem {
   return {
     id: 'local-1',
@@ -26,6 +37,8 @@ function item(overrides: Partial<NormalisedMenuItem> = {}): NormalisedMenuItem {
     category: 'hot_drinks',
     subcategory: null,
     imageUrl: null,
+    imageSource: null,
+    useDefaultImage: true,
     emoji: null,
     isAvailable: true,
     tags: [],
@@ -58,6 +71,19 @@ function createClient(handler: (sql: string, params?: unknown[]) => QueryResult)
   };
 }
 
+function existingItemRow(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 'mi-1',
+    archetype: null,
+    image_url: null,
+    image_source: null,
+    use_default_image: true,
+    ...overrides,
+  };
+}
+
 describe('syncNormalisedMenuCatalog', () => {
   it('updates price/name and Square image on existing pos-linked item', async () => {
     const calls: { sql: string; params?: unknown[] }[] = [];
@@ -66,8 +92,8 @@ describe('syncNormalisedMenuCatalog', () => {
       if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
         return { rows: [{ drink_archetype_config: {} }] };
       }
-      if (sql.includes('SELECT id, archetype FROM menu_items')) {
-        return { rows: [{ id: 'mi-1', archetype: null }] };
+      if (sql.includes('FROM menu_items WHERE cafe_id') && sql.includes('pos_item_id')) {
+        return { rows: [existingItemRow()] };
       }
       if (sql.includes('MAX(sort_order)')) {
         return { rows: [{ max: 0 }] };
@@ -102,6 +128,7 @@ describe('syncNormalisedMenuCatalog', () => {
         'Latte Large',
         400,
         'https://square-cdn.example/latte.jpg',
+        'pos',
         'mi-1',
         'cafe-1',
       ]),
@@ -117,8 +144,8 @@ describe('syncNormalisedMenuCatalog', () => {
       if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
         return { rows: [{ drink_archetype_config: {} }] };
       }
-      if (sql.includes('SELECT id, archetype FROM menu_items')) {
-        return { rows: [{ id: 'mi-1', archetype: 'milk-forward-hot' }] };
+      if (sql.includes('FROM menu_items WHERE cafe_id') && sql.includes('pos_item_id')) {
+        return { rows: [existingItemRow({ archetype: 'milk-forward-hot' })] };
       }
       if (sql.includes('MAX(sort_order)')) return { rows: [{ max: 0 }] };
       if (sql.includes('FROM menu_item_modifier_groups')) {
@@ -139,15 +166,51 @@ describe('syncNormalisedMenuCatalog', () => {
     );
   });
 
-  it('leaves image_url unchanged when Square has no image', async () => {
+  it('applies template image when Square has no image and name matches', async () => {
     const calls: { sql: string; params?: unknown[] }[] = [];
     const client = createClient((sql, params) => {
       calls.push({ sql, params });
       if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
         return { rows: [{ drink_archetype_config: {} }] };
       }
-      if (sql.includes('SELECT id, archetype FROM menu_items')) {
-        return { rows: [{ id: 'mi-1', archetype: null }] };
+      if (sql.includes('FROM menu_items WHERE cafe_id') && sql.includes('pos_item_id')) {
+        return { rows: [existingItemRow()] };
+      }
+      if (sql.includes('MAX(sort_order)')) return { rows: [{ max: 0 }] };
+      if (sql.includes('FROM menu_sections') && sql.includes('kind =')) return { rows: [] };
+      if (sql.includes('SELECT kds_config')) return { rows: [{ kds_config: {} }] };
+      return { rows: [] };
+    });
+
+    await syncNormalisedMenuCatalog(client as never, 'cafe-1', catalog([item()]));
+
+    const update = calls.find(
+      (c) => c.sql.includes('UPDATE menu_items SET') && c.sql.includes('image_source'),
+    );
+    expect(update?.params).toEqual(
+      expect.arrayContaining([
+        'https://api.example.com/api/v1/media/template/drinks/latte.webp',
+        'template',
+      ]),
+    );
+  });
+
+  it('leaves upload image unchanged when Square has no image', async () => {
+    const calls: { sql: string; params?: unknown[] }[] = [];
+    const client = createClient((sql, params) => {
+      calls.push({ sql, params });
+      if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
+        return { rows: [{ drink_archetype_config: {} }] };
+      }
+      if (sql.includes('FROM menu_items WHERE cafe_id') && sql.includes('pos_item_id')) {
+        return {
+          rows: [
+            existingItemRow({
+              image_url: 'https://api.example.com/cafes/c1/x.webp',
+              image_source: 'upload',
+            }),
+          ],
+        };
       }
       if (sql.includes('MAX(sort_order)')) return { rows: [{ max: 0 }] };
       if (sql.includes('FROM menu_sections') && sql.includes('kind =')) return { rows: [] };

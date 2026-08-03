@@ -120,6 +120,17 @@ Do not commit large binary drink photos unless the team explicitly wants them in
 
 Dashboard → Menu & pricing → expand an item → **Upload photo** / **Replace photo**. New items must be saved before a photo can be uploaded. Replaces only that café’s copy.
 
+### POS default images
+
+For POS-linked items (`pos_item_id` set), a **Use default image** switch sits under the photo preview:
+
+- When Square (or another POS) has no photo and the item **name exactly matches** a template drink display name (trim + case-insensitive — e.g. `"Flat White"` → Flat white), catalogue sync points `image_url` at the shared `template/drinks/{key}.webp` object and sets `image_source = template`.
+- Admins can turn the switch **off** to clear the photo and set `use_default_image = false` so later syncs do not re-apply the default.
+- The switch is **disabled** while a custom photo is in place (`image_source` is `pos` or `upload`), or when the current name has no template match.
+- Café uploads set `image_source = upload` and are never overwritten by POS sync when the POS sends no image.
+
+Columns: `menu_items.image_source` (`pos` | `upload` | `template` | null), `menu_items.use_default_image` (default true).
+
 ## Local development
 
 Without `MENU_IMAGE_*` configured:

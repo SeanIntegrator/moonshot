@@ -33,7 +33,9 @@ A Lightspeed adapter produces the same `PosCatalog` and reuses the upsert — no
 | POS catalogue | Items (name, price, sizes/variations, category tree, availability), modifier lists with POS names, images |
 | Moonshot (opt-in) | Flow prep groups the POS cannot express: Shots, Beans, Milk Temperature, Milk Texture, Ice Level, Toppings — attached **only** when an admin assigns a drink archetype |
 
-**On sync upsert:** POS wins for `name`, `description`, `price_minor`, `currency`, `category`, `sizes`, POS-linked modifier attachments, `is_available`, `image_url` (only when POS supplies an image). Soft-delete sets `is_available = false`.
+**On sync upsert:** POS wins for `name`, `description`, `price_minor`, `currency`, `category`, `sizes`, POS-linked modifier attachments, `is_available`, and `image_url` when the POS supplies a photo (`image_source = pos`). Soft-delete sets `is_available = false`.
+
+**Default template photos:** when the POS has no photo, the item name exactly matches a Moonshot template drink (trim + case-insensitive), `use_default_image` is true (default), and menu image storage is configured, sync sets `image_url` to the shared `template/drinks/{key}.webp` URL and `image_source = template`. Café uploads (`image_source = upload`) are never overwritten. Admins can opt out via **Use default image** on the dashboard (see [menu-images.md](./menu-images.md)).
 
 **Moonshot prep preservation:** attachments with `pos_group_id IS NULL` survive a sync **only when `menu_items.archetype IS NOT NULL`** (admin deliberately opted in). Otherwise Square's list is the whole picture — no auto-inferred prep.
 

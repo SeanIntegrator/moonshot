@@ -26,6 +26,8 @@ function item(category: string, name: string): NormalisedMenuItem {
     category,
     subcategory: null,
     imageUrl: null,
+    imageSource: null,
+    useDefaultImage: true,
     emoji: null,
     isAvailable: true,
     sizes: [],
