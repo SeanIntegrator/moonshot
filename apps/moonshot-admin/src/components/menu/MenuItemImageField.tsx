@@ -1,13 +1,29 @@
-import type { NormalisedMenuItem } from '@moonshot/types';
-import { Alert, Box, Button, LinearProgress, Typography } from '@mui/material';
+import type { MenuItemImageSource, NormalisedMenuItem } from '@moonshot/types';
+import { resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/types';
+import {
+  Alert,
+  Box,
+  Button,
+  FormControlLabel,
+  LinearProgress,
+  Switch,
+  Typography,
+} from '@mui/material';
 import { useRef, useState } from 'react';
-import { uploadMenuItemImage } from '../../lib/admin-api.js';
+import {
+  setMenuItemUseDefaultImage,
+  uploadMenuItemImage,
+} from '../../lib/admin-api.js';
 
 type Props = {
   cafeSlug: string;
   token: string;
   itemId: string | null;
   imageUrl: string | null;
+  imageSource: MenuItemImageSource | null;
+  useDefaultImage: boolean;
+  /** When set, show the default-image toggle (POS-linked items only). */
+  posItemId: string | null;
   itemName: string;
   disabled?: boolean;
   onUploaded: (item: NormalisedMenuItem) => void;
@@ -19,13 +35,25 @@ export function MenuItemImageField({
   token,
   itemId,
   imageUrl,
+  imageSource,
+  useDefaultImage,
+  posItemId,
   itemName,
   disabled = false,
   onUploaded,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [togglingDefault, setTogglingDefault] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isPosItem = posItemId != null;
+  const hasCustomImage = imageSource === 'pos' || imageSource === 'upload';
+  const hasTemplateMatch = resolveMenuTemplateDrinkKeyByExactName(itemName) != null;
+  const defaultToggleDisabled =
+    disabled || !itemId || togglingDefault || hasCustomImage || !hasTemplateMatch;
+  // Custom photos force the control off visually; opt-in flag drives it otherwise.
+  const defaultToggleChecked = !hasCustomImage && useDefaultImage;
 
   async function handleFile(file: File | null) {
     if (!file || !itemId) return;
@@ -39,6 +67,20 @@ export function MenuItemImageField({
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
+    }
+  }
+
+  async function handleDefaultToggle(next: boolean) {
+    if (!itemId || defaultToggleDisabled) return;
+    setTogglingDefault(true);
+    setError(null);
+    try {
+      const updated = await setMenuItemUseDefaultImage(token, cafeSlug, itemId, next);
+      onUploaded(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update default image');
+    } finally {
+      setTogglingDefault(false);
     }
   }
 
@@ -82,9 +124,33 @@ export function MenuItemImageField({
             <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>
               JPEG, PNG, or WebP · max 5MB · resized to a small thumbnail automatically
             </Typography>
+            {isPosItem ? (
+              <Box sx={{ mt: 1.25 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={defaultToggleChecked}
+                      disabled={defaultToggleDisabled}
+                      onChange={(_, checked) => void handleDefaultToggle(checked)}
+                    />
+                  }
+                  label="Use default image"
+                />
+                {hasCustomImage ? (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Turned off while a custom photo is in use.
+                  </Typography>
+                ) : !hasTemplateMatch ? (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    No default photo for this item name.
+                  </Typography>
+                ) : null}
+              </Box>
+            ) : null}
           </>
         )}
-        {uploading && <LinearProgress sx={{ mt: 1 }} />}
+        {(uploading || togglingDefault) && <LinearProgress sx={{ mt: 1 }} />}
         {error && (
           <Alert severity="error" sx={{ mt: 1 }} onClose={() => setError(null)}>
             {error}

@@ -17,6 +17,7 @@ import { ProfileStatCard } from '../components/ProfileStatCard.js';
 import { RecentOrderCard } from '../components/RecentOrderCard.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { SignedOutPanel } from '../components/SignedOutPanel.js';
+import { SurfaceCard } from '../components/ui/SurfaceCard.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
@@ -60,7 +61,7 @@ export function Profile() {
 
       {!loading && isSignedIn && user && (
         <>
-          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 2, mb: 2 }}>
+          <SurfaceCard sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
               <Avatar src={user.avatarUrl ?? undefined} sx={{ width: 56, height: 56 }}>
                 {(user.displayName ?? user.email).charAt(0).toUpperCase()}
@@ -83,7 +84,7 @@ export function Profile() {
                 <ProfileStatCard value={membership.loyaltyCardProgress} label="Stamps" />
               </Box>
             )}
-          </Box>
+          </SurfaceCard>
 
           <SectionHead eyebrow="Account" title="Your details" />
           <Box
@@ -149,7 +150,7 @@ export function Profile() {
             </Box>
           )}
 
-          <Button variant="outlined" color="error" fullWidth onClick={() => signOut()}>
+          <Button variant="contained" color="error" fullWidth onClick={() => signOut()}>
             Sign out
           </Button>
         </>

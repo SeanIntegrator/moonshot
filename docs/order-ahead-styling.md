@@ -29,6 +29,7 @@ flowchart LR
 |---------|----------------|
 | Reset, reduced-motion, page transitions | Global CSS (`index.css`, `page-transition.css`) |
 | Palette, typography, radius, button/chip/paper defaults | `muiBaseTheme` + café layer |
+| Elevated secondary card chrome (fill, border, subtle shadow) | `theme/surfaceCardChrome.ts` → `MuiPaper` + `SurfaceCard` / `PressableCard` / `LoyaltyCardShell` |
 | Reusable custom controls (option tile, pressable card, qty badge, fixed bars) | `styled(...)` under `src/components/ui/` reading `({ theme }) => …` |
 | Page layout / one-off spacing | `sx` layout-only (`display`, `gap`, `mt`, flex, absolute position) |
 | Never in components | Hex / raw `rgba(...)` for brand colours |
@@ -50,12 +51,14 @@ Use theme tokens (`'primary.main'`, `'divider'`, `'background.paper'`) or a styl
 ## Theme extension points
 
 - **`palette.cafe.*`** — surfaces and hero (`heroBg`, `heroText`, `textMuted`, …). Prefer these for hero/glass UI over ad-hoc white overlays; use `alpha(theme.palette.cafe.heroText, …)` when translucency is needed.
+- **Surface stack** — page canvas is `colors.background` → `palette.background.default`; elevated cards use `colors.surfaceElevated` → `palette.background.paper`. Mid `colors.surface` / `palette.cafe.surface` sits between them for nested or soft fills. Keep `surfaceElevated` lighter than the page so cards do not read as border-only.
+- **`SurfaceCard`** — shared elevated secondary card (`components/ui/SurfaceCard`). Uses `surfaceCardChrome` (paper fill, divider border, very subtle shadow). Prefer it over hand-rolled `Box` + `border: 1` for card chrome; `MuiPaper` shares the same chrome helper.
 - **`cafeLayout`** — layout enums from the café pack (`menuGrid`, `cardStyle`, `heroStyle`, `navStyle`). Prefer reading these when adding layout variants rather than hardcoding per page.
 - **Page column** — `Container maxWidth="sm"` and fixed chrome share `theme/pageLayout.ts`: full-bleed through tablet, then a 600px column + expanded gutters from **1024px** (not MUI’s default 600px `sm` media query). Use `pageContentWidthSx` for nav/cart/snackbar shells so they stay aligned.
 
 ## Interactive controls
 
-Use real MUI primitives (`Button`, `ButtonBase`, `Chip`, `ToggleButton`) or shared styled wrappers (`OptionTile`, `PressableCard`) so `theme.components` overrides apply. Do **not** use `Box component="button"` with hand-rolled brand `sx`.
+Use real MUI primitives (`Button`, `ButtonBase`, `Chip`, `ToggleButton`) or shared styled wrappers (`OptionTile`, `PressableCard`, `SurfaceCard`) so `theme.components` overrides apply. Do **not** use `Box component="button"` with hand-rolled brand `sx`.
 
 ## Hex is allowed only in
 

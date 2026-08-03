@@ -64,6 +64,8 @@ function emptyDraft(defaultCategory: string): DraftItem {
     category: defaultCategory,
     subcategory: null,
     imageUrl: null,
+    imageSource: null,
+    useDefaultImage: true,
     emoji: null,
     isAvailable: true,
     sizes: [],
@@ -386,6 +388,9 @@ export function MenuItemsPanel({
               token={token}
               itemId={itemId}
               imageUrl={draft.imageUrl}
+              imageSource={draft.imageSource ?? null}
+              useDefaultImage={draft.useDefaultImage !== false}
+              posItemId={draft.posItemId}
               itemName={draft.name || 'Menu item'}
               disabled={savingId === (itemId ?? 'new')}
               onUploaded={(updated) => {

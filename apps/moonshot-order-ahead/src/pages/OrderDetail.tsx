@@ -13,6 +13,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { OrderStatusStepper } from '../components/OrderStatusStepper.js';
 import { PageHeader } from '../components/PageHeader.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
+import { SurfaceCard } from '../components/ui/SurfaceCard.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { cancelCustomerOrder, fetchCustomerOrder } from '../api/orders-api.js';
 import { useAuth } from '../hooks/useAuth.js';
@@ -187,13 +188,10 @@ export function OrderDetail() {
 
               <OrderStatusStepper stepIndex={stepIndex} completed={allDone} />
 
-              <Box
+              <SurfaceCard
                 sx={{
                   mt: 2,
                   p: 1.5,
-                  border: 1,
-                  borderColor: 'divider',
-                  borderRadius: 1.25,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1.5,
@@ -218,7 +216,7 @@ export function OrderDetail() {
                     {formatMinutesLabel(minsUntilPickup)}
                   </Typography>
                 )}
-              </Box>
+              </SurfaceCard>
 
               <Typography
                 variant="caption"
@@ -284,20 +282,11 @@ export function OrderDetail() {
               )}
 
               {showStampPending && (
-                <Box
-                  sx={{
-                    mt: 2,
-                    p: 1.5,
-                    border: 1,
-                    borderColor: 'divider',
-                    borderRadius: 1.25,
-                    bgcolor: 'background.paper',
-                  }}
-                >
+                <SurfaceCard sx={{ mt: 2, p: 1.5 }}>
                   <Typography variant="body2" color="text.secondary">
                     ★ You&apos;ll earn <strong>1 stamp</strong> when the kitchen marks this order complete.
                   </Typography>
-                </Box>
+                </SurfaceCard>
               )}
 
               {showStampEarned && (
@@ -321,7 +310,7 @@ export function OrderDetail() {
             {canCancel && (
               <Box sx={{ pt: 2, flexShrink: 0 }}>
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   color="error"
                   fullWidth
                   sx={{ py: 1.5, minHeight: 48 }}

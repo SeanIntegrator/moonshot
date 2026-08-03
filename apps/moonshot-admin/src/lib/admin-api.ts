@@ -29,6 +29,7 @@ export {
   patchMenuSection,
   updateModifierGroup,
   uploadMenuItemImage,
+  setMenuItemUseDefaultImage,
   type DrinkArchetypeConfigPayload,
 } from './adminApi/menu.js';
 export { adminStripeOnboardingLink, adminStripeStatus } from './adminApi/stripe.js';

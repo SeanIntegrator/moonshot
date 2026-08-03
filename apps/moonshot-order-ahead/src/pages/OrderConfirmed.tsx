@@ -5,6 +5,7 @@ import { Box, Button, Container, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { fetchCustomerOrder } from '../api/orders-api.js';
+import { SurfaceCard } from '../components/ui/SurfaceCard.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
@@ -105,11 +106,11 @@ export function OrderConfirmed() {
           {error && <Typography color="error">{error}</Typography>}
 
           {isSignedIn && (
-            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.25, p: 1.5, textAlign: 'left', mb: 3 }}>
+            <SurfaceCard sx={{ p: 1.5, textAlign: 'left', mb: 3 }}>
               <Typography variant="body2" color="success.main">
                 ★ You&apos;ll earn <strong>1 stamp</strong> with this order.
               </Typography>
-            </Box>
+            </SurfaceCard>
           )}
         </Box>
 

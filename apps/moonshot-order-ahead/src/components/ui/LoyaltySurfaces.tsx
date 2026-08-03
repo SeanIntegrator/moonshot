@@ -3,6 +3,7 @@ import Button from '@mui/material/Button';
 import ButtonBase, { type ButtonBaseProps } from '@mui/material/ButtonBase';
 import { alpha, styled } from '@mui/material/styles';
 import type { ComponentType } from 'react';
+import { surfaceCardChrome } from '../../theme/surfaceCardChrome.js';
 
 /** Keep stamp grid phone-sized on tablet/desktop full-bleed layouts. */
 const LOYALTY_CARD_MAX_WIDTH_PX = 400;
@@ -27,10 +28,9 @@ export const LoyaltyHeroShell = styled(Box)(({ theme }) => ({
 /** Standard loyalty card shell. */
 export const LoyaltyCardShell = styled(Box)(({ theme }) => ({
   ...loyaltyCardWidth,
-  border: `1px solid ${theme.palette.divider}`,
+  ...surfaceCardChrome(theme),
   borderRadius: theme.shape.borderRadius * 1.5,
   padding: theme.spacing(2),
-  backgroundColor: theme.palette.background.paper,
 })) as typeof Box;
 
 export const LoyaltyHeroQrButton = styled(Button)(({ theme }) => ({

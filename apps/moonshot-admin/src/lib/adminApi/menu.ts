@@ -76,6 +76,28 @@ export async function uploadMenuItemImage(
   return envelope.data;
 }
 
+export async function setMenuItemUseDefaultImage(
+  token: string,
+  cafeSlug: string,
+  itemId: string,
+  useDefaultImage: boolean,
+): Promise<NormalisedMenuItem> {
+  const res = await fetch(apiUrl(`/menu/${encodeURIComponent(itemId)}/default-image`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Cafe-Slug': cafeSlug,
+    },
+    body: JSON.stringify({ useDefaultImage }),
+  });
+  const envelope = await parseEnvelope<NormalisedMenuItem>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Default image update failed (${res.status})`);
+  }
+  return envelope.data;
+}
+
 export async function createMenuItem(
   token: string,
   cafeSlug: string,

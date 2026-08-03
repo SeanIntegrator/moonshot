@@ -6,6 +6,7 @@ import {
   assertMenuItemId,
   createMenuItem,
   patchMenuItem,
+  setMenuItemUseDefaultImage,
   softHideMenuItem,
   uploadMenuItemImage,
 } from '../lib/menu-admin-service.js';
@@ -79,6 +80,22 @@ menuRouter.post(
     return res.json({ ok: true, data: item });
   },
 );
+
+menuRouter.post('/:itemId/default-image', requireMenuMutationAuth, async (req, res) => {
+  const rawId = req.params.itemId;
+  const itemId = assertMenuItemId(Array.isArray(rawId) ? rawId[0] : rawId);
+  const body = req.body as Record<string, unknown>;
+  if (typeof body.useDefaultImage !== 'boolean') {
+    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'useDefaultImage must be a boolean');
+  }
+  const item = await setMenuItemUseDefaultImage(
+    pool,
+    req.cafe!.cafeId,
+    itemId,
+    body.useDefaultImage,
+  );
+  return res.json({ ok: true, data: item });
+});
 
 menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const rawDel = req.params.itemId;

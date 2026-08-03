@@ -267,6 +267,8 @@ export function normaliseSquareCatalog(
       category: placement.sectionKey,
       subcategory: null,
       imageUrl,
+      imageSource: null,
+      useDefaultImage: true,
       emoji: null,
       isAvailable: !isGone,
       sizes,

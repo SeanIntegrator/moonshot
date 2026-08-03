@@ -1,10 +1,16 @@
 import type { NormalisedMenuItem, NormalisedModifierGroup } from '@moonshot/types';
-import { ApiErrorCode, isDrinkArchetypeId } from '@moonshot/types';
+import {
+  ApiErrorCode,
+  isDrinkArchetypeId,
+  menuTemplateDrinkImageUrl,
+  resolveMenuTemplateDrinkKeyByExactName,
+} from '@moonshot/types';
 import type { Pool } from 'pg';
 import { ApiHttpError } from './http-errors.js';
 import { fetchMenuItemsByIds } from './menu-fetch.js';
 import {
   MenuImageValidationError,
+  readMenuImageStorageConfig,
   uploadMenuItemThumbnail,
 } from './menu-image-storage.js';
 import { normalizeSizes, setMenuItemModifierGroups } from './menu-modifier-library.js';
@@ -272,16 +278,90 @@ export async function uploadMenuItemImage(
       previousImageUrl: existing.rows[0]!.image_url,
     });
 
-    await db.query(`UPDATE menu_items SET image_url = $1 WHERE id = $2 AND cafe_id = $3`, [
-      imageUrl,
-      itemId,
-      cafeId,
-    ]);
+    await db.query(
+      `UPDATE menu_items SET image_url = $1, image_source = 'upload' WHERE id = $2 AND cafe_id = $3`,
+      [imageUrl, itemId, cafeId],
+    );
   } catch (e) {
     if (e instanceof MenuImageValidationError) {
       throw new ApiHttpError(e.status, ApiErrorCode.VALIDATION, e.message);
     }
     throw e;
+  }
+
+  const item = await loadMergedItem(db, cafeId, itemId);
+  if (!item) {
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Menu item not found');
+  }
+  return item;
+}
+
+/**
+ * Opt in/out of shared template default photos for POS (or blank) items.
+ * Rejected while a custom POS or uploaded photo is in place.
+ */
+export async function setMenuItemUseDefaultImage(
+  db: Pool,
+  cafeId: string,
+  itemId: string,
+  useDefaultImage: boolean,
+): Promise<NormalisedMenuItem> {
+  const { rows } = await db.query<{
+    name: string;
+    image_source: string | null;
+    pos_item_id: string | null;
+  }>(
+    `SELECT name, image_source, pos_item_id FROM menu_items WHERE id = $1 AND cafe_id = $2`,
+    [itemId, cafeId],
+  );
+  if (rows.length === 0) {
+    throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Menu item not found');
+  }
+
+  const row = rows[0]!;
+  if (row.image_source === 'pos' || row.image_source === 'upload') {
+    throw new ApiHttpError(
+      400,
+      ApiErrorCode.VALIDATION,
+      'Cannot use default image while a custom photo is in place',
+    );
+  }
+
+  if (useDefaultImage) {
+    const templateKey = resolveMenuTemplateDrinkKeyByExactName(row.name);
+    if (!templateKey) {
+      throw new ApiHttpError(
+        400,
+        ApiErrorCode.VALIDATION,
+        'No default photo for this item name',
+      );
+    }
+    const config = readMenuImageStorageConfig();
+    if (!config) {
+      throw new ApiHttpError(
+        503,
+        ApiErrorCode.CONFIG,
+        'Menu image storage is not configured',
+      );
+    }
+    const imageUrl = menuTemplateDrinkImageUrl(templateKey, config.publicBaseUrl);
+    await db.query(
+      `UPDATE menu_items SET
+         use_default_image = TRUE,
+         image_url = $1,
+         image_source = 'template'
+       WHERE id = $2 AND cafe_id = $3`,
+      [imageUrl, itemId, cafeId],
+    );
+  } else {
+    await db.query(
+      `UPDATE menu_items SET
+         use_default_image = FALSE,
+         image_url = NULL,
+         image_source = NULL
+       WHERE id = $1 AND cafe_id = $2`,
+      [itemId, cafeId],
+    );
   }
 
   const item = await loadMergedItem(db, cafeId, itemId);

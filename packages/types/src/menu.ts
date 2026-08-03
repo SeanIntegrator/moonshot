@@ -103,6 +103,9 @@ export interface NormalisedItemSize extends ModifierDisplayMeta {
   isDefault: boolean;
 }
 
+/** Where `imageUrl` came from — drives admin “use default image” toggle. */
+export type MenuItemImageSource = 'pos' | 'upload' | 'template';
+
 export interface NormalisedMenuItem {
   /** Internal UUID — never a POS id */
   id: string;
@@ -114,6 +117,13 @@ export interface NormalisedMenuItem {
   category: MenuCategory;
   subcategory: string | null;
   imageUrl: string | null;
+  /** Origin of `imageUrl`; null when unset or legacy unknown. */
+  imageSource: MenuItemImageSource | null;
+  /**
+   * When true (default), POS sync may apply a shared template photo if the item
+   * has no custom image and the name exactly matches a template drink.
+   */
+  useDefaultImage: boolean;
   emoji: string | null;
   isAvailable: boolean;
   /** Ordered sizes; when non-empty, customer must pick one and `priceMinor` is the fallback/list anchor */

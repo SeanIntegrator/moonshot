@@ -23,6 +23,11 @@ import {
 import { parseCafeDrinkArchetypeConfig } from '../drink-archetype-resolve.js';
 import { MenuProvisionError } from '../menu-provisioners/errors.js';
 import { setMenuItemModifierGroups } from '../menu-modifier-library.js';
+import { readMenuImageStorageConfig } from '../menu-image-storage.js';
+import {
+  parseExistingMenuItemImageState,
+  resolvePosCatalogItemImage,
+} from './menu-item-default-image.js';
 
 export type CatalogUpsertMode = 'onboarding' | 'sync';
 
@@ -340,8 +345,15 @@ async function upsertCatalogItem(
   },
 ): Promise<'created' | 'updated'> {
   const { cafeId, item } = args;
-  const existing = await client.query<{ id: string; archetype: string | null }>(
-    `SELECT id, archetype FROM menu_items WHERE cafe_id = $1 AND pos_item_id = $2 LIMIT 1`,
+  const existing = await client.query<{
+    id: string;
+    archetype: string | null;
+    image_url: string | null;
+    image_source: string | null;
+    use_default_image: boolean;
+  }>(
+    `SELECT id, archetype, image_url, image_source, use_default_image
+     FROM menu_items WHERE cafe_id = $1 AND pos_item_id = $2 LIMIT 1`,
     [cafeId, item.posItemId],
   );
 
@@ -351,17 +363,26 @@ async function upsertCatalogItem(
     if (dbId) squareGroupIds.push(dbId);
   }
 
-  if (existing.rows[0]) {
-    const menuItemId = existing.rows[0].id;
-    const hasArchetype = existing.rows[0].archetype != null;
+  const publicBaseUrl = readMenuImageStorageConfig()?.publicBaseUrl ?? null;
+  const existingRow = existing.rows[0] ?? null;
+  const image = resolvePosCatalogItemImage({
+    posImageUrl: item.imageUrl,
+    itemName: item.name,
+    existing: existingRow ? parseExistingMenuItemImageState(existingRow) : null,
+    publicBaseUrl,
+  });
 
-    if (item.imageUrl) {
+  if (existingRow) {
+    const menuItemId = existingRow.id;
+    const hasArchetype = existingRow.archetype != null;
+
+    if (image.writeImage) {
       await client.query(
         `UPDATE menu_items SET
            name = $1, description = $2, price_minor = $3, currency = $4,
            category = $5, subcategory = $6, sizes = $7::jsonb,
-           image_url = $8, is_available = $9, synced_at = NOW()
-         WHERE id = $10 AND cafe_id = $11`,
+           image_url = $8, image_source = $9, is_available = $10, synced_at = NOW()
+         WHERE id = $11 AND cafe_id = $12`,
         [
           item.name,
           item.description,
@@ -370,7 +391,8 @@ async function upsertCatalogItem(
           item.category,
           item.subcategory,
           JSON.stringify(item.sizes),
-          item.imageUrl,
+          image.imageUrl,
+          image.imageSource,
           item.isAvailable !== false,
           menuItemId,
           cafeId,
@@ -427,11 +449,11 @@ async function upsertCatalogItem(
   const { rows } = await client.query<{ id: string }>(
     `INSERT INTO menu_items (
        cafe_id, pos_item_id, name, description, price_minor, currency, category, subcategory,
-       image_url, is_available, tags, modifier_groups, sizes, sort_order,
+       image_url, image_source, use_default_image, is_available, tags, modifier_groups, sizes, sort_order,
        archetype, waive_milk_surcharge, allow_no_milk, synced_at
      ) VALUES (
        $1, $2, $3, $4, $5, $6, $7, $8,
-       $9, $10, $11::text[], '[]'::jsonb, $12::jsonb, $13,
+       $9, $10, TRUE, $11, $12::text[], '[]'::jsonb, $13::jsonb, $14,
        NULL, FALSE, FALSE, NOW()
      )
      RETURNING id`,
@@ -444,7 +466,8 @@ async function upsertCatalogItem(
       item.currency || 'GBP',
       item.category,
       item.subcategory,
-      item.imageUrl ?? null,
+      image.imageUrl,
+      image.imageSource,
       item.isAvailable !== false,
       item.tags,
       JSON.stringify(item.sizes),

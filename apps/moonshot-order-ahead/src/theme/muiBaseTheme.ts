@@ -3,6 +3,7 @@ import {
   PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX,
   PAGE_CONTENT_MAX_WIDTH_PX,
 } from './pageLayout.js';
+import { surfaceCardChrome } from './surfaceCardChrome.js';
 
 const defaultCafeLayout = {
   menuGrid: '2col' as const,
@@ -43,8 +44,8 @@ export const baseMuiThemeOptions: ThemeOptions = {
     warning: { main: '#b97816' },
     error: { main: '#dc2626' },
     cafe: {
-      surface: '#ffffff',
-      surfaceElevated: '#f8fafe',
+      surface: '#f8fafd',
+      surfaceElevated: '#ffffff',
       textMuted: '#5d6780',
       textOnDark: '#f4f7ff',
       border: '#dbe3f1',
@@ -107,10 +108,7 @@ export const baseMuiThemeOptions: ThemeOptions = {
     },
     MuiPaper: {
       styleOverrides: {
-        root: ({ theme }) => ({
-          backgroundImage: 'none',
-          border: `1px solid ${theme.palette.divider}`,
-        }),
+        root: ({ theme }) => surfaceCardChrome(theme),
       },
     },
     MuiLink: {

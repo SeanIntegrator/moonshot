@@ -8,7 +8,7 @@ export const boldTheme: CafeTheme = {
     primaryContrast: '#ffdd00',
     secondary: '#ffdd00',
     background: '#f5f5f5',
-    surface: '#ffffff',
+    surface: '#fafafa',
     surfaceElevated: '#ffffff',
     text: '#000000',
     textMuted: '#404040',

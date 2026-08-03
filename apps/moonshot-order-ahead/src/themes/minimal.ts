@@ -8,7 +8,7 @@ export const minimalTheme: CafeTheme = {
     primaryContrast: '#ffffff',
     secondary: '#6b7280',
     background: '#fafafa',
-    surface: '#ffffff',
+    surface: '#fcfcfc',
     surfaceElevated: '#ffffff',
     text: '#111827',
     textMuted: '#6b7280',

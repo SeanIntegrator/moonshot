@@ -8,7 +8,7 @@ export const heritageTheme: CafeTheme = {
     primaryContrast: '#ffffff',
     secondary: '#334e85',
     background: '#f4f7fc',
-    surface: '#ffffff',
+    surface: '#f8fafd',
     surfaceElevated: '#ffffff',
     text: '#111a30',
     textMuted: '#5d6780',

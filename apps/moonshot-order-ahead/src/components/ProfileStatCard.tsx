@@ -1,4 +1,5 @@
-import { Box, Typography } from '@mui/material';
+import { Typography } from '@mui/material';
+import { SurfaceCard } from './ui/SurfaceCard.js';
 
 type Props = {
   value: string | number;
@@ -7,23 +8,13 @@ type Props = {
 
 export function ProfileStatCard({ value, label }: Props) {
   return (
-    <Box
-      sx={{
-        flex: 1,
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 1.25,
-        p: 1.5,
-        textAlign: 'center',
-        bgcolor: 'background.paper',
-      }}
-    >
+    <SurfaceCard sx={{ flex: 1, p: 1.5, textAlign: 'center' }}>
       <Typography variant="h5" fontWeight={700}>
         {value}
       </Typography>
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-    </Box>
+    </SurfaceCard>
   );
 }

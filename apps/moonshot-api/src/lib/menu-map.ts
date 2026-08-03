@@ -1,5 +1,6 @@
 import type {
   MenuCategory,
+  MenuItemImageSource,
   NormalisedItemSize,
   NormalisedMenuItem,
   NormalisedModifierGroup,
@@ -18,6 +19,8 @@ export type MenuItemRow = {
   category: string;
   subcategory: string | null;
   image_url: string | null;
+  image_source: string | null;
+  use_default_image: boolean;
   emoji: string | null;
   is_available: boolean;
   tags: string[];
@@ -192,6 +195,12 @@ export function mapMenuItemRow(
     allowNoMilk,
   );
 
+  const rawSource = row.image_source;
+  const imageSource: MenuItemImageSource | null =
+    rawSource === 'pos' || rawSource === 'upload' || rawSource === 'template'
+      ? rawSource
+      : null;
+
   return {
     id: row.id,
     posItemId: row.pos_item_id,
@@ -202,6 +211,8 @@ export function mapMenuItemRow(
     category: row.category as MenuCategory,
     subcategory: row.subcategory,
     imageUrl: row.image_url,
+    imageSource,
+    useDefaultImage: row.use_default_image !== false,
     emoji: row.emoji,
     isAvailable: row.is_available,
     sizes: parseSizes(row.sizes),

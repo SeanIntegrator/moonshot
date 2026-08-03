@@ -314,3 +314,25 @@ export const MENU_TEMPLATE_CATEGORIES: MenuTemplateCategoryDef[] = [
     ],
   },
 ];
+
+/** Lowercased trimmed display name → template drink key (built once from MENU_TEMPLATE_CATEGORIES). */
+const TEMPLATE_DRINK_KEY_BY_EXACT_NAME: ReadonlyMap<string, MenuTemplateDrinkKey> = (() => {
+  const map = new Map<string, MenuTemplateDrinkKey>();
+  for (const cat of MENU_TEMPLATE_CATEGORIES) {
+    for (const drink of cat.drinks ?? []) {
+      map.set(drink.name.trim().toLowerCase(), drink.key);
+    }
+  }
+  return map;
+})();
+
+/**
+ * Resolve a template drink key when `name` exactly matches a template display
+ * name (trim + case-insensitive). No aliases.
+ */
+export function resolveMenuTemplateDrinkKeyByExactName(
+  name: string,
+): MenuTemplateDrinkKey | null {
+  const key = TEMPLATE_DRINK_KEY_BY_EXACT_NAME.get(name.trim().toLowerCase());
+  return key ?? null;
+}

@@ -29,7 +29,7 @@ export async function fetchMenuForCafe(db: Db, cafeId: string, availableOnly = t
   const { rows: itemRows } = await db.query<MenuItemRow>(
     `SELECT
       mi.id, mi.pos_item_id, mi.name, mi.description, mi.price_minor, mi.currency,
-      mi.category, mi.subcategory, mi.image_url, mi.emoji, mi.is_available,
+      mi.category, mi.subcategory, mi.image_url, mi.image_source, mi.use_default_image, mi.emoji, mi.is_available,
       mi.tags, mi.modifier_groups, mi.sizes, mi.archetype, mi.waive_milk_surcharge, mi.allow_no_milk
     FROM menu_items mi
     WHERE mi.cafe_id = $1 ${availabilityClause}
@@ -98,7 +98,7 @@ export async function fetchMenuItemsByIds(
   const { rows: itemRows } = await db.query<MenuItemRow>(
     `SELECT
       mi.id, mi.pos_item_id, mi.name, mi.description, mi.price_minor, mi.currency,
-      mi.category, mi.subcategory, mi.image_url, mi.emoji, mi.is_available,
+      mi.category, mi.subcategory, mi.image_url, mi.image_source, mi.use_default_image, mi.emoji, mi.is_available,
       mi.tags, mi.modifier_groups, mi.sizes, mi.archetype, mi.waive_milk_surcharge, mi.allow_no_milk
     FROM menu_items mi
     WHERE mi.cafe_id = $1 AND mi.id = ANY($2::uuid[]) AND mi.is_available = TRUE`,
