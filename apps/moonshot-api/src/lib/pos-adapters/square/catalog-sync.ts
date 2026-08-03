@@ -17,8 +17,7 @@ import { normaliseSquareCatalog } from './catalog-normalise.js';
 import { syncNormalisedMenuCatalog } from '../../menu-sync-catalog.js';
 import { loadExistingPosCategoryKeys } from '../../pos-catalog/menu-catalog-upsert.js';
 import { resolveSquareEnvironment } from '../../square/oauth-urls.js';
-import { emitAdminMenuSynced } from '../../../realtime/admin-events.js';
-import { emitCustomerMenuUpdated } from '../../../realtime/customer-events.js';
+import { notifyMenuCatalogSynced } from '../../menu-sync-notify.js';
 
 const DEBOUNCE_MS = 45_000;
 
@@ -150,14 +149,13 @@ export async function runCatalogSyncForCafe(
       client.release();
     }
 
-    emitAdminMenuSynced({
+    notifyMenuCatalogSynced({
       cafeId,
       syncedAt: lastSyncedAt,
       upsertedItems: result.upsertedItems,
       softDeletedItems: result.softDeletedItems,
       source,
     });
-    emitCustomerMenuUpdated({ cafeId, syncedAt: lastSyncedAt });
 
     return {
       cafeId,

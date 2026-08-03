@@ -40,12 +40,8 @@ vi.mock('../../pos-catalog/menu-catalog-upsert.js', () => ({
   loadExistingPosCategoryKeys: vi.fn().mockResolvedValue(new Map()),
 }));
 
-vi.mock('../../../realtime/admin-events.js', () => ({
-  emitAdminMenuSynced: vi.fn(),
-}));
-
-vi.mock('../../../realtime/customer-events.js', () => ({
-  emitCustomerMenuUpdated: vi.fn(),
+vi.mock('../../menu-sync-notify.js', () => ({
+  notifyMenuCatalogSynced: vi.fn(),
 }));
 
 vi.mock('../../pos-connections-repository.js', async () => {
