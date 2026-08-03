@@ -26,8 +26,8 @@ type LoginScreenProps = {
 
 export function LoginScreen({ form, error, onChange, onSubmit }: LoginScreenProps) {
   return (
-    <div className="flex min-h-full items-start justify-center p-4 pt-12 sm:pt-20">
-      <Card className="w-full max-w-sm" size="sm">
+    <div className="flex min-h-full items-start justify-center bg-surface p-4 pt-12 sm:pt-20">
+      <Card className="w-full max-w-sm bg-surface-raised ring-1 ring-foreground/10" size="sm">
         <CardHeader>
           <CardTitle className="text-lg">Moonshot KDS</CardTitle>
           <CardDescription>Sign in with your café slug and KDS credentials.</CardDescription>
@@ -70,7 +70,7 @@ export function LoginScreen({ form, error, onChange, onSubmit }: LoginScreenProp
                 required
               />
             </div>
-            <Button type="submit" className="w-full" size="lg">
+            <Button type="submit" className="mt-1 min-h-11 w-full" size="lg">
               Sign in
             </Button>
           </form>

@@ -81,7 +81,7 @@ function RecentOrderLines({
   const foods = lines.filter((l) => l.view.isFood);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface-sunken">
       {drinks.map(({ item, view }, i) => (
         <DrinkRow
           key={item.id}
@@ -91,11 +91,12 @@ function RecentOrderLines({
           made={false}
           onToggleMade={() => undefined}
           hideBottomBorder={foods.length > 0 && i === drinks.length - 1}
+          density="compact"
         />
       ))}
       {foods.length > 0 ? (
         <>
-          <div className="bg-[#3a4555] px-4 py-1.5 text-center text-xs font-bold tracking-[0.12em] text-[#a8b4c4] uppercase">
+          <div className="bg-muted px-3 py-1 text-center text-[0.65rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
             Food
           </div>
           {foods.map(({ item, view }) => (
@@ -106,12 +107,13 @@ function RecentOrderLines({
               view={view}
               made={false}
               onToggleMade={() => undefined}
+              density="compact"
             />
           ))}
         </>
       ) : null}
       {order.notes?.trim() ? (
-        <p className="border-t border-border px-4 py-2 text-sm text-muted-foreground">
+        <p className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
           Notes: {order.notes.trim()}
         </p>
       ) : null}
@@ -143,9 +145,9 @@ function RecentOrderRow({
 
   return (
     <Collapsible open={expanded} onOpenChange={onExpandedChange}>
-      <div className="rounded-xl border border-border bg-card/60">
-        <div className="flex items-stretch gap-2 p-3">
-          <CollapsibleTrigger className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg text-left outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring">
+      <div className="rounded-xl border border-border bg-surface-raised ring-1 ring-foreground/5">
+        <div className="flex items-stretch gap-2 p-2.5 sm:p-3">
+          <CollapsibleTrigger className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg px-1.5 py-1 text-left outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring">
             <ChevronDown
               className={cn(
                 'size-5 shrink-0 text-muted-foreground transition-transform duration-200',
@@ -153,27 +155,27 @@ function RecentOrderRow({
               )}
               aria-hidden
             />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="font-semibold tracking-wide uppercase">
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="info" className="font-semibold tracking-wide uppercase">
                   {ticketKindLabel(kind)}
                 </Badge>
-                <Badge variant="outline">Completed</Badge>
+                <Badge variant="success">Completed</Badge>
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {formatRelativeCompleted(completedAt)}
                 </span>
               </div>
               {showCustomer ? (
-                <p className="truncate text-base font-medium">{order.customerName.trim()}</p>
+                <p className="truncate text-sm font-medium">{order.customerName.trim()}</p>
               ) : null}
-              <p className="text-sm text-muted-foreground">{itemSummary(order, kdsConfig)}</p>
+              <p className="text-xs text-muted-foreground">{itemSummary(order, kdsConfig)}</p>
             </div>
           </CollapsibleTrigger>
           <Button
             type="button"
             variant="default"
-            size="sm"
-            className="shrink-0 self-center"
+            size="lg"
+            className="min-h-10 shrink-0 self-center"
             disabled={recalling}
             onClick={(e) => {
               e.stopPropagation();
@@ -185,7 +187,7 @@ function RecentOrderRow({
           </Button>
         </div>
         <CollapsibleContent>
-          <div className="pointer-events-none border-t border-border px-3 pt-2 pb-3">
+          <div className="pointer-events-none border-t border-border px-2.5 pt-2 pb-2.5 sm:px-3">
             <RecentOrderLines order={order} kdsConfig={kdsConfig} />
           </div>
         </CollapsibleContent>
@@ -255,12 +257,12 @@ export function RecentOrdersDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex h-[min(90vh,52rem)] w-[min(96vw,56rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl"
+        className="flex h-[min(90vh,52rem)] w-[min(96vw,56rem)] max-w-4xl flex-col gap-0 overflow-hidden bg-popover p-0 sm:max-w-4xl"
         showCloseButton
       >
-        <DialogHeader className="shrink-0 border-b border-border px-5 pt-5 pb-4">
+        <DialogHeader className="shrink-0 border-b border-border bg-surface-raised/50 px-5 pt-5 pb-4">
           <DialogTitle className="flex items-center gap-2 text-lg">
-            <History className="size-5" aria-hidden />
+            <History className="size-5 text-info" aria-hidden />
             Recent orders
           </DialogTitle>
           <DialogDescription>
@@ -268,7 +270,7 @@ export function RecentOrdersDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col px-5 py-4">
+        <div className="flex min-h-0 flex-1 flex-col bg-surface px-5 py-4">
           {error ? (
             <Alert variant="destructive" className="mb-3 shrink-0">
               <AlertDescription>{error}</AlertDescription>
@@ -282,8 +284,8 @@ export function RecentOrdersDialog({
               No completed orders to show yet.
             </p>
           ) : (
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="flex flex-col gap-3 pr-3">
+            <ScrollArea className="min-h-0 flex-1 rounded-lg bg-surface-sunken/40">
+              <div className="flex flex-col gap-2.5 p-1 pr-3">
                 {orders.map((order) => (
                   <RecentOrderRow
                     key={order.id}
@@ -303,7 +305,7 @@ export function RecentOrdersDialog({
         </div>
 
         <DialogFooter className="shrink-0" showCloseButton={false}>
-          <DialogClose render={<Button type="button" variant="outline" />}>
+          <DialogClose render={<Button type="button" variant="outline" size="lg" className="min-h-10" />}>
             Close
           </DialogClose>
         </DialogFooter>

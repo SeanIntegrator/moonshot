@@ -21,7 +21,7 @@ export function FlowBoard({
   if (orders.length === 0) {
     return (
       <div
-        className="flex min-h-[60vh] items-center justify-center text-4xl font-bold tracking-wide text-muted-foreground opacity-60"
+        className="flex min-h-[60vh] items-center justify-center rounded-xl bg-surface-sunken/50 text-4xl font-bold tracking-wide text-muted-foreground/70"
         role="status"
       >
         Waiting for orders

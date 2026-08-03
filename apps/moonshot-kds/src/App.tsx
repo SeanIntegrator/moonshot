@@ -106,7 +106,7 @@ export function App() {
   return (
     <TooltipProvider>
       <div className="min-h-full">
-        <div className="sticky top-0 z-50 border-b border-border/60 bg-background/95 px-5 pt-4 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/85">
+        <div className="sticky top-0 z-50 border-b border-border bg-surface/95 px-5 pt-4 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/85">
           <AppHeader
             cafeName={session.cafeName}
             cafeSlug={session.cafeSlug}
@@ -120,7 +120,7 @@ export function App() {
             </Alert>
           ) : null}
         </div>
-        <div className="px-5 pt-4 pb-6">
+        <div className="bg-surface px-5 pt-4 pb-6">
           {kdsConfig ? (
             <FlowBoard
               orders={orders}

@@ -21,13 +21,19 @@ export function AppHeader({
       <h1 className="text-lg font-semibold tracking-wide">Moonshot KDS</h1>
       <div className="flex items-center gap-2 sm:gap-3">
         <span className="hidden text-sm text-muted-foreground sm:inline">
-          {cafeName}
+          {cafeName} ({cafeSlug}) — {username}
         </span>
-        <Button type="button" variant="outline" size="sm" onClick={onOpenRecentOrders}>
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="min-h-10"
+          onClick={onOpenRecentOrders}
+        >
           <History className="size-4" />
           Recent orders
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onLogout}>
+        <Button type="button" variant="outline" size="default" className="min-h-10" onClick={onLogout}>
           Sign out
         </Button>
       </div>
