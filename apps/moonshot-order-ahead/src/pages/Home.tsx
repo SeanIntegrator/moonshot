@@ -18,6 +18,7 @@ import { PressableCard } from '../components/ui/PressableCard.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
+import { useOrderingGate } from '../hooks/useOrderingGate.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
@@ -25,7 +26,7 @@ import { useCafe } from '../hooks/useCafe.js';
 import { firstName, formatFromPrice, formatMoney, timeGreeting } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
-import { SIGN_IN_TO_ORDER_MESSAGE } from '../lib/sign-in-to-order.js';
+import { SIGN_IN_TO_ORDER_MESSAGE } from '../lib/order-gate-messages.js';
 import { defaultSelectionsForItem, findWhyNotTryItem } from '../lib/why-not-try.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
@@ -39,6 +40,7 @@ export function Home() {
   const { user, membership, isSignedIn } = useAuth();
   const { summary, refresh: refreshLoyalty } = useLoyalty();
   const { caption: openCaption, orderingAvailable } = useCafeOpenStatus();
+  const { canStartNewOrder } = useOrderingGate();
   const { active, recent } = useActiveOrders();
   const { menu } = useMenu();
   const navigate = useNavigate();
@@ -203,7 +205,7 @@ export function Home() {
             variant="usual"
             order={usualOrder}
             menu={menu}
-            orderingAvailable={orderingAvailable}
+            orderingAvailable={canStartNewOrder}
             onOrder={() => {
               if (!isSignedIn) {
                 navigate(cafePath('/profile'), {
@@ -220,7 +222,7 @@ export function Home() {
           <UsualSuggestCard
             variant="whyNotTry"
             item={whyNotTryItem}
-            orderingAvailable={orderingAvailable}
+            orderingAvailable={canStartNewOrder}
             onOrder={() => {
               if (!isSignedIn) {
                 navigate(cafePath('/profile'), {
@@ -241,7 +243,7 @@ export function Home() {
           />
         )}
 
-        {featured.length > 0 && orderingAvailable && (
+        {featured.length > 0 && canStartNewOrder && (
           <Box sx={{ mb: 2, minHeight: 200 }}>
             <SectionHead
               eyebrow="Featured"

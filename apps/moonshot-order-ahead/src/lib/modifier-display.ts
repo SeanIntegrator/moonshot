@@ -1,6 +1,7 @@
 import type {
   NormalisedMenuItem,
   NormalisedOrderLineModifier,
+  OrderLineModifierSelectionInput,
 } from '@moonshot/types';
 
 /**
@@ -22,4 +23,29 @@ export function isStandardModifierVariant(
 
   const group = menuItem.modifierGroups.find((g) => g.id === mod.groupId);
   return group?.options.some((o) => o.id === mod.optionId && o.isDefault) === true;
+}
+
+type CartLineSelections = {
+  sizeId?: string | null;
+  modifiers: OrderLineModifierSelectionInput[];
+};
+
+/**
+ * Non-standard selections only — default size / default options stay hidden.
+ * Used by checkout line subtitles so Regular / Whole milk don't clutter the row.
+ */
+export function nonStandardCartLineLabels(
+  item: NormalisedMenuItem | undefined,
+  line: CartLineSelections,
+): string[] {
+  if (!item) return [];
+  const parts: string[] = [];
+  const size = line.sizeId ? item.sizes.find((s) => s.id === line.sizeId) : undefined;
+  if (size && !size.isDefault) parts.push(size.name);
+  for (const sel of line.modifiers) {
+    const g = item.modifierGroups.find((x) => x.id === sel.groupId);
+    const o = g?.options.find((x) => x.id === sel.optionId);
+    if (o && !o.isDefault) parts.push(o.name);
+  }
+  return parts;
 }

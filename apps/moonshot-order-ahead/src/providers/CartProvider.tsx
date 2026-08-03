@@ -42,6 +42,8 @@ function cartLineKey(
 
 type CartContextValue = {
   lines: CartLine[];
+  /** Sum of line quantities — used by the Order tab badge and floating cart. */
+  itemCount: number;
   pickupDelayMinutes: PickupDelayMinutes;
   setPickupDelayMinutes: (minutes: PickupDelayMinutes) => void;
   upsertLine: (params: {
@@ -115,16 +117,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     clearCartStorage(cafeSlug);
   }, [cafeSlug]);
 
+  const itemCount = useMemo(() => lines.reduce((sum, l) => sum + l.quantity, 0), [lines]);
+
   const value = useMemo(
     () => ({
       lines,
+      itemCount,
       pickupDelayMinutes,
       setPickupDelayMinutes,
       upsertLine,
       removeLine,
       clear,
     }),
-    [lines, pickupDelayMinutes, setPickupDelayMinutes, upsertLine, removeLine, clear],
+    [lines, itemCount, pickupDelayMinutes, setPickupDelayMinutes, upsertLine, removeLine, clear],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

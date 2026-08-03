@@ -2,17 +2,18 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
 import CardGiftcardOutlinedIcon from '@mui/icons-material/CardGiftcardOutlined';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
-import { BottomNavigation, BottomNavigationAction, Box, Paper } from '@mui/material';
+import { Badge, BottomNavigation, BottomNavigationAction, Box, Paper } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
 import { RequireAuth } from './components/RequireAuth.js';
 import { RequireFeature } from './components/RequireFeature.js';
+import { RequireNoActiveOrder } from './components/RequireNoActiveOrder.js';
 import { useAuth } from './hooks/useAuth.js';
 import { useCafePath } from './hooks/useCafePath.js';
 import { useCafeFeatures } from './hooks/useCafeFeatures.js';
-import { useCafeOpenStatus } from './hooks/useCafeOpenStatus.js';
-import { SIGN_IN_TO_ORDER_MESSAGE } from './lib/sign-in-to-order.js';
+import { useOrderingGate } from './hooks/useOrderingGate.js';
+import { SIGN_IN_TO_ORDER_MESSAGE } from './lib/order-gate-messages.js';
 import { PageTransition } from './page-transition/index.js';
 import { Checkout } from './pages/Checkout.js';
 import { CheckoutRestore } from './pages/CheckoutRestore.js';
@@ -23,6 +24,7 @@ import { OrderConfirmed } from './pages/OrderConfirmed.js';
 import { OrderDetail } from './pages/OrderDetail.js';
 import { Profile } from './pages/Profile.js';
 import { Rewards } from './pages/Rewards.js';
+import { useCart } from './providers/CartProvider.js';
 import { pageContentWidthSx } from './theme/pageLayout.js';
 
 function pathToNavValue(pathname: string): number {
@@ -46,8 +48,9 @@ export function App() {
   const location = useLocation();
   const cafePath = useCafePath();
   const { loyaltyEnabled } = useCafeFeatures();
-  const { orderingAvailable } = useCafeOpenStatus();
+  const { canStartNewOrder } = useOrderingGate();
   const { isSignedIn } = useAuth();
+  const { itemCount } = useCart();
   const navValue = pathToNavValue(location.pathname);
   const topBar = theme.cafeLayout.navStyle === 'top_bar';
 
@@ -81,7 +84,7 @@ export function App() {
         onChange={(_, v) => {
           if (v === 0) navigate(cafePath('/'));
           else if (v === 1) {
-            if (!orderingAvailable) return;
+            if (!canStartNewOrder) return;
             if (!isSignedIn) {
               navigate(cafePath('/profile'), {
                 state: { snackbar: SIGN_IN_TO_ORDER_MESSAGE },
@@ -98,9 +101,18 @@ export function App() {
         <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
         <BottomNavigationAction
           label="Order"
-          icon={<LocalCafeOutlinedIcon />}
-          disabled={!orderingAvailable}
-          sx={{ opacity: orderingAvailable ? 1 : 0.4 }}
+          icon={
+            <Badge
+              badgeContent={itemCount}
+              color="primary"
+              overlap="circular"
+              invisible={itemCount === 0}
+            >
+              <LocalCafeOutlinedIcon />
+            </Badge>
+          }
+          disabled={!canStartNewOrder}
+          sx={{ opacity: canStartNewOrder ? 1 : 0.4 }}
         />
         <BottomNavigationAction
           label="Rewards"
@@ -128,7 +140,9 @@ export function App() {
                 element={
                   <RequireFeature feature="orderAhead">
                     <RequireAuth>
-                      <Menu />
+                      <RequireNoActiveOrder>
+                        <Menu />
+                      </RequireNoActiveOrder>
                     </RequireAuth>
                   </RequireFeature>
                 }
@@ -138,7 +152,9 @@ export function App() {
                 element={
                   <RequireFeature feature="orderAhead">
                     <RequireAuth>
-                      <ItemDetail />
+                      <RequireNoActiveOrder>
+                        <ItemDetail />
+                      </RequireNoActiveOrder>
                     </RequireAuth>
                   </RequireFeature>
                 }
@@ -148,7 +164,9 @@ export function App() {
                 element={
                   <RequireFeature feature="orderAhead">
                     <RequireAuth>
-                      <Checkout />
+                      <RequireNoActiveOrder>
+                        <Checkout />
+                      </RequireNoActiveOrder>
                     </RequireAuth>
                   </RequireFeature>
                 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NormalisedMenuItem, NormalisedOrderLineModifier } from '@moonshot/types';
-import { isStandardModifierVariant } from './modifier-display.js';
+import { isStandardModifierVariant, nonStandardCartLineLabels } from './modifier-display.js';
 
 function mod(
   partial: Partial<NormalisedOrderLineModifier> &
@@ -40,6 +40,16 @@ const menuItem: NormalisedMenuItem = {
       options: [
         { id: 'o-whole', posOptionId: null, name: 'Whole', priceMinor: 0, isDefault: true },
         { id: 'o-oat', posOptionId: null, name: 'Oat', priceMinor: 50, isDefault: false },
+      ],
+    },
+    {
+      id: 'g-shots',
+      name: 'Shots',
+      selectionType: 'single',
+      required: true,
+      options: [
+        { id: 'o-double', posOptionId: null, name: 'Double', priceMinor: 0, isDefault: true },
+        { id: 'o-triple', posOptionId: null, name: 'Triple shot', priceMinor: 40, isDefault: false },
       ],
     },
   ],
@@ -90,5 +100,40 @@ describe('isStandardModifierVariant', () => {
         menuItem,
       ),
     ).toBe(true);
+  });
+});
+
+describe('nonStandardCartLineLabels', () => {
+  it('hides default size and default modifiers', () => {
+    expect(
+      nonStandardCartLineLabels(menuItem, {
+        sizeId: 'sz-reg',
+        modifiers: [
+          { groupId: 'g-milk', optionId: 'o-whole' },
+          { groupId: 'g-shots', optionId: 'o-double' },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it('keeps non-default size and modifiers', () => {
+    expect(
+      nonStandardCartLineLabels(menuItem, {
+        sizeId: 'sz-lrg',
+        modifiers: [
+          { groupId: 'g-milk', optionId: 'o-oat' },
+          { groupId: 'g-shots', optionId: 'o-triple' },
+        ],
+      }),
+    ).toEqual(['Large', 'Oat', 'Triple shot']);
+  });
+
+  it('returns empty when the menu item is missing', () => {
+    expect(
+      nonStandardCartLineLabels(undefined, {
+        sizeId: 'sz-lrg',
+        modifiers: [{ groupId: 'g-milk', optionId: 'o-oat' }],
+      }),
+    ).toEqual([]);
   });
 });

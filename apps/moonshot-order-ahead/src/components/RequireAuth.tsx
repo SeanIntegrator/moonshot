@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCafePath } from '../hooks/useCafePath.js';
-import { SIGN_IN_TO_ORDER_MESSAGE } from '../lib/sign-in-to-order.js';
+import { SIGN_IN_TO_ORDER_MESSAGE } from '../lib/order-gate-messages.js';
 
 /**
  * Redirects to profile with a snackbar when the customer is signed out.

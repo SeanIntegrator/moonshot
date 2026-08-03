@@ -4,7 +4,7 @@ import { Box, Chip, IconButton, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useEffect, useRef, useState } from 'react';
 import { formatModifierDelta } from '../lib/format.js';
-import { OptionColorDot, OptionTile } from './ui/OptionTile.js';
+import { OptionColorDot, OptionTile, optionBorderColor } from './ui/OptionTile.js';
 
 function colorDot(hex: string | null | undefined) {
   if (!hex) return null;
@@ -28,7 +28,7 @@ const OptionChip = styled(Chip, {
 })<{ selected?: boolean }>(({ theme, selected }) => {
   const surface = {
     border: '0.5px solid',
-    borderColor: selected ? theme.palette.text.primary : theme.palette.divider,
+    borderColor: optionBorderColor(theme, selected),
     backgroundColor: selected ? theme.palette.action.selected : theme.palette.background.paper,
     transition: OPTION_TRANSITION,
   };

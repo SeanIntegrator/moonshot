@@ -33,6 +33,17 @@ This document captures the substantial order-ahead work completed across the rec
   - real loyalty stamps card with QR modal access.
   - active order card with status/details.
 
+### Single active order
+
+Customers may only have one in-progress order at a time. While `GET /orders/me` reports an active order:
+
+- `RequireNoActiveOrder` wraps `/order`, `/order/item/:id`, and `/checkout` and redirects to `/orders/:id` with a snackbar (“Finish your current order first”).
+- The Order thumb-bar tab and Home “Your usual” / “Why not try” Order buttons are disabled via `useOrderingGate().canStartNewOrder`.
+- Featured menu cards are hidden so they cannot deep-link into a bounce.
+- Profile reorder buttons use the same gate (they land on `/checkout`).
+
+Centralise new “can I order?” checks in `useOrderingGate` rather than re-implementing per surface. Stripe return (`/checkout/restore`) and confirmation routes stay ungated.
+
 ## Production-complete vs wireframe-only
 
 ### Production-complete

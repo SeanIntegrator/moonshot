@@ -15,7 +15,7 @@ import { unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
-import { pageContentWidthSx } from '../theme/pageLayout.js';
+import { pageContentWidthSx, toastBottomPx } from '../theme/pageLayout.js';
 
 function menuGridTemplateColumns(menuGrid: MenuGridLayout): string {
   switch (menuGrid) {
@@ -36,10 +36,6 @@ function simpleLineQty(lines: ReturnType<typeof useCart>['lines'], menuItemId: s
   return hit?.quantity ?? 0;
 }
 
-function totalCartQty(lines: ReturnType<typeof useCart>['lines']): number {
-  return lines.reduce((sum, l) => sum + l.quantity, 0);
-}
-
 type MenuLocationState = {
   addedItemName?: string;
 };
@@ -55,10 +51,10 @@ export function Menu() {
   const { menu, loading, error } = useMenu();
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
+  const { lines, itemCount, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
   const cafeClosed = !isOpen;
-  const cartQty = totalCartQty(lines);
+  const cartQty = itemCount;
   const gridTemplateColumns = menuGridTemplateColumns(theme.cafeLayout.menuGrid);
 
   useEffect(() => {
@@ -194,7 +190,7 @@ export function Menu() {
         onClose={() => setToastMessage(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         sx={{
-          bottom: cafeClosed || cartQty > 0 ? 112 : 72,
+          bottom: toastBottomPx(cafeClosed || cartQty > 0),
           px: 2,
           ...pageContentWidthSx,
         }}

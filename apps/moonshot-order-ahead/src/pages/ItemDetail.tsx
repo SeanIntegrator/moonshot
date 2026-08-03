@@ -2,8 +2,7 @@ import type {
   NormalisedMenuItem,
   OrderLineModifierSelectionInput,
 } from '@moonshot/types';
-import { ArrowBack } from '@mui/icons-material';
-import { Box, Button, Container, IconButton, Typography } from '@mui/material';
+import { Box, Button, Container, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AdditionalCustomisationAccordion } from '../components/AdditionalCustomisationAccordion.js';
@@ -12,6 +11,7 @@ import { QuantityStepper } from '../components/QuantityStepper.js';
 import { SizeOptionGrid } from '../components/SizeOptionGrid.js';
 import { ItemDetailSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
+import { BackButton, BackButtonIcon } from '../components/ui/BackButton.js';
 import { FixedBottomBar } from '../components/ui/FixedBottomBar.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
@@ -20,6 +20,7 @@ import { partitionModifierGroups } from '../lib/modifier-slider-groups.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
+import { PAGE_CONTENT_MAX_WIDTH_PX } from '../theme/pageLayout.js';
 
 function defaultModifiers(item: NormalisedMenuItem): OrderLineModifierSelectionInput[] {
   const out: OrderLineModifierSelectionInput[] = [];
@@ -120,7 +121,13 @@ export function ItemDetail() {
 
   return (
     <Box sx={{ pb: 14 }}>
-      <Box sx={{ position: 'relative' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          maxWidth: PAGE_CONTENT_MAX_WIDTH_PX,
+          mx: 'auto',
+        }}
+      >
         <MenuItemImage
           src={item.imageUrl}
           alt={item.name}
@@ -130,21 +137,21 @@ export function ItemDetail() {
           fetchPriority="high"
           objectFit="cover"
         />
-        <IconButton
+        <BackButton
           onClick={() => navigate(cafePath('/order'))}
           aria-label="Back to menu"
+          size="small"
           sx={{
             position: 'absolute',
             top: 12,
             left: 12,
             bgcolor: 'background.paper',
-            border: 1,
-            borderColor: 'divider',
+            boxShadow: 1,
+            '&:hover': { bgcolor: 'background.paper', filter: 'brightness(0.96)' },
           }}
-          size="small"
         >
-          <ArrowBack fontSize="small" />
-        </IconButton>
+          <BackButtonIcon />
+        </BackButton>
       </Box>
 
       <Container maxWidth="sm" sx={{ py: 2 }}>

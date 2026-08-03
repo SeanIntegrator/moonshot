@@ -1,16 +1,18 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
+  Alert,
   Box,
   Button,
   Chip,
   Container,
   Divider,
+  Snackbar,
   Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { OrderStatusStepper } from '../components/OrderStatusStepper.js';
 import { PageHeader } from '../components/PageHeader.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
@@ -30,7 +32,9 @@ import {
   minutesUntil,
   modifierSummary,
 } from '../lib/format.js';
+import type { SnackbarLocationState } from '../lib/order-gate-messages.js';
 import { getOrderStatusMeta } from '../lib/order-status.js';
+import { pageContentWidthSx, toastBottomPx } from '../theme/pageLayout.js';
 
 const ACTIVE_FLOW = ['pending', 'confirmed', 'preparing', 'ready'] as const;
 
@@ -45,6 +49,7 @@ function totalItemQuantity(items: NormalisedOrder['items']): number {
 export function OrderDetail() {
   const { orderId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const cafePath = useCafePath();
   const { isSignedIn, refresh: refreshAuth } = useAuth();
   const { summary, refresh: refreshLoyalty } = useLoyalty();
@@ -54,6 +59,14 @@ export function OrderDetail() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const state = location.state as SnackbarLocationState | null;
+    if (!state?.snackbar) return;
+    setToastMessage(state.snackbar);
+    navigate('.', { replace: true, state: null });
+  }, [location.state, navigate]);
 
   const guestTracking = useMemo(() => {
     if (!orderId.trim() || isSignedIn) return undefined;
@@ -330,6 +343,30 @@ export function OrderDetail() {
           </>
         )}
       </Container>
+
+      <Snackbar
+        open={toastMessage != null}
+        autoHideDuration={3500}
+        onClose={() => setToastMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ bottom: toastBottomPx(false), px: 2, ...pageContentWidthSx }}
+      >
+        <Alert
+          severity="info"
+          variant="outlined"
+          sx={{
+            width: '100%',
+            alignItems: 'center',
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            borderColor: 'divider',
+            boxShadow: 3,
+            '& .MuiAlert-icon': { color: 'info.main' },
+          }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -19,6 +19,8 @@ type ActiveOrdersContextValue = {
   active: NormalisedOrder[];
   recent: NormalisedOrder[];
   loading: boolean;
+  /** True after the first refresh settles — guards wait on this to avoid menu flash. */
+  initialised: boolean;
   refresh: () => Promise<void>;
 };
 
@@ -29,11 +31,13 @@ export function ActiveOrdersProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<NormalisedOrder[]>([]);
   const [recent, setRecent] = useState<NormalisedOrder[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialised, setInitialised] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!isSignedIn) {
       setActive([]);
       setRecent([]);
+      setInitialised(true);
       return;
     }
     setLoading(true);
@@ -46,6 +50,7 @@ export function ActiveOrdersProvider({ children }: { children: ReactNode }) {
       setRecent([]);
     } finally {
       setLoading(false);
+      setInitialised(true);
     }
   }, [isSignedIn]);
 
@@ -81,9 +86,10 @@ export function ActiveOrdersProvider({ children }: { children: ReactNode }) {
       active,
       recent,
       loading,
+      initialised,
       refresh,
     }),
-    [active, recent, loading, refresh],
+    [active, recent, loading, initialised, refresh],
   );
 
   return <ActiveOrdersContext.Provider value={value}>{children}</ActiveOrdersContext.Provider>;

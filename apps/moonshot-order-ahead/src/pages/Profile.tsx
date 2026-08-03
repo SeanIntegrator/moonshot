@@ -7,26 +7,25 @@ import {
   Button,
   Container,
   Divider,
-  Link,
   Snackbar,
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ProfileStatCard } from '../components/ProfileStatCard.js';
-import { RecentOrderCard } from '../components/RecentOrderCard.js';
+import { RecentOrdersSection } from '../components/RecentOrdersSection.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { SignedOutPanel } from '../components/SignedOutPanel.js';
 import { SurfaceCard } from '../components/ui/SurfaceCard.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCafePath } from '../hooks/useCafePath.js';
-import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
+import { useOrderingGate } from '../hooks/useOrderingGate.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { formatShortDate } from '../lib/format.js';
-import type { SnackbarLocationState } from '../lib/sign-in-to-order.js';
+import type { SnackbarLocationState } from '../lib/order-gate-messages.js';
 import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useCart } from '../providers/CartProvider.js';
-import { pageContentWidthSx } from '../theme/pageLayout.js';
+import { pageContentWidthSx, toastBottomPx } from '../theme/pageLayout.js';
 
 export function Profile() {
   const { user, membership, loading, signOut, isSignedIn } = useAuth();
@@ -35,7 +34,7 @@ export function Profile() {
   const navigate = useNavigate();
   const location = useLocation();
   const { upsertLine } = useCart();
-  const { orderingAvailable } = useCafeOpenStatus();
+  const { canStartNewOrder } = useOrderingGate();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,7 +45,7 @@ export function Profile() {
   }, [location.state, navigate]);
 
   const handleReorder = (order: NormalisedOrder) => {
-    if (!orderingAvailable) return;
+    if (!canStartNewOrder) return;
     reorderFromOrder(order, upsertLine);
     navigate(cafePath('/checkout'));
   };
@@ -119,27 +118,11 @@ export function Profile() {
             ))}
           </SurfaceCard>
 
-          {recent.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <SectionHead
-                eyebrow="Activity"
-                title="Recent orders"
-                action={
-                  <Link component={RouterLink} to={cafePath('/order')} variant="body2" underline="hover">
-                    See all
-                  </Link>
-                }
-              />
-              {recent.slice(0, 3).map((o) => (
-                <RecentOrderCard
-                  key={o.id}
-                  order={o}
-                  orderingAvailable={orderingAvailable}
-                  onReorder={handleReorder}
-                />
-              ))}
-            </Box>
-          )}
+          <RecentOrdersSection
+            orders={recent}
+            orderingAvailable={canStartNewOrder}
+            onReorder={handleReorder}
+          />
 
           <Button variant="contained" color="error" fullWidth onClick={() => signOut()}>
             Sign out
@@ -152,7 +135,7 @@ export function Profile() {
         autoHideDuration={3500}
         onClose={() => setToastMessage(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{ bottom: 72, px: 2, ...pageContentWidthSx }}
+        sx={{ bottom: toastBottomPx(false), px: 2, ...pageContentWidthSx }}
       >
         <Alert
           severity="info"

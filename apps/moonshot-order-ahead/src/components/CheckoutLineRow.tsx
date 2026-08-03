@@ -5,7 +5,7 @@ import type { NormalisedMenuItem } from '@moonshot/types';
 import { Box, IconButton, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { formatPriceTag } from '../lib/format.js';
-import { sizeById } from '../lib/menu-price-utils.js';
+import { nonStandardCartLineLabels } from '../lib/modifier-display.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import type { CartLine } from '../providers/CartProvider.js';
 
@@ -17,26 +17,10 @@ type Props = {
   isLast?: boolean;
 };
 
-/** Size + modifiers as title-case labels for the checkout line subtitle. */
-function lineDetailLabels(item: NormalisedMenuItem | undefined, line: CartLine): string {
-  if (!item) return '';
-  const parts: string[] = [];
-  const size = sizeById(item.sizes ?? [], line.sizeId);
-  if (size) parts.push(size.name);
-  if (line.modifiers.length > 0) {
-    for (const sel of line.modifiers) {
-      const g = item.modifierGroups.find((x) => x.id === sel.groupId);
-      const o = g?.options.find((x) => x.id === sel.optionId);
-      if (o?.name) parts.push(o.name);
-    }
-  }
-  return parts.join(' · ');
-}
-
 export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = false }: Props) {
   const cafePath = useCafePath();
   const navigate = useNavigate();
-  const mods = lineDetailLabels(item, line);
+  const mods = nonStandardCartLineLabels(item, line).join(' · ');
   const lineTotal = unitMinor != null ? unitMinor * line.quantity : null;
   const lineTotalLabel = lineTotal != null ? formatPriceTag(lineTotal, item?.currency) : null;
 

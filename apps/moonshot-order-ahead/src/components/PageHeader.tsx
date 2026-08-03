@@ -1,6 +1,6 @@
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { Box, IconButton, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { BackButton, BackButtonIcon } from './ui/BackButton.js';
 
 type Props = {
   title: string;
@@ -20,14 +20,9 @@ export function PageHeader({ title, backTo, onBack, right }: Props) {
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, minHeight: 40 }}>
-      <IconButton
-        onClick={handleBack}
-        aria-label="Back"
-        sx={{ border: 1, borderColor: 'divider', borderRadius: '50%' }}
-        size="small"
-      >
-        <ArrowBackIcon fontSize="small" />
-      </IconButton>
+      <BackButton onClick={handleBack} aria-label="Back" size="small">
+        <BackButtonIcon />
+      </BackButton>
       <Typography variant="h5" component="h1" fontWeight={700} sx={{ flex: 1, textAlign: 'center' }}>
         {title}
       </Typography>
