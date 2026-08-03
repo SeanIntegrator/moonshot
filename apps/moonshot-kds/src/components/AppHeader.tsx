@@ -21,7 +21,7 @@ export function AppHeader({
       <h1 className="text-lg font-semibold tracking-wide">Moonshot KDS</h1>
       <div className="flex items-center gap-2 sm:gap-3">
         <span className="hidden text-sm text-muted-foreground sm:inline">
-          {cafeName} ({cafeSlug}) — {username}
+          {cafeName}
         </span>
         <Button
           type="button"
