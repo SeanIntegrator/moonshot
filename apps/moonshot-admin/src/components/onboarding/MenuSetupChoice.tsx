@@ -1,34 +1,68 @@
-import { Box, Button, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material';
+import { useCallback, useState } from 'react';
+import { startSquareConnect } from '../../lib/admin-api.js';
 
 type Props = {
+  token: string;
   onEditTemplate: () => void;
-  onImportPos: () => void;
-  onBack: () => void;
 };
 
-export function MenuSetupChoice({ onEditTemplate, onImportPos, onBack }: Props) {
+export function MenuSetupChoice({ token, onEditTemplate }: Props) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const connectSquare = useCallback(async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      // Jump straight to Square OAuth — no interstitial authorise page.
+      const { url } = await startSquareConnect(token);
+      window.location.href = url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not start Square connect');
+      setBusy(false);
+    }
+  }, [token]);
+
   return (
-    <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
+    <Box>
       <Typography variant="h6" gutterBottom>
         Set up your menu
       </Typography>
       <Typography variant="body2" color="text.secondary" paragraph>
-        Connect Square to pull your live catalogue, or start from our café template. You can always
-        edit items later in the dashboard.
+        Connect Square to pull your live catalogue, or start from our café template. Square supplies
+        prices, milks, and syrups; we add kitchen prep options (shots, beans, milk temp) on top. You
+        can always edit items later in the dashboard.
       </Typography>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <Button variant="contained" size="large" fullWidth onClick={onImportPos} sx={{ py: 1.5 }}>
-          Connect my menu with Square
+        <Button
+          variant="contained"
+          size="large"
+          fullWidth
+          disabled={busy}
+          onClick={() => void connectSquare()}
+          sx={{ py: 1.5 }}
+        >
+          {busy ? <CircularProgress size={22} color="inherit" /> : 'Connect my menu with Square'}
         </Button>
-        <Button variant="outlined" size="large" fullWidth onClick={onEditTemplate} sx={{ py: 1.5 }}>
+        <Button
+          variant="outlined"
+          size="large"
+          fullWidth
+          disabled={busy}
+          onClick={onEditTemplate}
+          sx={{ py: 1.5 }}
+        >
           Continue with template
         </Button>
       </Box>
-
-      <Button variant="text" sx={{ mt: 2 }} onClick={onBack}>
-        Back
-      </Button>
     </Box>
   );
 }

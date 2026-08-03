@@ -24,10 +24,6 @@ import {
   type MenuTemplateModifierState,
 } from './menu-template.js';
 
-const fieldSx = {
-  '& .MuiOutlinedInput-root fieldset': { borderColor: '#d4d4d8' },
-};
-
 type Props = {
   busy: boolean;
   onBack: () => void;
@@ -94,7 +90,7 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
   const canSave = enabledDrinks > 0 && enabledMilks > 0 && !busy;
 
   return (
-    <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
+    <Box>
       <Typography variant="h6" gutterBottom>
         Build your starter menu
       </Typography>
@@ -114,6 +110,7 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
               border: 1,
               borderColor: 'divider',
               borderRadius: 1,
+              bgcolor: 'background.default',
               '&:before': { display: 'none' },
               opacity: cat.enabled ? 1 : 0.72,
             }}
@@ -187,7 +184,6 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                             value={drink.name}
                             disabled={busy}
                             onChange={(e) => updateDrink(cat.key, drink.templateKey, { name: e.target.value })}
-                            sx={fieldSx}
                           />
                           <TextField
                             label="Description"
@@ -200,7 +196,6 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                             onChange={(e) =>
                               updateDrink(cat.key, drink.templateKey, { description: e.target.value })
                             }
-                            sx={fieldSx}
                           />
                           <TextField
                             label="Price (£)"
@@ -215,7 +210,7 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                               }
                             }}
                             inputProps={{ min: 0, step: 0.01 }}
-                            sx={{ maxWidth: 160, ...fieldSx }}
+                            sx={{ maxWidth: 160 }}
                           />
                         </Stack>
                       )}
@@ -260,7 +255,7 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                             onChange={(e) =>
                               updateModifier(cat.key, mod.templateKey, { name: e.target.value })
                             }
-                            sx={{ flex: 1, minWidth: 120, ...fieldSx }}
+                            sx={{ flex: 1, minWidth: 120 }}
                           />
                           <TextField
                             label="Extra (£)"
@@ -277,7 +272,7 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                               }
                             }}
                             inputProps={{ min: 0, step: 0.01 }}
-                            sx={{ width: 110, ...fieldSx }}
+                            sx={{ width: 110 }}
                           />
                           {cat.key === 'milks' && (
                             <FormControlLabel

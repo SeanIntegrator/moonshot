@@ -28,7 +28,8 @@ export interface AdminLoginResponse {
 
 export interface AdminRegisterRequest {
   cafeName: string;
-  cafeSlug: string;
+  /** Optional — server derives from cafeName when omitted. */
+  cafeSlug?: string;
   email: string;
   password: string;
   timezone?: string;
@@ -48,10 +49,14 @@ export interface AdminOnboardingStatusResponse {
 }
 
 export interface AdminCreateKdsUserRequest {
-  username: string;
-  password: string;
+  /** Defaults to `barista` when omitted. */
+  username?: string;
+  /** When omitted, the server generates a password and returns it once. */
+  password?: string;
 }
 
 export interface AdminCreateKdsUserResponse {
   username: string;
+  /** Present only when the server generated the password. */
+  password?: string;
 }

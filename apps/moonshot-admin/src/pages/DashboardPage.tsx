@@ -1,6 +1,7 @@
 import type { Cafe } from '@moonshot/types';
 import { Alert, Box, Button, CircularProgress, Stack } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
+import { CafeAccessCard } from '../components/dashboard/CafeAccessCard.js';
 import { KdsSettingsCard } from '../components/KdsSettingsCard.js';
 import { MenuEditorCard } from '../components/MenuEditorCard.js';
 import { CafeHoursSettingsCard } from '../components/CafeHoursSettingsCard.js';
@@ -56,6 +57,11 @@ export function DashboardPage({ session }: Props) {
 
   return (
     <Stack spacing={3}>
+      <CafeAccessCard
+        token={session.token}
+        cafeSlug={session.cafe.slug}
+        cafeName={session.cafe.name}
+      />
       <Box
         sx={{
           display: 'flex',

@@ -30,6 +30,21 @@ export function slugifyCafeName(name: string): string {
     .slice(0, 40);
 }
 
+/**
+ * Derive a valid café slug from a display name.
+ * Pads short results and falls back to `cafe` when slugify yields nothing
+ * (e.g. non-latin names), so signup never needs a manual slug field.
+ */
+export function deriveCafeSlugFromName(name: string): string {
+  let slug = slugifyCafeName(name);
+  if (!slug) slug = 'cafe';
+  // Pad under the 3-char minimum without inventing letters — repeat last char.
+  while (slug.length < 3) {
+    slug = `${slug}${slug[slug.length - 1] ?? 'x'}`;
+  }
+  return slug.slice(0, 40);
+}
+
 export type SlugValidationResult =
   | { ok: true; slug: string }
   | { ok: false; error: string };

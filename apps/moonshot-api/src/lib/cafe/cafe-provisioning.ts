@@ -7,6 +7,8 @@ import { validateCafeSlug } from '../cafe-slug.js';
 import { findCafeBySlug } from '../cafes-repository.js';
 import { seedDefaultModifierLibrary } from '../menu/menu-seed-library.js';
 import { ensureSystemMenuSections } from '../menu/menu-sections.js';
+import { allocateCafeSlug, CafeSlugAllocationError } from './cafe-slug-allocator.js';
+import { seedDefaultKitchenLogin } from './cafe-kitchen-login.js';
 
 /** Default `cafes.features` for self-service signups — pay-in-store until Stripe Connect. */
 export function defaultNewCafeFeatures(): CafeFeatures {
@@ -67,7 +69,8 @@ export function defaultNewCafeKdsConfig(): Omit<KdsConfig, 'cafeId'> {
 
 export type ProvisionCafeParams = {
   cafeName: string;
-  cafeSlug: string;
+  /** Optional — allocated from cafeName when omitted. */
+  cafeSlug?: string;
   email: string;
   password: string;
   timezone?: string;
@@ -95,7 +98,7 @@ export class ProvisionCafeError extends Error {
 
 async function insertCafeWithAdmin(
   client: PoolClient,
-  params: ProvisionCafeParams,
+  params: ProvisionCafeParams & { cafeSlug: string },
 ): Promise<ProvisionCafeResult> {
   const name = params.cafeName.trim();
   if (name.length < 2) {
@@ -138,6 +141,8 @@ async function insertCafeWithAdmin(
 
   await seedDefaultModifierLibrary(client, cafeId);
   await ensureSystemMenuSections(client, cafeId);
+  // Kitchen login is seeded here so onboarding never asks owners for a KDS password.
+  await seedDefaultKitchenLogin(client, cafeId);
 
   await client.query(
     `UPDATE cafes SET kds_config = jsonb_set(kds_config, '{cafeId}', to_jsonb($1::text), TRUE) WHERE id = $2`,
@@ -164,16 +169,6 @@ async function insertCafeWithAdmin(
 
 /** Transactional café + admin user creation for self-service onboarding. */
 export async function provisionCafe(params: ProvisionCafeParams): Promise<ProvisionCafeResult> {
-  const slugResult = validateCafeSlug(params.cafeSlug);
-  if (!slugResult.ok) {
-    throw new ProvisionCafeError(slugResult.error, 400, 'VALIDATION');
-  }
-
-  const existingSlug = await findCafeBySlug(slugResult.slug);
-  if (existingSlug) {
-    throw new ProvisionCafeError('This café URL is already taken', 409, 'CONFLICT');
-  }
-
   const email = params.email.trim().toLowerCase();
   const emailCheck = await pool.query<{ id: string }>(
     `SELECT id FROM admin_users WHERE lower(trim(email)) = $1 AND is_active = TRUE LIMIT 1`,
@@ -183,18 +178,54 @@ export async function provisionCafe(params: ProvisionCafeParams): Promise<Provis
     throw new ProvisionCafeError('An account with this email already exists', 409, 'CONFLICT');
   }
 
+  let cafeSlug: string;
+  try {
+    // Allocate outside the transaction so we don't hold a connection during availability probes.
+    cafeSlug = await allocateCafeSlug(params.cafeName, params.cafeSlug);
+  } catch (err) {
+    if (err instanceof CafeSlugAllocationError) {
+      throw new ProvisionCafeError(err.message, err.status, err.code);
+    }
+    throw err;
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const result = await insertCafeWithAdmin(client, params);
+    const result = await insertCafeWithAdmin(client, { ...params, cafeSlug });
     await client.query('COMMIT');
     return result;
   } catch (err) {
     await client.query('ROLLBACK');
     if (err instanceof ProvisionCafeError) throw err;
     const pgErr = err as { code?: string };
+    // Race: another signup took the slug between allocate and insert — retry once.
     if (pgErr.code === '23505') {
-      throw new ProvisionCafeError('Café URL or email already taken', 409, 'CONFLICT');
+      try {
+        const retrySlug = await allocateCafeSlug(params.cafeName, params.cafeSlug);
+        const retryClient = await pool.connect();
+        try {
+          await retryClient.query('BEGIN');
+          const result = await insertCafeWithAdmin(retryClient, { ...params, cafeSlug: retrySlug });
+          await retryClient.query('COMMIT');
+          return result;
+        } catch (retryErr) {
+          await retryClient.query('ROLLBACK');
+          if (retryErr instanceof ProvisionCafeError) throw retryErr;
+          const retryPg = retryErr as { code?: string };
+          if (retryPg.code === '23505') {
+            throw new ProvisionCafeError('Café URL or email already taken', 409, 'CONFLICT');
+          }
+          throw retryErr;
+        } finally {
+          retryClient.release();
+        }
+      } catch (allocErr) {
+        if (allocErr instanceof CafeSlugAllocationError) {
+          throw new ProvisionCafeError(allocErr.message, allocErr.status, allocErr.code);
+        }
+        throw allocErr;
+      }
     }
     throw err;
   } finally {

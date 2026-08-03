@@ -1,70 +1,104 @@
 import {
+  Alert,
   Box,
   Button,
+  CircularProgress,
   IconButton,
   InputAdornment,
   LinearProgress,
   TextField,
   Typography,
 } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useId, useState, type FormEvent } from 'react';
 import { getPasswordStrength } from '../../lib/onboarding-utils.js';
-
-const fieldSx = {
-  '& .MuiOutlinedInput-root': {
-    '& fieldset': { borderColor: '#2a2a2e' },
-    '&:hover fieldset': { borderColor: '#71717a' },
-    '&.Mui-focused fieldset': { borderColor: '#e8ff47' },
-  },
-  '& .MuiInputLabel-root.Mui-focused': { color: '#e8ff47' },
-  '& .MuiInputBase-input': { color: '#f4f4f5' },
-  '& .MuiInputLabel-root': { color: '#71717a' },
-};
-
-const strengthColor = {
-  weak: '#ff4d4d',
-  fair: '#d4a017',
-  strong: '#2d6a4f',
-};
+import { CafeUrlPreview } from './CafeUrlPreview.js';
 
 type Props = {
+  cafeName: string;
   email: string;
   password: string;
   confirmPassword: string;
+  submitting: boolean;
+  error: string | null;
+  success: boolean;
+  onCafeNameChange: (v: string) => void;
   onEmailChange: (v: string) => void;
   onPasswordChange: (v: string) => void;
   onConfirmPasswordChange: (v: string) => void;
-  onBack: () => void;
-  onContinue: () => void;
+  onSubmit: () => void;
 };
 
-export function SignupStepAccount({
+const strengthColor = {
+  weak: 'error.main',
+  fair: 'warning.main',
+  strong: 'success.main',
+} as const;
+
+export function SignupForm({
+  cafeName,
   email,
   password,
   confirmPassword,
+  submitting,
+  error,
+  success,
+  onCafeNameChange,
   onEmailChange,
   onPasswordChange,
   onConfirmPasswordChange,
-  onBack,
-  onContinue,
+  onSubmit,
 }: Props) {
   const headingId = useId();
   const [showPassword, setShowPassword] = useState(false);
   const strength = getPasswordStrength(password);
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
-  const canContinue = emailValid && password.length >= 8 && passwordsMatch;
+  const canSubmit =
+    cafeName.trim().length >= 2 &&
+    emailValid &&
+    password.length >= 8 &&
+    passwordsMatch &&
+    !submitting;
 
-  function onSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    onContinue();
+    if (!canSubmit) return;
+    onSubmit();
+  }
+
+  if (success) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 2 }} aria-live="polite">
+        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          Café created!
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Setting up your workspace…
+        </Typography>
+        <CircularProgress size={24} color="primary" sx={{ mt: 3 }} />
+      </Box>
+    );
   }
 
   return (
-    <Box component="form" onSubmit={onSubmit} aria-labelledby={headingId}>
+    <Box component="form" onSubmit={handleSubmit} aria-labelledby={headingId}>
       <Typography id={headingId} variant="h6" component="h2" sx={{ mb: 2, fontWeight: 600 }}>
-        Your account
+        Get started
       </Typography>
+      <TextField
+        fullWidth
+        label="Café name"
+        placeholder="Clay & Bean"
+        value={cafeName}
+        onChange={(e) => onCafeNameChange(e.target.value)}
+        margin="normal"
+        required
+        autoFocus
+        disabled={submitting}
+      />
+      <CafeUrlPreview cafeName={cafeName} />
       <TextField
         fullWidth
         label="Email"
@@ -74,8 +108,7 @@ export function SignupStepAccount({
         onChange={(e) => onEmailChange(e.target.value)}
         margin="normal"
         required
-        autoFocus
-        sx={fieldSx}
+        disabled={submitting}
       />
       <TextField
         fullWidth
@@ -86,7 +119,7 @@ export function SignupStepAccount({
         onChange={(e) => onPasswordChange(e.target.value)}
         margin="normal"
         required
-        sx={fieldSx}
+        disabled={submitting}
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
@@ -94,9 +127,9 @@ export function SignupStepAccount({
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPassword((s) => !s)}
                 edge="end"
-                sx={{ color: '#71717a' }}
+                size="small"
               >
-                {showPassword ? '🙈' : '👁'}
+                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
               </IconButton>
             </InputAdornment>
           ),
@@ -110,11 +143,14 @@ export function SignupStepAccount({
             sx={{
               height: 4,
               borderRadius: 2,
-              bgcolor: '#2a2a2e',
+              bgcolor: 'divider',
               '& .MuiLinearProgress-bar': { bgcolor: strengthColor[strength] },
             }}
           />
-          <Typography variant="caption" sx={{ color: strengthColor[strength], mt: 0.5, display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{ color: strengthColor[strength], mt: 0.5, display: 'block' }}
+          >
             {strength.charAt(0).toUpperCase() + strength.slice(1)} password
           </Typography>
         </Box>
@@ -128,32 +164,34 @@ export function SignupStepAccount({
         onChange={(e) => onConfirmPasswordChange(e.target.value)}
         margin="normal"
         required
+        disabled={submitting}
         error={confirmPassword.length > 0 && !passwordsMatch}
         helperText={
           confirmPassword.length > 0 && !passwordsMatch ? 'Passwords do not match' : ' '
         }
-        sx={fieldSx}
       />
-      <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-        <Button variant="outlined" onClick={onBack} sx={{ flex: 1, borderColor: '#2a2a2e', color: '#f4f4f5' }}>
-          Back
-        </Button>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={!canContinue}
-          sx={{
-            flex: 2,
-            bgcolor: '#e8ff47',
-            color: '#0a0a0b',
-            fontWeight: 700,
-            '&:hover': { bgcolor: '#d4eb3a' },
-            '&.Mui-disabled': { bgcolor: '#2a2a2e', color: '#71717a' },
-          }}
-        >
-          Continue
-        </Button>
-      </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      <Button
+        type="submit"
+        variant="contained"
+        fullWidth
+        size="large"
+        disabled={!canSubmit}
+        sx={{ mt: 1 }}
+      >
+        {submitting ? (
+          <>
+            <CircularProgress size={18} sx={{ color: 'primary.contrastText', mr: 1 }} />
+            Creating…
+          </>
+        ) : (
+          'Create my café'
+        )}
+      </Button>
     </Box>
   );
 }

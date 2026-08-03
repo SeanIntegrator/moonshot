@@ -58,10 +58,10 @@ function AppRoutes() {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          bgcolor: '#0a0a0b',
+          bgcolor: 'background.default',
         }}
       >
-        <CircularProgress sx={{ color: '#e8ff47' }} />
+        <CircularProgress color="primary" />
       </Box>
     );
   }

@@ -1,8 +1,8 @@
-/** Client-side slug helpers — shared rules from `@moonshot/types`. */
+/** Client-side slug helpers — shared rules from `@moonshot/domain`. */
 
-import { slugifyCafeName, validateCafeSlugMessage } from '@moonshot/domain';
+import { deriveCafeSlugFromName, slugifyCafeName, validateCafeSlugMessage } from '@moonshot/domain';
 
-export { slugifyCafeName };
+export { deriveCafeSlugFromName, slugifyCafeName };
 
 export function validateSlugClient(slug: string): string | null {
   return validateCafeSlugMessage(slug);

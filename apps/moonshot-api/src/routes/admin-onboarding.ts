@@ -5,8 +5,8 @@ import { buildAdminLoginResponse } from '../lib/admin/admin-auth-tokens.js';
 import { fetchAdminOnboardingChecklist } from '../lib/admin/onboarding-repository.js';
 import { normalizeCafeSlugInput, validateCafeSlug } from '../lib/cafe-slug.js';
 import { ProvisionCafeError, isCafeSlugAvailable, provisionCafe } from '../lib/cafe/cafe-provisioning.js';
+import { upsertKitchenLogin } from '../lib/cafe/cafe-kitchen-login.js';
 import { findCafeById } from '../lib/cafes-repository.js';
-import { hashKdsPassword } from '../lib/kds-password.js';
 import { MenuTemplateError } from '../lib/menu/menu-template-onboarding.js';
 import { getMenuProvisioner, MenuProvisionError } from '../lib/menu/menu-provisioners/index.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
@@ -33,7 +33,7 @@ adminOnboardingRouter.get('/slug-available', slugLimiter, async (req, res) => {
 adminOnboardingRouter.post('/register', registerLimiter, async (req, res) => {
   const body = req.body as Record<string, unknown>;
   const cafeName = typeof body.cafeName === 'string' ? body.cafeName : '';
-  const cafeSlug = typeof body.cafeSlug === 'string' ? body.cafeSlug : '';
+  const cafeSlug = typeof body.cafeSlug === 'string' ? body.cafeSlug : undefined;
   const email = typeof body.email === 'string' ? body.email : '';
   const password = typeof body.password === 'string' ? body.password : '';
   const timezone = typeof body.timezone === 'string' ? body.timezone : undefined;
@@ -187,36 +187,23 @@ adminOnboardingRouter.post('/complete', requireAdminAuth, async (req, res) => {
 adminOnboardingRouter.post('/kds-users', requireAdminAuth, async (req, res) => {
   const cafeId = req.adminUser!.cafeId;
   const body = req.body as Record<string, unknown>;
-  const username = typeof body.username === 'string' ? body.username.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
+  const username = typeof body.username === 'string' ? body.username.trim() : undefined;
+  const password = typeof body.password === 'string' ? body.password : undefined;
 
-  if (!username || username.length < 2) {
-    return res.status(400).json({
-      ok: false,
-      error: 'username must be at least 2 characters',
-      code: ApiErrorCode.VALIDATION,
-    });
-  }
-  if (!password || password.length < 8) {
-    return res.status(400).json({
-      ok: false,
-      error: 'password must be at least 8 characters',
-      code: ApiErrorCode.VALIDATION,
-    });
-  }
-
-  const passwordHash = hashKdsPassword(password);
+  const client = await pool.connect();
   try {
-    await pool.query(
-      `INSERT INTO kds_users (cafe_id, username, password_hash, display_name, is_active, updated_at)
-       VALUES ($1, $2, $3, $4, TRUE, NOW())
-       ON CONFLICT (cafe_id, username) DO UPDATE SET
-         password_hash = EXCLUDED.password_hash,
-         is_active = TRUE,
-         updated_at = NOW()`,
-      [cafeId, username, passwordHash, `KDS ${username}`],
-    );
+    const result = await upsertKitchenLogin(client, cafeId, { username, password });
+    const data: AdminCreateKdsUserResponse = result;
+    return res.status(201).json({ ok: true, data });
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to create kitchen login';
+    if (message.includes('username') || message.includes('password')) {
+      return res.status(400).json({
+        ok: false,
+        error: message,
+        code: ApiErrorCode.VALIDATION,
+      });
+    }
     const pgErr = err as { code?: string };
     if (pgErr.code === '23505') {
       return res.status(409).json({
@@ -226,8 +213,7 @@ adminOnboardingRouter.post('/kds-users', requireAdminAuth, async (req, res) => {
       });
     }
     throw err;
+  } finally {
+    client.release();
   }
-
-  const data: AdminCreateKdsUserResponse = { username };
-  return res.status(201).json({ ok: true, data });
 });

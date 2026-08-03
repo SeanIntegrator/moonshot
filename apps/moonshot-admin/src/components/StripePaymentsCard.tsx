@@ -148,7 +148,7 @@ export function StripePaymentsCard({
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {status.chargesEnabled && onChargesEnabled && (
               <Button variant="contained" onClick={() => onChargesEnabled()}>
-                Continue to go live
+                Finish setup
               </Button>
             )}
             <Button

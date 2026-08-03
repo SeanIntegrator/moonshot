@@ -1,30 +1,14 @@
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Link,
-  Step,
-  StepLabel,
-  Stepper,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Step, StepLabel, Stepper } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MenuSetupChoice } from '../components/onboarding/MenuSetupChoice.js';
-import { MenuTemplateStep } from '../components/onboarding/MenuTemplateStep.js';
-import { StripePaymentsCard } from '../components/StripePaymentsCard.js';
+import { BrandShell } from '../components/BrandShell.js';
+import { MenuStep } from '../components/onboarding/MenuStep.js';
+import { PaymentsStep } from '../components/onboarding/PaymentsStep.js';
 import { useAuth } from '../context/AuthContext.js';
-import {
-  adminCompleteOnboarding,
-  adminCreateKdsUser,
-  adminSaveMenuTemplate,
-} from '../lib/admin-api.js';
+import { adminCompleteOnboarding, adminSaveMenuTemplate } from '../lib/admin-api.js';
 import type { AdminSaveMenuTemplateRequest } from '@moonshot/domain';
-import { getKdsBaseUrl, getOrderAheadBaseUrl } from '../lib/onboarding-utils.js';
 
-const STEPS = ['Welcome', 'Kitchen', 'Menu', 'Payments', 'Go live'];
+const STEPS = ['Menu', 'Payments'] as const;
 
 function stepStorageKey(cafeId: string): string {
   return `moonshot_onboarding_step_${cafeId}`;
@@ -40,25 +24,18 @@ function readStoredStep(cafeId: string): number {
   }
 }
 
-const fieldSx = {
-  '& .MuiOutlinedInput-root fieldset': { borderColor: '#d4d4d8' },
-};
-
 export function OnboardingWizard() {
   const navigate = useNavigate();
   const { session, onboardingStatus, refreshOnboardingStatus } = useAuth();
   const [step, setStep] = useState(() =>
     session?.cafe.id ? readStoredStep(session.cafe.id) : 0,
   );
-  const [stripeReturnNotice, setStripeReturnNotice] = useState(
+  const [stripeReturnNotice] = useState(
     () => new URLSearchParams(window.location.search).get('stripeConnect') === 'return',
   );
-  const [kdsUsername, setKdsUsername] = useState('barista');
-  const [kdsPassword, setKdsPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [menuSetupView, setMenuSetupView] = useState<'choice' | 'template'>('choice');
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) return;
@@ -66,14 +43,17 @@ export function OnboardingWizard() {
   }, [step, session]);
 
   useEffect(() => {
-    if (step !== 2) setMenuSetupView('choice');
+    if (step !== 0) setMenuSetupView('choice');
   }, [step]);
 
-  const goToGoLive = useCallback(() => {
-    setStep(4);
-  }, []);
+  // Menu already provisioned (e.g. Square return) → land on payments.
+  useEffect(() => {
+    if (onboardingStatus?.hasMenuItem) {
+      setStep((prev) => Math.max(prev, 1));
+    }
+  }, [onboardingStatus?.hasMenuItem]);
 
-  // Full-page Stripe redirect remounts the wizard — land on payments (or go-live when ready).
+  // Full-page Stripe redirect remounts the wizard — land on payments.
   useEffect(() => {
     if (!stripeReturnNotice) return;
     const params = new URLSearchParams(window.location.search);
@@ -86,57 +66,25 @@ export function OnboardingWizard() {
         `${window.location.pathname}${qs ? `?${qs}` : ''}`,
       );
     }
-    // Stay on payments until Stripe status confirms charges; card calls goToGoLive when ready.
-    setStep((prev) => Math.max(prev, 3));
+    setStep(1);
   }, [stripeReturnNotice]);
 
-  // Square OAuth may land on /onboarding if redirect URL is origin-only — send to import page.
+  // Square OAuth may land on /onboarding if redirect URL is origin-only.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('squareConnect')) return;
     navigate(`/onboarding/import-pos?${params.toString()}`, { replace: true });
   }, [navigate]);
 
-  if (!session) return null;
-
-  const orderUrl = `${getOrderAheadBaseUrl()}/${session.cafe.slug}`;
-  const kdsUrl = getKdsBaseUrl();
-
-  async function copyText(label: string, text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(label);
-      setTimeout(() => setCopied(null), 2000);
-    } catch {
-      setError('Could not copy to clipboard');
-    }
-  }
-
-  const saveKds = useCallback(async () => {
-    setError(null);
-    setBusy(true);
-    try {
-      await adminCreateKdsUser(session!.token, {
-        username: kdsUsername.trim(),
-        password: kdsPassword,
-      });
-      await refreshOnboardingStatus();
-      setStep(2);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create kitchen login');
-    } finally {
-      setBusy(false);
-    }
-  }, [session, kdsUsername, kdsPassword, refreshOnboardingStatus]);
-
   const saveMenuTemplate = useCallback(
     async (payload: AdminSaveMenuTemplateRequest) => {
+      if (!session) return;
       setError(null);
       setBusy(true);
       try {
-        await adminSaveMenuTemplate(session!.token, payload);
+        await adminSaveMenuTemplate(session.token, payload);
         await refreshOnboardingStatus();
-        setStep(3);
+        setStep(1);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to save menu template');
       } finally {
@@ -147,12 +95,13 @@ export function OnboardingWizard() {
   );
 
   const finish = useCallback(async () => {
+    if (!session) return;
     setError(null);
     setBusy(true);
     try {
-      await adminCompleteOnboarding(session!.token);
+      await adminCompleteOnboarding(session.token);
       await refreshOnboardingStatus();
-      sessionStorage.removeItem(stepStorageKey(session!.cafe.id));
+      sessionStorage.removeItem(stepStorageKey(session.cafe.id));
       navigate('/', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not complete setup');
@@ -161,16 +110,17 @@ export function OnboardingWizard() {
     }
   }, [session, refreshOnboardingStatus, navigate]);
 
+  if (!session) return null;
+
+  const cafeName = session.cafe.name;
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.100', py: 4 }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
-        <Typography variant="h5" component="h1" sx={{ fontFamily: '"Syne", sans-serif', fontWeight: 800, mb: 1 }}>
-          Set up {session.cafe.name}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          About 5 minutes to go live.
-        </Typography>
-        <Stepper activeStep={step} alternativeLabel sx={{ mb: 4 }}>
+    <BrandShell
+      title={`Set up ${cafeName}`}
+      subtitle="A couple of steps and you're ready for orders."
+      maxWidth={640}
+      stepper={
+        <Stepper activeStep={step} alternativeLabel sx={{ mb: 3 }}>
           {STEPS.map((label, i) => (
             <Step key={label} completed={step > i}>
               <StepLabel
@@ -182,174 +132,34 @@ export function OnboardingWizard() {
             </Step>
           ))}
         </Stepper>
+      }
+    >
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+      {step === 0 && (
+        <MenuStep
+          hasMenuItem={Boolean(onboardingStatus?.hasMenuItem)}
+          menuSetupView={menuSetupView}
+          busy={busy}
+          token={session.token}
+          onSetMenuSetupView={setMenuSetupView}
+          onSaveMenuTemplate={saveMenuTemplate}
+          onContinueToPayments={() => setStep(1)}
+        />
+      )}
 
-        {step === 0 && (
-          <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
-            <Typography variant="h6" gutterBottom>
-              You&apos;re live.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Your café workspace is ready. Next: kitchen login, your starter menu, and optional
-              online payments.
-            </Typography>
-            <Typography variant="subtitle2" gutterBottom>
-              Your order-ahead URL
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-              <TextField fullWidth size="small" value={orderUrl} InputProps={{ readOnly: true }} />
-              <Button variant="outlined" onClick={() => void copyText('order', orderUrl)}>
-                {copied === 'order' ? 'Copied' : 'Copy'}
-              </Button>
-            </Box>
-            <Button variant="contained" fullWidth onClick={() => setStep(1)}>
-              Continue
-            </Button>
-          </Box>
-        )}
-
-        {step === 1 && (
-          <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
-            <Typography variant="h6" gutterBottom>
-              Kitchen login
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Your baristas use this on the kitchen tablet. They&apos;ll also enter your café slug:{' '}
-              <strong>{session.cafe.slug}</strong>
-            </Typography>
-            <TextField
-              fullWidth
-              label="KDS username"
-              value={kdsUsername}
-              onChange={(e) => setKdsUsername(e.target.value)}
-              margin="normal"
-              sx={fieldSx}
-            />
-            <TextField
-              fullWidth
-              label="KDS password"
-              type="password"
-              value={kdsPassword}
-              onChange={(e) => setKdsPassword(e.target.value)}
-              margin="normal"
-              helperText="At least 8 characters"
-              sx={fieldSx}
-            />
-            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-              <Button variant="outlined" onClick={() => setStep(0)}>
-                Back
-              </Button>
-              <Button
-                variant="contained"
-                fullWidth
-                disabled={busy || kdsPassword.length < 8 || kdsUsername.trim().length < 2}
-                onClick={() => void saveKds()}
-              >
-                {busy ? <CircularProgress size={22} /> : 'Save & continue'}
-              </Button>
-            </Box>
-          </Box>
-        )}
-
-        {step === 2 &&
-          (onboardingStatus?.hasMenuItem ? (
-            <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
-              <Typography variant="h6" gutterBottom>
-                Starter menu saved
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Your menu is ready for customers. You can add specialty items from the dashboard
-                after setup.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button variant="outlined" onClick={() => setStep(1)}>
-                  Back
-                </Button>
-                <Button variant="contained" fullWidth onClick={() => setStep(3)}>
-                  Continue
-                </Button>
-              </Box>
-            </Box>
-          ) : menuSetupView === 'choice' ? (
-            <MenuSetupChoice
-              onEditTemplate={() => setMenuSetupView('template')}
-              onImportPos={() => navigate('/onboarding/import-pos')}
-              onBack={() => setStep(1)}
-            />
-          ) : (
-            <MenuTemplateStep
-              busy={busy}
-              onBack={() => setMenuSetupView('choice')}
-              onSave={saveMenuTemplate}
-            />
-          ))}
-
-        {step === 3 && (
-          <Box>
-            <StripePaymentsCard
-              token={session.token}
-              stripeReturnNotice={stripeReturnNotice}
-              onChargesEnabled={goToGoLive}
-            />
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Link
-                component="button"
-                type="button"
-                variant="body2"
-                onClick={goToGoLive}
-                sx={{ cursor: 'pointer' }}
-              >
-                {stripeReturnNotice ? 'Continue to go live' : 'Skip — pay in store for now'}
-              </Link>
-            </Box>
-            <Button variant="outlined" sx={{ mt: 2 }} onClick={() => setStep(2)}>
-              Back
-            </Button>
-          </Box>
-        )}
-
-        {step === 4 && (
-          <Box sx={{ bgcolor: 'white', borderRadius: 2, p: 3, boxShadow: 1 }}>
-            <Typography variant="h6" gutterBottom>
-              Go live
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Share these links with your team and customers.
-            </Typography>
-            <Typography variant="subtitle2">Order-ahead</Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-              <TextField fullWidth size="small" value={orderUrl} InputProps={{ readOnly: true }} />
-              <Button variant="outlined" onClick={() => void copyText('order2', orderUrl)}>
-                {copied === 'order2' ? 'Copied' : 'Copy'}
-              </Button>
-            </Box>
-            <Typography variant="subtitle2">Kitchen display</Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-              <TextField fullWidth size="small" value={kdsUrl} InputProps={{ readOnly: true }} />
-              <Button variant="outlined" onClick={() => void copyText('kds', kdsUrl)}>
-                {copied === 'kds' ? 'Copied' : 'Copy'}
-              </Button>
-            </Box>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-              KDS login uses café slug: <strong>{session.cafe.slug}</strong>
-            </Typography>
-            <Button
-              variant="contained"
-              fullWidth
-              size="large"
-              disabled={busy}
-              onClick={() => void finish()}
-            >
-              {busy ? 'Finishing…' : 'Enter dashboard'}
-            </Button>
-          </Box>
-        )}
-      </Box>
-    </Box>
+      {step === 1 && (
+        <PaymentsStep
+          token={session.token}
+          stripeReturnNotice={stripeReturnNotice}
+          busy={busy}
+          onFinish={() => void finish()}
+        />
+      )}
+    </BrandShell>
   );
 }
