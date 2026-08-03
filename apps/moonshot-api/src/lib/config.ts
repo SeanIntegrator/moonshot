@@ -70,7 +70,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port,
     nodeEnv,
     isProduction,
-    corsOrigins: trimOrUndefined(env.CORS_ORIGINS) ?? env.CORS_ORIGINS,
+    corsOrigins: trimOrUndefined(env.CORS_ORIGINS),
     googleClientId: trimOrUndefined(env.GOOGLE_CLIENT_ID),
     cronSecret: trimOrUndefined(env.CRON_SECRET),
     menuAdminEmails: env.MENU_ADMIN_EMAILS,
