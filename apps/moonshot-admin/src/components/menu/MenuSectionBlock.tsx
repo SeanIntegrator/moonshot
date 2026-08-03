@@ -36,28 +36,27 @@ export function MenuSectionBlock({
   onToggleAvailability,
   renderEditor,
 }: Props) {
-  const showEmptyFood = section.key === 'food' && items.length === 0;
+  const showEmptyFood = (section.kind === 'food' || section.key === 'food') && items.length === 0;
 
   return (
     <Stack spacing={1} sx={{ mb: 3, minWidth: 0 }}>
       <Stack direction="row" alignItems="center" spacing={1}>
         <Typography variant="subtitle2" color="text.secondary" sx={{ flex: 1 }}>
           {section.label}
+          {section.parentKey ? '' : ''}
         </Typography>
-        {section.key !== 'hot_drinks' && (
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={section.enabled}
-                disabled={sectionBusyId === section.id}
-                onChange={(_, v) => onToggleSection(section, v)}
-              />
-            }
-            label={section.enabled ? 'On' : 'Off'}
-            sx={{ mr: 0 }}
-          />
-        )}
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={section.enabled}
+              disabled={sectionBusyId === section.id}
+              onChange={(_, v) => onToggleSection(section, v)}
+            />
+          }
+          label={section.enabled ? 'On' : 'Off'}
+          sx={{ mr: 0 }}
+        />
       </Stack>
 
       {showEmptyFood ? (

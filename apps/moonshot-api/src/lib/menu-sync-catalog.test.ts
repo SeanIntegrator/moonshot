@@ -1,23 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { NormalisedMenu, NormalisedMenuItem } from '@moonshot/types';
+import type { PosCatalog, NormalisedMenuItem } from '@moonshot/types';
 import { syncNormalisedMenuCatalog } from './menu-sync-catalog.js';
 
-vi.mock('./menu-sections.js', () => ({
-  ensureSystemMenuSections: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('./menu-seed-library.js', () => ({
-  ensureFlowPrepModifierGroups: vi.fn().mockResolvedValue({}),
-  ensureIceAndToppingsModifierGroups: vi.fn().mockResolvedValue({}),
-}));
+vi.mock('./pos-catalog/menu-catalog-upsert.js', async () => {
+  const actual = await vi.importActual<typeof import('./pos-catalog/menu-catalog-upsert.js')>(
+    './pos-catalog/menu-catalog-upsert.js',
+  );
+  return {
+    ...actual,
+    upsertPosCatalog: vi.fn(actual.upsertPosCatalog),
+  };
+});
 
 vi.mock('./menu-modifier-library.js', () => ({
   setMenuItemModifierGroups: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('./menu-persist-catalog.js', () => ({
-  upsertModifierGroup: vi.fn().mockResolvedValue('group-db-1'),
-  syncKdsModifierClassification: vi.fn().mockResolvedValue(undefined),
 }));
 
 function item(overrides: Partial<NormalisedMenuItem> = {}): NormalisedMenuItem {
@@ -43,12 +39,14 @@ function item(overrides: Partial<NormalisedMenuItem> = {}): NormalisedMenuItem {
   };
 }
 
-function emptyMenu(items: NormalisedMenuItem[] = []): NormalisedMenu {
+function catalog(items: NormalisedMenuItem[] = [], deleted: string[] = []): PosCatalog {
   return {
     cafeId: 'cafe-1',
-    currency: 'GBP',
     sections: [],
     items,
+    groupsByPosId: new Map(),
+    deletedPosItemIds: deleted,
+    fetchedAt: new Date().toISOString(),
   };
 }
 
@@ -68,19 +66,17 @@ describe('syncNormalisedMenuCatalog', () => {
       if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
         return { rows: [{ drink_archetype_config: {} }] };
       }
-      if (sql.includes('FROM modifier_groups')) {
-        return { rows: [] };
+      if (sql.includes('SELECT id, archetype FROM menu_items')) {
+        return { rows: [{ id: 'mi-1', archetype: null }] };
       }
       if (sql.includes('MAX(sort_order)')) {
         return { rows: [{ max: 0 }] };
       }
-      if (sql.includes('SELECT id FROM menu_items WHERE cafe_id') && sql.includes('pos_item_id')) {
-        return { rows: [{ id: 'mi-1' }] };
+      if (sql.includes('FROM menu_sections') && sql.includes('kind =')) {
+        return { rows: [] };
       }
-      if (sql.includes('FROM menu_item_modifier_groups')) {
-        return {
-          rows: [{ modifier_group_id: 'prep-shots', pos_group_id: null }],
-        };
+      if (sql.includes('SELECT kds_config')) {
+        return { rows: [{ kds_config: {} }] };
       }
       return { rows: [] };
     });
@@ -88,14 +84,13 @@ describe('syncNormalisedMenuCatalog', () => {
     const result = await syncNormalisedMenuCatalog(
       client as never,
       'cafe-1',
-      emptyMenu([
+      catalog([
         item({
           name: 'Latte Large',
           priceMinor: 400,
           imageUrl: 'https://square-cdn.example/latte.jpg',
         }),
       ]),
-      { groupsByPosId: new Map(), roleHints: new Map() },
     );
 
     expect(result.upsertedItems).toBe(1);
@@ -112,6 +107,30 @@ describe('syncNormalisedMenuCatalog', () => {
       ]),
     );
 
+    // No archetype → Square groups only (empty here); prep NOT preserved.
+    const { setMenuItemModifierGroups } = await import('./menu-modifier-library.js');
+    expect(setMenuItemModifierGroups).toHaveBeenCalledWith(expect.anything(), 'mi-1', []);
+  });
+
+  it('preserves Moonshot prep attachments when archetype is set', async () => {
+    const client = createClient((sql) => {
+      if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
+        return { rows: [{ drink_archetype_config: {} }] };
+      }
+      if (sql.includes('SELECT id, archetype FROM menu_items')) {
+        return { rows: [{ id: 'mi-1', archetype: 'milk-forward-hot' }] };
+      }
+      if (sql.includes('MAX(sort_order)')) return { rows: [{ max: 0 }] };
+      if (sql.includes('FROM menu_item_modifier_groups')) {
+        return { rows: [{ modifier_group_id: 'prep-shots', pos_group_id: null }] };
+      }
+      if (sql.includes('FROM menu_sections') && sql.includes('kind =')) return { rows: [] };
+      if (sql.includes('SELECT kds_config')) return { rows: [{ kds_config: {} }] };
+      return { rows: [] };
+    });
+
+    await syncNormalisedMenuCatalog(client as never, 'cafe-1', catalog([item()]));
+
     const { setMenuItemModifierGroups } = await import('./menu-modifier-library.js');
     expect(setMenuItemModifierGroups).toHaveBeenCalledWith(
       expect.anything(),
@@ -127,21 +146,16 @@ describe('syncNormalisedMenuCatalog', () => {
       if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
         return { rows: [{ drink_archetype_config: {} }] };
       }
-      if (sql.includes('FROM modifier_groups')) return { rows: [] };
+      if (sql.includes('SELECT id, archetype FROM menu_items')) {
+        return { rows: [{ id: 'mi-1', archetype: null }] };
+      }
       if (sql.includes('MAX(sort_order)')) return { rows: [{ max: 0 }] };
-      if (sql.includes('SELECT id FROM menu_items') && sql.includes('pos_item_id')) {
-        return { rows: [{ id: 'mi-1' }] };
-      }
-      if (sql.includes('FROM menu_item_modifier_groups')) {
-        return { rows: [] };
-      }
+      if (sql.includes('FROM menu_sections') && sql.includes('kind =')) return { rows: [] };
+      if (sql.includes('SELECT kds_config')) return { rows: [{ kds_config: {} }] };
       return { rows: [] };
     });
 
-    await syncNormalisedMenuCatalog(client as never, 'cafe-1', emptyMenu([item()]), {
-      groupsByPosId: new Map(),
-      roleHints: new Map(),
-    });
+    await syncNormalisedMenuCatalog(client as never, 'cafe-1', catalog([item()]));
 
     const update = calls.find((c) => c.sql.includes('UPDATE menu_items SET'));
     expect(update?.sql).not.toContain('image_url');
@@ -152,23 +166,19 @@ describe('syncNormalisedMenuCatalog', () => {
       if (sql.includes('drink_archetype_config') && sql.startsWith('SELECT')) {
         return { rows: [{ drink_archetype_config: {} }] };
       }
-      if (sql.includes('FROM modifier_groups')) return { rows: [] };
       if (sql.includes('MAX(sort_order)')) return { rows: [{ max: 0 }] };
       if (sql.includes('is_available = FALSE')) {
         return { rows: [], rowCount: 2 };
       }
+      if (sql.includes('FROM menu_sections') && sql.includes('kind =')) return { rows: [] };
+      if (sql.includes('SELECT kds_config')) return { rows: [{ kds_config: {} }] };
       return { rows: [] };
     });
 
     const result = await syncNormalisedMenuCatalog(
       client as never,
       'cafe-1',
-      emptyMenu(),
-      {
-        groupsByPosId: new Map(),
-        roleHints: new Map(),
-        deletedPosItemIds: ['ITEM_GONE', 'ITEM_OLD'],
-      },
+      catalog([], ['ITEM_GONE', 'ITEM_OLD']),
     );
 
     expect(result.softDeletedItems).toBe(2);

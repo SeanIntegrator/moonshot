@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import type { PoolClient } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import {
   MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR,
   MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR,
   MENU_TEMPLATE_SYRUP_PRICE_MINOR,
 } from '@moonshot/types';
+
+type Db = Pool | PoolClient;
 
 /** Option shape stored in modifier_groups.options JSONB. */
 type SeedOption = {
@@ -38,7 +40,7 @@ function opt(
  * Returns group ids so callers can attach them to drinks.
  */
 export async function seedDefaultModifierLibrary(
-  client: PoolClient,
+  client: Db,
   cafeId: string,
 ): Promise<{
   milksId: string;
@@ -207,7 +209,7 @@ export async function seedDefaultModifierLibrary(
 
 /** Ensure Flow coffee-prep groups exist for a café; create with defaults if missing. */
 export async function ensureFlowPrepModifierGroups(
-  client: PoolClient,
+  client: Db,
   cafeId: string,
 ): Promise<{
   shotsId: string;
@@ -273,7 +275,7 @@ export async function ensureFlowPrepModifierGroups(
 
 /** Ensure Ice Level + Toppings exist for iced / non-coffee archetypes. */
 export async function ensureIceAndToppingsModifierGroups(
-  client: PoolClient,
+  client: Db,
   cafeId: string,
 ): Promise<{ iceLevelId: string; toppingsId: string }> {
   async function findOrCreate(

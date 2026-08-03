@@ -11,6 +11,7 @@ export type ApiVersionPrefix = typeof API_VERSION_PREFIX;
 /** Socket.io namespace pathnames (client: `io(origin + namespace)`). */
 export const KDS_SOCKET_NAMESPACE = '/kds' as const;
 export const CUSTOMER_SOCKET_NAMESPACE = '/customer' as const;
+export const ADMIN_SOCKET_NAMESPACE = '/admin' as const;
 
 /** KDS namespace — server → client */
 export const KDS_SOCKET_SERVER_EVENT = {
@@ -27,6 +28,7 @@ export type KdsSocketServerEventName =
 export const CUSTOMER_SOCKET_SERVER_EVENT = {
   ORDER_COMPLETED: 'customerOrderCompleted',
   ETA_UPDATED: 'customerEtaUpdated',
+  MENU_UPDATED: 'customerMenuUpdated',
 } as const;
 
 export type CustomerSocketServerEventName =
@@ -35,7 +37,13 @@ export type CustomerSocketServerEventName =
 /** Order-ahead / customer namespace — client → server */
 export const CUSTOMER_SOCKET_CLIENT_EVENT = {
   SUBSCRIBE: 'customer:subscribe',
+  SUBSCRIBE_CAFE: 'customer:subscribeCafe',
 } as const;
 
 export type CustomerSocketClientEventName =
   (typeof CUSTOMER_SOCKET_CLIENT_EVENT)[keyof typeof CUSTOMER_SOCKET_CLIENT_EVENT];
+
+/** Admin namespace — server → client */
+export const ADMIN_SOCKET_SERVER_EVENT = {
+  MENU_SYNCED: 'admin:menu:synced',
+} as const;

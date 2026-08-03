@@ -1,10 +1,12 @@
 /**
- * Classify Square modifier-list names into Moonshot roles for chip palette
- * lookup and KDS `modifierClassification` sync. Square keeps its own names;
+ * Classify POS modifier-list names into Moonshot roles for chip palette
+ * lookup and KDS `modifierClassification` sync. POS keeps its own names;
  * we only hint so the KDS board still recognises milks / syrups / toppings.
  */
 
-export type ModifierRoleHint = 'milk' | 'syrup' | 'topping' | 'other';
+import type { ModifierRoleHint } from '@moonshot/types';
+
+export type { ModifierRoleHint };
 
 const MILK_ALIASES = [
   'milk',
@@ -56,7 +58,7 @@ export function classifyModifierListRole(listName: string): ModifierRoleHint {
   return 'other';
 }
 
-/** Build a posGroupId → role map from Square list names. */
+/** Build a posGroupId → role map from modifier list names. */
 export function buildRoleHintMap(
   lists: Array<{ posGroupId: string; name: string }>,
 ): Map<string, ModifierRoleHint> {

@@ -1,36 +1,38 @@
+/**
+ * Pure Square Catalog → PosCatalog mapping. No DB / HTTP.
+ * Hierarchy and modifier fidelity live here; upsert is POS-agnostic.
+ */
+
 import { randomUUID } from 'node:crypto';
 import type { CatalogObject } from 'square';
 import type {
-  CafeMenuSection,
   NormalisedItemSize,
-  NormalisedMenu,
   NormalisedMenuItem,
   NormalisedModifierGroup,
   NormalisedModifierOption,
+  PosCatalog,
+  PosCatalogModifierGroup,
+  ModifierRoleHint,
 } from '@moonshot/types';
-import { SYSTEM_MENU_SECTION_KEYS, SYSTEM_MENU_SECTION_LABELS } from '@moonshot/types';
 import { chipMetaForOptionName } from '../../menu-chip-palette.js';
-import { slugifyMenuSectionKey } from '../../menu-sections.js';
 import type { SquareCatalogSnapshot } from './catalog-fetch.js';
-import { buildRoleHintMap, classifyModifierListRole, type ModifierRoleHint } from './role-hints.js';
+import {
+  buildCatalogSections,
+  resolveItemCategoryPlacement,
+} from './catalog-categories.js';
+import { buildRoleHintMap, classifyModifierListRole } from './role-hints.js';
 
-/** Import-time group: Square list id carried alongside NormalisedModifierGroup. */
-export type ImportModifierGroup = NormalisedModifierGroup & { posGroupId: string };
-
-export type CatalogNormaliseResult = {
-  menu: NormalisedMenu;
-  /** Groups keyed by Square MODIFIER_LIST id. */
-  groupsByPosId: Map<string, ImportModifierGroup>;
-  /** posGroupId → role for KDS sync + chip palette. */
-  roleHints: Map<string, ModifierRoleHint>;
-  /** Square item ids marked deleted/archived in this snapshot (for soft-delete). */
-  deletedPosItemIds: string[];
-};
+export type CatalogNormaliseResult = PosCatalog;
 
 export type CatalogNormaliseOptions = {
   /** When true, include deleted/archived items as `isAvailable: false`. */
   includeDeletedItems?: boolean;
+  /** Existing pos_category_id → section key map (rename-stable keys). */
+  existingKeyByPosCategoryId?: Map<string, string>;
 };
+
+/** @deprecated Use PosCatalogModifierGroup from @moonshot/types. */
+export type ImportModifierGroup = PosCatalogModifierGroup;
 
 function moneyToMinor(amount: bigint | number | null | undefined): number {
   if (amount == null) return 0;
@@ -43,85 +45,10 @@ function stripHtml(html: string | null | undefined): string | null {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || null;
 }
 
-/** Map Square category name onto a system section key when possible. */
-export function mapCategoryToSectionKey(categoryName: string): string {
-  const slug = slugifyMenuSectionKey(categoryName);
-  const n = categoryName.trim().toLowerCase();
-
-  if (
-    slug === 'hot_drinks' ||
-    n.includes('hot drink') ||
-    n === 'hot drinks' ||
-    n === 'coffee' ||
-    n === 'hot'
-  ) {
-    return 'hot_drinks';
-  }
-  if (
-    slug === 'cold_drinks' ||
-    n.includes('cold drink') ||
-    n.includes('iced') ||
-    n === 'cold'
-  ) {
-    return 'cold_drinks';
-  }
-  if (slug === 'food' || n.includes('food') || n.includes('pastr') || n.includes('bakery')) {
-    return 'food';
-  }
-  return slug || 'other';
-}
-
-function buildSections(
-  cafeId: string,
-  categories: CatalogObject.Category[],
-  usedKeys: Set<string>,
-): CafeMenuSection[] {
-  const sections: CafeMenuSection[] = [];
-  const seenKeys = new Set<string>();
-
-  for (const key of SYSTEM_MENU_SECTION_KEYS) {
-    sections.push({
-      id: randomUUID(),
-      cafeId,
-      key,
-      label: SYSTEM_MENU_SECTION_LABELS[key],
-      enabled: usedKeys.has(key) || key !== 'food',
-      isSystem: true,
-      sortOrder: sections.length,
-    });
-    seenKeys.add(key);
-  }
-
-  for (const cat of categories) {
-    const name = cat.categoryData?.name?.trim();
-    if (!name) continue;
-    const key = mapCategoryToSectionKey(name);
-    if (seenKeys.has(key)) continue;
-    seenKeys.add(key);
-    usedKeys.add(key);
-    sections.push({
-      id: randomUUID(),
-      cafeId,
-      key,
-      label: name,
-      enabled: true,
-      isSystem: false,
-      sortOrder: sections.length,
-    });
-  }
-
-  if (usedKeys.has('food')) {
-    const food = sections.find((s) => s.key === 'food');
-    if (food) food.enabled = true;
-  }
-
-  return sections;
-}
-
 function normaliseModifierList(
   list: CatalogObject.ModifierList,
   role: ModifierRoleHint,
-): ImportModifierGroup | null {
+): PosCatalogModifierGroup | null {
   const data = list.modifierListData;
   if (!data) return null;
   if (data.modifierType === 'TEXT') return null;
@@ -173,12 +100,13 @@ function normaliseModifierList(
     required: minSel > 0,
     maxSelect: selectionType === 'multi' ? maxSel : null,
     options,
+    role,
   };
 }
 
 /**
- * Pure Square Catalog → NormalisedMenu mapping. No DB / HTTP.
- * Internal UUIDs are generated here; persist upserts by pos_* ids.
+ * Pure Square Catalog → PosCatalog. Internal UUIDs are generated here;
+ * persist upserts by pos_* ids.
  */
 export function normaliseSquareCatalog(
   cafeId: string,
@@ -200,7 +128,7 @@ export function normaliseSquareCatalog(
   }));
   const roleHints = buildRoleHintMap(listMeta);
 
-  const groupsByPosId = new Map<string, ImportModifierGroup>();
+  const groupsByPosId = new Map<string, PosCatalogModifierGroup>();
   for (const list of snapshot.modifierLists) {
     if (list.isDeleted) continue;
     const role =
@@ -210,14 +138,13 @@ export function normaliseSquareCatalog(
     groupsByPosId.set(list.id, group);
   }
 
-  const categoryNameById = new Map<string, string>();
-  for (const cat of snapshot.categories) {
-    if (cat.isDeleted) continue;
-    const name = cat.categoryData?.name?.trim();
-    if (name && cat.id) categoryNameById.set(cat.id, name);
-  }
+  const { sections, keyByPosCategoryId } = buildCatalogSections(
+    snapshot.categories,
+    options.existingKeyByPosCategoryId ?? new Map(),
+  );
 
-  const usedSectionKeys = new Set<string>();
+  // Ensure uncategorised fallback exists when any item lacks a category.
+  const usedKeys = new Set<string>();
   const items: NormalisedMenuItem[] = [];
   const deletedPosItemIds: string[] = [];
 
@@ -233,18 +160,8 @@ export function normaliseSquareCatalog(
       continue;
     }
 
-    let categoryKey = 'hot_drinks';
-    const catRefs = data?.categories ?? [];
-    const firstCatId =
-      catRefs[0] && typeof catRefs[0] === 'object' && 'id' in catRefs[0]
-        ? (catRefs[0] as { id?: string }).id
-        : (data?.categoryId ?? undefined);
-    if (firstCatId && categoryNameById.has(firstCatId)) {
-      categoryKey = mapCategoryToSectionKey(categoryNameById.get(firstCatId)!);
-    } else if (data?.categoryId && categoryNameById.has(data.categoryId)) {
-      categoryKey = mapCategoryToSectionKey(categoryNameById.get(data.categoryId)!);
-    }
-    usedSectionKeys.add(categoryKey);
+    const placement = resolveItemCategoryPlacement(data, keyByPosCategoryId);
+    usedKeys.add(placement.sectionKey);
 
     const variationObjs = (data?.variations ?? []).filter(
       (v): v is CatalogObject.ItemVariation => v.type === 'ITEM_VARIATION' && !v.isDeleted,
@@ -278,11 +195,21 @@ export function normaliseSquareCatalog(
       }
     }
 
+    // Honour Square's per-item modifier list order (ordinal) and enablement.
+    const listInfos = [...(data?.modifierListInfo ?? [])].sort((a, b) => {
+      const ao = a.ordinal ?? 0;
+      const bo = b.ordinal ?? 0;
+      return ao - bo;
+    });
+
     const itemGroups: NormalisedModifierGroup[] = [];
-    for (const info of data?.modifierListInfo ?? []) {
+    for (const info of listInfos) {
       if (info.enabled === false) continue;
       const base = groupsByPosId.get(info.modifierListId);
       if (!base) continue;
+
+      // Per-item hidden override: skip entire list when forced hidden.
+      if (info.hiddenFromCustomerOverride === 'YES') continue;
 
       const minSel =
         info.minSelectedModifiers != null && info.minSelectedModifiers > 0
@@ -337,7 +264,7 @@ export function normaliseSquareCatalog(
       description: stripHtml(data?.descriptionPlaintext ?? data?.description),
       priceMinor,
       currency,
-      category: categoryKey,
+      category: placement.sectionKey,
       subcategory: null,
       imageUrl,
       emoji: null,
@@ -351,15 +278,40 @@ export function normaliseSquareCatalog(
     });
   }
 
+  // Drop unused sections; keep parents that still have used children.
+  const childKeysByParent = new Map<string, string[]>();
+  for (const s of sections) {
+    if (!s.parentKey) continue;
+    const list = childKeysByParent.get(s.parentKey) ?? [];
+    list.push(s.key);
+    childKeysByParent.set(s.parentKey, list);
+  }
+
+  const enabledSections = sections.filter((s) => {
+    if (usedKeys.has(s.key)) return true;
+    const children = childKeysByParent.get(s.key) ?? [];
+    return children.some((k) => usedKeys.has(k));
+  });
+
+  // If any item fell into uncategorised and that key isn't in the tree, add it.
+  if (usedKeys.has('uncategorised') && !enabledSections.some((s) => s.key === 'uncategorised')) {
+    enabledSections.push({
+      key: 'uncategorised',
+      label: 'Uncategorised',
+      parentKey: null,
+      posCategoryId: null,
+      kind: 'drink',
+      enabled: true,
+      sortOrder: enabledSections.length,
+    });
+  }
+
   return {
-    menu: {
-      cafeId,
-      items,
-      sections: buildSections(cafeId, snapshot.categories, usedSectionKeys),
-      fetchedAt: new Date().toISOString(),
-    },
+    cafeId,
+    sections: enabledSections,
+    items,
     groupsByPosId,
-    roleHints,
     deletedPosItemIds,
+    fetchedAt: new Date().toISOString(),
   };
 }

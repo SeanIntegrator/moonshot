@@ -36,7 +36,7 @@ import {
   patchMenuSection,
 } from '../../lib/admin-api.js';
 import { MenuItemImageField } from './MenuItemImageField.js';
-import { MenuSectionBlock } from './MenuSectionBlock.js';
+import { MenuSectionTree } from './MenuSectionTree.js';
 import { SizeEditor } from './SizeEditor.js';
 
 type DraftItem = NormalisedMenuItem & { attachedGroupIds: string[] };
@@ -86,14 +86,19 @@ function applyArchetypeToDraft(
     return { ...draft, archetype: null, waiveMilkSurcharge: false, allowNoMilk: false };
   }
   const byName = new Map(library.map((g) => [g.name, g]));
-  const attachedGroupIds: string[] = [];
+  // Preserve POS-sourced groups (any option carries a posOptionId) so Square milks/syrups survive.
+  const posPreserved = draft.attachedGroupIds.filter((id) => {
+    const g = library.find((x) => x.id === id);
+    return g?.options.some((o) => o.posOptionId != null) === true;
+  });
+  const attachedGroupIds = [...posPreserved];
   for (const slot of recipe.slots) {
     const groupName = DRINK_ARCHETYPE_SLOT_GROUP_NAMES[slot];
     const group = byName.get(groupName);
     if (!group) continue;
     // Match API resolveArchetypeGroups: skip empty optional groups (syrups, toppings, …).
     if (group.options.length === 0) continue;
-    attachedGroupIds.push(group.id);
+    if (!attachedGroupIds.includes(group.id)) attachedGroupIds.push(group.id);
   }
   return {
     ...draft,
@@ -127,7 +132,11 @@ export function MenuItemsPanel({
   creating,
   onCreatingChange,
 }: Props) {
-  const defaultCategory = sections.find((s) => s.key === 'hot_drinks')?.key ?? sections[0]?.key ?? 'hot_drinks';
+  const defaultCategory =
+    sections.find((s) => s.enabled && !s.parentKey)?.key ??
+    sections.find((s) => s.enabled)?.key ??
+    sections[0]?.key ??
+    'uncategorised';
   const [drafts, setDrafts] = useState<Record<string, DraftItem>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -511,28 +520,16 @@ export function MenuItemsPanel({
         </Box>
       )}
 
-      <Box sx={{ maxHeight: '70vh', overflowY: 'auto', minWidth: 0 }}>
-        {sections.map((section) => {
-          const categoryItems = items.filter((item) => item.category === section.key);
-          // Food always listed; other empty+disabled sections stay hidden.
-          if (section.key !== 'food' && categoryItems.length === 0 && !section.enabled) {
-            return null;
-          }
-          return (
-            <MenuSectionBlock
-              key={section.id}
-              section={section}
-              items={categoryItems}
-              sectionBusyId={sectionBusyId}
-              togglingId={togglingId}
-              draftFor={draftFor}
-              onToggleSection={(s, enabled) => void toggleSectionEnabled(s, enabled)}
-              onToggleAvailability={(item, next) => void toggleAvailability(item, next)}
-              renderEditor={(draft, itemId) => renderEditor(draft, itemId)}
-            />
-          );
-        })}
-      </Box>
+      <MenuSectionTree
+        sections={sections}
+        items={items}
+        sectionBusyId={sectionBusyId}
+        togglingId={togglingId}
+        draftFor={draftFor}
+        onToggleSection={(s, enabled) => void toggleSectionEnabled(s, enabled)}
+        onToggleAvailability={(item, next) => void toggleAvailability(item, next)}
+        renderEditor={(draft, itemId) => renderEditor(draft, itemId)}
+      />
     </Box>
   );
 }

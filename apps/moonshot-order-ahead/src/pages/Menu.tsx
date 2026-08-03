@@ -39,11 +39,10 @@ export function Menu() {
   const { estimate } = usePickupEstimate();
   const locationState = location.state as MenuLocationState | null;
   const { menu, loading, error } = useMenu();
-  const [activeCategory, setActiveCategory] = useState<MenuCategory>('hot_drinks');
+  const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { lines, pickupDelayMinutes, setPickupDelayMinutes } = useCart();
   const sectionRefs = useRef<Partial<Record<MenuCategory, HTMLDivElement | null>>>({});
-  const categoryInitialized = useRef(false);
   const cafeClosed = !isOpen;
   const cartQty = totalCartQty(lines);
 
@@ -53,16 +52,20 @@ export function Menu() {
     navigate('.', { replace: true, state: null });
   }, [locationState?.addedItemName, navigate]);
 
-  useEffect(() => {
-    if (!menu || categoryInitialized.current) return;
-    const sections = groupMenuByCategory(menu);
-    if (sections[0]) {
-      setActiveCategory(sections[0].category);
-      categoryInitialized.current = true;
-    }
-  }, [menu]);
-
   const sections = useMemo(() => (menu ? groupMenuByCategory(menu) : []), [menu]);
+
+  // Keep strip selection valid: first section when unset/empty, or when current key vanishes.
+  useEffect(() => {
+    if (sections.length === 0) {
+      setActiveCategory(null);
+      return;
+    }
+    setActiveCategory((prev) =>
+      prev && sections.some((s) => s.category === prev) ? prev : sections[0]!.category,
+    );
+  }, [sections]);
+
+  const resolvedActive = activeCategory ?? sections[0]?.category ?? '';
 
   const cartTotalMinor = useMemo(() => {
     if (!menu) return 0;
@@ -100,7 +103,7 @@ export function Menu() {
       </Box>
 
       {sections.length > 0 && (
-        <CategoryStrip sections={sections} active={activeCategory} onSelect={scrollToCategory} />
+        <CategoryStrip sections={sections} active={resolvedActive} onSelect={scrollToCategory} />
       )}
 
       {error && (
@@ -118,20 +121,47 @@ export function Menu() {
           sx={{ mb: 3, scrollMarginTop: 8 }}
         >
           <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5, textTransform: 'uppercase' }}>
-            {section.label} · {section.items.length} items
+            {section.label}
+            {!section.children?.length
+              ? ` · ${section.items.length} items`
+              : ''}
           </Typography>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 1.25,
-              mt: 1,
-            }}
-          >
-            {section.items.map((item) => (
-              <MenuItemCard key={item.id} item={item} qty={simpleLineQty(lines, item.id)} />
-            ))}
-          </Box>
+
+          {section.children && section.children.length > 0 ? (
+            section.children.map((child) => (
+              <Box key={child.category} sx={{ mt: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                  {child.label}
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 1.25,
+                  }}
+                >
+                  {child.items.map((item) => (
+                    <MenuItemCard key={item.id} item={item} qty={simpleLineQty(lines, item.id)} />
+                  ))}
+                </Box>
+              </Box>
+            ))
+          ) : null}
+
+          {section.items.length > 0 && (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 1.25,
+                mt: 1,
+              }}
+            >
+              {section.items.map((item) => (
+                <MenuItemCard key={item.id} item={item} qty={simpleLineQty(lines, item.id)} />
+              ))}
+            </Box>
+          )}
         </Box>
       ))}
 

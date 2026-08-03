@@ -1,51 +1,69 @@
-# POS → normalised catalogue (manual-first)
+# POS → normalised catalogue
 
-Moonshot treats **`NormalisedMenu`** / **`NormalisedOrder`** as the internal contract. The **manual** adapter reads `menu_items` + `modifier_groups` JSON from Postgres today. Customer-facing `GET /menu` always reads Postgres via `fetchMenuForCafe` — POS adapters are for **sync/ingress** only.
+Moonshot treats **`PosCatalog`** (and the derived **`NormalisedMenu`**) as the internal contract between POS adapters and Postgres. Customer-facing `GET /menu` always reads Postgres via `fetchMenuForCafe` — POS adapters are for **sync/ingress** only.
 
-When adding Square, SumUp, Lightspeed, or Epos adapters:
+## POS-neutral contract (`PosCatalog`)
 
-1. **Keep secrets and HTTP in the adapter** — `PosAdapter.fetchMenu`, `verifyWebhookSignature`, `parseWebhook`.
-2. **Map provider fields → `NormalisedMenuItem`** — internal UUIDs for rows you control; use `posItemId` / `posOptionId` / `pos_group_id` when you need a stable external key for sync/dedupe.
-3. **Persist ingress separately** — use `persistNormalisedMenuCatalog` (onboarding) or `syncNormalisedMenuCatalog` / `persistPosOrderEvent` (ongoing sync); avoid embedding SQL in provider SDK wrappers.
+Any POS adapter (Square today, Lightspeed later) must normalise into:
 
-4. **Modifiers** — map provider modifier sets into `NormalisedModifierGroup[]`; order lines still snapshot selections as `NormalisedOrderLineModifier[]` with `groupId` / `optionId` for KDS clarity.
-5. **Onboarding import** — POS catalogue ingress uses `getMenuProvisioner('pos')` → `PosAdapter.fetchMenu` → `persistNormalisedMenuCatalog`. Ongoing sync uses `syncNormalisedMenuCatalog`. Template onboarding uses `getMenuProvisioner('template')`.
+```ts
+PosCatalog {
+  cafeId
+  sections: PosCatalogSection[]   // key, label, parentKey, posCategoryId, kind, sortOrder
+  items: NormalisedMenuItem[]     // category = leaf section key; modifierGroups[].id = POS group id
+  groupsByPosId: Map<posGroupId, PosCatalogModifierGroup>  // + role hint
+  deletedPosItemIds: string[]
+  fetchedAt
+}
+```
 
-## Square adapter (live for onboarding import + catalog sync)
+The shared writer is [`menu-catalog-upsert.ts`](../apps/moonshot-api/src/lib/pos-catalog/menu-catalog-upsert.ts):
 
-See [square-oauth.md](./square-oauth.md) for OAuth, token storage, webhooks, and Admin Sync UX.
+| Mode | Entry | Behaviour |
+|------|-------|-----------|
+| Onboarding | `persistNormalisedMenuCatalog` | Rejects non-empty menus; empty catalogues |
+| Sync | `syncNormalisedMenuCatalog` | Upserts deltas; soft-deletes `deletedPosItemIds` |
 
-### Decision: Square owns items + modifiers; Moonshot layers prep
+A Lightspeed adapter produces the same `PosCatalog` and reuses the upsert — no Square types leak into the persist layer.
+
+## Ownership matrix
 
 | Source | What it owns |
 |--------|----------------|
-| Square Catalog | Items (name, price, sizes/variations, category, availability), modifier lists (milks, syrups, etc.) with Square's names, **images** (`CatalogImage` → `image_url`) |
-| Moonshot | Flow prep groups Square cannot express: Shots, Beans, Milk Temperature, Milk Texture, Ice Level, Toppings — attached via `inferDrinkArchetypeFromName` + `slotFilter` (never milk/syrup slots) |
+| POS catalogue | Items (name, price, sizes/variations, category tree, availability), modifier lists with POS names, images |
+| Moonshot (opt-in) | Flow prep groups the POS cannot express: Shots, Beans, Milk Temperature, Milk Texture, Ice Level, Toppings — attached **only** when an admin assigns a drink archetype |
 
-**Owned fields on sync upsert** (Square wins when present): `name`, `description`, `price_minor`, `currency`, `category` / section, `sizes`, Square-linked modifier attachments, `is_available`, `image_url` (only when Square supplies an image — never wipe a café upload if Square has none). Soft-delete sets `is_available = false` (no hard delete). Moonshot-only: Flow prep attachments (`pos_group_id IS NULL`), archetype / allow-no-milk flags on existing rows, custom tags.
+**On sync upsert:** POS wins for `name`, `description`, `price_minor`, `currency`, `category`, `sizes`, POS-linked modifier attachments, `is_available`, `image_url` (only when POS supplies an image). Soft-delete sets `is_available = false`.
 
-Square list names are **not renamed**. Import appends them into `cafes.kds_config.modifierClassification` so KDS chip matching still works.
+**Moonshot prep preservation:** attachments with `pos_group_id IS NULL` survive a sync **only when `menu_items.archetype IS NOT NULL`** (admin deliberately opted in). Otherwise Square's list is the whole picture — no auto-inferred prep.
 
-### Mapping table
+## Category hierarchy
 
-```
-CatalogCategory
-  → menu_sections (hot_drinks / cold_drinks / food by name, else custom key)
+Square `CatalogCategory` exposes `parentCategory`, `isTopLevel`, `pathToRoot`. The Square adapter mirrors this as a **two-level** tree:
 
-CatalogItem (+ ItemVariation)
-  → NormalisedMenuItem
-      posItemId     = CatalogItem.id
-      priceMinor    = variation price (minor units)
-      sizes         = multi-variation → NormalisedItemSize[]; single → []
-      category      = mapped section key
+- Top-level categories → customer nav tabs (`parentKey = null`)
+- Child categories → ordered sub-headings inside each tab
+- Deeper trees collapse so the leaf hangs under the top-most ancestor
 
-CatalogModifierList + CatalogModifier
-  → NormalisedModifierGroup + NormalisedModifierOption
-      pos_group_id  = modifier list id (DB column)
-      posOptionId   = modifier id
-      name          = Square's list / option name (kept)
-```
+Keys are generated from labels (`slugifyMenuSectionKey`) but **matched on `pos_category_id`**, so a rename in Square updates the label and leaves the Moonshot key (and historical `order_items.category`) stable.
 
-Signup still seeds Milks/Syrups. On import, a Square list named `Milks` **claims** the seeded row (`pos_group_id` + replace options). Unclaimed seeded Milks/Syrups with no item attachments are deleted when Square supplied an equivalent role.
+`menu_sections.kind` (`drink` | `food`) drives KDS food/drink split and loyalty pastry matching via `cafes.kds_config.foodSectionKeys` — not the literal string `"food"`.
 
-Starter Square Item Library CSV (template defaults + food) for Dashboard seeding and adapter tests: [`apps/moonshot-api/fixtures/pos/square/`](../apps/moonshot-api/fixtures/pos/square/).
+## Modifiers
+
+- Item modifier lists honour Square `modifierListInfo.ordinal` (sort order), `enabled`, per-item min/max, and `modifierOverrides`.
+- List names are **not renamed**. Import appends them into `kds_config.modifierClassification`.
+- Signup may seed Milks/Syrups for template cafés. On POS import, a Square list named `Milks` **claims** the seeded row. Unclaimed seeded Milks/Syrups with no attachments are deleted when Square supplied an equivalent role.
+
+## Realtime menu invalidation
+
+After a successful catalog sync (webhook / manual / cron), the API emits:
+
+- `admin:menu:synced` on `/admin` room `admin:cafe:{cafeId}`
+- `customerMenuUpdated` on `/customer` room `customer:cafe:{cafeId}`
+
+Admin and order-ahead clients soft-reload; the old 10s Admin poll is gone (60s reconcile remains as a safety net).
+
+See [architecture/realtime.md](./architecture/realtime.md) and [square-oauth.md](./square-oauth.md).
+
+Starter Square fixture: [`apps/moonshot-api/fixtures/pos/square/`](../apps/moonshot-api/fixtures/pos/square/).

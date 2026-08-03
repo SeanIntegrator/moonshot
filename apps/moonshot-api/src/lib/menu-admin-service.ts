@@ -15,9 +15,6 @@ import {
 } from './menu-sections.js';
 import { UUID_RE } from './uuid.js';
 
-/** @deprecated Prefer café `menu_sections` — kept for any legacy callers. */
-export const MENU_CATEGORIES = ['hot_drinks', 'cold_drinks', 'food', 'extras'] as const;
-
 function parseModifierGroupIds(body: Record<string, unknown>): string[] | undefined {
   if (!('modifierGroupIds' in body)) return undefined;
   if (!Array.isArray(body.modifierGroupIds)) return [];

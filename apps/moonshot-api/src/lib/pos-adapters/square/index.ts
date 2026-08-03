@@ -1,4 +1,5 @@
-import type { NormalisedMenu, PosAdapter, WebhookRequestLike } from '@moonshot/types';
+import type { NormalisedMenu, PosAdapter, PosCatalog, WebhookRequestLike } from '@moonshot/types';
+import { posSectionsToCafeSections } from '@moonshot/types';
 import { fetchSquareCatalog } from './catalog-fetch.js';
 import { normaliseSquareCatalog } from './catalog-normalise.js';
 import type { SquareClientEnvironment } from './client.js';
@@ -6,7 +7,6 @@ import {
   fetchSquareOrder,
   mapSquareEnvelopeToWebhookEvent,
 } from './order-normalise.js';
-import type { ModifierRoleHint } from './role-hints.js';
 import {
   parseSquareWebhookEnvelope,
   verifySquareWebhookRequest,
@@ -20,24 +20,28 @@ export type SquareAdapterConfig = {
 };
 
 export type SquarePosAdapter = PosAdapter & {
-  /** Last normalisation role hints — available after fetchMenu. */
-  lastRoleHints: Map<string, ModifierRoleHint>;
-  lastGroupsByPosId: ReturnType<typeof normaliseSquareCatalog>['groupsByPosId'];
+  /** Full POS catalogue from the last fetchMenu call. */
+  lastPosCatalog: PosCatalog | null;
 };
+
+function posCatalogToNormalisedMenu(catalog: PosCatalog): NormalisedMenu {
+  return {
+    cafeId: catalog.cafeId,
+    items: catalog.items,
+    sections: posSectionsToCafeSections(catalog.cafeId, catalog.sections),
+    fetchedAt: catalog.fetchedAt,
+  };
+}
 
 /**
  * Square POS adapter — Catalog fetch + order webhook parse/verify.
  */
 export function createSquarePosAdapter(config: SquareAdapterConfig): SquarePosAdapter {
-  let lastRoleHints = new Map<string, ModifierRoleHint>();
-  let lastGroupsByPosId: SquarePosAdapter['lastGroupsByPosId'] = new Map();
+  let lastPosCatalog: PosCatalog | null = null;
 
   return {
-    get lastRoleHints() {
-      return lastRoleHints;
-    },
-    get lastGroupsByPosId() {
-      return lastGroupsByPosId;
+    get lastPosCatalog() {
+      return lastPosCatalog;
     },
 
     async fetchMenu(cafeId: string): Promise<NormalisedMenu> {
@@ -45,10 +49,8 @@ export function createSquarePosAdapter(config: SquareAdapterConfig): SquarePosAd
         accessToken: config.accessToken,
         environment: config.environment,
       });
-      const result = normaliseSquareCatalog(cafeId || config.cafeId, snapshot);
-      lastRoleHints = result.roleHints;
-      lastGroupsByPosId = result.groupsByPosId;
-      return result.menu;
+      lastPosCatalog = normaliseSquareCatalog(cafeId || config.cafeId, snapshot);
+      return posCatalogToNormalisedMenu(lastPosCatalog);
     },
 
     async parseWebhook(req: WebhookRequestLike) {

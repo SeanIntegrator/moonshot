@@ -101,7 +101,7 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
     }
 
     if (envelope.type === SQUARE_CATALOG_WEBHOOK_TYPE) {
-      enqueueCatalogSync(cafeId);
+      enqueueCatalogSync(cafeId, { source: 'webhook' });
       await completeWebhookProcessing({
         client: pool,
         provider: PROVIDER,

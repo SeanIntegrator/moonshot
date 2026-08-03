@@ -20,7 +20,10 @@ export const SYSTEM_MENU_SECTION_LABELS: Record<SystemMenuSectionKey, string> = 
   food: 'Food',
 };
 
-/** Café-scoped top-level menu section (Items tab grouping / order-ahead nav). */
+/** Section kind — food vs drink for KDS / loyalty. */
+export type MenuSectionKind = 'drink' | 'food';
+
+/** Café-scoped menu section (Items tab grouping / order-ahead nav). May nest via parentKey. */
 export interface CafeMenuSection {
   id: string;
   cafeId: string;
@@ -29,16 +32,37 @@ export interface CafeMenuSection {
   enabled: boolean;
   isSystem: boolean;
   sortOrder: number;
+  /** Parent section key; null for top-level. */
+  parentKey?: string | null;
+  /** POS category id when synced from Square/Lightspeed. */
+  posCategoryId?: string | null;
+  /** Food vs drink — defaults to drink when omitted (legacy rows). */
+  kind?: MenuSectionKind;
 }
 
-/** True when a category key should be treated as food (KDS / loyalty). */
-export function isFoodMenuCategory(category: string): boolean {
+/**
+ * True when a category key should be treated as food (KDS / loyalty).
+ * Prefer `foodSectionKeys` from kds_config when available; this is the legacy fallback.
+ */
+export function isFoodMenuCategory(
+  category: string,
+  foodSectionKeys?: readonly string[] | null,
+): boolean {
+  if (foodSectionKeys && foodSectionKeys.length > 0) {
+    return foodSectionKeys.includes(category);
+  }
   return category === 'food' || category.toLowerCase().includes('food');
 }
 
-/** True when a category key earns a free-drink loyalty reward. */
-export function isDrinkMenuCategory(category: string): boolean {
-  if (isFoodMenuCategory(category)) return false;
+/**
+ * True when a category key earns a free-drink loyalty reward.
+ * Prefer section `kind` / foodSectionKeys when available.
+ */
+export function isDrinkMenuCategory(
+  category: string,
+  foodSectionKeys?: readonly string[] | null,
+): boolean {
+  if (isFoodMenuCategory(category, foodSectionKeys)) return false;
   if (category === 'extras') return false;
   return true;
 }

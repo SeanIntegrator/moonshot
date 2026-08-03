@@ -129,7 +129,7 @@ async function loadCafeConfig(db: Db, cafeId: string): Promise<CafeDrinkArchetyp
 
 /**
  * Re-attach modifier groups + sync waive flag for all items with the given archetype.
- * Does not change items that have no archetype or a different one.
+ * Preserves POS-linked groups (pos_group_id NOT NULL); replaces Moonshot-only prep slots.
  */
 export async function applyArchetypeToItems(
   db: Db,
@@ -139,6 +139,13 @@ export async function applyArchetypeToItems(
   if (!isDrinkArchetypeId(archetypeId)) {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid archetype id');
   }
+
+  // Lazily ensure Flow prep groups exist when an admin opts in.
+  const { ensureFlowPrepModifierGroups, ensureIceAndToppingsModifierGroups } = await import(
+    './menu-seed-library.js'
+  );
+  await ensureFlowPrepModifierGroups(db, cafeId);
+  await ensureIceAndToppingsModifierGroups(db, cafeId);
 
   const config = await loadCafeConfig(db, cafeId);
   const library = await loadLibraryMap(db, cafeId);
@@ -154,7 +161,26 @@ export async function applyArchetypeToItems(
       `UPDATE menu_items SET waive_milk_surcharge = $1 WHERE id = $2 AND cafe_id = $3`,
       [resolved.waiveMilkSurcharge, row.id, cafeId],
     );
-    await setMenuItemModifierGroups(db, row.id, resolved.groupIds);
+
+    // Keep Square/POS-linked groups; merge in archetype prep groups.
+    const { rows: attached } = await db.query<{
+      modifier_group_id: string;
+      pos_group_id: string | null;
+    }>(
+      `SELECT mig.modifier_group_id, mg.pos_group_id
+       FROM menu_item_modifier_groups mig
+       JOIN modifier_groups mg ON mg.id = mig.modifier_group_id
+       WHERE mig.menu_item_id = $1`,
+      [row.id],
+    );
+    const posGroupIds = attached
+      .filter((r) => r.pos_group_id != null)
+      .map((r) => r.modifier_group_id);
+    const merged = [
+      ...posGroupIds,
+      ...resolved.groupIds.filter((id) => !posGroupIds.includes(id)),
+    ];
+    await setMenuItemModifierGroups(db, row.id, merged);
   }
 
   return { updatedCount: rows.length };

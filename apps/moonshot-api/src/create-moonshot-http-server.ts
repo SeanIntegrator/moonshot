@@ -7,6 +7,8 @@ import { Server } from 'socket.io';
 import { createCorsOriginValidator, parseAllowedOrigins } from './lib/cors-origins.js';
 import { attachCustomerSocketIO } from './realtime/customer-events.js';
 import { registerCustomerSocketHandlers } from './realtime/customer-socket.js';
+import { attachAdminSocketIO } from './realtime/admin-events.js';
+import { registerAdminSocketHandlers } from './realtime/admin-socket.js';
 import { attachKdsSocketIO } from './realtime/kds-events.js';
 import { registerKdsSocketHandlers } from './realtime/kds-socket.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -50,6 +52,8 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   registerKdsSocketHandlers(io);
   attachCustomerSocketIO(io);
   registerCustomerSocketHandlers(io);
+  attachAdminSocketIO(io);
+  registerAdminSocketHandlers(io);
 
   app.use(helmet());
   app.use(

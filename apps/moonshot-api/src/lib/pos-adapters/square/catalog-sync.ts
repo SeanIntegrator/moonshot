@@ -15,14 +15,20 @@ import {
 } from './catalog-fetch.js';
 import { normaliseSquareCatalog } from './catalog-normalise.js';
 import { syncNormalisedMenuCatalog } from '../../menu-sync-catalog.js';
+import { loadExistingPosCategoryKeys } from '../../pos-catalog/menu-catalog-upsert.js';
 import { resolveSquareEnvironment } from '../../square/oauth-urls.js';
+import { emitAdminMenuSynced } from '../../../realtime/admin-events.js';
+import { emitCustomerMenuUpdated } from '../../../realtime/customer-events.js';
 
 const DEBOUNCE_MS = 45_000;
 
 type PendingEntry = {
   timer: ReturnType<typeof setTimeout>;
   forceFull: boolean;
+  source: CatalogSyncSource;
 };
+
+export type CatalogSyncSource = 'webhook' | 'manual' | 'cron';
 
 const pendingByCafe = new Map<string, PendingEntry>();
 const inFlight = new Set<string>();
@@ -50,9 +56,10 @@ export type CatalogSyncRunResult = {
  */
 export function enqueueCatalogSync(
   cafeId: string,
-  opts?: { immediate?: boolean; forceFull?: boolean },
+  opts?: { immediate?: boolean; forceFull?: boolean; source?: CatalogSyncSource },
 ): void {
   const forceFull = opts?.forceFull === true;
+  const source = opts?.source ?? 'webhook';
   const existing = pendingByCafe.get(cafeId);
   if (existing) {
     clearTimeout(existing.timer);
@@ -61,15 +68,19 @@ export function enqueueCatalogSync(
 
   if (opts?.immediate) {
     pendingByCafe.delete(cafeId);
-    void runCatalogSyncForCafe(cafeId, { forceFull: forceFull || existing?.forceFull });
+    void runCatalogSyncForCafe(cafeId, {
+      forceFull: forceFull || existing?.forceFull,
+      source: source === 'webhook' ? 'manual' : source,
+    });
     return;
   }
 
   const entry: PendingEntry = {
     forceFull: forceFull || Boolean(existing?.forceFull),
+    source,
     timer: setTimeout(() => {
       pendingByCafe.delete(cafeId);
-      void runCatalogSyncForCafe(cafeId, { forceFull: entry.forceFull });
+      void runCatalogSyncForCafe(cafeId, { forceFull: entry.forceFull, source: entry.source });
     }, DEBOUNCE_MS),
   };
   pendingByCafe.set(cafeId, entry);
@@ -77,12 +88,13 @@ export function enqueueCatalogSync(
 
 export async function runCatalogSyncForCafe(
   cafeId: string,
-  opts?: { forceFull?: boolean; db?: Pool },
+  opts?: { forceFull?: boolean; db?: Pool; source?: CatalogSyncSource },
 ): Promise<CatalogSyncRunResult> {
   const db = opts?.db ?? pool;
+  const source = opts?.source ?? 'manual';
   if (inFlight.has(cafeId)) {
     // Coalesce: schedule another pass after the current one finishes.
-    enqueueCatalogSync(cafeId, { forceFull: opts?.forceFull });
+    enqueueCatalogSync(cafeId, { forceFull: opts?.forceFull, source });
     const conn = await getPosConnection(db, cafeId, POS_PROVIDERS.square);
     return {
       cafeId,
@@ -116,20 +128,21 @@ export async function runCatalogSyncForCafe(
           environment,
         });
 
-    const normalised = normaliseSquareCatalog(cafeId, snapshot, {
-      includeDeletedItems: !forceFull,
-    });
-
     const client = await db.connect();
     let result;
+    let lastSyncedAt: string;
     try {
       await client.query('BEGIN');
-      result = await syncNormalisedMenuCatalog(client, cafeId, normalised.menu, {
-        groupsByPosId: normalised.groupsByPosId,
-        roleHints: normalised.roleHints,
-        deletedPosItemIds: normalised.deletedPosItemIds,
+      const existingKeys = await loadExistingPosCategoryKeys(client, cafeId);
+      const catalog = normaliseSquareCatalog(cafeId, snapshot, {
+        includeDeletedItems: !forceFull,
+        existingKeyByPosCategoryId: existingKeys,
       });
+      result = await syncNormalisedMenuCatalog(client, cafeId, catalog);
       await client.query('COMMIT');
+      const cursor = new Date(snapshot.latestTime);
+      await markCatalogSyncSuccess(db, cafeId, cursor, POS_PROVIDERS.square);
+      lastSyncedAt = new Date().toISOString();
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
@@ -137,15 +150,21 @@ export async function runCatalogSyncForCafe(
       client.release();
     }
 
-    const cursor = new Date(snapshot.latestTime);
-    await markCatalogSyncSuccess(db, cafeId, cursor, POS_PROVIDERS.square);
+    emitAdminMenuSynced({
+      cafeId,
+      syncedAt: lastSyncedAt,
+      upsertedItems: result.upsertedItems,
+      softDeletedItems: result.softDeletedItems,
+      source,
+    });
+    emitCustomerMenuUpdated({ cafeId, syncedAt: lastSyncedAt });
 
     return {
       cafeId,
       upsertedItems: result.upsertedItems,
       softDeletedItems: result.softDeletedItems,
       upsertedGroups: result.upsertedGroups,
-      lastSyncedAt: new Date().toISOString(),
+      lastSyncedAt,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -167,7 +186,7 @@ export async function syncStaleCatalogs(db: Pool = pool): Promise<{
   let failed = 0;
   for (const conn of due) {
     try {
-      await runCatalogSyncForCafe(conn.cafeId, { db });
+      await runCatalogSyncForCafe(conn.cafeId, { db, source: 'cron' });
       synced += 1;
     } catch {
       failed += 1;

@@ -11,6 +11,10 @@ export function customerOrderRoom(orderId: string): string {
   return `customer:order:${orderId}`;
 }
 
+export function customerCafeRoom(cafeId: string): string {
+  return `customer:cafe:${cafeId}`;
+}
+
 /** Push customer tracking events to Socket.io subscribers for one order. */
 export function emitCustomerServerToClient(
   orderId: string,
@@ -18,4 +22,24 @@ export function emitCustomerServerToClient(
 ): void {
   if (!customerNs) return;
   void customerNs.to(customerOrderRoom(orderId)).emit('customer:event', event);
+}
+
+/** Push café-scoped events (e.g. menu invalidation) to menu subscribers. */
+export function emitCustomerCafeEvent(
+  cafeId: string,
+  event: CustomerServerToClientEvent,
+): void {
+  if (!customerNs) return;
+  void customerNs.to(customerCafeRoom(cafeId)).emit('customer:event', event);
+}
+
+export function emitCustomerMenuUpdated(payload: {
+  cafeId: string;
+  syncedAt: string;
+}): void {
+  emitCustomerCafeEvent(payload.cafeId, {
+    type: 'customerMenuUpdated',
+    cafeId: payload.cafeId,
+    syncedAt: payload.syncedAt,
+  });
 }

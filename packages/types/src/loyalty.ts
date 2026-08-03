@@ -49,9 +49,13 @@ export function isKnownLoyaltyRewardType(value: string): value is KnownLoyaltyRe
   return value === 'free_coffee' || value === 'free_pastry';
 }
 
-function lineMatchesRewardType(rewardType: string, category: string): boolean {
-  if (rewardType === 'free_coffee') return isDrinkMenuCategory(category);
-  if (rewardType === 'free_pastry') return isFoodMenuCategory(category);
+function lineMatchesRewardType(
+  rewardType: string,
+  category: string,
+  foodSectionKeys?: readonly string[] | null,
+): boolean {
+  if (rewardType === 'free_coffee') return isDrinkMenuCategory(category, foodSectionKeys);
+  if (rewardType === 'free_pastry') return isFoodMenuCategory(category, foodSectionKeys);
   return false;
 }
 
@@ -59,21 +63,23 @@ function lineMatchesRewardType(rewardType: string, category: string): boolean {
 export function isLoyaltyRewardApplicable(
   rewardType: string,
   lines: ReadonlyArray<Pick<LoyaltyDiscountLine, 'category'>>,
+  foodSectionKeys?: readonly string[] | null,
 ): boolean {
-  return lines.some((line) => lineMatchesRewardType(rewardType, line.category));
+  return lines.some((line) => lineMatchesRewardType(rewardType, line.category, foodSectionKeys));
 }
 
 /**
  * Free-item discount: cheapest unit price among matching lines (0 if none).
- * Custom drink sections count for free_coffee; food / *food* for free_pastry.
+ * Custom drink sections count for free_coffee; foodSectionKeys / *food* for free_pastry.
  */
 export function computeLoyaltyRewardDiscountMinor(
   rewardType: string,
   lines: ReadonlyArray<LoyaltyDiscountLine>,
+  foodSectionKeys?: readonly string[] | null,
 ): number {
   let min: number | null = null;
   for (const line of lines) {
-    if (!lineMatchesRewardType(rewardType, line.category)) continue;
+    if (!lineMatchesRewardType(rewardType, line.category, foodSectionKeys)) continue;
     if (min == null || line.unitPriceMinor < min) min = line.unitPriceMinor;
   }
   return min ?? 0;

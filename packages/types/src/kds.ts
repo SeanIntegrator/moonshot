@@ -261,8 +261,15 @@ export function deriveLinePrep(item: NormalisedOrderItem, config: KdsConfig): Kd
   };
 }
 
-function isFoodCategory(category: string | null | undefined): boolean {
-  return typeof category === 'string' && (category === 'food' || category.toLowerCase().includes('food'));
+function isFoodCategory(
+  category: string | null | undefined,
+  foodSectionKeys?: readonly string[] | null,
+): boolean {
+  if (typeof category !== 'string') return false;
+  if (foodSectionKeys && foodSectionKeys.length > 0) {
+    return foodSectionKeys.includes(category);
+  }
+  return category === 'food' || category.toLowerCase().includes('food');
 }
 
 /**
@@ -271,7 +278,7 @@ function isFoodCategory(category: string | null | undefined): boolean {
  */
 export function deriveFlowLine(item: NormalisedOrderItem, config: KdsConfig): FlowLineView {
   const classification = resolveClassification(config);
-  const isFood = isFoodCategory(item.category);
+  const isFood = isFoodCategory(item.category, config.foodSectionKeys);
 
   let sizeLabel: string | null = null;
   let shotMod: NormalisedOrderLineModifier | null = null;

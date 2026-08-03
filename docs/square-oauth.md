@@ -105,15 +105,16 @@ Set the same `CRON_SECRET` on the API service and the cron caller. Optional head
 
 ### Catalog sync (Square → Moonshot)
 
-Square is source of truth for items, prices, categories, modifier lists, availability, and **images**. Moonshot Flow prep groups stay as an overlay.
+Square is source of truth for items, prices, **category hierarchy**, modifier lists, availability, and **images**. Moonshot Flow prep groups (shots, beans, milk temp/texture, ice, toppings) are **opt-in** via admin drink types — never auto-attached on import/sync.
 
 1. `catalog.version.updated` enqueues a **debounced** (~45s) sync per café.
 2. Incremental `SearchCatalogObjects(begin_time=cursor)` (or full List on first sync / Admin force).
-3. Upsert by `pos_item_id` / `pos_group_id`; Square images override Moonshot `image_url` when present; soft-delete when Square deletes.
-4. Admin **Sync from Square** calls `POST /admin/menu/sync-pos`.
-5. Daily cron: `POST /internal/pos/sync-catalogs` with `CRON_SECRET` (missed webhooks).
+3. Normalise to `PosCatalog` (mirrors Square parent/child categories + modifier ordinals) → `upsertPosCatalog`.
+4. On success, emit `admin:menu:synced` and `customerMenuUpdated` so Admin / order-ahead soft-reload (no 10s poll).
+5. Admin **Sync from Square** calls `POST /admin/menu/sync-pos`.
+6. Daily cron: `POST /internal/pos/sync-catalogs` with `CRON_SECRET` (missed webhooks).
 
-Cursor lives on `pos_connections.catalog_sync_cursor` / `catalog_last_synced_at`.
+Cursor lives on `pos_connections.catalog_sync_cursor` / `catalog_last_synced_at`. See [pos-normalisation.md](./pos-normalisation.md).
 
 ### Order runtime
 

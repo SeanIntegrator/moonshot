@@ -36,6 +36,18 @@ vi.mock('../../menu-sync-catalog.js', () => ({
   syncNormalisedMenuCatalog,
 }));
 
+vi.mock('../../pos-catalog/menu-catalog-upsert.js', () => ({
+  loadExistingPosCategoryKeys: vi.fn().mockResolvedValue(new Map()),
+}));
+
+vi.mock('../../../realtime/admin-events.js', () => ({
+  emitAdminMenuSynced: vi.fn(),
+}));
+
+vi.mock('../../../realtime/customer-events.js', () => ({
+  emitCustomerMenuUpdated: vi.fn(),
+}));
+
 vi.mock('../../pos-connections-repository.js', async () => {
   const actual = await vi.importActual<typeof import('../../pos-connections-repository.js')>(
     '../../pos-connections-repository.js',

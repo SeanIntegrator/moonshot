@@ -31,10 +31,22 @@ export interface KdsSocketHandshakeAuth {
   token: string;
 }
 
-/**
- * @deprecated Use {@link KdsSocketHandshakeAuth}; KDS never emits a `kds:subscribe` payload.
- */
-export type KdsClientToServerEvent = KdsSocketHandshakeAuth;
+// --- Admin room: server → client ---
+
+export type AdminCatalogSyncSource = 'webhook' | 'manual' | 'cron';
+
+export type AdminServerToClientEvent = {
+  type: 'admin:menu:synced';
+  cafeId: string;
+  syncedAt: IsoDateTime;
+  upsertedItems: number;
+  softDeletedItems: number;
+  source: AdminCatalogSyncSource;
+};
+
+export interface AdminSocketHandshakeAuth {
+  token: string;
+}
 
 // --- Customer room: server → client ---
 
@@ -61,19 +73,32 @@ export type CustomerServerToClientEvent =
       orderId: string;
       cafeId: string;
       googlePlaceId: string | null;
+    }
+  | {
+      type: 'customerMenuUpdated';
+      cafeId: string;
+      syncedAt: IsoDateTime;
     };
 
 // --- Customer room: client → server ---
 
-export type CustomerClientToServerEvent = {
-  type: 'customer:subscribe';
-  orderId: string;
-  /** Guest: `trackingToken` from `POST /orders`. Signed-in: Google session JWT from `POST /auth/google`. */
-  authToken: string;
-};
+export type CustomerClientToServerEvent =
+  | {
+      type: 'customer:subscribe';
+      orderId: string;
+      /** Guest: `trackingToken` from `POST /orders`. Signed-in: Google session JWT from `POST /auth/google`. */
+      authToken: string;
+    }
+  | {
+      type: 'customer:subscribeCafe';
+      cafeSlug: string;
+    };
 
 /** Union of every server-emitted payload (discriminate on `type`) */
-export type MoonshotServerToClientEvent = KdsServerToClientEvent | CustomerServerToClientEvent;
+export type MoonshotServerToClientEvent =
+  | KdsServerToClientEvent
+  | CustomerServerToClientEvent
+  | AdminServerToClientEvent;
 
-/** Client→server payloads customers may emit (KDS uses handshake only). */
+/** Client→server payloads customers may emit (KDS/Admin use handshake only). */
 export type MoonshotClientToServerEvent = CustomerClientToServerEvent;

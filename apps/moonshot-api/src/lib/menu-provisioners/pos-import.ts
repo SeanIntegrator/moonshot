@@ -60,18 +60,19 @@ export const posImportMenuProvisioner: MenuProvisioner<PosMenuProvisionPayload> 
       environment: resolveSquareEnvironment(),
     });
 
-    let menu;
     try {
-      menu = await adapter.fetchMenu(cafeId);
+      await adapter.fetchMenu(cafeId);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Square Catalog fetch failed';
       throw new MenuProvisionError(message, 502, 'VALIDATION');
     }
 
-    const result = await persistNormalisedMenuCatalog(client, cafeId, menu, {
-      groupsByPosId: adapter.lastGroupsByPosId,
-      roleHints: adapter.lastRoleHints,
-    });
+    const catalog = adapter.lastPosCatalog;
+    if (!catalog) {
+      throw new MenuProvisionError('Square catalogue normalisation produced no data', 502, 'VALIDATION');
+    }
+
+    const result = await persistNormalisedMenuCatalog(client, cafeId, catalog);
     await markCatalogSyncSuccess(client, cafeId, new Date(), POS_PROVIDERS.square);
     return result;
   },

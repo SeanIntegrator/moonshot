@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { CatalogObject } from 'square';
-import { normaliseSquareCatalog, mapCategoryToSectionKey } from './catalog-normalise.js';
+import { normaliseSquareCatalog } from './catalog-normalise.js';
 import type { SquareCatalogSnapshot } from './catalog-fetch.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -24,43 +24,56 @@ function loadFixture(): SquareCatalogSnapshot {
 }
 
 describe('catalog-normalise', () => {
-  it('maps Square category names onto system section keys', () => {
-    expect(mapCategoryToSectionKey('Hot drinks')).toBe('hot_drinks');
-    expect(mapCategoryToSectionKey('Food')).toBe('food');
-    expect(mapCategoryToSectionKey('Seasonal Specials')).toBe('seasonal_specials');
+  it('mirrors Square category names as section keys (not forced system keys)', () => {
+    const snapshot = loadFixture();
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot);
+    expect(catalog.sections.some((s) => s.key === 'hot_drinks' && s.posCategoryId === 'CAT_HOT')).toBe(
+      true,
+    );
+    expect(catalog.sections.some((s) => s.key === 'food' && s.kind === 'food')).toBe(true);
   });
 
   it('normalises items, sizes, and Square modifier lists from fixture', () => {
     const snapshot = loadFixture();
-    const { menu, groupsByPosId, roleHints } = normaliseSquareCatalog('cafe-1', snapshot);
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot);
 
-    expect(menu.items).toHaveLength(3);
-    expect(roleHints.get('LIST_MILKS')).toBe('milk');
-    expect(roleHints.get('LIST_SYRUPS')).toBe('syrup');
+    expect(catalog.items).toHaveLength(3);
+    expect(catalog.groupsByPosId.get('LIST_MILKS')?.role).toBe('milk');
+    expect(catalog.groupsByPosId.get('LIST_SYRUPS')?.role).toBe('syrup');
 
-    const milks = groupsByPosId.get('LIST_MILKS');
+    const milks = catalog.groupsByPosId.get('LIST_MILKS');
     expect(milks?.name).toBe('Milk Options');
     expect(milks?.options).toHaveLength(2);
     expect(milks?.options.find((o) => o.name === 'Oat')?.priceMinor).toBe(50);
     expect(milks?.options.find((o) => o.name === 'Oat')?.chipLabel).toBe('Oa');
 
-    const latte = menu.items.find((i) => i.name === 'Latte')!;
+    const latte = catalog.items.find((i) => i.name === 'Latte')!;
     expect(latte.posItemId).toBe('ITEM_LATTE');
     expect(latte.category).toBe('hot_drinks');
     expect(latte.priceMinor).toBe(350);
     expect(latte.sizes).toHaveLength(0);
     expect(latte.modifierGroups.map((g) => g.name)).toEqual(['Milk Options', 'Syrups']);
+    expect(latte.archetype).toBeNull();
 
-    const americano = menu.items.find((i) => i.name === 'Americano')!;
+    const americano = catalog.items.find((i) => i.name === 'Americano')!;
     expect(americano.sizes).toHaveLength(2);
     expect(americano.sizes[0]?.isDefault).toBe(true);
     expect(americano.sizes[1]?.priceMinor).toBe(350);
 
-    const cookie = menu.items.find((i) => i.name === 'Oat cookie')!;
+    const cookie = catalog.items.find((i) => i.name === 'Oat cookie')!;
     expect(cookie.category).toBe('food');
     expect(cookie.modifierGroups).toHaveLength(0);
 
-    expect(menu.sections.some((s) => s.key === 'food' && s.enabled)).toBe(true);
+    expect(catalog.sections.some((s) => s.key === 'food' && s.enabled)).toBe(true);
+  });
+
+  it('does not auto-attach Moonshot prep groups', () => {
+    const snapshot = loadFixture();
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot);
+    for (const item of catalog.items) {
+      expect(item.modifierGroups.every((g) => !['Shots', 'Beans'].includes(g.name))).toBe(true);
+      expect(item.archetype).toBeNull();
+    }
   });
 
   it('skips archived / deleted items', () => {
@@ -76,9 +89,9 @@ describe('catalog-normalise', () => {
       },
     };
     snapshot.items.push(archived);
-    const { menu, deletedPosItemIds } = normaliseSquareCatalog('cafe-1', snapshot);
-    expect(menu.items.find((i) => i.posItemId === 'ITEM_GONE')).toBeUndefined();
-    expect(deletedPosItemIds).toContain('ITEM_GONE');
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot);
+    expect(catalog.items.find((i) => i.posItemId === 'ITEM_GONE')).toBeUndefined();
+    expect(catalog.deletedPosItemIds).toContain('ITEM_GONE');
   });
 
   it('maps CatalogImage onto item imageUrl', () => {
@@ -95,26 +108,21 @@ describe('catalog-normalise', () => {
     if (latte?.itemData) {
       latte.itemData.imageIds = ['IMG_1'];
     }
-    const { menu } = normaliseSquareCatalog('cafe-1', snapshot);
-    expect(menu.items.find((i) => i.posItemId === 'ITEM_LATTE')?.imageUrl).toBe(
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot);
+    expect(catalog.items.find((i) => i.posItemId === 'ITEM_LATTE')?.imageUrl).toBe(
       'https://square-cdn.example/latte.jpg',
     );
-    expect(menu.items.find((i) => i.posItemId === 'ITEM_AMERICANO')?.imageUrl ?? null).toBeNull();
   });
 
-  it('includes deleted items as unavailable when includeDeletedItems is set', () => {
+  it('preserves existing section keys across Square renames via posCategoryId', () => {
     const snapshot = loadFixture();
-    snapshot.items.push({
-      type: 'ITEM',
-      id: 'ITEM_DEL',
-      isDeleted: true,
-      itemData: { name: 'Deleted Latte', variations: [] },
+    const existing = new Map([['CAT_HOT', 'coffee']]);
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot, {
+      existingKeyByPosCategoryId: existing,
     });
-    const { menu, deletedPosItemIds } = normaliseSquareCatalog('cafe-1', snapshot, {
-      includeDeletedItems: true,
-    });
-    expect(deletedPosItemIds).toContain('ITEM_DEL');
-    const del = menu.items.find((i) => i.posItemId === 'ITEM_DEL');
-    expect(del?.isAvailable).toBe(false);
+    expect(catalog.sections.find((s) => s.posCategoryId === 'CAT_HOT')?.key).toBe('coffee');
+    expect(catalog.items.find((i) => i.posItemId === 'ITEM_LATTE')?.category).toBe('coffee');
+    // Label still reflects Square's current name.
+    expect(catalog.sections.find((s) => s.posCategoryId === 'CAT_HOT')?.label).toBe('Hot drinks');
   });
 });

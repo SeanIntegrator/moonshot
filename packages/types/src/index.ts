@@ -20,4 +20,5 @@ export * from './order-tracking-auth.js';
 export * from './order.js';
 export * from './payment.js';
 export * from './pos.js';
+export * from './pos-catalog.js';
 export * from './sockets.js';

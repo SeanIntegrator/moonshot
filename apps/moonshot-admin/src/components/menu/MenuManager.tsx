@@ -11,6 +11,7 @@ import {
   syncPosMenuFromSquare,
   type SquareConnectStatus,
 } from '../../lib/admin-api.js';
+import { useAdminMenuSync } from '../../hooks/useAdminMenuSync.js';
 import { DrinkArchetypesPanel } from './DrinkArchetypesPanel.js';
 import { MenuItemsPanel } from './MenuItemsPanel.js';
 import { ModifierLibraryEditor } from './ModifierLibraryEditor.js';
@@ -80,41 +81,29 @@ export function MenuManager({ cafeSlug, token }: Props) {
 
   const softReload = useCallback(() => load('soft'), [load]);
 
-  // Webhook sync updates Postgres in the background; poll so Admin reflects it without Sync.
-  useEffect(() => {
-    if (!ready || squareStatus?.connected !== true) return;
+  const squareConnected = squareStatus?.connected === true;
 
-    let cancelled = false;
-    const knownSyncedAt = { current: squareStatus.catalogLastSyncedAt };
-
-    const tick = async () => {
-      try {
-        const next = await getSquareConnectStatus(token);
-        if (cancelled) return;
-        const prev = knownSyncedAt.current;
-        const changed =
-          Boolean(next.catalogLastSyncedAt) && next.catalogLastSyncedAt !== prev;
-        if (!changed) {
-          setSquareStatus(next);
-          return;
-        }
-        knownSyncedAt.current = next.catalogLastSyncedAt;
-        setSquareStatus(next);
-        setSyncNotice('Menu updated from Square');
-        softReload();
-      } catch {
-        // ignore transient poll errors
-      }
-    };
-
-    const id = window.setInterval(() => {
-      void tick();
-    }, 10_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [ready, squareStatus?.connected, squareStatus?.catalogLastSyncedAt, softReload, token]);
+  useAdminMenuSync({
+    token,
+    enabled: ready && squareConnected,
+    knownSyncedAt: squareStatus?.catalogLastSyncedAt ?? null,
+    onMenuSynced: (ev) => {
+      setSyncNotice(
+        `Menu updated from Square — ${ev.upsertedItems} item(s)` +
+          (ev.softDeletedItems > 0 ? `, ${ev.softDeletedItems} hidden` : ''),
+      );
+      setSquareStatus((prev) =>
+        prev
+          ? { ...prev, catalogLastSyncedAt: ev.syncedAt, catalogSyncStatus: 'idle' }
+          : prev,
+      );
+      softReload();
+    },
+    onReconcileSyncDetected: () => {
+      setSyncNotice('Menu updated from Square');
+      softReload();
+    },
+  });
 
   async function handleSyncFromSquare(): Promise<void> {
     setSyncing(true);
@@ -159,19 +148,15 @@ export function MenuManager({ cafeSlug, token }: Props) {
     );
   }
 
-  const squareConnected = squareStatus?.connected === true;
-
   return (
     <Paper sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
       <Typography variant="h6" gutterBottom>
         Menu & pricing
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Add items, sizes, and reusable modifier sections. Changes appear on the order-ahead app
-        immediately.
         {squareConnected
-          ? ' Square is the source of truth for POS-linked items — use Sync to pull Dashboard changes.'
-          : null}
+          ? 'Square is the source of truth for items, prices, categories, and modifiers. Use Sync (or wait for automatic updates) to pull Dashboard changes. Moonshot extras — shots, beans, milk temp/texture, ice, toppings — are opt-in via Drink types.'
+          : 'Add items, sizes, and reusable modifier sections. Changes appear on the order-ahead app immediately.'}
       </Typography>
 
       {squareConnected && (

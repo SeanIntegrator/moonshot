@@ -197,6 +197,11 @@ export interface KdsConfig {
   audio: KdsAudioConfig;
   display: KdsDisplayPreferences;
   eta: KdsEtaConfig;
+  /**
+   * Section keys treated as food on the KDS board / loyalty pastry rewards.
+   * Maintained from menu_sections.kind; replaces the legacy `category === 'food'` check.
+   */
+  foodSectionKeys?: string[];
 }
 
 export interface Cafe {
