@@ -1,5 +1,6 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import {
   Alert,
   Box,
@@ -13,7 +14,6 @@ import {
 import { alpha } from '@mui/material/styles';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { OrderStatusStepper } from '../components/OrderStatusStepper.js';
 import { PageHeader } from '../components/PageHeader.js';
 import { MenuItemImage } from '../components/MenuItemImage.js';
 import { SurfaceCard } from '../components/ui/SurfaceCard.js';
@@ -95,7 +95,7 @@ export function OrderDetail() {
     void refreshActiveOrders();
   }, [isSignedIn, refreshLoyalty, refreshAuth, refreshActiveOrders]);
 
-  const { trackingStatus, completedAt, stepIndex, lastPickupTime } = useOrderTracking(
+  const { trackingStatus, lastPickupTime } = useOrderTracking(
     order?.id ?? null,
     order?.status,
     guestTracking ?? null,
@@ -121,6 +121,7 @@ export function OrderDetail() {
 
   const pickupTime = lastPickupTime ?? order?.pickup.pickupTime;
   const allDone = trackingStatus === 'completed' || order?.status === 'completed';
+  const readyForPickup = order?.status === 'ready' || allDone;
   // Prefer socket-driven completion so the chip flips before the HTTP reload lands.
   const statusMeta = order
     ? getOrderStatusMeta(allDone ? 'completed' : order.status)
@@ -131,16 +132,16 @@ export function OrderDetail() {
     isSignedIn && loyaltyEnabled && order != null && !allDone && order.status !== 'cancelled';
   const canCancel = order != null && isCancellable(order.status) && !allDone;
 
-  // Keep the "7 mins" label fresh while the order is still active.
+  // Keep the "7 mins" label fresh while waiting for pickup.
   useEffect(() => {
-    if (!pickupTime || allDone) return;
+    if (!pickupTime || readyForPickup) return;
     const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
     return () => window.clearInterval(id);
-  }, [pickupTime, allDone]);
+  }, [pickupTime, readyForPickup]);
 
   const minsUntilPickup = useMemo(
-    () => (allDone ? null : minutesUntil(pickupTime, nowMs)),
-    [allDone, pickupTime, nowMs],
+    () => (readyForPickup ? null : minutesUntil(pickupTime, nowMs)),
+    [readyForPickup, pickupTime, nowMs],
   );
 
   async function onCancel(): Promise<void> {
@@ -184,15 +185,10 @@ export function OrderDetail() {
         {order && (
           <>
             <Box sx={{ flex: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
-                    Order #{order.id.slice(0, 8)}
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
-                    {allDone ? 'Done' : 'In progress'}
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
+                  Order #{order.id.slice(0, 8)}
+                </Typography>
                 <Chip
                   label={statusMeta?.label ?? order.status}
                   size="small"
@@ -200,37 +196,61 @@ export function OrderDetail() {
                 />
               </Box>
 
-              <OrderStatusStepper stepIndex={stepIndex} completed={allDone} />
-
-              <SurfaceCard
-                sx={{
-                  mt: 2,
-                  p: 1.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                }}
-              >
-                <AccessTimeIcon color="action" />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Pickup time
-                  </Typography>
-                  <Typography variant="body1" fontWeight={700}>
-                    {formatTime(pickupTime)}
-                  </Typography>
-                </Box>
-                {minsUntilPickup != null && (
-                  <Typography
-                    variant="body1"
-                    fontWeight={700}
-                    color="text.secondary"
-                    sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
-                  >
-                    {formatMinutesLabel(minsUntilPickup)}
-                  </Typography>
-                )}
-              </SurfaceCard>
+              {readyForPickup ? (
+                <SurfaceCard
+                  sx={{
+                    mt: 2,
+                    p: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    borderColor: 'success.main',
+                    bgcolor: (t) => alpha(t.palette.success.main, 0.08),
+                  }}
+                >
+                  <CheckCircleOutlineIcon color="success" />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body1" fontWeight={700} color="success.main">
+                      Ready for pickup
+                    </Typography>
+                    {pickupTime && (
+                      <Typography variant="caption" color="text.secondary">
+                        Pickup time {formatTime(pickupTime)}
+                      </Typography>
+                    )}
+                  </Box>
+                </SurfaceCard>
+              ) : (
+                <SurfaceCard
+                  sx={{
+                    mt: 2,
+                    p: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                  }}
+                >
+                  <AccessTimeIcon color="action" />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Pickup time
+                    </Typography>
+                    <Typography variant="body1" fontWeight={700}>
+                      {formatTime(pickupTime)}
+                    </Typography>
+                  </Box>
+                  {minsUntilPickup != null && (
+                    <Typography
+                      variant="body1"
+                      fontWeight={700}
+                      color="text.secondary"
+                      sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      {formatMinutesLabel(minsUntilPickup)}
+                    </Typography>
+                  )}
+                </SurfaceCard>
+              )}
 
               <Typography
                 variant="caption"
@@ -286,12 +306,6 @@ export function OrderDetail() {
               {trackingStatus === 'error' && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   Tracking unavailable — we&apos;ll call your name when it&apos;s ready.
-                </Typography>
-              )}
-              {allDone && (
-                <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-                  Your order is ready!
-                  {completedAt ? ` (${formatTime(completedAt)})` : ''}
                 </Typography>
               )}
 

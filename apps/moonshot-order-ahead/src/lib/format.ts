@@ -50,14 +50,6 @@ export function formatOrderDate(iso: string | null | undefined): string {
   });
 }
 
-/** "Good morning" / "Good afternoon" / "Good evening" */
-export function timeGreeting(date = new Date()): string {
-  const h = date.getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 export function firstName(displayName: string | null | undefined, email?: string): string {
   if (displayName?.trim()) return displayName.trim().split(/\s+/)[0]!;
   if (email) return email.split('@')[0]!;

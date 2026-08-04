@@ -14,32 +14,10 @@ export type OrderTrackingStatus =
   | 'completed'
   | 'error';
 
-/** Derives user-visible step index 0–3 from order status until socket confirms completion. */
-export function trackingStepFromStatus(
-  status: OrderTrackingStatus,
-  orderStatus: OrderStatus | undefined,
-): number {
-  if (status === 'completed') return 3;
-  if (!orderStatus) return 0;
-  switch (orderStatus) {
-    case 'confirmed':
-    case 'pending':
-      return 0;
-    case 'preparing':
-      return 1;
-    case 'ready':
-      return 2;
-    case 'completed':
-      return 3;
-    default:
-      return 0;
-  }
-}
-
 export function useOrderTracking(
   orderId: string | null,
-  /** From `POST /orders` response — drives steps until realtime status exists */
-  initialOrderStatus?: OrderStatus,
+  /** Kept for call-site compatibility; order status is refreshed via onSyncNeeded. */
+  _initialOrderStatus?: OrderStatus,
   /** Present for guest checkout only — JWT for `/customer` subscribe */
   orderTrackingToken?: string | null,
   options?: {
@@ -54,22 +32,15 @@ export function useOrderTracking(
 ): {
   trackingStatus: OrderTrackingStatus;
   completedAt: IsoDateTime | null;
-  /** Step 0 Confirmed … 3 Done — for UI progression */
-  stepIndex: number;
   lastPickupTime: IsoDateTime | null;
 } {
   const [trackingStatus, setTrackingStatus] = useState<OrderTrackingStatus>('idle');
   const [completedAt, setCompletedAt] = useState<IsoDateTime | null>(null);
-  const [liveOrderStatus, setLiveOrderStatus] = useState<OrderStatus | undefined>(initialOrderStatus);
   const [lastPickupTime, setLastPickupTime] = useState<IsoDateTime | null>(null);
   const onOrderCompletedRef = useRef(options?.onOrderCompleted);
   onOrderCompletedRef.current = options?.onOrderCompleted;
   const onSyncNeededRef = useRef(options?.onSyncNeeded);
   onSyncNeededRef.current = options?.onSyncNeeded;
-
-  useEffect(() => {
-    setLiveOrderStatus(initialOrderStatus);
-  }, [orderId, initialOrderStatus]);
 
   useEffect(() => {
     setCompletedAt(null);
@@ -94,13 +65,11 @@ export function useOrderTracking(
       if (ev.type === 'customerOrderCompleted' && ev.orderId === orderId) {
         setCompletedAt(ev.completedAt);
         setTrackingStatus('completed');
-        setLiveOrderStatus('completed');
         onOrderCompletedRef.current?.({ orderId: ev.orderId, completedAt: ev.completedAt });
         // Reload so order.status / payment fields match the socket completion.
         onSyncNeededRef.current?.();
       }
       if (ev.type === 'customerOrderStatusUpdated' && ev.orderId === orderId) {
-        setLiveOrderStatus(ev.status);
         onSyncNeededRef.current?.();
       }
       if (ev.type === 'customerEtaUpdated') {
@@ -149,7 +118,5 @@ export function useOrderTracking(
     };
   }, [orderId, orderTrackingToken]);
 
-  const stepIndex = trackingStepFromStatus(trackingStatus, liveOrderStatus);
-
-  return { trackingStatus, completedAt, stepIndex, lastPickupTime };
+  return { trackingStatus, completedAt, lastPickupTime };
 }

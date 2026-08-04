@@ -57,7 +57,7 @@ export function CurrentOrderCard({ order }: Props) {
         <Chip label={chipLabel} size="small" color={statusMeta.chipColor} />
       </Box>
       <Box sx={{ p: 2 }}>
-        {order.items.slice(0, 3).map((li) => {
+        {order.items.map((li) => {
           // Order lines snapshot name/mods but not images — resolve from live menu.
           const menuItem = li.menuItemId
             ? menu?.items.find((i) => i.id === li.menuItemId)

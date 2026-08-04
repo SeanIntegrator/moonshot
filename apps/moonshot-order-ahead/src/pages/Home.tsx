@@ -23,7 +23,7 @@ import { useActiveOrders } from '../providers/ActiveOrdersProvider.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useCafe } from '../hooks/useCafe.js';
-import { firstName, formatFromPrice, formatMoney, timeGreeting } from '../lib/format.js';
+import { firstName, formatFromPrice, formatMoney } from '../lib/format.js';
 import { featuredItems } from '../lib/menu-utils.js';
 import { reorderFromOrder } from '../lib/cart-from-order.js';
 import { SIGN_IN_TO_ORDER_MESSAGE } from '../lib/order-gate-messages.js';
@@ -83,7 +83,6 @@ export function Home() {
   );
   const featured = useMemo(() => (menu ? featuredItems(menu) : []), [menu]);
   const activeOrder = active[0] ?? null;
-  const greeting = timeGreeting();
   const name = isSignedIn ? firstName(user?.displayName, user?.email) : 'there';
   const canShowLiveLoyalty = isSignedIn && loyaltyEnabled && summary?.loyaltyEnabled && membership;
 
@@ -140,7 +139,7 @@ export function Home() {
                 fontWeight: 700,
               }}
             >
-              {greeting}, {name}.
+              Hey {name}.
             </Typography>
           </Box>
           {isSignedIn && user && (
