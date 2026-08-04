@@ -108,3 +108,14 @@ Sets `orders.pickup_time` and `orders.eta_mode = 'manual_override'`. FIFO recomp
 - Drink row: shot column (qty + bar + name + `[shots · bean]` + size) · milk/syrup column (collapses when empty) · right column allergens (yellow chrome) + free-text notes (plain off-white, right-aligned).
 - Food row: qty · italic name · same right column (allergens + notes, `justify-end`).
 - Order-level notes: footer strip on the live `OrderCard` (and Recent Orders).
+
+## iPad install (Clay & Bean)
+
+Installable SPA: `public/manifest.json` (`display: standalone`) + Apple meta tags + icons. No service worker.
+
+1. Open the KDS HTTPS URL in **Safari** on the iPad.
+2. Share → **Add to Home Screen**.
+3. Launch from the **home-screen icon** (not a Safari tab) — URL bar is hidden.
+4. Optional shift lock: Settings → Accessibility → **Guided Access** → enable; on the KDS icon, triple-click the side/top button and start Guided Access.
+
+Opening the same URL as a Safari tab always shows the address bar — that is expected Safari behaviour, not a missing install config.

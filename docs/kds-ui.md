@@ -49,6 +49,10 @@ Domain ticket layout (shot columns, milk wraps, allergen hazard stripes) stays a
 
 **Recent orders** (header button) opens a tablet-sized `Dialog` listing the last 20 completed tickets (`GET /kds/orders/recent`). Rows expand via `Collapsible` for full line details at **compact** density; **Recall** calls `POST /kds/orders/:id/recall` and returns the ticket to the board as `confirmed`. Modal food strip uses theme muted tokens (board strip hex unchanged).
 
+## iPad Add to Home Screen
+
+The KDS ships a Web App Manifest + Apple meta (`apple-mobile-web-app-capable`) so **Share → Add to Home Screen** launches fullscreen without a Safari URL bar. There is no service worker on KDS (iPad does not need one for A2HS). Pair with **Guided Access** for shift lockdown. See [architecture/kds-board.md](architecture/kds-board.md#ipad-install-clay--bean).
+
 ## Adding components
 
 From `apps/moonshot-kds`:

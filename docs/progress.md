@@ -31,10 +31,10 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 
 ### KDS Flow board
 
-- **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — Vite SPA (not yet installable; see roadmap Workstream 6).
+- **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — installable SPA (`display: standalone` + Apple meta; no SW).
 - Status advance (`preparing` / `ready`), ETA stretch, **`GET /kds/config`**.
 - **Recent orders** (`GET /kds/orders/recent`) + **recall** (`POST …/recall`, `…/recall-last`).
-- Line-level free-text notes render on drink/food rows (plain off-white, right-aligned with allergens); **order-level** notes also show on the live `OrderCard` (Workstream 6 notes done; install remaining).
+- Line-level free-text notes render on drink/food rows (plain off-white, right-aligned with allergens); **order-level** notes also show on the live `OrderCard`.
 
 ### Menu & café ops
 
@@ -64,8 +64,8 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 | Service | Notes |
 |---|---|
 | `moonshot-api` | HTTP + sockets |
-| `moonshot-kds` | Flow board SPA (installability TBD) |
-| `moonshot-order-ahead` | Customer app (manifest stub only) |
+| `moonshot-kds` | Flow board SPA — Add to Home Screen on iPad (`standalone`) |
+| `moonshot-order-ahead` | Customer PWA (manifest + SW; `/runtime-config.js` NetworkOnly) |
 | `moonshot-admin` | Owner console (single-scroll dashboard) |
 | `moonshot-marketing` | Public marketing / signup entry |
 
@@ -80,7 +80,6 @@ Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`
 3. No incremental / merge Stripe checkout (F3).
 4. **Review nudge**: API may emit `customerReviewEligible` but order-ahead has no UI; Phase A also sets `review_prompt_state = 'shown_positive'` at emit time (burns eligibility before the modal ships — roadmap WS2).
 5. Admin invites, audit trail, and café theme/logo editor still missing (roadmap WS3–WS4).
-6. Order-ahead / KDS not properly installable (missing icons / SW / Apple meta) — roadmap WS5–WS6.
 
 ---
 
@@ -91,9 +90,7 @@ Tackle as planned sessions per [architecture/roadmap.md](architecture/roadmap.md
 1. **WS2** — Review nudge single-CTA modal + `eligible` state + Admin `reviewUrl`.
 2. **WS3** — Admin dashboard redesign (unified brand, sidebar, primitives).
 3. **WS4** — Café branding write path (theme picker, colour overrides, logo).
-4. **WS5** — Order-ahead installability (`vite-plugin-pwa`, icons, Apple meta).
-5. **WS6b** — KDS iPad Add-to-Home-Screen (notes half of WS6 done).
-6. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
+4. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
 
 Parked (post-launch): Stripe refunds, Redis socket adapter, KDS hold / line made-state, Lightspeed, Capacitor wrapper.
 

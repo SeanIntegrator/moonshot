@@ -151,20 +151,13 @@ A café owner can pick a pack, override brand colours, upload a logo, and see th
 
 ## Workstream 5 — Order-ahead installability
 
-### Current state (verified)
+**Status: done (August 2026).**
 
-- `public/manifest.json` exists but is a stub: no `icons` array, no service worker, no `vite-plugin-pwa`, no `apple-touch-icon`, no `theme-color` meta in HTML.
-- Android install prompt needs a service worker; iOS Add-to-Home-Screen needs Apple meta tags.
-- Deployed via `vite preview` on Railway; `/runtime-config.js` is written at container start.
+- Full `manifest.json` with 192/512 icons (incl. maskable) + `apple-touch-icon`.
+- Apple / theme-color meta in `index.html` (`apple-mobile-web-app-capable`, etc.).
+- `vite-plugin-pwa` with `registerType: 'autoUpdate'`; `/runtime-config.js` is NetworkOnly and excluded from precache.
 
-### Work
-
-1. Add `vite-plugin-pwa` to order-ahead Vite 5.4 config.
-2. Generate 192/512 icons (incl. maskable), `apple-touch-icon`, and Apple / theme-color meta tags.
-3. Keep `display: standalone` so the URL bar is hidden once installed.
-4. Ensure the service worker does **not** cache `/runtime-config.js` stale (config is rewritten at container start).
-
-### Done when
+### Done when (met)
 
 A customer can Add to Home Screen on iOS and Android and launch fullscreen without a browser chrome URL bar.
 
@@ -186,22 +179,20 @@ A customer can Add to Home Screen on iOS and Android and launch fullscreen witho
 - Empty / whitespace notes normalise to `null` at Square normaliser + POS ingress.
 - Failed `fetchSquareOrder` still opens a stub ticket; empty-snapshot path and adapter catch now warn/log for ops.
 
-### Install — remaining
+### Install — done (August 2026)
 
-- KDS has no manifest, icons, or service worker. Docs historically called it a “PWA shell”; it is a Vite SPA.
-- Target device is **iPad**. A `display: standalone` manifest + Apple meta tags + Add to Home Screen removes the URL bar. Pair with Guided Access for shift lockdown.
-- **Parked:** Capacitor / native wrapper — Apple Developer + provisioning churn for the same visual result on iPadOS.
+- Web App Manifest (`display: standalone`) + icons + Apple meta tags on the KDS SPA.
+- **No service worker** on KDS — iPad Add-to-Home-Screen does not need one; avoids SW cache risk on the kitchen device.
+- Ops: after Add to Home Screen, use **Guided Access** for shift lockdown. Capacitor stays parked.
+- Safari tabs still show the URL bar by design — only the home-screen icon launches fullscreen.
 
 ### Work remaining
 
-1. ~~Render order-level notes on the live `OrderCard`.~~
-2. ~~Square normaliser tests + empty-string → `null`.~~
-3. ~~Failed-fetch fallback logging.~~
-4. Add KDS web manifest + icons + Apple meta tags (`display: standalone`). Document Guided Access for C&B iPads. No native wrapper for launch.
+None for launch install. Parked: Capacitor / native wrapper.
 
-### Done when
+### Done when (met)
 
-- ~~A Square order with free-text notes (order and/or line) shows them on the live board.~~
+- A Square order with free-text notes (order and/or line) shows them on the live board.
 - KDS Add-to-Home-Screen on iPad runs fullscreen without a URL bar.
 
 ### Files
@@ -209,7 +200,7 @@ A customer can Add to Home Screen on iOS and Android and launch fullscreen witho
 - `apps/moonshot-kds/src/board/OrderCard.tsx`, `DrinkRow.tsx`, `FoodRow.tsx`
 - `apps/moonshot-api/src/lib/pos-adapters/square/order-normalise.ts` (+ tests)
 - `apps/moonshot-api/src/lib/orders/pos-order-ingress.ts`
-- `apps/moonshot-kds/index.html`, new `public/manifest.json`, icons (install remaining)
+- `apps/moonshot-kds/index.html`, `public/manifest.json`, icons
 
 ---
 
@@ -253,7 +244,7 @@ C&B is on v2 only with OAuth Square, no duplicate POS events, and one clean live
 |-------|---------|
 | M1 happy-path cards still open on the old board | Closed — see [bugs/m1-triage.md](../bugs/m1-triage.md) |
 | Split oversized `admin-api.ts` | Already a barrel; bulk lives in `adminApi/menu.ts` + menu panels |
-| KDS is a “PWA shell” | Vite SPA with no manifest / SW / icons — installability is Workstream 6 |
+| KDS is a “PWA shell” | Vite SPA + manifest / Apple meta for iPad A2HS (no SW); order-ahead has full PWA SW |
 | Café theme editor is only “post-launch polish” | Read path shipped; write path is launch Workstream 4 |
 | Review nudge needs thumbs up/down + `feedback_responses` | Launch scope is single CTA to configurable URL (Workstream 2) |
 | Square line notes untested / possibly unmapped | Line notes mapped + plain off-white in allergen column; order-level notes on live `OrderCard` (WS6 notes done; install remaining) |
