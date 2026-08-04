@@ -116,11 +116,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         modifiers: params.modifiers,
         allergens: params.allergens,
       };
-      const idx = withoutOld.findIndex((l) => l.key === key);
-      if (idx === -1) return [...withoutOld, row];
-      const copy = [...withoutOld];
-      copy[idx] = { ...row, quantity: copy[idx].quantity + row.quantity };
-      return copy;
+      const existing = withoutOld.find((l) => l.key === key);
+      if (!existing) return [...withoutOld, row];
+      return withoutOld.map((l) =>
+        l.key === key ? { ...row, quantity: existing.quantity + row.quantity } : l,
+      );
     });
   }, []);
 

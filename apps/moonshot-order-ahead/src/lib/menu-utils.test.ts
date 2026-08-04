@@ -44,7 +44,7 @@ function menu(sections: CafeMenuSection[], items: NormalisedMenuItem[]): Normali
 }
 
 describe('groupMenuByCategory', () => {
-  it('renders children under an empty top-level parent', () => {
+  it('promotes leaf children to top-level when parent has subcategories', () => {
     const sections = [
       section({ key: 'coffee', label: 'Coffee', sortOrder: 0 }),
       section({ key: 'hot_drinks', label: 'Hot drinks', parentKey: 'coffee', sortOrder: 1 }),
@@ -52,10 +52,37 @@ describe('groupMenuByCategory', () => {
     const grouped = groupMenuByCategory(menu(sections, [item('hot_drinks', 'Latte')]));
 
     expect(grouped).toHaveLength(1);
-    expect(grouped[0]?.category).toBe('coffee');
-    expect(grouped[0]?.items).toEqual([]);
-    expect(grouped[0]?.children?.[0]?.category).toBe('hot_drinks');
-    expect(grouped[0]?.children?.[0]?.items.map((i) => i.name)).toEqual(['Latte']);
+    expect(grouped[0]?.category).toBe('hot_drinks');
+    expect(grouped[0]?.label).toBe('Hot drinks');
+    expect(grouped[0]?.items.map((i) => i.name)).toEqual(['Latte']);
+    expect(grouped[0]?.children).toBeUndefined();
+  });
+
+  it('emits Food leaves Sweet and Savory without a Food parent header', () => {
+    const sections = [
+      section({ key: 'food', label: 'Food', sortOrder: 0, kind: 'food' }),
+      section({ key: 'sweet', label: 'Sweet', parentKey: 'food', sortOrder: 1, kind: 'food' }),
+      section({ key: 'savory', label: 'Savory', parentKey: 'food', sortOrder: 2, kind: 'food' }),
+    ];
+    const grouped = groupMenuByCategory(
+      menu(sections, [item('sweet', 'Plain Croissant'), item('savory', 'Ham Croissant')]),
+    );
+
+    expect(grouped.map((s) => s.category)).toEqual(['sweet', 'savory']);
+    expect(grouped.every((s) => s.children == null)).toBe(true);
+  });
+
+  it('keeps parent as its own section when it has direct items alongside children', () => {
+    const sections = [
+      section({ key: 'food', label: 'Food', sortOrder: 0, kind: 'food' }),
+      section({ key: 'sweet', label: 'Sweet', parentKey: 'food', sortOrder: 1, kind: 'food' }),
+    ];
+    const grouped = groupMenuByCategory(
+      menu(sections, [item('food', 'Platter'), item('sweet', 'Cookie')]),
+    );
+
+    expect(grouped.map((s) => s.category)).toEqual(['sweet', 'food']);
+    expect(grouped.find((s) => s.category === 'food')?.items.map((i) => i.name)).toEqual(['Platter']);
   });
 
   it('promotes children whose parent is disabled (not in shown)', () => {
@@ -70,19 +97,15 @@ describe('groupMenuByCategory', () => {
     expect(grouped[0]?.items.map((i) => i.name)).toEqual(['Latte']);
   });
 
-  it('promotes children when parentKey points at a skipped empty top-level section', () => {
-    // Stale parentKey: child claims parent "ghost", which is top-level + empty and has
-    // no registered children under that key in childrenOf for a *different* reason —
-    // here "ghost" is empty leaf; child parentKey is "ghost" so childrenOf DOES link them.
-    // Assert the empty-parent+child-items path (parent must not be dropped).
+  it('promotes leaf when parent would otherwise be an empty container', () => {
     const sections = [
       section({ key: 'ghost', label: 'Ghost', sortOrder: 0 }),
       section({ key: 'leaf', label: 'Leaf', parentKey: 'ghost', sortOrder: 1 }),
     ];
     const grouped = groupMenuByCategory(menu(sections, [item('leaf', 'Item')]));
     expect(grouped).toHaveLength(1);
-    expect(grouped[0]?.category).toBe('ghost');
-    expect(grouped[0]?.children?.[0]?.items).toHaveLength(1);
+    expect(grouped[0]?.category).toBe('leaf');
+    expect(grouped[0]?.items).toHaveLength(1);
   });
 
   it('returns empty array when no available items', () => {

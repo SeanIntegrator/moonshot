@@ -43,11 +43,15 @@ A Lightspeed adapter produces the same `PosCatalog` and reuses the upsert — no
 
 Square `CatalogCategory` exposes `parentCategory`, `isTopLevel`, `pathToRoot`. The Square adapter mirrors this as a **two-level** tree:
 
-- Top-level categories → customer nav tabs (`parentKey = null`)
-- Child categories → ordered sub-headings inside each tab
+- Top-level categories → `parentKey = null`
+- Child categories → `parentKey` = top-level Moonshot key
 - Deeper trees collapse so the leaf hangs under the top-most ancestor
 
+Order-ahead **promotes non-empty leaves** to nav tabs / section headers (e.g. Sweet, Savory) and hides empty container parents (e.g. Food). Admin keeps the full parent → child tree.
+
 Keys are generated from labels (`slugifyMenuSectionKey`) but **matched on `pos_category_id`**, so a rename in Square updates the label and leaves the Moonshot key (and historical `order_items.category`) stable.
+
+**Incremental sync:** item deltas often omit CATEGORY objects. Placement merges existing `pos_category_id → key` from Postgres, and the sync path BatchRetrieves any referenced category ids (plus parents) missing from the snapshot so new leaves are not forced to `uncategorised`.
 
 `menu_sections.kind` (`drink` | `food`) drives KDS food/drink split and loyalty pastry matching via `cafes.kds_config.foodSectionKeys` — not the literal string `"food"`.
 

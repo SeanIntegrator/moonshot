@@ -10,6 +10,7 @@ import {
 } from '../../pos-connections-repository.js';
 import { ensureFreshSquareAccessToken } from './token-refresh.js';
 import {
+  enrichSnapshotWithMissingCategories,
   fetchSquareCatalog,
   searchSquareCatalogSince,
 } from './catalog-fetch.js';
@@ -116,7 +117,7 @@ export async function runCatalogSyncForCafe(
     const environment = resolveSquareEnvironment();
     const forceFull = opts?.forceFull === true || !conn.catalogSyncCursor;
 
-    const snapshot = forceFull
+    let snapshot = forceFull
       ? await fetchSquareCatalog({
           accessToken: conn.accessToken,
           environment,
@@ -126,6 +127,15 @@ export async function runCatalogSyncForCafe(
           beginTime: conn.catalogSyncCursor!.toISOString(),
           environment,
         });
+
+    // Item-only deltas omit CATEGORY objects; pull referenced categories (+ parents)
+    // so placement and section upsert still work for brand-new leaves.
+    if (!forceFull) {
+      snapshot = await enrichSnapshotWithMissingCategories(snapshot, {
+        accessToken: conn.accessToken,
+        environment,
+      });
+    }
 
     const client = await db.connect();
     let result;

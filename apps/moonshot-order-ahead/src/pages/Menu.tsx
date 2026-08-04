@@ -133,31 +133,8 @@ export function Menu() {
         >
           <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5, textTransform: 'uppercase' }}>
             {section.label}
-            {!section.children?.length
-              ? ` · ${section.items.length} items`
-              : ''}
+            {` · ${section.items.length} items`}
           </Typography>
-
-          {section.children && section.children.length > 0 ? (
-            section.children.map((child) => (
-              <Box key={child.category} sx={{ mt: 1.5 }}>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-                  {child.label}
-                </Typography>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns,
-                    gap: 1.25,
-                  }}
-                >
-                  {child.items.map((item) => (
-                    <MenuItemCard key={item.id} item={item} qty={simpleLineQty(lines, item.id)} />
-                  ))}
-                </Box>
-              </Box>
-            ))
-          ) : null}
 
           {section.items.length > 0 && (
             <Box

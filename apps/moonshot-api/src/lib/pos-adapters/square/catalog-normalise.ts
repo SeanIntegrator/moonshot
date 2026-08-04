@@ -131,10 +131,18 @@ export function normaliseSquareCatalog(
     groupsByPosId.set(list.id, group);
   }
 
+  const existingKeys = options.existingKeyByPosCategoryId ?? new Map();
   const { sections, keyByPosCategoryId } = buildCatalogSections(
     snapshot.categories,
-    options.existingKeyByPosCategoryId ?? new Map(),
+    existingKeys,
   );
+
+  // Incremental deltas often omit CATEGORY objects; merge DB keys so placement
+  // still resolves reportingCategory / categories[] ids already known to Moonshot.
+  const placementMap = new Map(keyByPosCategoryId);
+  for (const [posId, key] of existingKeys) {
+    if (!placementMap.has(posId)) placementMap.set(posId, key);
+  }
 
   // Ensure uncategorised fallback exists when any item lacks a category.
   const usedKeys = new Set<string>();
@@ -153,7 +161,7 @@ export function normaliseSquareCatalog(
       continue;
     }
 
-    const placement = resolveItemCategoryPlacement(data, keyByPosCategoryId);
+    const placement = resolveItemCategoryPlacement(data, placementMap);
     usedKeys.add(placement.sectionKey);
 
     const variationObjs = (data?.variations ?? []).filter(
@@ -273,20 +281,9 @@ export function normaliseSquareCatalog(
     });
   }
 
-  // Drop unused sections; keep parents that still have used children.
-  const childKeysByParent = new Map<string, string[]>();
-  for (const s of sections) {
-    if (!s.parentKey) continue;
-    const list = childKeysByParent.get(s.parentKey) ?? [];
-    list.push(s.key);
-    childKeysByParent.set(s.parentKey, list);
-  }
-
-  const enabledSections = sections.filter((s) => {
-    if (usedKeys.has(s.key)) return true;
-    const children = childKeysByParent.get(s.key) ?? [];
-    return children.some((k) => usedKeys.has(k));
-  });
+  // Keep every live category from the snapshot (including empty leaves) so a
+  // later item assignment can land without the section vanishing first.
+  const enabledSections = [...sections];
 
   // If any item fell into uncategorised and that key isn't in the tree, add it.
   if (usedKeys.has('uncategorised') && !enabledSections.some((s) => s.key === 'uncategorised')) {

@@ -125,4 +125,71 @@ describe('catalog-normalise', () => {
     // Label still reflects Square's current name.
     expect(catalog.sections.find((s) => s.posCategoryId === 'CAT_HOT')?.label).toBe('Hot drinks');
   });
+
+  it('places items using existing DB category keys when CATEGORY is absent from the snapshot', () => {
+    // Incremental item-only delta: Ham references Savory, but Savory is not in the snapshot.
+    const snapshot: SquareCatalogSnapshot = {
+      items: [
+        {
+          type: 'ITEM',
+          id: 'ITEM_HAM',
+          isDeleted: false,
+          itemData: {
+            name: 'Ham and Cheese Croissant',
+            reportingCategory: { id: 'CAT_SAVORY' },
+            variations: [
+              {
+                type: 'ITEM_VARIATION',
+                id: 'VAR_HAM',
+                isDeleted: false,
+                itemVariationData: {
+                  name: 'Regular',
+                  priceMoney: { amount: 500n, currency: 'GBP' },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      categories: [],
+      modifierLists: [],
+      images: [],
+      latestTime: new Date().toISOString(),
+    };
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot, {
+      existingKeyByPosCategoryId: new Map([['CAT_SAVORY', 'savory']]),
+    });
+    expect(catalog.items.find((i) => i.posItemId === 'ITEM_HAM')?.category).toBe('savory');
+    expect(catalog.sections.some((s) => s.key === 'uncategorised')).toBe(false);
+  });
+
+  it('keeps unused live categories from the snapshot (empty leaves)', () => {
+    const snapshot: SquareCatalogSnapshot = {
+      items: [],
+      categories: [
+        {
+          type: 'CATEGORY',
+          id: 'CAT_FOOD',
+          isDeleted: false,
+          categoryData: { name: 'Food', isTopLevel: true },
+        },
+        {
+          type: 'CATEGORY',
+          id: 'CAT_SAVORY',
+          isDeleted: false,
+          categoryData: {
+            name: 'Savory',
+            isTopLevel: false,
+            parentCategory: { id: 'CAT_FOOD', ordinal: 0 },
+          },
+        },
+      ],
+      modifierLists: [],
+      images: [],
+      latestTime: new Date().toISOString(),
+    };
+    const catalog = normaliseSquareCatalog('cafe-1', snapshot);
+    expect(catalog.sections.some((s) => s.key === 'savory' && s.parentKey === 'food')).toBe(true);
+    expect(catalog.sections.some((s) => s.key === 'food')).toBe(true);
+  });
 });

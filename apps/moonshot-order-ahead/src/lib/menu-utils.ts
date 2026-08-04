@@ -15,15 +15,20 @@ export type MenuSectionChild = {
 export type MenuSection = {
   category: string;
   label: string;
-  /** Items directly on this section (when it has no children, or leaf-only). */
+  /** Items on this section (always leaf-level after grouping). */
   items: NormalisedMenuItem[];
-  /** Child subsections when the café uses a two-level Square hierarchy. */
+  /**
+   * @deprecated Leaf promotion made nesting unused; kept for type compatibility.
+   * Prefer flat top-level sections only.
+   */
   children?: MenuSectionChild[];
 };
 
 /**
  * Group available items by café section registry.
- * Top-level sections (no parentKey) become nav tabs; their children become sub-headings.
+ * When a parent has subcategories, only the non-empty leaf sections are emitted
+ * as top-level nav tabs / headers (e.g. Sweet, Savory — not Food).
+ * Parent sections with their own direct items still appear as their own tab.
  */
 export function groupMenuByCategory(menu: NormalisedMenu): MenuSection[] {
   const byCat = new Map<string, NormalisedMenuItem[]>();
@@ -57,21 +62,24 @@ export function groupMenuByCategory(menu: NormalisedMenu): MenuSection[] {
   for (const parent of topLevel) {
     const kids = childrenOf.get(parent.key) ?? [];
     if (kids.length > 0) {
-      const children: MenuSectionChild[] = kids
-        .map((c) => ({
-          category: c.key,
-          label: c.label,
-          items: byCat.get(c.key) ?? [],
-        }))
-        .filter((c) => c.items.length > 0);
+      // Promote non-empty leaves to top-level; hide empty container parents.
+      for (const child of kids) {
+        const items = byCat.get(child.key) ?? [];
+        if (items.length === 0) continue;
+        result.push({
+          category: child.key,
+          label: child.label,
+          items,
+        });
+      }
       const ownItems = byCat.get(parent.key) ?? [];
-      if (children.length === 0 && ownItems.length === 0) continue;
-      result.push({
-        category: parent.key,
-        label: parent.label,
-        items: ownItems,
-        children: children.length > 0 ? children : undefined,
-      });
+      if (ownItems.length > 0) {
+        result.push({
+          category: parent.key,
+          label: parent.label,
+          items: ownItems,
+        });
+      }
     } else {
       const items = byCat.get(parent.key) ?? [];
       if (items.length === 0) continue;
@@ -83,14 +91,10 @@ export function groupMenuByCategory(menu: NormalisedMenu): MenuSection[] {
     }
   }
 
-  // Orphan / stranded leaves: parent missing, disabled, or skipped because it had
-  // nothing to show. Only skip if the parent actually rendered (we're already a child).
-  const shown = new Set(
-    result.flatMap((r) => [r.category, ...(r.children?.map((c) => c.category) ?? [])]),
-  );
+  // Orphan / stranded leaves: parent missing, disabled, or skipped.
+  const shown = new Set(result.map((r) => r.category));
   for (const s of sorted) {
     if (shown.has(s.key)) continue;
-    if (s.parentKey && shown.has(s.parentKey)) continue;
     const items = byCat.get(s.key) ?? [];
     if (items.length === 0) continue;
     result.push({ category: s.key, label: s.label, items });
