@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { getCafeSlug } from './lib/api.js';
 import { CafeProvider } from './config/CafeProvider.js';
 import { AuthProvider } from './hooks/useAuth.js';
+import { CustomerEventsProvider } from './providers/CustomerEventsProvider.js';
 import { LoyaltyProvider } from './providers/LoyaltyProvider.js';
 import { MenuProvider } from './providers/MenuProvider.js';
 import { ActiveOrdersProvider } from './providers/ActiveOrdersProvider.js';
@@ -18,16 +19,18 @@ function CafeAppTree() {
   return (
     <CafeProvider>
       <AuthProvider>
-        <LoyaltyProvider>
-          <MenuProvider>
-            {/* Remount cart when café slug changes so sessionStorage keys never cross tenants */}
-            <CartProvider key={cafeSlug}>
-              <ActiveOrdersProvider>
-                <App />
-              </ActiveOrdersProvider>
-            </CartProvider>
-          </MenuProvider>
-        </LoyaltyProvider>
+        <CustomerEventsProvider>
+          <LoyaltyProvider>
+            <MenuProvider>
+              {/* Remount cart when café slug changes so sessionStorage keys never cross tenants */}
+              <CartProvider key={cafeSlug}>
+                <ActiveOrdersProvider>
+                  <App />
+                </ActiveOrdersProvider>
+              </CartProvider>
+            </MenuProvider>
+          </LoyaltyProvider>
+        </CustomerEventsProvider>
       </AuthProvider>
     </CafeProvider>
   );

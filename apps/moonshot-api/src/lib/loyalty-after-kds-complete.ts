@@ -7,17 +7,27 @@ import { fetchOrderWithItems } from './orders/order-read.js';
 import { applyLedgerStampAndRewards } from './loyalty/apply-ledger-on-complete.js';
 import { onTimeForReviewPrompt, stampsEarnedForCompletedOrder } from './loyalty/loyalty-rules.js';
 
+/** Result of post-complete loyalty apply — carried on `customerOrderCompleted` when applied. */
+export type LoyaltyApplyResult =
+  | { applied: false }
+  | {
+      applied: true;
+      stamps: number;
+      stampsPerReward: number;
+      rewardsAvailable: number;
+    };
+
 /** After KDS marks an app order complete: ledger stamps/rewards + counters + optional review prompt signal. */
 export async function applyLoyaltyAfterKdsComplete(params: {
   cafeId: string;
   order: NormalisedOrder;
-}): Promise<void> {
+}): Promise<LoyaltyApplyResult> {
   const { cafeId, order } = params;
   const userId = order.customerId;
-  if (!userId || order.source !== 'app') return;
+  if (!userId || order.source !== 'app') return { applied: false };
 
   const cafe = await findCafeById(cafeId);
-  if (!cafe) return;
+  if (!cafe) return { applied: false };
   const { features } = cafe;
   const timezone = cafe.timezone?.trim() || 'Europe/London';
 
@@ -56,6 +66,7 @@ export async function applyLoyaltyAfterKdsComplete(params: {
      * `on_time_completed_orders`.
      */
     let ledgerInserted = true;
+    let loyaltyPayload: LoyaltyApplyResult = { applied: false };
     if (loyaltyEnabled && stampsDelta > 0 && features.loyalty) {
       const result = await applyLedgerStampAndRewards({
         client,
@@ -67,11 +78,22 @@ export async function applyLoyaltyAfterKdsComplete(params: {
         stampsDelta,
       });
       ledgerInserted = result.inserted;
+      if (result.inserted) {
+        const thresholdRaw = features.loyalty.stampsPerReward ?? 10;
+        const stampsPerReward =
+          Number.isFinite(thresholdRaw) && thresholdRaw >= 1 ? Math.floor(thresholdRaw) : 10;
+        loyaltyPayload = {
+          applied: true,
+          stamps: result.cardProgress,
+          stampsPerReward,
+          rewardsAvailable: result.rewardsAvailable,
+        };
+      }
     }
 
     if (!ledgerInserted) {
       await client.query('COMMIT');
-      return;
+      return { applied: false };
     }
 
     const upd = await client.query<{ on_time_completed_orders: number; review_prompt_state: string }>(
@@ -91,7 +113,7 @@ export async function applyLoyaltyAfterKdsComplete(params: {
         userId,
       });
       await client.query('COMMIT');
-      return;
+      return { applied: false };
     }
 
     let shouldEmitReview = false;
@@ -118,6 +140,8 @@ export async function applyLoyaltyAfterKdsComplete(params: {
         googlePlaceId,
       });
     }
+
+    return loyaltyPayload;
   } catch (e) {
     await client.query('ROLLBACK');
     throw e;

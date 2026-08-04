@@ -21,24 +21,17 @@ Work through the seven workstreams below as separate planned sessions, in order.
 
 ## Workstream 1 — Loyalty hot-update on order complete
 
-### Current state (verified)
+**Status: done (August 2026).**
 
-- On KDS complete, the API runs `applyLoyaltyAfterKdsComplete` **after** emitting `customerOrderCompleted`. The event payload has no stamp fields.
-- `ActiveOrdersProvider` listens for that event and optimistically drops the order from the active list.
-- `LoyaltyProvider` has **no** socket subscription and **no** polling; Home only calls `refreshLoyalty()` on `location.pathname` change.
-- Result: the active-order card flips immediately; the stamp card stays stale until the next navigation/refresh.
-- A separate `customerLoyaltyUpdated` event emitted *after* the ledger write would race the client: dropping the order changes `idsKey` in `useActiveOrderSockets`, which disconnects the socket before the second event arrives.
+### Shipped behaviour
 
-### Work
+- `notifyOrderCompleted` applies loyalty **before** emitting `customerOrderCompleted`, with a 2s budget; failure or overrun still emits completion without `loyalty`.
+- `applyLedgerStampAndRewards` returns `cardProgress` **and** `rewardsAvailable` (unredeemed count in the same transaction). `applyLoyaltyAfterKdsComplete` returns a discriminated `{ applied }` result.
+- Optional `loyalty?: { stamps; stampsPerReward; rewardsAvailable }` on `customerOrderCompleted`.
+- Order-ahead `CustomerEventsProvider` owns one shared `/customer` connection (refcounted rooms + `customer:unsubscribe`). `ActiveOrdersProvider`, `useOrderTracking`, and `LoyaltyProvider` subscribe to it; `MenuProvider` still has its own café-scoped socket.
+- `LoyaltyProvider` patches the stamp card from the socket payload; when `loyalty` is absent it calls `refresh()` (not optimistic `+1` — double-stamp days and punch-card rollover make a naive increment wrong).
 
-1. Reorder `notifyOrderCompleted` so loyalty apply runs **before** `customerOrderCompleted` is emitted.
-2. Return `{ cardProgress, rewardsAvailable }` (and `stampsPerReward`) from `applyLoyaltyAfterKdsComplete` — `applyLedgerStampAndRewards` already returns `cardProgress` and discards it today.
-3. Extend the `customerOrderCompleted` socket variant with optional `loyalty?: { stamps; stampsPerReward; rewardsAvailable }`.
-4. Preserve swallow semantics: a loyalty failure must never block telling the customer the order is done — emit without `loyalty` on failure.
-5. Add `applyLoyaltyFromSocket()` on `LoyaltyProvider`; thread the payload through `useActiveOrderSockets` / `ActiveOrdersProvider`.
-6. Fallback: optimistic `stamps + 1` when `loyalty` is absent, reconciled via `GET /loyalty/me`.
-
-### Done when
+### Done when (met)
 
 Completing an order on the KDS while sitting on Home moves the stamp card immediately (no refresh). A forced loyalty failure still flips the order card.
 
@@ -47,10 +40,12 @@ Completing an order on the KDS while sitting on Home moves the stamp card immedi
 - `apps/moonshot-api/src/lib/orders/order-lifecycle-notify.ts`
 - `apps/moonshot-api/src/lib/loyalty-after-kds-complete.ts`
 - `apps/moonshot-api/src/lib/loyalty/apply-ledger-on-complete.ts`
+- `apps/moonshot-api/src/realtime/customer-socket.ts` (`customer:unsubscribe`)
 - `packages/types/src/sockets.ts`
+- `apps/moonshot-order-ahead/src/providers/CustomerEventsProvider.tsx`
 - `apps/moonshot-order-ahead/src/providers/LoyaltyProvider.tsx`
-- `apps/moonshot-order-ahead/src/hooks/useActiveOrderSockets.ts`
 - `apps/moonshot-order-ahead/src/providers/ActiveOrdersProvider.tsx`
+- `apps/moonshot-order-ahead/src/hooks/useOrderTracking.ts`
 
 ---
 
@@ -282,6 +277,6 @@ flowchart LR
   WS6 --> WS7
 ```
 
-- Loyalty stamp payload on `customerOrderCompleted` (WS1) should land before relying on Home-during-complete for the review modal (WS2).
+- Loyalty stamp payload on `customerOrderCompleted` (WS1 — **done**) lands before relying on Home-during-complete for the review modal (WS2).
 - Branding admin UI (WS4) sits on the redesigned shell (WS3).
 - Cutover (WS7) waits on product workstreams being good enough for a live shift.

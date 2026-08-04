@@ -1,11 +1,19 @@
 import type { CafeFeatures, NormalisedOrder } from '@moonshot/types';
 import type { PoolClient } from 'pg';
 import {
+  countUnredeemedRewards,
   insertLoyaltyRewardRow,
   insertRewardEarned,
   insertStampEarnIfAbsent,
   lockMembershipRow,
 } from './repository.js';
+
+export type LedgerStampResult = {
+  cardProgress: number;
+  inserted: boolean;
+  /** Unredeemed rewards after this apply; 0 when `inserted` is false (unused by caller). */
+  rewardsAvailable: number;
+};
 
 /**
  * Stamp ledger + punch-card rollover inside an open transaction.
@@ -22,7 +30,7 @@ export async function applyLedgerStampAndRewards(params: {
   features: CafeFeatures;
   cafeTimezone: string;
   stampsDelta: number;
-}): Promise<{ cardProgress: number; inserted: boolean }> {
+}): Promise<LedgerStampResult> {
   const { client, cafeId, userId, order, features, stampsDelta } = params;
 
   const thresholdRaw = features.loyalty?.stampsPerReward ?? 10;
@@ -44,7 +52,7 @@ export async function applyLedgerStampAndRewards(params: {
   });
 
   if (!inserted) {
-    return { cardProgress: lock.cardProgress, inserted: false };
+    return { cardProgress: lock.cardProgress, inserted: false, rewardsAvailable: 0 };
   }
 
   let progress = lock.cardProgress + stampsDelta;
@@ -74,5 +82,8 @@ export async function applyLedgerStampAndRewards(params: {
     [cafeId, userId, progress],
   );
 
-  return { cardProgress: progress, inserted: true };
+  // Count inside the same transaction so the socket payload matches GET /loyalty/me.
+  const rewardsAvailable = await countUnredeemedRewards({ pool: client, cafeId, userId });
+
+  return { cardProgress: progress, inserted: true, rewardsAvailable };
 }

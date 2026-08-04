@@ -18,6 +18,12 @@ function isSubscribeCafePayload(p: unknown): p is { cafeSlug: string } {
   return typeof o.cafeSlug === 'string' && o.cafeSlug.trim().length > 0;
 }
 
+function isUnsubscribePayload(p: unknown): p is { orderId: string } {
+  if (typeof p !== 'object' || p === null) return false;
+  const o = p as Record<string, unknown>;
+  return typeof o.orderId === 'string' && o.orderId.trim().length > 0;
+}
+
 export function registerCustomerSocketHandlers(io: Server): void {
   const ns = io.of('/customer');
 
@@ -52,6 +58,22 @@ export function registerCustomerSocketHandlers(io: Server): void {
           // Await join before ack — otherwise the client may think it is
           // subscribed while still outside the room and miss the next push.
           await socket.join(customerOrderRoom(trimmedOrderId));
+          ack?.();
+        })();
+      },
+    );
+
+    // Leave is unauthenticated — the socket can only leave rooms it already joined.
+    socket.on(
+      'customer:unsubscribe',
+      (payload: unknown, ack?: (err?: string) => void) => {
+        void (async () => {
+          if (!isUnsubscribePayload(payload)) {
+            ack?.('Invalid unsubscribe payload');
+            return;
+          }
+          const trimmedOrderId = payload.orderId.trim();
+          await socket.leave(customerOrderRoom(trimmedOrderId));
           ack?.();
         })();
       },

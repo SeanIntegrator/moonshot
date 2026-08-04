@@ -1,3 +1,7 @@
+import type {
+  CustomerOrderCompletedLoyalty,
+  CustomerServerToClientEvent,
+} from '@moonshot/types';
 import type { LoyaltyReward, LoyaltySummaryResponse, LoyaltyTransaction } from '@moonshot/domain';
 import {
   createContext,
@@ -16,6 +20,7 @@ import {
 } from '../api/loyalty-api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
+import { useCustomerEvents } from './CustomerEventsProvider.js';
 
 type LoyaltyContextValue = {
   summary: LoyaltySummaryResponse | null;
@@ -35,10 +40,15 @@ const LoyaltyContext = createContext<LoyaltyContextValue | null>(null);
 /**
  * Single loyalty fetch/cache for Home, Checkout, Rewards, and Order detail.
  * `refresh()` loads summary + rewards only; ledger is lazy via `ensureTransactions`.
+ *
+ * Listens on the shared customer event bus for `customerOrderCompleted` and
+ * patches the stamp card from the optional `loyalty` payload (or refreshes when
+ * the payload is absent — double-stamp / rollover make a naive +1 unsafe).
  */
 export function LoyaltyProvider({ children }: { children: ReactNode }) {
   const { isSignedIn, loading: authLoading } = useAuth();
   const { loyaltyEnabled } = useCafeFeatures();
+  const { subscribe } = useCustomerEvents();
   const [summary, setSummary] = useState<LoyaltySummaryResponse | null>(null);
   const [transactions, setTransactions] = useState<LoyaltyTransaction[]>([]);
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
@@ -46,6 +56,8 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const transactionsLoadedRef = useRef(false);
+  const summaryRef = useRef(summary);
+  summaryRef.current = summary;
 
   const refresh = useCallback(async () => {
     if (!isSignedIn || !loyaltyEnabled) {
@@ -68,6 +80,24 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   }, [isSignedIn, loyaltyEnabled]);
+
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+
+  const applyLoyaltyFromSocket = useCallback((loyalty: CustomerOrderCompletedLoyalty) => {
+    const current = summaryRef.current;
+    if (!current) {
+      // Cannot synthesise rewardDescription / displayId — refetch the full summary.
+      void refreshRef.current();
+      return;
+    }
+    setSummary({
+      ...current,
+      stamps: loyalty.stamps,
+      stampsPerReward: loyalty.stampsPerReward,
+      rewardsAvailable: loyalty.rewardsAvailable,
+    });
+  }, []);
 
   const ensureTransactions = useCallback(async () => {
     if (!isSignedIn || !loyaltyEnabled || transactionsLoadedRef.current) return;
@@ -101,6 +131,20 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
     if (authLoading) return;
     void refresh();
   }, [authLoading, refresh]);
+
+  useEffect(() => {
+    if (!isSignedIn || !loyaltyEnabled || authLoading) return;
+
+    return subscribe((ev: CustomerServerToClientEvent) => {
+      if (ev.type !== 'customerOrderCompleted') return;
+      if (ev.loyalty) {
+        applyLoyaltyFromSocket(ev.loyalty);
+      } else {
+        // Apply failed / timed out / non-app order — reconcile via HTTP.
+        void refreshRef.current();
+      }
+    });
+  }, [isSignedIn, loyaltyEnabled, authLoading, subscribe, applyLoyaltyFromSocket]);
 
   const value = useMemo(
     () => ({

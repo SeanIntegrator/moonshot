@@ -5,7 +5,10 @@ import type {
 } from '@moonshot/types';
 import { useEffect, useRef, useState } from 'react';
 import { getStoredToken } from '../lib/api.js';
-import { createCustomerSocket } from '../lib/socket.js';
+import {
+  useCustomerEvents,
+  type CustomerConnectionStatus,
+} from '../providers/CustomerEventsProvider.js';
 
 export type OrderTrackingStatus =
   | 'idle'
@@ -13,6 +16,17 @@ export type OrderTrackingStatus =
   | 'tracking'
   | 'completed'
   | 'error';
+
+function mapConnectionStatus(
+  status: CustomerConnectionStatus,
+  completed: boolean,
+): OrderTrackingStatus {
+  if (completed) return 'completed';
+  if (status === 'connected') return 'tracking';
+  if (status === 'error') return 'error';
+  if (status === 'connecting') return 'connecting';
+  return 'idle';
+}
 
 export function useOrderTracking(
   orderId: string | null,
@@ -34,37 +48,50 @@ export function useOrderTracking(
   completedAt: IsoDateTime | null;
   lastPickupTime: IsoDateTime | null;
 } {
-  const [trackingStatus, setTrackingStatus] = useState<OrderTrackingStatus>('idle');
+  const { connectionStatus, subscribe, registerOrderRoom } = useCustomerEvents();
   const [completedAt, setCompletedAt] = useState<IsoDateTime | null>(null);
   const [lastPickupTime, setLastPickupTime] = useState<IsoDateTime | null>(null);
+  const [subscribeError, setSubscribeError] = useState(false);
   const onOrderCompletedRef = useRef(options?.onOrderCompleted);
   onOrderCompletedRef.current = options?.onOrderCompleted;
   const onSyncNeededRef = useRef(options?.onSyncNeeded);
   onSyncNeededRef.current = options?.onSyncNeeded;
 
+  const trackingStatus: OrderTrackingStatus = subscribeError
+    ? 'error'
+    : mapConnectionStatus(connectionStatus, completedAt != null);
+
   useEffect(() => {
     setCompletedAt(null);
     setLastPickupTime(null);
+    setSubscribeError(false);
 
-    if (!orderId?.trim()) {
-      setTrackingStatus('idle');
-      return;
-    }
+    if (!orderId?.trim()) return;
 
     const sessionJwt = getStoredToken();
     const guestJwt = orderTrackingToken?.trim() ?? '';
-    if (!guestJwt && !sessionJwt?.trim()) {
-      setTrackingStatus('error');
+    const authToken = guestJwt || sessionJwt?.trim() || '';
+    if (!authToken) {
+      setSubscribeError(true);
       return;
     }
 
-    setTrackingStatus('connecting');
-    const socket = createCustomerSocket();
+    const releaseRoom = registerOrderRoom({
+      orderId: orderId.trim(),
+      authToken,
+      onSubscribeAck: (err) => {
+        if (err) {
+          setSubscribeError(true);
+          return;
+        }
+        // Catch-up if the kitchen completed before we joined the room.
+        onSyncNeededRef.current?.();
+      },
+    });
 
-    function onCustomerEvent(ev: CustomerServerToClientEvent): void {
+    const unsubscribe = subscribe((ev: CustomerServerToClientEvent) => {
       if (ev.type === 'customerOrderCompleted' && ev.orderId === orderId) {
         setCompletedAt(ev.completedAt);
-        setTrackingStatus('completed');
         onOrderCompletedRef.current?.({ orderId: ev.orderId, completedAt: ev.completedAt });
         // Reload so order.status / payment fields match the socket completion.
         onSyncNeededRef.current?.();
@@ -76,47 +103,13 @@ export function useOrderTracking(
         const u = ev.updates.find((x) => x.orderId === orderId);
         if (u) setLastPickupTime(u.pickupTime);
       }
-    }
-
-    socket.on('customer:event', onCustomerEvent);
-
-    socket.on('connect', () => {
-      setTrackingStatus('tracking');
-      const authToken =
-        guestJwt.trim() || getStoredToken()?.trim() || '';
-      if (!authToken) {
-        setTrackingStatus('error');
-        return;
-      }
-      socket.emit(
-        'customer:subscribe',
-        {
-          type: 'customer:subscribe',
-          orderId,
-          authToken,
-        },
-        (err?: string) => {
-          if (err) {
-            setTrackingStatus('error');
-            return;
-          }
-          // Catch-up if the kitchen completed before we joined the room.
-          onSyncNeededRef.current?.();
-        },
-      );
     });
-
-    socket.on('connect_error', () => {
-      setTrackingStatus('error');
-    });
-
-    socket.connect();
 
     return () => {
-      socket.off('customer:event', onCustomerEvent);
-      socket.disconnect();
+      unsubscribe();
+      releaseRoom();
     };
-  }, [orderId, orderTrackingToken]);
+  }, [orderId, orderTrackingToken, registerOrderRoom, subscribe]);
 
   return { trackingStatus, completedAt, lastPickupTime };
 }

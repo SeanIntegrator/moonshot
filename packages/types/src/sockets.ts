@@ -50,6 +50,13 @@ export interface AdminSocketHandshakeAuth {
 
 // --- Customer room: server → client ---
 
+/** Stamp-card snapshot carried on order-complete when loyalty apply succeeded. */
+export type CustomerOrderCompletedLoyalty = {
+  stamps: number;
+  stampsPerReward: number;
+  rewardsAvailable: number;
+};
+
 export type CustomerServerToClientEvent =
   | {
       type: 'customerOrderCompleted';
@@ -57,6 +64,8 @@ export type CustomerServerToClientEvent =
       cafeId: string;
       completedAt: IsoDateTime;
       userId: string | null;
+      /** Present when ledger apply finished before emit; omit on failure/timeout. */
+      loyalty?: CustomerOrderCompletedLoyalty;
     }
   | {
       type: 'customerOrderStatusUpdated';
@@ -88,6 +97,10 @@ export type CustomerClientToServerEvent =
       orderId: string;
       /** Guest: `trackingToken` from `POST /orders`. Signed-in: Google session JWT from `POST /auth/google`. */
       authToken: string;
+    }
+  | {
+      type: 'customer:unsubscribe';
+      orderId: string;
     }
   | {
       type: 'customer:subscribeCafe';

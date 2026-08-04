@@ -46,7 +46,7 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 
 - Ledger + punch card on KDS complete; redeem routes; order-ahead **`LoyaltyProvider`**.
 - New self-service cafés: **loyalty enabled by default** (10 stamps → free drink).
-- Stamp card on Home does **not** hot-update on KDS complete while staying on the page (Workstream 1).
+- Stamp card on Home **hot-updates** on KDS complete via optional `loyalty` on `customerOrderCompleted` (Workstream 1 done).
 
 ### Self-service onboarding + theme
 
@@ -78,11 +78,10 @@ Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`
 1. Seed / Stripe cafés fail `POST /orders` until Connect is ready (or switch to `pay_in_store`).
 2. Stripe cancel does not refund — paid → `refundPending: true`.
 3. No incremental / merge Stripe checkout (F3).
-4. **Loyalty stamp card stale on Home** after KDS complete: `LoyaltyProvider` has no socket path; `customerOrderCompleted` carries no stamp payload (roadmap WS1).
-5. **Review nudge**: API may emit `customerReviewEligible` but order-ahead has no UI; Phase A also sets `review_prompt_state = 'shown_positive'` at emit time (burns eligibility before the modal ships — roadmap WS2).
-6. Admin invites, audit trail, and café theme/logo editor still missing (roadmap WS3–WS4).
-7. **Order-level POS notes** invisible on the live KDS board (only Recent Orders) — roadmap WS6.
-8. Order-ahead / KDS not properly installable (missing icons / SW / Apple meta) — roadmap WS5–WS6.
+4. **Review nudge**: API may emit `customerReviewEligible` but order-ahead has no UI; Phase A also sets `review_prompt_state = 'shown_positive'` at emit time (burns eligibility before the modal ships — roadmap WS2).
+5. Admin invites, audit trail, and café theme/logo editor still missing (roadmap WS3–WS4).
+6. **Order-level POS notes** invisible on the live KDS board (only Recent Orders) — roadmap WS6.
+7. Order-ahead / KDS not properly installable (missing icons / SW / Apple meta) — roadmap WS5–WS6.
 
 ---
 
@@ -90,13 +89,12 @@ Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`
 
 Tackle as planned sessions per [architecture/roadmap.md](architecture/roadmap.md):
 
-1. **WS1** — Loyalty hot-update on `customerOrderCompleted` (reorder apply-before-emit + stamp payload).
-2. **WS2** — Review nudge single-CTA modal + `eligible` state + Admin `reviewUrl`.
-3. **WS3** — Admin dashboard redesign (unified brand, sidebar, primitives).
-4. **WS4** — Café branding write path (theme picker, colour overrides, logo).
-5. **WS5** — Order-ahead installability (`vite-plugin-pwa`, icons, Apple meta).
-6. **WS6** — KDS order-level notes on live board + iPad Add-to-Home-Screen.
-7. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
+1. **WS2** — Review nudge single-CTA modal + `eligible` state + Admin `reviewUrl`.
+2. **WS3** — Admin dashboard redesign (unified brand, sidebar, primitives).
+3. **WS4** — Café branding write path (theme picker, colour overrides, logo).
+4. **WS5** — Order-ahead installability (`vite-plugin-pwa`, icons, Apple meta).
+5. **WS6** — KDS order-level notes on live board + iPad Add-to-Home-Screen.
+6. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
 
 Parked (post-launch): Stripe refunds, Redis socket adapter, KDS hold / line made-state, Lightspeed, Capacitor wrapper.
 

@@ -7,7 +7,7 @@ Two namespaces isolate audiences and middleware:
 | Namespace | Client apps | Purpose |
 |-----------|-------------|---------|
 | **`/kds`** | moonshot-kds | Café-scoped KDS JWT in **handshake** `auth.token`. Auto-joins `kds:cafe:{cafeId}`. Events on channel `kds:event` (`KdsServerToClientEvent`). |
-| **`/customer`** | moonshot-order-ahead | **No auth on connect.** Emit `customer:subscribe` (order) or `customer:subscribeCafe` (menu). Events on channel `customer:event`. |
+| **`/customer`** | moonshot-order-ahead | **No auth on connect.** Emit `customer:subscribe` / `customer:unsubscribe` (order) or `customer:subscribeCafe` (menu). Events on channel `customer:event`. |
 | **`/admin`** | moonshot-admin | Admin JWT in handshake `auth.token` (`purpose: 'admin'`). Auto-joins `admin:cafe:{cafeId}`. Events on channel `admin:event` (`AdminServerToClientEvent`). |
 
 Constants: [`KDS_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts), [`CUSTOMER_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts), [`ADMIN_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts).
@@ -22,12 +22,25 @@ Constants: [`KDS_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts), [`CUS
 
 ## Customer order tracking
 
-Order-ahead surfaces:
+### Shared subscription provider (order-ahead)
+
+`CustomerEventsProvider` owns **one** `/customer` Socket.io connection for order-room consumers:
+
+| Consumer | Role |
+|----------|------|
+| **`ActiveOrdersProvider`** | Registers each active order id; drops completed orders on Home / Profile |
+| **`useOrderTracking`** | Registers the detail-page order (guest `trackingToken` or session JWT); ack drives missed-event HTTP catch-up |
+| **`LoyaltyProvider`** | Listens only (no room registration of its own); patches the stamp card from `customerOrderCompleted.loyalty` |
+
+Room membership is **refcounted**: two consumers for the same `orderId` share one `customer:subscribe`; the last release emits `customer:unsubscribe`. Leaving a room is unauthenticated — the socket can only leave rooms it already joined.
+
+`MenuProvider` still opens its **own** connection for `customer:subscribeCafe` (public, slug-scoped). Migrating it onto the shared provider is a follow-up; do not add a fourth independent `/customer` socket elsewhere.
 
 | Surface | Push | HTTP fallback |
 |---------|------|---------------|
-| **Order detail** (`useOrderTracking`) | `customer:subscribe` for that order | 5s poll while active |
-| **Home / Profile lists** (`ActiveOrdersProvider`) | subscribe to each active order id | 30s poll |
+| **Order detail** (`useOrderTracking`) | shared bus → order room | 5s poll while active |
+| **Home / Profile lists** (`ActiveOrdersProvider`) | shared bus → each active order id | 30s poll |
+| **Stamp card** (`LoyaltyProvider`) | shared bus → `loyalty` on complete | `GET /loyalty/me` when payload absent |
 
 Subscribing requires **one** of:
 
@@ -50,7 +63,7 @@ The raw order UUID alone is **not** sufficient — this avoids unauthenticated l
 | Same status route | `/customer` room `customer:order:{id}` | `customerOrderStatusUpdated` |
 | Queue/ETA recompute (FIFO; skips `manual_override`) | `/kds` | `kds:eta:updated` |
 | Same ETA recompute / barista stretch | `/customer` room `customer:order:{id}` | `customerEtaUpdated` |
-| Same complete route | `/customer` room `customer:order:{id}` | `customerOrderCompleted` |
+| Same complete route (after loyalty apply, ≤2s budget) | `/customer` room `customer:order:{id}` | `customerOrderCompleted` (optional `loyalty` snapshot) |
 | Loyalty/review threshold (optional) | `/customer` | `customerReviewEligible` |
 | Square catalog sync success | `/admin` room `admin:cafe:{id}` | `admin:menu:synced` |
 | Same catalog sync | `/customer` room `customer:cafe:{id}` | `customerMenuUpdated` |

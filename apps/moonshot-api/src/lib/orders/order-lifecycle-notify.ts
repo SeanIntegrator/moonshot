@@ -133,9 +133,33 @@ export function notifyOrderStatusAdvanced(params: {
   emitOrderStatusToCustomer(params.cafeId, params.order.id, params.order.status);
 }
 
+/** Cap loyalty apply so a slow/locked ledger never delays the customer completion push. */
+const LOYALTY_APPLY_BUDGET_MS = 2000;
+
+async function raceWithBudget<T>(
+  promise: Promise<T>,
+  budgetMs: number,
+): Promise<T | 'timeout'> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<'timeout'>((resolve) => {
+        timer = setTimeout(() => resolve('timeout'), budgetMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 /**
  * Post-complete side-effects must never fail the KDS request: the order row is
  * already `completed`. Log + swallow loyalty and ETA failures.
+ *
+ * Loyalty runs *before* `customerOrderCompleted` so the stamp payload rides the
+ * same event (avoids a second emit racing socket teardown when the order drops
+ * from the active list). A budget/failure still emits completion without `loyalty`.
  */
 export async function notifyOrderCompleted(params: {
   db: OrderLifecycleDb;
@@ -147,6 +171,27 @@ export async function notifyOrderCompleted(params: {
 
   emitOrderRemovedFromKds(cafeId, orderId);
 
+  // Apply may still finish after a timeout (review nudge, ledger); swallow late errors.
+  const applyPromise = applyLoyaltyAfterKdsComplete({ cafeId, order }).catch((e) => {
+    console.error('[kds.complete] loyalty post-success failure (swallowed)', {
+      cafeId,
+      orderId,
+      customerId: order.customerId,
+      paymentStatus: order.paymentStatus,
+      err: e,
+    });
+    return { applied: false as const };
+  });
+
+  const applyResult = await raceWithBudget(applyPromise, LOYALTY_APPLY_BUDGET_MS);
+  if (applyResult === 'timeout') {
+    console.error('[kds.complete] loyalty apply overran budget (swallowed)', {
+      cafeId,
+      orderId,
+      budgetMs: LOYALTY_APPLY_BUDGET_MS,
+    });
+  }
+
   const completedAt = order.pickup.completedAt;
   if (completedAt) {
     emitCustomerServerToClient(orderId, {
@@ -155,18 +200,15 @@ export async function notifyOrderCompleted(params: {
       cafeId,
       completedAt,
       userId: order.customerId,
-    });
-  }
-
-  try {
-    await applyLoyaltyAfterKdsComplete({ cafeId, order });
-  } catch (e) {
-    console.error('[kds.complete] loyalty post-success failure (swallowed)', {
-      cafeId,
-      orderId,
-      customerId: order.customerId,
-      paymentStatus: order.paymentStatus,
-      err: e,
+      ...(applyResult !== 'timeout' && applyResult.applied
+        ? {
+            loyalty: {
+              stamps: applyResult.stamps,
+              stampsPerReward: applyResult.stampsPerReward,
+              rewardsAvailable: applyResult.rewardsAvailable,
+            },
+          }
+        : {}),
     });
   }
 
