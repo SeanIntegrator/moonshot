@@ -4,6 +4,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import type { NormalisedMenuItem } from '@moonshot/types';
 import { Box, IconButton, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import type { ItemDetailLocationState } from '../lib/cart-edit-state.js';
 import { formatPriceTag } from '../lib/format.js';
 import { nonStandardCartLineLabels } from '../lib/modifier-display.js';
 import { useCafePath } from '../hooks/useCafePath.js';
@@ -45,7 +46,17 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
           <IconButton
             size="small"
             aria-label={`Edit ${item?.name ?? 'item'}`}
-            onClick={() => navigate(cafePath(`/order/item/${line.menuItemId}`))}
+            onClick={() => {
+              const state: ItemDetailLocationState = {
+                editLine: {
+                  key: line.key,
+                  sizeId: line.sizeId,
+                  quantity: line.quantity,
+                  modifiers: line.modifiers,
+                },
+              };
+              navigate(cafePath(`/order/item/${line.menuItemId}`), { state });
+            }}
             sx={{
               width: 28,
               height: 28,

@@ -15,9 +15,9 @@ describe('Square import layering helpers', () => {
     expect(chipMetaForOptionName('Oat', 'milk').chipLabel).toBe('Oa');
     expect(chipMetaForOptionName('Oat', 'milk').colorHex).toBe('#f0e4d0');
     expect(chipMetaForOptionName('Almond', 'milk').colorHex).toBe('#ff2d87');
-    expect(chipMetaForOptionName('Coconut', 'milk').colorHex).toBe('#1b3fe0');
+    expect(chipMetaForOptionName('Coconut', 'milk').colorHex).toBe('#4a8fd4');
     expect(chipMetaForOptionName('Soy', 'milk').colorHex).toBe('#145a32');
-    expect(chipMetaForOptionName('Skinny', 'milk').colorHex).toBe('#e6001a');
+    expect(chipMetaForOptionName('Skinny', 'milk').colorHex).toBe('#c44548');
     expect(chipMetaForOptionName('Semi', 'milk').colorHex).toBe('#e6001a');
     expect(chipMetaForOptionName('Whole', 'milk').colorHex).toBe('#f7f4ee');
     expect(chipMetaForOptionName('Vanilla', 'syrup').chipLabel).toBe('Va');

@@ -9,7 +9,6 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { ColorChipField } from './ColorChipField.js';
 
 function newSize(): NormalisedItemSize {
   return {
@@ -17,8 +16,6 @@ function newSize(): NormalisedItemSize {
     name: '',
     priceMinor: 0,
     isDefault: false,
-    colorHex: '#e8e8e8',
-    chipLabel: '',
   };
 }
 
@@ -86,15 +83,6 @@ export function SizeEditor({ sizes, currency, onChange }: Props) {
                 Remove
               </Button>
             </Stack>
-            <Box sx={{ mt: 1 }}>
-              <ColorChipField
-                compact
-                colorHex={size.colorHex ?? '#e8e8e8'}
-                chipLabel={size.chipLabel ?? ''}
-                onColorChange={(v) => updateAt(index, { colorHex: v })}
-                onLabelChange={(v) => updateAt(index, { chipLabel: v })}
-              />
-            </Box>
           </Box>
         ))}
       </Stack>

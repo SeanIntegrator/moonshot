@@ -4,7 +4,7 @@ import type {
 } from '@moonshot/types';
 import { Box, Button, Container, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AdditionalCustomisationAccordion } from '../components/AdditionalCustomisationAccordion.js';
 import { ModifierOptionGrid } from '../components/ModifierOptionGrid.js';
 import { QuantityStepper } from '../components/QuantityStepper.js';
@@ -15,6 +15,7 @@ import { BackButton, BackButtonIcon } from '../components/ui/BackButton.js';
 import { FixedBottomBar } from '../components/ui/FixedBottomBar.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
+import { parseItemDetailLocationState } from '../lib/cart-edit-state.js';
 import { formatPriceTag } from '../lib/format.js';
 import { partitionModifierGroups } from '../lib/modifier-slider-groups.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
@@ -46,25 +47,43 @@ function modifiersAreComplete(item: NormalisedMenuItem, mods: OrderLineModifierS
 export function ItemDetail() {
   const { menuItemId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const cafePath = useCafePath();
-  const { upsertLine } = useCart();
+  const { upsertLine, replaceLine } = useCart();
   const { menu, loading, error } = useMenu();
   const { isOpen } = useCafeOpenStatus();
   const [quantity, setQuantity] = useState(1);
   const [sizeId, setSizeId] = useState<string | null>(null);
   const [modifiers, setModifiers] = useState<OrderLineModifierSelectionInput[]>([]);
 
+  const editLine = useMemo(() => {
+    const parsed = parseItemDetailLocationState(location.state);
+    const line = parsed?.editLine;
+    if (!line || !menuItemId.trim()) return null;
+    // Ignore stale location.state left over from editing a different item.
+    if (line.key !== menuItemId && !line.key.startsWith(`${menuItemId}#`)) return null;
+    return line;
+  }, [location.state, menuItemId]);
+
   const item = useMemo(() => {
     if (!menu || !menuItemId.trim()) return null;
     return menu.items.find((i) => i.id === menuItemId) ?? null;
   }, [menu, menuItemId]);
 
+  const isEditing = editLine != null;
+
   useEffect(() => {
     if (!item) return;
+    if (editLine) {
+      setModifiers(editLine.modifiers);
+      setSizeId(editLine.sizeId);
+      setQuantity(editLine.quantity);
+      return;
+    }
     setModifiers(defaultModifiers(item));
     setSizeId(defaultSizeId(item.sizes ?? []));
     setQuantity(1);
-  }, [item]);
+  }, [item, editLine]);
 
   const lineUnit = item ? unitPriceForItem(item, sizeId, modifiers) : 0;
   const hasSizes = (item?.sizes?.length ?? 0) > 0;
@@ -84,6 +103,13 @@ export function ItemDetail() {
       : formatPriceTag(item.priceMinor, item.currency)
     : '';
 
+  const priceTag = item ? formatPriceTag(lineUnit * quantity, item.currency) : '';
+  const ctaLabel = cafeClosed
+    ? 'Cafe is currently closed'
+    : isEditing
+      ? `Update item${priceTag ? ` · ${priceTag}` : ''}`
+      : `Add${priceTag ? ` · ${priceTag}` : ''}`;
+
   function handleSelect(
     groupId: string,
     optionId: string,
@@ -97,6 +123,28 @@ export function ItemDetail() {
       const rest = prev.filter((m) => !(m.groupId === groupId && m.optionId === optionId));
       return checked ? [...rest, { groupId, optionId }] : rest;
     });
+  }
+
+  function handleBack() {
+    navigate(cafePath(isEditing ? '/checkout' : '/order'));
+  }
+
+  function handleSubmit() {
+    if (cafeClosed || !item) return;
+    const params = {
+      menuItemId: item.id,
+      sizeId: hasSizes ? sizeId : null,
+      quantity,
+      modifiers,
+      allergens: [] as string[],
+    };
+    if (editLine) {
+      replaceLine(editLine.key, params);
+      navigate(cafePath('/checkout'));
+      return;
+    }
+    upsertLine(params);
+    navigate(cafePath('/order'), { state: { addedItemName: item.name } });
   }
 
   if (error) {
@@ -120,7 +168,7 @@ export function ItemDetail() {
   }
 
   return (
-    <Box sx={{ pb: 14 }}>
+    <Box sx={{ pb: '84px' }}>
       <Box
         sx={{
           position: 'relative',
@@ -138,8 +186,8 @@ export function ItemDetail() {
           objectFit="cover"
         />
         <BackButton
-          onClick={() => navigate(cafePath('/order'))}
-          aria-label="Back to menu"
+          onClick={handleBack}
+          aria-label={isEditing ? 'Back to checkout' : 'Back to menu'}
           size="small"
           sx={{
             position: 'absolute',
@@ -202,17 +250,7 @@ export function ItemDetail() {
           variant="contained"
           fullWidth
           disabled={!canAdd}
-          onClick={() => {
-            if (cafeClosed || !item) return;
-            upsertLine({
-              menuItemId: item.id,
-              sizeId: hasSizes ? sizeId : null,
-              quantity,
-              modifiers,
-              allergens: [],
-            });
-            navigate(cafePath('/order'), { state: { addedItemName: item.name } });
-          }}
+          onClick={handleSubmit}
           sx={{
             py: 1.25,
             border: 0,
@@ -221,9 +259,7 @@ export function ItemDetail() {
             '&::before, &::after': { display: 'none' },
           }}
         >
-          {cafeClosed
-            ? 'Cafe is currently closed'
-            : `Add${formatPriceTag(lineUnit * quantity, item.currency) ? ` · ${formatPriceTag(lineUnit * quantity, item.currency)}` : ''}`}
+          {ctaLabel}
         </Button>
       </FixedBottomBar>
     </Box>

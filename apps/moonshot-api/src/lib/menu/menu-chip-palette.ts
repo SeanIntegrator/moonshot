@@ -3,21 +3,21 @@
  * Used by template onboarding and Square catalog import (name-matched).
  *
  * Plant milks follow Rude Health pack colours so baristas can scan by brand hue:
- * almond pink, coconut royal blue, soy forest green, oat pale brown.
- * Dairy: whole = off-white; skinny/semi = bright red.
+ * almond pink, coconut mid blue, soy forest green, oat pale brown.
+ * Dairy: whole = off-white; skinny/skimmed = muted red; semi = bright red.
  */
 
 export type ChipMeta = { colorHex: string | null; chipLabel: string };
 
 export const MILK_CHIP: Record<string, ChipMeta> = {
   whole: { colorHex: '#f7f4ee', chipLabel: 'WM' },
-  skinny: { colorHex: '#e6001a', chipLabel: 'Sk' },
-  skimmed: { colorHex: '#e6001a', chipLabel: 'Sk' },
+  skinny: { colorHex: '#c44548', chipLabel: 'Sk' },
+  skimmed: { colorHex: '#c44548', chipLabel: 'Sk' },
   semi: { colorHex: '#e6001a', chipLabel: 'Sm' },
   'semi-skimmed': { colorHex: '#e6001a', chipLabel: 'Sm' },
   oat: { colorHex: '#f0e4d0', chipLabel: 'Oa' },
   almond: { colorHex: '#ff2d87', chipLabel: 'Al' },
-  coconut: { colorHex: '#1b3fe0', chipLabel: 'Co' },
+  coconut: { colorHex: '#4a8fd4', chipLabel: 'Co' },
   soy: { colorHex: '#145a32', chipLabel: 'So' },
   soya: { colorHex: '#145a32', chipLabel: 'So' },
   cashew: { colorHex: '#e8d4b8', chipLabel: 'Ca' },

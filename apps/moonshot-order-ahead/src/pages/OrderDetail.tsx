@@ -129,7 +129,7 @@ export function OrderDetail() {
   const showStampEarned = isSignedIn && loyaltyEnabled && allDone;
   const showStampPending =
     isSignedIn && loyaltyEnabled && order != null && !allDone && order.status !== 'cancelled';
-  const canCancel = order != null && isCancellable(order.status);
+  const canCancel = order != null && isCancellable(order.status) && !allDone;
 
   // Keep the "7 mins" label fresh while the order is still active.
   useEffect(() => {

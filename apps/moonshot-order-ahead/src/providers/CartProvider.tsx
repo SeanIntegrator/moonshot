@@ -40,19 +40,23 @@ function cartLineKey(
   return parts.join('#');
 }
 
+type LineWriteParams = {
+  menuItemId: string;
+  sizeId?: string | null;
+  quantity: number;
+  modifiers: OrderLineModifierSelectionInput[];
+  allergens: string[];
+};
+
 type CartContextValue = {
   lines: CartLine[];
   /** Sum of line quantities — used by the Order tab badge and floating cart. */
   itemCount: number;
   pickupDelayMinutes: PickupDelayMinutes;
   setPickupDelayMinutes: (minutes: PickupDelayMinutes) => void;
-  upsertLine: (params: {
-    menuItemId: string;
-    sizeId?: string | null;
-    quantity: number;
-    modifiers: OrderLineModifierSelectionInput[];
-    allergens: string[];
-  }) => void;
+  upsertLine: (params: LineWriteParams) => void;
+  /** Drop `oldKey` then write the new line; merge qty if another line already matches. */
+  replaceLine: (oldKey: string, params: LineWriteParams) => void;
   removeLine: (key: string) => void;
   clear: () => void;
 };
@@ -74,38 +78,51 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setPickupDelayMinutesState(minutes);
   }, []);
 
-  const upsertLine = useCallback(
-    (params: {
-      menuItemId: string;
-      sizeId?: string | null;
-      quantity: number;
-      modifiers: OrderLineModifierSelectionInput[];
-      allergens: string[];
-    }) => {
-      const sizeId = params.sizeId ?? null;
-      const key = cartLineKey(params.menuItemId, params.modifiers, sizeId);
-      setLines((prev) => {
-        const idx = prev.findIndex((l) => l.key === key);
-        if (params.quantity <= 0) {
-          if (idx === -1) return prev;
-          return prev.filter((_, i) => i !== idx);
-        }
-        const row: CartLine = {
-          key,
-          menuItemId: params.menuItemId,
-          sizeId,
-          quantity: params.quantity,
-          modifiers: params.modifiers,
-          allergens: params.allergens,
-        };
-        if (idx === -1) return [...prev, row];
-        const copy = [...prev];
-        copy[idx] = row;
-        return copy;
-      });
-    },
-    [],
-  );
+  const upsertLine = useCallback((params: LineWriteParams) => {
+    const sizeId = params.sizeId ?? null;
+    const key = cartLineKey(params.menuItemId, params.modifiers, sizeId);
+    setLines((prev) => {
+      const idx = prev.findIndex((l) => l.key === key);
+      if (params.quantity <= 0) {
+        if (idx === -1) return prev;
+        return prev.filter((_, i) => i !== idx);
+      }
+      const row: CartLine = {
+        key,
+        menuItemId: params.menuItemId,
+        sizeId,
+        quantity: params.quantity,
+        modifiers: params.modifiers,
+        allergens: params.allergens,
+      };
+      if (idx === -1) return [...prev, row];
+      const copy = [...prev];
+      copy[idx] = row;
+      return copy;
+    });
+  }, []);
+
+  const replaceLine = useCallback((oldKey: string, params: LineWriteParams) => {
+    const sizeId = params.sizeId ?? null;
+    const key = cartLineKey(params.menuItemId, params.modifiers, sizeId);
+    setLines((prev) => {
+      const withoutOld = prev.filter((l) => l.key !== oldKey);
+      if (params.quantity <= 0) return withoutOld;
+      const row: CartLine = {
+        key,
+        menuItemId: params.menuItemId,
+        sizeId,
+        quantity: params.quantity,
+        modifiers: params.modifiers,
+        allergens: params.allergens,
+      };
+      const idx = withoutOld.findIndex((l) => l.key === key);
+      if (idx === -1) return [...withoutOld, row];
+      const copy = [...withoutOld];
+      copy[idx] = { ...row, quantity: copy[idx].quantity + row.quantity };
+      return copy;
+    });
+  }, []);
 
   const removeLine = useCallback((key: string) => {
     setLines((prev) => prev.filter((l) => l.key !== key));
@@ -126,10 +143,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       pickupDelayMinutes,
       setPickupDelayMinutes,
       upsertLine,
+      replaceLine,
       removeLine,
       clear,
     }),
-    [lines, itemCount, pickupDelayMinutes, setPickupDelayMinutes, upsertLine, removeLine, clear],
+    [
+      lines,
+      itemCount,
+      pickupDelayMinutes,
+      setPickupDelayMinutes,
+      upsertLine,
+      replaceLine,
+      removeLine,
+      clear,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
