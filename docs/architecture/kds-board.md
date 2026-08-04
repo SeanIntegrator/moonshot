@@ -1,6 +1,6 @@
 # KDS board contracts (Flow UI shipped)
 
-Socket payloads stay `NormalisedOrder`; the PWA derives Flow chrome via `deriveFlowLine` (and legacy `deriveLinePrep`).
+Socket payloads stay `NormalisedOrder`; the KDS app derives Flow chrome via `deriveFlowLine` (and legacy `deriveLinePrep`). Installability (manifest / Add to Home Screen) is Workstream 6 in [roadmap.md](roadmap.md) — today this is a Vite SPA, not an installed PWA.
 
 ## Data on order lines
 
@@ -59,7 +59,7 @@ GET /api/v1/kds/config   (KDS JWT)
 → { ok: true, data: { kdsConfig } }
 ```
 
-Loaded after login by the KDS PWA. Admin edits layout / timers / display / ETA via settings PATCH.
+Loaded after login by the KDS app. Admin edits layout / timers / display / ETA via settings PATCH.
 
 ## Status machine
 

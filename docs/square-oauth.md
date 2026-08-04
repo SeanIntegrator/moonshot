@@ -2,7 +2,7 @@
 
 Connects a café's Square seller account during admin onboarding, imports the Item Library into Moonshot Postgres, keeps the menu in sync via `catalog.version.updated` + Admin Sync + daily cron, refreshes OAuth tokens on a schedule, and ingests till/POS tickets through an app-level webhook.
 
-Clay & Bean cutover from any hand-wired legacy token remains a separate step (roadmap M3).
+Clay & Bean cutover from any hand-wired legacy token remains a separate step ([roadmap](architecture/roadmap.md) Workstream 7).
 
 ## Flow
 

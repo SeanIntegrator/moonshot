@@ -2,7 +2,7 @@
 
 _Last updated: August 2026_
 
-Concise changelog of what is **shipped now**. For routes and sequences see [current/http-surface.md](current/http-surface.md) and [current/flows.md](current/flows.md).
+Concise changelog of what is **shipped now**. For launch workstreams see [architecture/roadmap.md](architecture/roadmap.md). For routes and sequences see [current/http-surface.md](current/http-surface.md) and [current/flows.md](current/flows.md).
 
 ---
 
@@ -31,24 +31,28 @@ Concise changelog of what is **shipped now**. For routes and sequences see [curr
 
 ### KDS Flow board
 
-- **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — not a thin skeleton.
+- **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — Vite SPA (not yet installable; see roadmap Workstream 6).
 - Status advance (`preparing` / `ready`), ETA stretch, **`GET /kds/config`**.
 - **Recent orders** (`GET /kds/orders/recent`) + **recall** (`POST …/recall`, `…/recall-last`).
+- Line-level free-text notes render on drink/food rows; **order-level** notes only appear in Recent Orders (live-board gap — Workstream 6).
 
 ### Menu & café ops
 
 - Menu CRUD, images (upload / default / media proxy), **modifier groups**, **menu sections** (hierarchy + POS category ids), **drink archetypes**.
 - Opening hours (`cafes.hours`); Admin settings PATCH for features / KDS config.
+- Admin HTTP client is split under `lib/adminApi/*` (`admin-api.ts` is a thin barrel).
 
 ### Loyalty
 
 - Ledger + punch card on KDS complete; redeem routes; order-ahead **`LoyaltyProvider`**.
 - New self-service cafés: **loyalty enabled by default** (10 stamps → free drink).
+- Stamp card on Home does **not** hot-update on KDS complete while staying on the page (Workstream 1).
 
 ### Self-service onboarding + theme
 
 - Marketing → admin signup → wizard (KDS user, Square or template menu, optional Stripe).
 - Order-ahead **theme system**: structural + café packs (`heritage`, etc.), radii, webfonts, `cafeLayout`.
+- Theme **read** path shipped (`theme_id` / `theme_overrides`); Admin **write** path and logo upload not yet (Workstream 4).
 
 ### Shared packages & realtime
 
@@ -60,9 +64,9 @@ Concise changelog of what is **shipped now**. For routes and sequences see [curr
 | Service | Notes |
 |---|---|
 | `moonshot-api` | HTTP + sockets |
-| `moonshot-kds` | Flow board PWA shell |
-| `moonshot-order-ahead` | Customer app |
-| `moonshot-admin` | Owner console |
+| `moonshot-kds` | Flow board SPA (installability TBD) |
+| `moonshot-order-ahead` | Customer app (manifest stub only) |
+| `moonshot-admin` | Owner console (single-scroll dashboard) |
 | `moonshot-marketing` | Public marketing / signup entry |
 
 Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`moonshot-api`** only.
@@ -74,27 +78,38 @@ Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`
 1. Seed / Stripe cafés fail `POST /orders` until Connect is ready (or switch to `pay_in_store`).
 2. Stripe cancel does not refund — paid → `refundPending: true`.
 3. No incremental / merge Stripe checkout (F3).
-4. Admin invites, audit trail, and café theme editor still missing.
-5. Feedback is socket eligibility MVP only — no `feedback_responses` HTTP yet.
+4. **Loyalty stamp card stale on Home** after KDS complete: `LoyaltyProvider` has no socket path; `customerOrderCompleted` carries no stamp payload (roadmap WS1).
+5. **Review nudge**: API may emit `customerReviewEligible` but order-ahead has no UI; Phase A also sets `review_prompt_state = 'shown_positive'` at emit time (burns eligibility before the modal ships — roadmap WS2).
+6. Admin invites, audit trail, and café theme/logo editor still missing (roadmap WS3–WS4).
+7. **Order-level POS notes** invisible on the live KDS board (only Recent Orders) — roadmap WS6.
+8. Order-ahead / KDS not properly installable (missing icons / SW / Apple meta) — roadmap WS5–WS6.
 
 ---
 
 ## Next
 
-1. Stripe **refunds** + optional **order merge** / incremental sessions.
-2. KDS **hold**, synced line made-state, `layout.columns` grouping, preparing/ready chrome polish.
-3. Feedback persistence + order-ahead review drawer.
-4. Admin invites / audit / theme editor.
-5. C&B production cutover verification (OAuth-only, no duplicate POS events).
+Tackle as planned sessions per [architecture/roadmap.md](architecture/roadmap.md):
+
+1. **WS1** — Loyalty hot-update on `customerOrderCompleted` (reorder apply-before-emit + stamp payload).
+2. **WS2** — Review nudge single-CTA modal + `eligible` state + Admin `reviewUrl`.
+3. **WS3** — Admin dashboard redesign (unified brand, sidebar, primitives).
+4. **WS4** — Café branding write path (theme picker, colour overrides, logo).
+5. **WS5** — Order-ahead installability (`vite-plugin-pwa`, icons, Apple meta).
+6. **WS6** — KDS order-level notes on live board + iPad Add-to-Home-Screen.
+7. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
+
+Parked (post-launch): Stripe refunds, Redis socket adapter, KDS hold / line made-state, Lightspeed, Capacitor wrapper.
 
 ---
 
 ## Related docs
 
 - [docs/README.md](README.md)
+- [architecture/roadmap.md](architecture/roadmap.md)
 - [architecture/realtime.md](architecture/realtime.md)
 - [current/http-surface.md](current/http-surface.md)
 - [current/flows.md](current/flows.md)
+- [feedback-prompt-flow.md](feedback-prompt-flow.md)
 - [schema-draft.md](schema-draft.md)
 - [pos-normalisation.md](pos-normalisation.md)
 - [square-oauth.md](square-oauth.md)
