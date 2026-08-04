@@ -105,5 +105,6 @@ Sets `orders.pickup_time` and `orders.eta_mode = 'manual_override'`. FIFO recomp
 ## Flow board layout
 
 - Drinks first; food after a dashed `FOOD` / `FOOD ONLY` divider (food always after drinks regardless of API order).
-- Drink row: shot column (qty + bar + name + `[shots · bean]` + size) · milk/syrup column (collapses when empty) · notes/allergens.
-- Food row: qty · italic name · wide notes/allergens.
+- Drink row: shot column (qty + bar + name + `[shots · bean]` + size) · milk/syrup column (collapses when empty) · right column allergens (yellow chrome) + free-text notes (plain off-white, right-aligned).
+- Food row: qty · italic name · same right column (allergens + notes, `justify-end`).
+- Order-level notes: footer strip on the live `OrderCard` (and Recent Orders).

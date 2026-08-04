@@ -179,39 +179,37 @@ A customer can Add to Home Screen on iOS and Android and launch fullscreen witho
 
 ## Workstream 6 — KDS notes + iPad install
 
-### Current state (verified)
+### Notes — done (August 2026)
 
-**Notes**
+- Line-level Square notes render in the right (allergen) column on drink/food rows as **plain off-white** text (`#e8eef2`), right-aligned; allergens keep yellow chrome.
+- Order-level `order.note` renders on the live `OrderCard` footer strip (and Recent Orders).
+- Empty / whitespace notes normalise to `null` at Square normaliser + POS ingress.
+- Failed `fetchSquareOrder` still opens a stub ticket; empty-snapshot path and adapter catch now warn/log for ops.
 
-- Square line-level `note` **is** mapped (`lineItems[].note` → `NormalisedOrderItem.notes`) and rendered italic on drink/food rows.
-- Order-level `order.note` → `orders.notes` is stored but **`OrderCard` never renders it** — only `RecentOrdersDialog` does. POS order-level notes never reach the barista on the live board.
-- No test asserts `order.note` / `lineItems[].note` in `squareOrderToSnapshot`; fixtures use `notes: null`.
-- Failed `fetchSquareOrder` falls back to `notes: null, items: []`, silently dropping data.
-- Empty-string notes are stored then hidden by `.trim()` — normalise to `null` at ingress.
-
-**Install**
+### Install — remaining
 
 - KDS has no manifest, icons, or service worker. Docs historically called it a “PWA shell”; it is a Vite SPA.
 - Target device is **iPad**. A `display: standalone` manifest + Apple meta tags + Add to Home Screen removes the URL bar. Pair with Guided Access for shift lockdown.
 - **Parked:** Capacitor / native wrapper — Apple Developer + provisioning churn for the same visual result on iPadOS.
 
-### Work
+### Work remaining
 
-1. Render order-level notes on the live `OrderCard` (and keep Recent Orders).
-2. Add Square normaliser tests for order- and line-level notes; normalise empty strings to `null` at ingress.
-3. Soften failed-fetch fallback logging so silent empty tickets are visible in ops.
+1. ~~Render order-level notes on the live `OrderCard`.~~
+2. ~~Square normaliser tests + empty-string → `null`.~~
+3. ~~Failed-fetch fallback logging.~~
 4. Add KDS web manifest + icons + Apple meta tags (`display: standalone`). Document Guided Access for C&B iPads. No native wrapper for launch.
 
 ### Done when
 
-A Square order with free-text notes (order and/or line) shows them on the live board; KDS Add-to-Home-Screen on iPad runs fullscreen without a URL bar.
+- ~~A Square order with free-text notes (order and/or line) shows them on the live board.~~
+- KDS Add-to-Home-Screen on iPad runs fullscreen without a URL bar.
 
 ### Files
 
-- `apps/moonshot-kds/src/board/OrderCard.tsx`
+- `apps/moonshot-kds/src/board/OrderCard.tsx`, `DrinkRow.tsx`, `FoodRow.tsx`
 - `apps/moonshot-api/src/lib/pos-adapters/square/order-normalise.ts` (+ tests)
 - `apps/moonshot-api/src/lib/orders/pos-order-ingress.ts`
-- `apps/moonshot-kds/index.html`, new `public/manifest.json`, icons
+- `apps/moonshot-kds/index.html`, new `public/manifest.json`, icons (install remaining)
 
 ---
 
@@ -258,7 +256,7 @@ C&B is on v2 only with OAuth Square, no duplicate POS events, and one clean live
 | KDS is a “PWA shell” | Vite SPA with no manifest / SW / icons — installability is Workstream 6 |
 | Café theme editor is only “post-launch polish” | Read path shipped; write path is launch Workstream 4 |
 | Review nudge needs thumbs up/down + `feedback_responses` | Launch scope is single CTA to configurable URL (Workstream 2) |
-| Square line notes untested / possibly unmapped | Line notes **are** mapped and rendered; **order-level** notes are the live-board gap |
+| Square line notes untested / possibly unmapped | Line notes mapped + plain off-white in allergen column; order-level notes on live `OrderCard` (WS6 notes done; install remaining) |
 
 ---
 

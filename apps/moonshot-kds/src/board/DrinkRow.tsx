@@ -207,7 +207,7 @@ export function DrinkRow({
         {view.notes?.trim() ? (
           <span
             className={cn(
-              'flow-strike text-muted-foreground italic',
+              'flow-strike font-normal text-[#e8eef2]',
               compact ? 'text-xs' : 'text-[1.05rem]',
             )}
           >

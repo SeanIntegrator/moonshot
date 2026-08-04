@@ -184,6 +184,70 @@ describe('squareOrderToSnapshot', () => {
     expect(snap.items).toHaveLength(1);
     expect(snap.items![0]!.quantity).toBe(2);
   });
+
+  it('maps order-level and line-level notes', () => {
+    const snap = squareOrderToSnapshot('cafe-1', {
+      id: 'o1',
+      note: 'Table 4 — extra napkins',
+      totalMoney: { amount: 350n, currency: 'GBP' },
+      lineItems: [
+        {
+          uid: 'li1',
+          name: 'Latte',
+          quantity: '1',
+          note: 'No sugar',
+          basePriceMoney: { amount: 350n },
+        },
+      ],
+    });
+    expect(snap.notes).toBe('Table 4 — extra napkins');
+    expect(snap.items![0]!.notes).toBe('No sugar');
+  });
+
+  it('normalises empty and whitespace-only notes to null', () => {
+    const snap = squareOrderToSnapshot('cafe-1', {
+      id: 'o1',
+      note: '   ',
+      totalMoney: { amount: 100n, currency: 'GBP' },
+      lineItems: [
+        {
+          uid: 'li1',
+          name: 'Tea',
+          quantity: '1',
+          note: '',
+          basePriceMoney: { amount: 100n },
+        },
+      ],
+    });
+    expect(snap.notes).toBeNull();
+    expect(snap.items![0]!.notes).toBeNull();
+  });
+});
+
+describe('mapSquareEnvelopeToWebhookEvent empty fetch fallback', () => {
+  it('builds an empty stub snapshot when order fetch is missing', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const event = mapSquareEnvelopeToWebhookEvent({
+      cafeId: 'cafe-1',
+      envelope: {
+        eventId: 'e',
+        merchantId: 'm',
+        type: 'order.updated',
+        orderId: 'ord-missing',
+      },
+      order: null,
+    });
+    expect(event.kind).toBe('order_open_or_updated');
+    if (event.kind === 'order_open_or_updated') {
+      expect(event.posOrderId).toBe('ord-missing');
+      expect(event.snapshot?.notes).toBeNull();
+      expect(event.snapshot?.items).toEqual([]);
+    }
+    expect(warn).toHaveBeenCalledWith(
+      '[square-order] square_order_fetch_missing',
+      expect.objectContaining({ cafeId: 'cafe-1', posOrderId: 'ord-missing' }),
+    );
+  });
 });
 
 afterEach(() => {

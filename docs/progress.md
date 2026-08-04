@@ -34,7 +34,7 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 - **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — Vite SPA (not yet installable; see roadmap Workstream 6).
 - Status advance (`preparing` / `ready`), ETA stretch, **`GET /kds/config`**.
 - **Recent orders** (`GET /kds/orders/recent`) + **recall** (`POST …/recall`, `…/recall-last`).
-- Line-level free-text notes render on drink/food rows; **order-level** notes only appear in Recent Orders (live-board gap — Workstream 6).
+- Line-level free-text notes render on drink/food rows (plain off-white, right-aligned with allergens); **order-level** notes also show on the live `OrderCard` (Workstream 6 notes done; install remaining).
 
 ### Menu & café ops
 
@@ -80,8 +80,7 @@ Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`
 3. No incremental / merge Stripe checkout (F3).
 4. **Review nudge**: API may emit `customerReviewEligible` but order-ahead has no UI; Phase A also sets `review_prompt_state = 'shown_positive'` at emit time (burns eligibility before the modal ships — roadmap WS2).
 5. Admin invites, audit trail, and café theme/logo editor still missing (roadmap WS3–WS4).
-6. **Order-level POS notes** invisible on the live KDS board (only Recent Orders) — roadmap WS6.
-7. Order-ahead / KDS not properly installable (missing icons / SW / Apple meta) — roadmap WS5–WS6.
+6. Order-ahead / KDS not properly installable (missing icons / SW / Apple meta) — roadmap WS5–WS6.
 
 ---
 
@@ -93,7 +92,7 @@ Tackle as planned sessions per [architecture/roadmap.md](architecture/roadmap.md
 2. **WS3** — Admin dashboard redesign (unified brand, sidebar, primitives).
 3. **WS4** — Café branding write path (theme picker, colour overrides, logo).
 4. **WS5** — Order-ahead installability (`vite-plugin-pwa`, icons, Apple meta).
-5. **WS6** — KDS order-level notes on live board + iPad Add-to-Home-Screen.
+5. **WS6b** — KDS iPad Add-to-Home-Screen (notes half of WS6 done).
 6. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
 
 Parked (post-launch): Stripe refunds, Redis socket adapter, KDS hold / line made-state, Lightspeed, Capacitor wrapper.

@@ -27,6 +27,11 @@ type SnapshotLine = Pick<
   | 'menuItemId'
 >;
 
+/** Trim free-text notes; empty / whitespace-only → null. */
+function nonemptyNote(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 async function replaceOrderItems(
   client: PoolClient,
   orderId: string,
@@ -104,7 +109,7 @@ export async function persistPosOrderEvent(
     typeof snap.customerName === 'string' && snap.customerName.trim()
       ? snap.customerName.trim().slice(0, 120)
       : 'POS Guest';
-  const notes = typeof snap.notes === 'string' ? snap.notes : null;
+  const notes = nonemptyNote(snap.notes);
   const orderType = snap.orderType === 'eat_in' ? 'eat_in' : 'takeaway';
   const paymentStatus = snap.paymentStatus === 'paid' ? 'paid' : 'unpaid';
   const totalMinor = typeof snap.totalMinor === 'number' ? Math.max(0, snap.totalMinor) : 0;
@@ -120,7 +125,7 @@ export async function persistPosOrderEvent(
         unitPriceMinor: Math.max(0, it.unitPriceMinor || 0),
         modifiers: it.modifiers ?? [],
         allergens: it.allergens ?? [],
-        notes: it.notes ?? null,
+        notes: nonemptyNote(it.notes),
         category: it.category ?? null,
       }))
     : [];

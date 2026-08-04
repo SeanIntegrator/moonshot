@@ -71,7 +71,7 @@ export function FoodRow({
       </div>
       <div
         className={cn(
-          'flex min-w-0 flex-wrap items-center justify-start',
+          'flex min-w-0 flex-wrap items-center justify-end',
           compact ? 'gap-1 py-1.5' : 'gap-1.5 py-[calc(0.55rem+8px)]',
         )}
       >
@@ -83,7 +83,7 @@ export function FoodRow({
         {view.notes?.trim() ? (
           <span
             className={cn(
-              'flow-strike text-muted-foreground italic',
+              'flow-strike font-normal text-[#e8eef2]',
               compact ? 'text-xs' : 'text-[1.05rem]',
             )}
           >

@@ -272,6 +272,12 @@ export function OrderCard({
                 : null}
             </>
           ) : null}
+
+          {order.notes?.trim() ? (
+            <p className="border-t border-border px-4 py-2 text-[1.05rem] font-normal text-[#e8eef2]">
+              {order.notes.trim()}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

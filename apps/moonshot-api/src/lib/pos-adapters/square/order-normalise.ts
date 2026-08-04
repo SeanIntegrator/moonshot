@@ -5,6 +5,11 @@ import { SQUARE_ORDER_WEBHOOK_TYPES, type SquareWebhookEnvelope } from './webhoo
 
 type MoneyLike = { amount?: bigint | number | null; currency?: string | null } | null | undefined;
 
+/** Trim free-text notes; empty / whitespace-only → null so KDS never stores "". */
+function nonemptyNote(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function moneyMinor(m: MoneyLike): number {
   if (!m || m.amount == null) return 0;
   return Number(m.amount);
@@ -98,7 +103,7 @@ function mapLineItems(raw: unknown): NormalisedOrderItem[] {
       unitPriceMinor: moneyMinor(li.basePriceMoney),
       modifiers: mapModifiers(li.modifiers),
       allergens: [],
-      notes: typeof li.note === 'string' ? li.note : null,
+      notes: nonemptyNote(li.note),
       category: li.itemType === 'GIFT_CARD' ? 'other' : null,
     });
   }
@@ -119,7 +124,7 @@ export function squareOrderToSnapshot(
     source: 'pos',
     posOrderId: typeof order.id === 'string' ? order.id : null,
     customerName: customerNameFromOrder(order),
-    notes: typeof order.note === 'string' ? order.note : null,
+    notes: nonemptyNote(order.note),
     orderType: mapOrderType(order),
     status: 'confirmed',
     paymentStatus: paymentStatusFromOrder(order),
@@ -176,19 +181,27 @@ export function mapSquareEnvelopeToWebhookEvent(params: {
 
   const snapshot = order
     ? squareOrderToSnapshot(cafeId, order)
-    : {
-        cafeId,
-        source: 'pos' as const,
-        posOrderId,
-        customerName: 'POS Guest',
-        status: 'confirmed' as const,
-        paymentStatus: 'unpaid' as const,
-        totalMinor: 0,
-        currency: 'GBP',
-        items: [],
-        orderType: 'takeaway' as const,
-        notes: null,
-      };
+    : (() => {
+        // Fetch failed or omitted — stub ticket keeps KDS moving; ops must see the empty board.
+        console.warn('[square-order] square_order_fetch_missing', {
+          cafeId,
+          posOrderId,
+          envelopeType: envelope.type,
+        });
+        return {
+          cafeId,
+          source: 'pos' as const,
+          posOrderId,
+          customerName: 'POS Guest',
+          status: 'confirmed' as const,
+          paymentStatus: 'unpaid' as const,
+          totalMinor: 0,
+          currency: 'GBP',
+          items: [],
+          orderType: 'takeaway' as const,
+          notes: null,
+        };
+      })();
 
   return {
     kind: 'order_open_or_updated',

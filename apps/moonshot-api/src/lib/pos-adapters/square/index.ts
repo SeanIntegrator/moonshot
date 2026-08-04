@@ -80,7 +80,12 @@ export function createSquarePosAdapter(config: SquareAdapterConfig): SquarePosAd
             orderId: envelope.orderId,
             environment: config.environment,
           });
-        } catch {
+        } catch (err) {
+          console.error('[square-adapter] retrieve_order_failed', {
+            cafeId: config.cafeId,
+            orderId: envelope.orderId,
+            message: err instanceof Error ? err.message : String(err),
+          });
           order = null;
         }
       }
