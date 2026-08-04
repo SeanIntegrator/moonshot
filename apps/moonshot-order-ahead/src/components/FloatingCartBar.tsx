@@ -40,7 +40,9 @@ export function FloatingCartBar({
       >
         {cafeClosed ? (
           <FloatingClosedBanner role="status">
-            <Typography variant="body2" fontWeight={600}>
+            <Typography variant="body2" sx={{
+              fontWeight: 600
+            }}>
               {closedMessage}
             </Typography>
           </FloatingClosedBanner>
@@ -48,11 +50,19 @@ export function FloatingCartBar({
           <FloatingCartButton component={RouterLink} to={cafePath('/checkout')} fullWidth>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <ShoppingBagOutlinedIcon fontSize="small" />
-              <Typography variant="body2" fontWeight={600}>
+              <Typography variant="body2" sx={{
+                fontWeight: 600
+              }}>
                 {itemCount} item{itemCount !== 1 ? 's' : ''} · {formatMoney(totalMinor, currency)}
               </Typography>
             </Box>
-            <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center'
+              }}>
               Checkout <ChevronRightIcon fontSize="small" />
             </Typography>
           </FloatingCartButton>

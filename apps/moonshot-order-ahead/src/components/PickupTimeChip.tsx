@@ -92,10 +92,14 @@ export function PickupTimeChip({
         <PickupTimeFieldButton onClick={(e) => setAnchorEl(e.currentTarget)}>
           <AccessTimeIcon color="action" />
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body1" fontWeight={700}>
+            <Typography variant="body1" sx={{
+              fontWeight: 700
+            }}>
               {displayTime}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               {optionLabel(safeValue)}
               {safeValue === 0 && estimate ? ` · in ${estimate.minutesFromNow} min` : ''}
             </Typography>
@@ -115,7 +119,13 @@ export function PickupTimeChip({
         icon={<AccessTimeIcon sx={{ fontSize: '16px !important' }} />}
         label={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-            <Typography component="span" variant="body2" fontWeight={600} sx={{ lineHeight: 1.2 }}>
+            <Typography
+              component="span"
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+                lineHeight: 1.2
+              }}>
               Pickup at {displayTime}
             </Typography>
             <KeyboardArrowDownIcon sx={{ fontSize: 18, color: 'text.secondary' }} />

@@ -123,7 +123,9 @@ export function OnboardingPosImportPage() {
       {(phase === 'loading' || phase === 'importing') && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress size={28} sx={{ mb: 2 }} />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             {phase === 'importing' ? 'Pulling your Square catalogue…' : 'Checking Square…'}
           </Typography>
         </Box>
@@ -134,7 +136,12 @@ export function OnboardingPosImportPage() {
           <Typography variant="h6" gutterBottom>
             Choose a location
           </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              marginBottom: "16px"
+            }}>
             You have more than one Square location. Pick which catalogue to import.
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>

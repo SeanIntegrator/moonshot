@@ -97,7 +97,13 @@ export function StripePaymentsCard({
 
   return (
     <Paper sx={{ p: 3, borderRadius: 2, height: '100%' }}>
-      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "flex-start",
+          justifyContent: "space-between"
+        }}>
         <Typography variant="h6" gutterBottom>
           Enable Stripe payments
         </Typography>
@@ -111,7 +117,12 @@ export function StripePaymentsCard({
           </Tooltip>
         )}
       </Stack>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 2
+        }}>
         Order-ahead uses Stripe when payment provider is set to Stripe. Customers cannot place paid orders until
         charges are enabled on the connected account.
       </Typography>
@@ -134,13 +145,23 @@ export function StripePaymentsCard({
         )
       )}
       {stripeUnavailable ? null : loading || !status ? (
-        <Typography color="text.secondary">Loading Stripe status…</Typography>
+        <Typography sx={{
+          color: "text.secondary"
+        }}>Loading Stripe status…</Typography>
       ) : (
         <Stack spacing={2}>
           {status.chargesEnabled && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'success.main' }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                color: 'success.main'
+              }}>
               <CheckCircleIcon fontSize="small" />
-              <Typography variant="body2" fontWeight={600}>
+              <Typography variant="body2" sx={{
+                fontWeight: 600
+              }}>
                 Stripe connected
               </Typography>
             </Stack>

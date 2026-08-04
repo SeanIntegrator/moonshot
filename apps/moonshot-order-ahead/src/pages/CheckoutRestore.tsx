@@ -87,7 +87,9 @@ export function CheckoutRestore() {
       }}
     >
       <CircularProgress size={32} />
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{
+        color: "text.secondary"
+      }}>
         Confirming your payment…
       </Typography>
     </Box>

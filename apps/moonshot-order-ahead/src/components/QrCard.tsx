@@ -21,7 +21,13 @@ export function QrCard({ displayId, name, stamps, stampsPerReward = 10, size = 2
 
   return (
     <Box sx={{ textAlign: 'center' }}>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          display: 'block',
+          mb: 1
+        }}>
         Show at till
       </Typography>
       <SurfaceCard
@@ -33,11 +39,22 @@ export function QrCard({ displayId, name, stamps, stampsPerReward = 10, size = 2
         <QRCodeSVG value={displayId} size={size} level="M" />
       </SurfaceCard>
       {subtitle && (
-        <Typography variant="body2" fontWeight={600} sx={{ mt: 1.5 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 600,
+            mt: 1.5
+          }}>
           {subtitle}
         </Typography>
       )}
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          display: 'block',
+          mt: 0.5
+        }}>
         Turn brightness up for best scan
       </Typography>
     </Box>

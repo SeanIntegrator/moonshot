@@ -123,11 +123,18 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
   return (
     <Box sx={{ mt: 2.5, '&:first-of-type': { mt: 0.5 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, mb: 1.25 }}>
-        <Typography variant="subtitle2" fontWeight={700}>
+        <Typography variant="subtitle2" sx={{
+          fontWeight: 700
+        }}>
           {group.name}
         </Typography>
         {selected ? (
-          <Typography variant="body2" color="text.secondary" fontWeight={600}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600
+            }}>
             {selected.name}
             {selectedDelta ? ` ${selectedDelta}` : ''}
           </Typography>

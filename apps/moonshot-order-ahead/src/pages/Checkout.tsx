@@ -191,7 +191,9 @@ export function Checkout() {
         }}
       >
         <CircularProgress size={32} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Taking you to payment
         </Typography>
       </Box>
@@ -229,7 +231,13 @@ export function Checkout() {
             }}
           />
 
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+              mt: 3,
+              mb: 1
+            }}>
             Pickup time
           </Typography>
           {pickupTimeEnabled ? (
@@ -252,11 +260,15 @@ export function Checkout() {
             >
               <AccessTimeIcon color="action" />
               <Box sx={{ flex: 1 }}>
-                <Typography variant="body1" fontWeight={700}>
+                <Typography variant="body1" sx={{
+                  fontWeight: 700
+                }}>
                   {estimate ? formatTime(estimate.pickupTime) : 'ASAP'}
                 </Typography>
                 {estimate && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     in {estimate.minutesFromNow} min
                   </Typography>
                 )}
@@ -264,7 +276,13 @@ export function Checkout() {
             </SurfaceCard>
           )}
 
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+              mt: 3,
+              mb: 1
+            }}>
             Allergy info
           </Typography>
           <SegmentedToggleGroup
@@ -284,18 +302,36 @@ export function Checkout() {
           {isSignedIn && loyaltyEnabled && summary && rewards.length > 0 ? (
             splitSections ? (
               <>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 700,
+                    mt: 3,
+                    mb: 0.5
+                  }}>
                   Applicable rewards
                 </Typography>
                 {renderRewardRows({ ...rewardRowProps, rewards: applicableRewards })}
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 2, mb: 0.5 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 700,
+                    mt: 2,
+                    mb: 0.5
+                  }}>
                   Other rewards
                 </Typography>
                 {renderRewardRows({ ...rewardRowProps, rewards: otherRewards })}
               </>
             ) : (
               <>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 700,
+                    mt: 3,
+                    mb: 0.5
+                  }}>
                   Rewards
                 </Typography>
                 {renderRewardRows({ ...rewardRowProps, rewards })}
@@ -303,10 +339,18 @@ export function Checkout() {
             )
           ) : (
             <>
-              <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 0.5 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  fontWeight: 700,
+                  mt: 3,
+                  mb: 0.5
+                }}>
                 Rewards
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 {!loyaltyEnabled
                   ? 'Loyalty is not enabled for this café.'
                   : !isSignedIn
@@ -326,7 +370,12 @@ export function Checkout() {
             </Typography>
           )}
           {!isOpen && (
-            <Typography color="warning.dark" sx={{ mb: 1.5 }} fontWeight={600}>
+            <Typography
+              sx={{
+                color: "warning.dark",
+                fontWeight: 600,
+                mb: 1.5
+              }}>
               {closedBarMessage}
             </Typography>
           )}
@@ -359,9 +408,12 @@ export function Checkout() {
           {loyaltyEnabled && isSignedIn && !selectedRewardId && (
             <Typography
               variant="caption"
-              color="success.main"
-              sx={{ display: 'block', textAlign: 'center', mt: 1 }}
-            >
+              sx={{
+                color: "success.main",
+                display: 'block',
+                textAlign: 'center',
+                mt: 1
+              }}>
               Earn 1 stamp with this order
             </Typography>
           )}

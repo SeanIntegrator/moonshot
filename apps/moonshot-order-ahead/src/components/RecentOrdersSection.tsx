@@ -44,9 +44,11 @@ export function RecentOrdersSection({ orders, orderingAvailable, onReorder }: Pr
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <Typography
                 variant="caption"
-                color="text.secondary"
-                sx={{ fontVariantNumeric: 'tabular-nums', mr: 0.5 }}
-              >
+                sx={{
+                  color: "text.secondary",
+                  fontVariantNumeric: 'tabular-nums',
+                  mr: 0.5
+                }}>
                 {rangeStart}–{rangeEnd} of {orders.length}
               </Typography>
               <IconButton

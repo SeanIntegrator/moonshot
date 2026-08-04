@@ -139,7 +139,7 @@ describe('POST /api/v1/kds/orders/:orderId/complete', () => {
   it('returns 200 and the completed order on the happy path', async () => {
     const order = mockOrder();
     completeOrderForKds.mockResolvedValue(order);
-    applyLoyaltyAfterKdsComplete.mockResolvedValue(undefined);
+    applyLoyaltyAfterKdsComplete.mockResolvedValue({ applied: false });
     recomputePickupEtasForCafe.mockResolvedValue(undefined);
 
     const app = await appWithKdsRouter();
@@ -174,7 +174,7 @@ describe('POST /api/v1/kds/orders/:orderId/complete', () => {
 
   it('still returns 200 when ETA recompute throws', async () => {
     completeOrderForKds.mockResolvedValue(mockOrder());
-    applyLoyaltyAfterKdsComplete.mockResolvedValue(undefined);
+    applyLoyaltyAfterKdsComplete.mockResolvedValue({ applied: false });
     recomputePickupEtasForCafe.mockRejectedValue(new Error('pickup eta down'));
 
     const app = await appWithKdsRouter();

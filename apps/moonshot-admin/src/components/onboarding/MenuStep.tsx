@@ -29,7 +29,12 @@ export function MenuStep({
         <Typography variant="h6" gutterBottom>
           Starter menu saved
         </Typography>
-        <Typography variant="body2" color="text.secondary" paragraph>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            marginBottom: "16px"
+          }}>
           Your menu is ready for customers. You can add specialty items from the dashboard after
           setup.
         </Typography>

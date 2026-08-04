@@ -16,7 +16,12 @@ export function SizeOptionGrid({ sizes, currency, selectedId, onSelect }: Props)
 
   return (
     <Box sx={{ mt: 2 }}>
-      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 700,
+          mb: 1
+        }}>
         Size
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
@@ -29,12 +34,16 @@ export function SizeOptionGrid({ sizes, currency, selectedId, onSelect }: Props)
                 {size.colorHex ? (
                   <OptionColorDot sx={{ bgcolor: size.colorHex }} />
                 ) : null}
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="body2" sx={{
+                  fontWeight: 600
+                }}>
                   {size.name}
                 </Typography>
               </Box>
               {price ? (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {price}
                 </Typography>
               ) : null}

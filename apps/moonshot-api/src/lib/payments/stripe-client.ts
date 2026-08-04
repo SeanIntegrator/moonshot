@@ -5,10 +5,12 @@ let stripeSingleton: Stripe | null = null;
 /**
  * Pin the API version so behaviour is identical across environments and
  * doesn't change silently when the account's dashboard default moves. Bump
- * deliberately when adopting new features. See docs/architecture for upgrade
- * guidance and the Stripe upgrade-stripe skill.
+ * deliberately with the stripe package (types and HTTP header stay aligned).
+ * Webhook endpoints must be pinned to the same version in the Stripe Dashboard
+ * — payload shape follows the endpoint config, not this client pin.
+ * See docs/architecture/dependency-upgrades.md.
  */
-const STRIPE_API_VERSION = '2026-04-22.dahlia' as Stripe.LatestApiVersion;
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = '2026-07-29.dahlia';
 
 export function getStripeOrNull(): Stripe | null {
   const key = process.env.STRIPE_API_KEY?.trim();

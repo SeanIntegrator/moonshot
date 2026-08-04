@@ -5,7 +5,7 @@ import {
   Link,
   Typography,
 } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard.js';
@@ -152,7 +152,7 @@ export function Home() {
                       width: compactHero ? 32 : 36,
                       height: compactHero ? 32 : 36,
                       border: '1.5px solid',
-                      borderColor: alpha(t.palette.cafe.heroText, 0.3),
+                      borderColor: t.alpha(t.palette.cafe.heroText, 0.3),
                     })
                   : {
                       width: 36,
@@ -273,10 +273,14 @@ export function Home() {
                     fetchPriority={featured.indexOf(item) === 0 ? 'high' : 'auto'}
                   />
                   <Box sx={{ p: 1.25 }}>
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>
                       {item.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>
                       {item.sizes?.length
                         ? formatFromPrice(menuItemListPriceMinor(item), item.currency)
                         : formatMoney(menuItemListPriceMinor(item), item.currency)}

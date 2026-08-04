@@ -1,6 +1,6 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import {
   Alert,
   Box,
@@ -11,7 +11,6 @@ import {
   Snackbar,
   Typography,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader.js';
@@ -177,7 +176,11 @@ export function OrderDetail() {
           </Typography>
         )}
         {!order && !error && (
-          <Typography color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            sx={{
+              color: "text.secondary",
+              mt: 1
+            }}>
             Loading…
           </Typography>
         )}
@@ -186,7 +189,12 @@ export function OrderDetail() {
           <>
             <Box sx={{ flex: 1 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                    letterSpacing: 0.5
+                  }}>
                   Order #{order.id.slice(0, 8)}
                 </Typography>
                 <Chip
@@ -205,16 +213,23 @@ export function OrderDetail() {
                     alignItems: 'center',
                     gap: 1.5,
                     borderColor: 'success.main',
-                    bgcolor: (t) => alpha(t.palette.success.main, 0.08),
+                    bgcolor: (t) => t.alpha(t.palette.success.main, 0.08),
                   }}
                 >
-                  <CheckCircleOutlineIcon color="success" />
+                  <CheckCircleOutlinedIcon color="success" />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body1" fontWeight={700} color="success.main">
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontWeight: 700,
+                        color: "success.main"
+                      }}>
                       Ready for pickup
                     </Typography>
                     {pickupTime && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         Pickup time {formatTime(pickupTime)}
                       </Typography>
                     )}
@@ -232,20 +247,26 @@ export function OrderDetail() {
                 >
                   <AccessTimeIcon color="action" />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>
                       Pickup time
                     </Typography>
-                    <Typography variant="body1" fontWeight={700}>
+                    <Typography variant="body1" sx={{
+                      fontWeight: 700
+                    }}>
                       {formatTime(pickupTime)}
                     </Typography>
                   </Box>
                   {minsUntilPickup != null && (
                     <Typography
                       variant="body1"
-                      fontWeight={700}
-                      color="text.secondary"
-                      sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
-                    >
+                      sx={{
+                        fontWeight: 700,
+                        color: "text.secondary",
+                        flexShrink: 0,
+                        fontVariantNumeric: 'tabular-nums'
+                      }}>
                       {formatMinutesLabel(minsUntilPickup)}
                     </Typography>
                   )}
@@ -254,9 +275,12 @@ export function OrderDetail() {
 
               <Typography
                 variant="caption"
-                color="text.secondary"
-                sx={{ mt: 3, letterSpacing: 0.5, display: 'block' }}
-              >
+                sx={{
+                  color: "text.secondary",
+                  mt: 3,
+                  letterSpacing: 0.5,
+                  display: 'block'
+                }}>
                 Items · {totalItemQuantity(order.items)}
               </Typography>
               {order.items.map((li) => {
@@ -274,11 +298,15 @@ export function OrderDetail() {
                       loading="lazy"
                     />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" sx={{
+                        fontWeight: 600
+                      }}>
                         {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
                       </Typography>
                       {li.modifiers.length > 0 && (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>
                           {modifierSummary(li.modifiers)}
                         </Typography>
                       )}
@@ -292,26 +320,44 @@ export function OrderDetail() {
 
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography fontWeight={700}>Total paid</Typography>
-                <Typography fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                <Typography sx={{
+                  fontWeight: 700
+                }}>Total paid</Typography>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums'
+                  }}>
                   {formatMoney(order.totalMinor, order.currency)}
                 </Typography>
               </Box>
 
               {trackingStatus === 'connecting' && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                    mt: 1
+                  }}>
                   Connecting for live updates…
                 </Typography>
               )}
               {trackingStatus === 'error' && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                    mt: 1
+                  }}>
                   Tracking unavailable — we&apos;ll call your name when it&apos;s ready.
                 </Typography>
               )}
 
               {showStampPending && (
                 <SurfaceCard sx={{ mt: 2, p: 1.5 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>
                     ★ You&apos;ll earn <strong>1 stamp</strong> when the kitchen marks this order complete.
                   </Typography>
                 </SurfaceCard>
@@ -323,10 +369,15 @@ export function OrderDetail() {
                     mt: 2,
                     p: 1.5,
                     borderColor: 'success.main',
-                    bgcolor: (t) => alpha(t.palette.success.main, 0.08),
+                    bgcolor: (t) => t.alpha(t.palette.success.main, 0.08),
                   }}
                 >
-                  <Typography variant="body2" color="success.main" fontWeight={600}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "success.main",
+                      fontWeight: 600
+                    }}>
                     ★ Stamp earned — your loyalty card has been updated.
                   </Typography>
                 </SurfaceCard>
@@ -347,9 +398,12 @@ export function OrderDetail() {
                 </Button>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block', mt: 1, textAlign: 'center' }}
-                >
+                  sx={{
+                    color: "text.secondary",
+                    display: 'block',
+                    mt: 1,
+                    textAlign: 'center'
+                  }}>
                   You can cancel free of charge before the kitchen starts your order.
                 </Typography>
               </Box>

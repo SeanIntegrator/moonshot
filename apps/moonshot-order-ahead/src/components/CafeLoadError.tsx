@@ -27,10 +27,17 @@ export function CafeLoadError({ message, isConnectivity, onRetry }: Props) {
         ) : (
           <ErrorOutlineOutlinedIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
         )}
-        <Typography variant="h6" fontWeight={700} gutterBottom>
+        <Typography variant="h6" gutterBottom sx={{
+          fontWeight: 700
+        }}>
           {isConnectivity ? 'Connection problem' : 'Café unavailable'}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 3
+          }}>
           {message}
         </Typography>
         <Button variant="contained" fullWidth sx={{ py: 1.5 }} onClick={onRetry}>

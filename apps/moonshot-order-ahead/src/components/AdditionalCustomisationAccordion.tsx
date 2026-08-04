@@ -34,7 +34,9 @@ export function AdditionalCustomisationAccordion({ groups, selections, onSelect 
             '& .MuiAccordionSummary-content': { my: 1 },
           }}
         >
-          <Typography variant="subtitle1" fontWeight={700}>
+          <Typography variant="subtitle1" sx={{
+            fontWeight: 700
+          }}>
             Additional customisation
           </Typography>
         </AccordionSummary>

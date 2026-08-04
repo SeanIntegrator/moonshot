@@ -1,7 +1,7 @@
 import Box, { type BoxProps } from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase, { type ButtonBaseProps } from '@mui/material/ButtonBase';
-import { alpha, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import type { ComponentType } from 'react';
 import { surfaceCardChrome } from '../../theme/surfaceCardChrome.js';
 
@@ -18,8 +18,8 @@ const loyaltyCardWidth = {
 /** Hero loyalty card shell — glass surfaces derived from cafe.heroText. */
 export const LoyaltyHeroShell = styled(Box)(({ theme }) => ({
   ...loyaltyCardWidth,
-  backgroundColor: alpha(theme.palette.cafe.heroText, 0.08),
-  border: `1px solid ${alpha(theme.palette.cafe.heroText, 0.14)}`,
+  backgroundColor: theme.alpha(theme.palette.cafe.heroText, 0.08),
+  border: `1px solid ${theme.alpha(theme.palette.cafe.heroText, 0.14)}`,
   borderRadius: theme.radii.card,
   padding: theme.spacing(1.5),
   marginTop: theme.spacing(2),
@@ -34,11 +34,11 @@ export const LoyaltyCardShell = styled(Box)(({ theme }) => ({
 })) as typeof Box;
 
 export const LoyaltyHeroQrButton = styled(Button)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.cafe.heroText, 0.12),
+  backgroundColor: theme.alpha(theme.palette.cafe.heroText, 0.12),
   color: theme.palette.common.white,
-  border: `1px solid ${alpha(theme.palette.cafe.heroText, 0.2)}`,
+  border: `1px solid ${theme.alpha(theme.palette.cafe.heroText, 0.2)}`,
   '&:hover': {
-    backgroundColor: alpha(theme.palette.cafe.heroText, 0.2),
+    backgroundColor: theme.alpha(theme.palette.cafe.heroText, 0.2),
   },
 })) as typeof Button;
 
@@ -58,7 +58,7 @@ export const LoyaltyStampSlot: ComponentType<LoyaltyStampSlotProps> = styled(Box
       : theme.palette.primary.main
     : 'transparent',
   border: filled ? 'none' : '1px dashed',
-  borderColor: hero ? alpha(theme.palette.cafe.heroText, 0.35) : theme.palette.divider,
+  borderColor: hero ? theme.alpha(theme.palette.cafe.heroText, 0.35) : theme.palette.divider,
 }));
 
 export const LoyaltyRewardsLink = styled(ButtonBase)(({ theme }) => ({

@@ -47,10 +47,21 @@ export function CurrentOrderCard({ order }: Props) {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <Typography variant="body2" color="text.secondary" fontWeight={600}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600
+            }}>
             Pickup
           </Typography>
-          <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              color: "text.primary",
+              fontVariantNumeric: 'tabular-nums'
+            }}>
             {formatTime(order.pickup.pickupTime)}
           </Typography>
         </Box>
@@ -73,16 +84,28 @@ export function CurrentOrderCard({ order }: Props) {
                 loading="lazy"
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: "text.primary",
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5
+                  }}>
                   {li.itemName}
                   {li.quantity > 1 && (
-                    <Typography component="span" variant="caption" color="text.secondary">
+                    <Typography component="span" variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>
                       x{li.quantity}
                     </Typography>
                   )}
                 </Typography>
                 {li.modifiers.length > 0 && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     {modifierSummary(li.modifiers)}
                   </Typography>
                 )}
@@ -93,7 +116,9 @@ export function CurrentOrderCard({ order }: Props) {
         <Divider sx={{ my: 1.25 }} />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-            <Typography variant="body2" color="primary" fontWeight={600}>
+            <Typography variant="body2" color="primary" sx={{
+              fontWeight: 600
+            }}>
               View details
             </Typography>
             <ChevronRightIcon sx={{ fontSize: 18, color: 'primary.main' }} />

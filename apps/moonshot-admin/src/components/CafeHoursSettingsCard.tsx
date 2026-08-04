@@ -14,7 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { useEffect, useState } from 'react';
 import { patchAdminSettings } from '../lib/admin-api.js';
 
@@ -131,7 +131,12 @@ export function CafeHoursSettingsCard({ cafe, token, onCafeUpdated }: Props) {
       <Typography variant="h6" gutterBottom>
         Opening hours
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 2
+        }}>
         Times are local to {cafe.timezone}. Empty / closed days block online ordering on the customer
         home screen. Use Add window for split shifts (e.g. lunch + afternoon).
       </Typography>
@@ -201,10 +206,11 @@ export function CafeHoursSettingsCard({ cafe, token, onCafeUpdated }: Props) {
                     value={iv.open}
                     onChange={(e) => updateInterval(day, index, { open: e.target.value })}
                     disabled={saving}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
                     sx={{ width: 130 }}
-                  />
+                    slotProps={{
+                      htmlInput: { step: 300 },
+                      inputLabel: { shrink: true }
+                    }} />
                   <TextField
                     label={d.intervals.length > 1 ? `Close ${index + 1}` : 'Close'}
                     type="time"
@@ -212,10 +218,11 @@ export function CafeHoursSettingsCard({ cafe, token, onCafeUpdated }: Props) {
                     value={iv.close}
                     onChange={(e) => updateInterval(day, index, { close: e.target.value })}
                     disabled={saving}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
                     sx={{ width: 130 }}
-                  />
+                    slotProps={{
+                      htmlInput: { step: 300 },
+                      inputLabel: { shrink: true }
+                    }} />
                   {d.intervals.length > 1 && (
                     <IconButton
                       aria-label={`Remove window ${index + 1}`}
@@ -223,7 +230,7 @@ export function CafeHoursSettingsCard({ cafe, token, onCafeUpdated }: Props) {
                       onClick={() => removeInterval(day, index)}
                       disabled={saving}
                     >
-                      <DeleteOutlineIcon fontSize="small" />
+                      <DeleteOutlinedIcon fontSize="small" />
                     </IconButton>
                   )}
                 </Box>

@@ -95,7 +95,8 @@ export async function retrieveStripeCheckoutSession(params: {
   connectedAccountId: string;
 }): Promise<Stripe.Checkout.Session> {
   const stripe = requireStripe();
-  return stripe.checkout.sessions.retrieve(params.sessionId, {
+  // v22+: RequestOptions must be the third arg when params are omitted
+  return stripe.checkout.sessions.retrieve(params.sessionId, undefined, {
     stripeAccount: params.connectedAccountId,
   });
 }

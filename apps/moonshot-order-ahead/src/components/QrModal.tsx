@@ -30,7 +30,12 @@ export function QrModal({ open, onClose, displayId, name, stamps, stampsPerRewar
         >
           <CloseIcon fontSize="small" />
         </IconButton>
-        <Typography variant="h5" fontWeight={700} sx={{ mb: 2.25 }}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            mb: 2.25
+          }}>
           Your QR code
         </Typography>
         <QrCard displayId={displayId} name={name} stamps={stamps} stampsPerReward={stampsPerReward} size={180} />

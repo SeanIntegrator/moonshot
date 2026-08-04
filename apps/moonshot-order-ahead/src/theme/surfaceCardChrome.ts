@@ -1,4 +1,4 @@
-import { alpha, type Theme } from '@mui/material/styles';
+import { type Theme } from '@mui/material/styles';
 
 /**
  * Shared elevated-card chrome used by MuiPaper and SurfaceCard.
@@ -9,6 +9,6 @@ export function surfaceCardChrome(theme: Theme) {
     backgroundColor: theme.palette.background.paper,
     backgroundImage: 'none' as const,
     border: `1px solid ${theme.palette.divider}`,
-    boxShadow: `0 1px 2px ${alpha(theme.palette.common.black, 0.04)}, 0 1px 3px ${alpha(theme.palette.common.black, 0.05)}`,
+    boxShadow: `0 1px 2px ${theme.alpha(theme.palette.common.black, 0.04)}, 0 1px 3px ${theme.alpha(theme.palette.common.black, 0.05)}`,
   };
 }

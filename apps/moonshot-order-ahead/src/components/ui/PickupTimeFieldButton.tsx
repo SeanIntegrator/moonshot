@@ -1,6 +1,6 @@
 import ButtonBase from '@mui/material/ButtonBase';
 import type { Theme } from '@mui/material/styles';
-import { alpha, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 
 /** Field-style pickup time trigger — theme borders/surfaces. */
 export const PickupTimeFieldButton = styled(ButtonBase)(({ theme }) => ({
@@ -29,8 +29,8 @@ export function pickupChipSx(theme: Theme) {
     height: 'auto' as const,
     py: 0.625,
     border: 'none',
-    bgcolor: alpha(theme.palette.primary.main, 0.08),
-    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.12) },
+    bgcolor: theme.alpha(theme.palette.primary.main, 0.08),
+    '&:hover': { bgcolor: theme.alpha(theme.palette.primary.main, 0.12) },
     '& .MuiChip-label': { px: 0.5 },
     '& .MuiChip-icon': { ml: 1, mr: 0.75, color: theme.palette.text.secondary },
   };

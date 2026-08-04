@@ -53,7 +53,9 @@ export function Profile() {
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
       {loading && (
-        <Typography color="text.secondary">Checking session…</Typography>
+        <Typography sx={{
+          color: "text.secondary"
+        }}>Checking session…</Typography>
       )}
 
       {!loading && !isSignedIn && <SignedOutPanel />}
@@ -66,11 +68,15 @@ export function Profile() {
                 {(user.displayName ?? user.email).charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" fontWeight={700}>
+                <Typography variant="h6" sx={{
+                  fontWeight: 700
+                }}>
                   {user.displayName ?? user.email}
                 </Typography>
                 {membership && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     Member since {formatShortDate(membership.firstVisit)}
                   </Typography>
                 )}
@@ -103,11 +109,18 @@ export function Profile() {
                     py: 1.25,
                   }}
                 >
-                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      textTransform: 'uppercase'
+                    }}>
                     {label}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>
                       {value}
                     </Typography>
                     <ChevronRightIcon fontSize="small" color="disabled" />

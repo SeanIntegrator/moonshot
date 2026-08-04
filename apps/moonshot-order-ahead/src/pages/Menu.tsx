@@ -100,7 +100,13 @@ export function Menu() {
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, gap: 1 }}>
-        <Typography variant="h5" component="h1" fontWeight={700} sx={{ mt: 0 }}>
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{
+            fontWeight: 700,
+            mt: 0
+          }}>
           Order
         </Typography>
         {pickupTimeEnabled && (
@@ -131,7 +137,13 @@ export function Menu() {
           }}
           sx={{ mb: 3, scrollMarginTop: 8 }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5, textTransform: 'uppercase' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              letterSpacing: 0.5,
+              textTransform: 'uppercase'
+            }}>
             {section.label}
             {` · ${section.items.length} items`}
           </Typography>

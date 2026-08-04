@@ -367,8 +367,10 @@ export function MenuItemsPanel({
                   const v = Number.parseFloat(raw);
                   if (Number.isFinite(v)) update({ priceMinor: Math.round(v * 100) });
                 }}
-                inputProps={{ min: 0, step: 0.01 }}
                 sx={{ maxWidth: 200 }}
+                slotProps={{
+                  htmlInput: { min: 0, step: 0.01 }
+                }}
               />
             )}
           </Stack>
@@ -404,7 +406,9 @@ export function MenuItemsPanel({
 
         {library.length > 0 && (
           <Box>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            <Typography variant="subtitle2" gutterBottom sx={{
+              color: "text.secondary"
+            }}>
               Modifier sections on this item
             </Typography>
             <FormGroup>
@@ -485,7 +489,13 @@ export function MenuItemsPanel({
         </Alert>
       )}
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }} alignItems={{ sm: 'center' }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1}
+        sx={{
+          alignItems: { sm: 'center' },
+          mb: 2
+        }}>
         <TextField
           size="small"
           label="New section name"
@@ -506,7 +516,9 @@ export function MenuItemsPanel({
 
       {creating && (
         <Box sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2, mb: 2 }}>
-          <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+          <Typography variant="subtitle1" gutterBottom sx={{
+            fontWeight: 700
+          }}>
             New item
           </Typography>
           {renderEditor(newItem, null)}

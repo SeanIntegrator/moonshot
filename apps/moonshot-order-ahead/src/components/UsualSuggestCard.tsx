@@ -87,11 +87,15 @@ export function UsualSuggestCard(props: Props) {
               loading="lazy"
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600}>
+              <Typography variant="body2" sx={{
+                fontWeight: 600
+              }}>
                 {li.name}
               </Typography>
               {li.modifierSummary && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {li.modifierSummary}
                 </Typography>
               )}
@@ -100,10 +104,14 @@ export function UsualSuggestCard(props: Props) {
         ))}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               Total
             </Typography>
-            <Typography variant="body1" fontWeight={700}>
+            <Typography variant="body1" sx={{
+              fontWeight: 700
+            }}>
               {formatMoney(totalMinor, currency)}
             </Typography>
           </Box>

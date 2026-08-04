@@ -24,17 +24,28 @@ export function SignedOutPanel({ onContinueGuest }: Props) {
       >
         <PersonOutlinedIcon sx={{ fontSize: 36, color: 'text.secondary' }} />
       </Box>
-      <Typography variant="h6" fontWeight={700} gutterBottom>
+      <Typography variant="h6" gutterBottom sx={{
+        fontWeight: 700
+      }}>
         Sign in to Moonshot
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 280, mx: 'auto' }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 3,
+          maxWidth: 280,
+          mx: 'auto'
+        }}>
         Earn stamps, save your usual, and skip the queue with order-ahead.
       </Typography>
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
         <SignInButton />
       </Box>
       {onContinueGuest && (
-        <Link component="button" variant="body2" color="text.secondary" onClick={onContinueGuest} underline="hover">
+        <Link component="button" variant="body2" onClick={onContinueGuest} underline="hover" sx={{
+          color: "text.secondary"
+        }}>
           Continue as guest
         </Link>
       )}

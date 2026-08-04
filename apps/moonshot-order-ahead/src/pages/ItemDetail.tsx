@@ -162,7 +162,9 @@ export function ItemDetail() {
   if (!menu || !item) {
     return (
       <Container maxWidth="sm" sx={{ py: 2, pb: 10, minHeight: 200 }}>
-        <Typography color="text.secondary">{menu ? 'Item not found.' : 'Loading…'}</Typography>
+        <Typography sx={{
+          color: "text.secondary"
+        }}>{menu ? 'Item not found.' : 'Loading…'}</Typography>
       </Container>
     );
   }
@@ -204,17 +206,29 @@ export function ItemDetail() {
 
       <Container maxWidth="sm" sx={{ py: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 2 }}>
-          <Typography variant="h5" component="h1" fontWeight={700}>
+          <Typography variant="h5" component="h1" sx={{
+            fontWeight: 700
+          }}>
             {item.name}
           </Typography>
           {headerPrice ? (
-            <Typography variant="body1" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+            <Typography
+              variant="body1"
+              sx={{
+                fontWeight: 600,
+                fontVariantNumeric: 'tabular-nums'
+              }}>
               {headerPrice}
             </Typography>
           ) : null}
         </Box>
         {item.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mt: 1
+            }}>
             {item.description}
           </Typography>
         )}

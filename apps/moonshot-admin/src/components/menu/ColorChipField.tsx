@@ -28,7 +28,9 @@ export function ColorChipField({
         value={colorHex || '#cccccc'}
         onChange={(e) => onColorChange(e.target.value)}
         sx={{ width: compact ? 72 : 96 }}
-        InputLabelProps={{ shrink: true }}
+        slotProps={{
+          inputLabel: { shrink: true }
+        }}
       />
       <TextField
         label="Chip label"

@@ -50,7 +50,9 @@ export function Rewards() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 2, pb: 10 }}>
-      {authLoading && <Typography color="text.secondary">Checking session…</Typography>}
+      {authLoading && <Typography sx={{
+        color: "text.secondary"
+      }}>Checking session…</Typography>}
 
       {!authLoading && !isSignedIn && <SignedOutPanel onContinueGuest={() => {}} />}
 
@@ -90,17 +92,23 @@ export function Rewards() {
                 >
                   <CardGiftcardIcon color="success" fontSize="small" />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography variant="body2" sx={{
+                      fontWeight: 600
+                    }}>
                       {summary.rewardDescription || 'Free drink'}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>
                       Ready to redeem at checkout
                     </Typography>
                   </Box>
                 </SurfaceCard>
               ))
             ) : (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 {stampsUntilRewardCopy(summary)}
               </Typography>
             )}
@@ -110,10 +118,17 @@ export function Rewards() {
 
       {isSignedIn && !loading && summary && !summary.loyaltyEnabled && (
         <Box sx={{ textAlign: 'center', py: 6 }}>
-          <Typography variant="h6" fontWeight={700} gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: 700
+          }}>
             Loyalty off
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 2
+            }}>
             This café hasn&apos;t enabled stamps yet.
           </Typography>
           <Button component={RouterLink} to={cafePath('/order')} variant="contained">
@@ -129,7 +144,9 @@ export function Rewards() {
         summary.rewardsAvailable === 0 &&
         redeemed.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{
+              fontWeight: 700
+            }}>
               No stamps yet
             </Typography>
             <Button component={RouterLink} sx={{ mt: 2 }} to={cafePath('/order')} variant="contained">
@@ -151,10 +168,14 @@ export function Rewards() {
                 justifyContent: 'space-between',
               }}
             >
-              <Typography variant="body2" fontWeight={600}>
+              <Typography variant="body2" sx={{
+                fontWeight: 600
+              }}>
                 Free drink
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 {formatShortDate(t.createdAt)}
               </Typography>
             </SurfaceCard>

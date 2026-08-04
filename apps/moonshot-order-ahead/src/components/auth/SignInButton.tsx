@@ -34,9 +34,10 @@ export function SignInButton() {
 
   if (!clientId || clientId.includes('your-google-oauth')) {
     return (
-      <Typography variant="body2" color="text.secondary">
-        Set a real VITE_GOOGLE_CLIENT_ID to enable sign-in.
-      </Typography>
+      <Typography variant="body2" sx={{
+        color: "text.secondary"
+      }}>Set a real VITE_GOOGLE_CLIENT_ID to enable sign-in.
+              </Typography>
     );
   }
 

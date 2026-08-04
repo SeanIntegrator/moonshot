@@ -32,7 +32,12 @@ function ProtectedDashboard() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Moonshot Admin
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              display: { xs: 'none', sm: 'block' }
+            }}>
             {session.adminUser.email} · {session.cafe.name}
           </Typography>
           <Button color="inherit" onClick={logout}>

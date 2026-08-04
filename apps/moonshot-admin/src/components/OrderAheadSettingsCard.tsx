@@ -91,7 +91,9 @@ export function OrderAheadSettingsCard({ cafe, token, onCafeUpdated }: Props) {
         </Alert>
       )}
 
-      <Typography variant="subtitle2" color="text.secondary">
+      <Typography variant="subtitle2" sx={{
+        color: "text.secondary"
+      }}>
         Loyalty
       </Typography>
       <Stack spacing={2} sx={{ mt: 1, mb: 2 }}>
@@ -106,8 +108,10 @@ export function OrderAheadSettingsCard({ cafe, token, onCafeUpdated }: Props) {
           value={stampsPerReward}
           onChange={(e) => setStampsPerReward(Number(e.target.value))}
           disabled={!loyaltyOn || saving}
-          inputProps={{ min: 1, max: 50, step: 1 }}
           sx={{ maxWidth: 220 }}
+          slotProps={{
+            htmlInput: { min: 1, max: 50, step: 1 }
+          }}
         />
         <Box>
           <Button variant="contained" size="small" onClick={() => void saveLoyalty()} disabled={saving}>
@@ -118,10 +122,18 @@ export function OrderAheadSettingsCard({ cafe, token, onCafeUpdated }: Props) {
 
       <Divider sx={{ my: 2 }} />
 
-      <Typography variant="subtitle2" color="text.secondary">
+      <Typography variant="subtitle2" sx={{
+        color: "text.secondary"
+      }}>
         Pickup timing
       </Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }} alignItems="flex-start">
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{
+          alignItems: "flex-start",
+          mt: 1
+        }}>
         <TextField
           label="Minimum lead time (minutes)"
           type="number"
@@ -129,8 +141,10 @@ export function OrderAheadSettingsCard({ cafe, token, onCafeUpdated }: Props) {
           value={defaultPickup}
           onChange={(e) => setDefaultPickup(Number(e.target.value))}
           disabled={saving}
-          inputProps={{ min: 1, max: 1440, step: 1 }}
           helperText="Default earliest pickup slot"
+          slotProps={{
+            htmlInput: { min: 1, max: 1440, step: 1 }
+          }}
         />
         <TextField
           label="Maximum lead time (minutes)"
@@ -139,7 +153,9 @@ export function OrderAheadSettingsCard({ cafe, token, onCafeUpdated }: Props) {
           value={maxPickup}
           onChange={(e) => setMaxPickup(Number(e.target.value))}
           disabled={saving}
-          inputProps={{ min: 1, max: 1440, step: 1 }}
+          slotProps={{
+            htmlInput: { min: 1, max: 1440, step: 1 }
+          }}
         />
       </Stack>
       <Box sx={{ mt: 2 }}>

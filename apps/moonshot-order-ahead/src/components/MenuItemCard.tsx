@@ -43,11 +43,22 @@ export function MenuItemCard({ item, qty = 0 }: Props) {
           onReadyChange={handleReady}
         />
         <Box sx={{ p: 1.25, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 0.5 }}>
-          <Typography variant="body2" fontWeight={600} sx={{ minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              minWidth: 0
+            }}>
             {item.name}
           </Typography>
           {priceLabel ? (
-            <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontVariantNumeric: 'tabular-nums',
+                flexShrink: 0
+              }}>
               {priceLabel}
             </Typography>
           ) : null}

@@ -77,10 +77,19 @@ export function OrderConfirmed() {
       >
         <Box sx={{ flex: 1, textAlign: 'center' }}>
           <CheckCircleIcon sx={{ fontSize: 56, color: 'success.main', mb: 2 }} />
-          <Typography variant="h5" fontWeight={700} gutterBottom>
+          <Typography variant="h5" gutterBottom sx={{
+            fontWeight: 700
+          }}>
             Order confirmed
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 320, mx: 'auto' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 2,
+              maxWidth: 320,
+              mx: 'auto'
+            }}>
             Thanks {isSignedIn ? name : 'there'} — we&apos;ve got your order. We&apos;ll let you know when it&apos;s ready.
           </Typography>
 
@@ -94,9 +103,17 @@ export function OrderConfirmed() {
               }}
             >
               <AccessTimeIcon fontSize="small" color="action" />
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 Pickup at{' '}
-                <Typography component="span" variant="body2" fontWeight={700} color="text.primary">
+                <Typography
+                  component="span"
+                  variant="body2"
+                  sx={{
+                    fontWeight: 700,
+                    color: "text.primary"
+                  }}>
                   {formatTime(order.pickup.pickupTime)}
                 </Typography>
               </Typography>
@@ -107,7 +124,9 @@ export function OrderConfirmed() {
 
           {isSignedIn && (
             <SurfaceCard sx={{ p: 1.5, textAlign: 'left', mb: 3 }}>
-              <Typography variant="body2" color="success.main">
+              <Typography variant="body2" sx={{
+                color: "success.main"
+              }}>
                 ★ You&apos;ll earn <strong>1 stamp</strong> with this order.
               </Typography>
             </SurfaceCard>

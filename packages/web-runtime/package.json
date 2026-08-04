@@ -18,10 +18,10 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@moonshot/types": "workspace:*",
-    "@moonshot/domain": "workspace:*"
+    "@moonshot/domain": "workspace:*",
+    "@moonshot/types": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   }
 }

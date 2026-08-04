@@ -94,7 +94,12 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
       <Typography variant="h6" gutterBottom>
         Build your starter menu
       </Typography>
-      <Typography variant="body2" color="text.secondary" paragraph>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          marginBottom: "16px"
+        }}>
         Tick the drinks, milks, and syrups you offer. You can edit names, descriptions, and prices
         before saving — add your specialty items from the dashboard later.
       </Typography>
@@ -126,7 +131,9 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                   gap: 2,
                 }}
               >
-                <Typography fontWeight={600}>{cat.label}</Typography>
+                <Typography sx={{
+                  fontWeight: 600
+                }}>{cat.label}</Typography>
                 <FormControlLabel
                   onClick={(e) => e.stopPropagation()}
                   onFocus={(e) => e.stopPropagation()}
@@ -147,7 +154,9 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
               {cat.kind === 'drinks' && (
                 <Stack spacing={2}>
                   {cat.key === 'food' && cat.drinks.length === 0 && (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>
                       No current food items
                     </Typography>
                   )}
@@ -170,7 +179,9 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                           />
                         }
                         label={
-                          <Typography fontWeight={600} color={cat.enabled ? 'text.primary' : 'text.disabled'}>
+                          <Typography color={cat.enabled ? 'text.primary' : 'text.disabled'} sx={{
+                            fontWeight: 600
+                          }}>
                             {drink.name}
                           </Typography>
                         }
@@ -209,8 +220,10 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                                 updateDrink(cat.key, drink.templateKey, { priceMinor: Math.round(v * 100) });
                               }
                             }}
-                            inputProps={{ min: 0, step: 0.01 }}
                             sx={{ maxWidth: 160 }}
+                            slotProps={{
+                              htmlInput: { min: 0, step: 0.01 }
+                            }}
                           />
                         </Stack>
                       )}
@@ -271,8 +284,10 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                                 });
                               }
                             }}
-                            inputProps={{ min: 0, step: 0.01 }}
                             sx={{ width: 110 }}
+                            slotProps={{
+                              htmlInput: { min: 0, step: 0.01 }
+                            }}
                           />
                           {cat.key === 'milks' && (
                             <FormControlLabel
@@ -289,7 +304,9 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
                               label="Default"
                             />
                           )}
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             {formatGbpMinor(mod.priceMinor)}
                           </Typography>
                         </>
@@ -303,7 +320,13 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
         ))}
       </Stack>
 
-      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          display: "block",
+          mt: 2
+        }}>
         {enabledDrinks} drink{enabledDrinks === 1 ? '' : 's'} selected · {enabledMilks} milk
         {enabledMilks === 1 ? '' : 's'} selected
       </Typography>

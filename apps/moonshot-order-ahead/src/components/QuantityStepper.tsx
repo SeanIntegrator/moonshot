@@ -36,13 +36,12 @@ export function QuantityStepper({ value, onChange, min = 1, disabled = false }: 
         <RemoveIcon fontSize="small" />
       </IconButton>
       <Typography
-        fontWeight={600}
         sx={{
+          fontWeight: 600,
           minWidth: 20,
           textAlign: 'center',
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
+          fontVariantNumeric: 'tabular-nums'
+        }}>
         {value}
       </Typography>
       <IconButton

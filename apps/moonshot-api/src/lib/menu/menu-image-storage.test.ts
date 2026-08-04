@@ -12,11 +12,22 @@ import {
 const sendMock = vi.fn();
 
 vi.mock('@aws-sdk/client-s3', () => ({
-  S3Client: vi.fn(() => ({ send: sendMock })),
-  PutObjectCommand: vi.fn((input: unknown) => input),
-  GetObjectCommand: vi.fn((input: unknown) => input),
-  DeleteObjectCommand: vi.fn((input: unknown) => input),
-  CopyObjectCommand: vi.fn((input: unknown) => input),
+  // Regular functions so `new X()` works under Vitest 4 (arrow impls are not constructable).
+  S3Client: vi.fn(function MockS3Client() {
+    return { send: sendMock };
+  }),
+  PutObjectCommand: vi.fn(function MockPutObjectCommand(input: unknown) {
+    return input;
+  }),
+  GetObjectCommand: vi.fn(function MockGetObjectCommand(input: unknown) {
+    return input;
+  }),
+  DeleteObjectCommand: vi.fn(function MockDeleteObjectCommand(input: unknown) {
+    return input;
+  }),
+  CopyObjectCommand: vi.fn(function MockCopyObjectCommand(input: unknown) {
+    return input;
+  }),
 }));
 
 describe('menu-image-storage', () => {

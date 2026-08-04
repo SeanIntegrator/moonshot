@@ -75,13 +75,18 @@ export const structuralThemeOptions: ThemeOptions = {
         root: ({ theme }) => ({
           borderRadius: theme.radii.control,
           fontWeight: 700,
-        }),
-        containedPrimary: ({ theme }) => ({
-          backgroundColor: theme.palette.primary.main,
-          color: theme.palette.primary.contrastText,
-          '&:hover': {
-            backgroundColor: theme.palette.primary.dark || theme.palette.primary.main,
-          },
+          variants: [
+            {
+              props: { variant: 'contained', color: 'primary' },
+              style: {
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.dark || theme.palette.primary.main,
+                },
+              },
+            },
+          ],
         }),
         outlined: ({ theme }) => ({
           borderColor: theme.palette.divider,

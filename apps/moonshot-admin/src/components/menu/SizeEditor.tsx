@@ -40,7 +40,9 @@ export function SizeEditor({ sizes, currency, onChange }: Props) {
 
   return (
     <Box>
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+      <Typography variant="subtitle2" gutterBottom sx={{
+        color: "text.secondary"
+      }}>
         Sizes ({currency}) — leave empty for a single-price item
       </Typography>
       <Stack spacing={1.5}>
@@ -49,7 +51,9 @@ export function SizeEditor({ sizes, currency, onChange }: Props) {
             key={size.id}
             sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}
           >
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{
+              alignItems: "flex-start"
+            }}>
               <TextField
                 label="Size name"
                 size="small"
@@ -66,8 +70,10 @@ export function SizeEditor({ sizes, currency, onChange }: Props) {
                   const v = Number.parseFloat(e.target.value);
                   if (Number.isFinite(v)) updateAt(index, { priceMinor: Math.round(v * 100) });
                 }}
-                inputProps={{ min: 0, step: 0.01 }}
                 sx={{ width: 120 }}
+                slotProps={{
+                  htmlInput: { min: 0, step: 0.01 }
+                }}
               />
               <FormControlLabel
                 control={

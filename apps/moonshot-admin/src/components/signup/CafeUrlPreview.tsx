@@ -59,12 +59,19 @@ export function CafeUrlPreview({ cafeName, onSlugResolved }: Props) {
       {status === 'checking' ? (
         <>
           <CircularProgress size={14} color="inherit" sx={{ opacity: 0.5 }} />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             Checking your order URL…
           </Typography>
         </>
       ) : (
-        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            fontFamily: 'monospace'
+          }}>
           Your order page:{' '}
           <Box component="span" sx={{ color: 'primary.main' }}>
             {orderAheadHostPath(orderBase, slug)}

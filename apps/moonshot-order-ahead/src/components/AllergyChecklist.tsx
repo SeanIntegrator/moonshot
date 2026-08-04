@@ -31,7 +31,12 @@ export function AllergyChecklist({ selected, onChange }: Props) {
 
   return (
     <Box sx={{ mt: 1.5 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 1
+        }}>
         Tap any that apply. We declare on the 14 UK allergens.
       </Typography>
       <SurfaceCard sx={{ overflow: 'hidden' }}>

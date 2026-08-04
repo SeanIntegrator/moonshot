@@ -30,6 +30,7 @@ vi.mock('./token-refresh.js', () => ({
 vi.mock('./catalog-fetch.js', () => ({
   fetchSquareCatalog,
   searchSquareCatalogSince,
+  enrichSnapshotWithMissingCategories: vi.fn(async (snapshot: unknown) => snapshot),
 }));
 
 vi.mock('../../menu/menu-sync-catalog.js', () => ({

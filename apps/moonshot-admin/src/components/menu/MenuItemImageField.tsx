@@ -86,7 +86,9 @@ export function MenuItemImageField({
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+      <Typography variant="subtitle2" gutterBottom sx={{
+        color: "text.secondary"
+      }}>
         Item photo
       </Typography>
       <Box
@@ -108,7 +110,9 @@ export function MenuItemImageField({
       />
       <Box sx={{ mt: 1 }}>
         {!itemId ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Save the item first, then upload a photo.
           </Typography>
         ) : (
@@ -121,7 +125,13 @@ export function MenuItemImageField({
             >
               {imageUrl ? 'Replace photo' : 'Upload photo'}
             </Button>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: "block",
+                mt: 0.75
+              }}>
               JPEG, PNG, or WebP · max 5MB · resized to a small thumbnail automatically
             </Typography>
             {isPosItem ? (
@@ -138,11 +148,21 @@ export function MenuItemImageField({
                   label="Use default image"
                 />
                 {hasCustomImage ? (
-                  <Typography variant="caption" color="text.secondary" display="block">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: "block"
+                    }}>
                     Turned off while a custom photo is in use.
                   </Typography>
                 ) : !hasTemplateMatch ? (
-                  <Typography variant="caption" color="text.secondary" display="block">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: "block"
+                    }}>
                     No default photo for this item name.
                   </Typography>
                 ) : null}

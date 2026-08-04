@@ -65,15 +65,22 @@ export const signupTheme = createTheme({
     ...numberInputReset,
     MuiButton: {
       styleOverrides: {
-        containedPrimary: {
-          backgroundColor: brandPalette.lime,
-          color: brandPalette.ink,
-          fontWeight: 700,
-          '&:hover': { backgroundColor: brandPalette.limeHover },
-          '&.Mui-disabled': {
-            backgroundColor: brandPalette.border,
-            color: brandPalette.muted,
-          },
+        root: {
+          variants: [
+            {
+              props: { variant: 'contained', color: 'primary' },
+              style: {
+                backgroundColor: brandPalette.lime,
+                color: brandPalette.ink,
+                fontWeight: 700,
+                '&:hover': { backgroundColor: brandPalette.limeHover },
+                '&.Mui-disabled': {
+                  backgroundColor: brandPalette.border,
+                  color: brandPalette.muted,
+                },
+              },
+            },
+          ],
         },
         outlined: {
           borderColor: brandPalette.border,

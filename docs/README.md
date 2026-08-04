@@ -22,6 +22,7 @@ Start here when onboarding or verifying behaviour against production.
 - [Review nudge](feedback-prompt-flow.md) — single-CTA launch design
 - [M1 bug triage](bugs/m1-triage.md) — discrete cards for remaining UI glitches
 - [API module layout](architecture/api-modules.md) — where order/loyalty/admin/menu logic lives
+- [Dependency upgrades](architecture/dependency-upgrades.md) — Stripe pin, Vite/Vitest coupling, pnpm 11 build policy
 - [HTTP routes & CORS](current/http-surface.md)
 - [Self-service onboarding](onboarding.md)
 - [Order-ahead styling](order-ahead-styling.md) — theme packs, radii, webfonts

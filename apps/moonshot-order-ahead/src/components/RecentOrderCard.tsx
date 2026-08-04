@@ -16,7 +16,12 @@ export function RecentOrderCard({ order, orderingAvailable, onReorder }: Props) 
 
   return (
     <SurfaceCard sx={{ p: 1.5, mb: 1.5 }}>
-      <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: 700,
+          mb: 0.5
+        }}>
         Ordered on {formatOrderDate(order.createdAt)}
       </Typography>
 
@@ -35,11 +40,15 @@ export function RecentOrderCard({ order, orderingAvailable, onReorder }: Props) 
               loading="lazy"
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600}>
+              <Typography variant="body2" sx={{
+                fontWeight: 600
+              }}>
                 {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
               </Typography>
               {li.modifiers.length > 0 && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {modifierSummary(li.modifiers)}
                 </Typography>
               )}

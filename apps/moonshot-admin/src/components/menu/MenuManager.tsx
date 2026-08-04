@@ -153,7 +153,12 @@ export function MenuManager({ cafeSlug, token }: Props) {
       <Typography variant="h6" gutterBottom>
         Menu & pricing
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 2
+        }}>
         {squareConnected
           ? 'Square is the source of truth for items, prices, categories, and modifiers. Use Sync (or wait for automatic updates) to pull Dashboard changes. Moonshot extras — shots, beans, milk temp/texture, ice, toppings — are opt-in via Drink types.'
           : 'Add items, sizes, and reusable modifier sections. Changes appear on the order-ahead app immediately.'}
@@ -163,10 +168,16 @@ export function MenuManager({ cafeSlug, token }: Props) {
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={1.5}
-          alignItems={{ sm: 'center' }}
-          sx={{ mb: 2 }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+          sx={{
+            alignItems: { sm: 'center' },
+            mb: 2
+          }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              flex: 1
+            }}>
             Last synced from Square: {formatSyncedAt(squareStatus?.catalogLastSyncedAt ?? null)}
             {squareStatus?.catalogSyncStatus === 'error' && squareStatus.catalogSyncError
               ? ` — last error: ${squareStatus.catalogSyncError}`
@@ -214,11 +225,12 @@ export function MenuManager({ cafeSlug, token }: Props) {
         >
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ mb: 2 }}
             spacing={2}
-          >
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 2
+            }}>
             <Tabs value={tab} onChange={(_, v) => setTab(v)}>
               <Tab label="Items" />
               <Tab label="Sections (milks, syrups…)" />

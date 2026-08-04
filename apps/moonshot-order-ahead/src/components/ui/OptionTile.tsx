@@ -1,11 +1,11 @@
 import ButtonBase, { type ButtonBaseProps } from '@mui/material/ButtonBase';
 import Box, { type BoxProps } from '@mui/material/Box';
-import { alpha, styled, type Theme } from '@mui/material/styles';
+import { styled, type Theme } from '@mui/material/styles';
 import type { ComponentType } from 'react';
 
 /** Shared selected/idle border for size tiles and modifier chips. */
 export function optionBorderColor(theme: Theme, selected?: boolean): string {
-  return selected ? alpha(theme.palette.text.primary, 0.3) : theme.palette.divider;
+  return selected ? theme.alpha(theme.palette.text.primary, 0.3) : theme.palette.divider;
 }
 
 export type OptionTileProps = ButtonBaseProps & { selected?: boolean };

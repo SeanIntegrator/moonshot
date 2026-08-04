@@ -1,3 +1,17 @@
 packages:
   - "packages/*"
   - "apps/*"
+
+# pnpm 11+: settings live here (package.json "pnpm" field is ignored).
+# Allow lifecycle scripts only for packages that ship native binaries.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+
+allowBuilds:
+  esbuild: true
+  sharp: true
+
+# Default minimumReleaseAge (24h) blocks same-day caret bumps during upgrades.
+# Keep at 0 until the programme settles; raise to 1440 once lockfile is stable.
+minimumReleaseAge: 0

@@ -84,7 +84,12 @@ export function BrandShell({
               </Typography>
             )}
             {subtitle && (
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "text.secondary",
+                  mb: 3
+                }}>
                 {subtitle}
               </Typography>
             )}
@@ -103,9 +108,11 @@ export function BrandShell({
             {footer != null && (
               <Typography
                 variant="body2"
-                color="text.secondary"
-                sx={{ mt: 2, textAlign: 'center' }}
-              >
+                sx={{
+                  color: "text.secondary",
+                  mt: 2,
+                  textAlign: 'center'
+                }}>
                 {footer}
               </Typography>
             )}

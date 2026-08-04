@@ -67,7 +67,12 @@ export function CafeAccessCard({ token, cafeSlug, cafeName }: Props) {
       <Typography variant="h6" gutterBottom>
         Your café links
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 2
+        }}>
         Share these with your team and customers. Baristas sign into the kitchen display with café
         slug <strong>{cafeSlug}</strong> and username <strong>{DEFAULT_KDS_USERNAME}</strong>.
       </Typography>
@@ -80,7 +85,9 @@ export function CafeAccessCard({ token, cafeSlug, cafeName }: Props) {
 
       <Typography variant="subtitle2">Order-ahead</Typography>
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-        <TextField fullWidth size="small" value={orderUrl} InputProps={{ readOnly: true }} />
+        <TextField fullWidth size="small" value={orderUrl} slotProps={{
+          input: { readOnly: true }
+        }} />
         <Button
           variant="outlined"
           startIcon={<ContentCopyIcon fontSize="small" />}
@@ -92,7 +99,9 @@ export function CafeAccessCard({ token, cafeSlug, cafeName }: Props) {
 
       <Typography variant="subtitle2">Kitchen display</Typography>
       <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-        <TextField fullWidth size="small" value={kdsUrl} InputProps={{ readOnly: true }} />
+        <TextField fullWidth size="small" value={kdsUrl} slotProps={{
+          input: { readOnly: true }
+        }} />
         <Button
           variant="outlined"
           startIcon={<ContentCopyIcon fontSize="small" />}
@@ -104,7 +113,9 @@ export function CafeAccessCard({ token, cafeSlug, cafeName }: Props) {
 
       <Stack spacing={1.5}>
         <Typography variant="subtitle2">Kitchen password</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           A kitchen login was created when you signed up {cafeName ? `for ${cafeName}` : ''}. Generate
           a new password anytime — the previous one stops working immediately.
         </Typography>
@@ -122,7 +133,12 @@ export function CafeAccessCard({ token, cafeSlug, cafeName }: Props) {
             }
           >
             New password: <strong style={{ fontFamily: 'monospace' }}>{generatedPassword}</strong>
-            <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+                mt: 0.5
+              }}>
               Copy it now — it won&apos;t be shown again.
             </Typography>
           </Alert>

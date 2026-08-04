@@ -40,7 +40,12 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
       {/* Row 1 — name + edit + quantity */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={700} sx={{ minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 700,
+              minWidth: 0
+            }}>
             {item?.name ?? line.menuItemId}
           </Typography>
           <IconButton
@@ -85,9 +90,12 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
           </IconButton>
           <Typography
             variant="body2"
-            fontWeight={700}
-            sx={{ minWidth: 16, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}
-          >
+            sx={{
+              fontWeight: 700,
+              minWidth: 16,
+              textAlign: 'center',
+              fontVariantNumeric: 'tabular-nums'
+            }}>
             {line.quantity}
           </Typography>
           <IconButton
@@ -111,17 +119,22 @@ export function CheckoutLineRow({ line, item, unitMinor, onQtyChange, isLast = f
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 20 }}>
         <Typography
           variant="caption"
-          color="text.secondary"
-          sx={{ flex: 1, minWidth: 0, lineHeight: 1.35 }}
-        >
+          sx={{
+            color: "text.secondary",
+            flex: 1,
+            minWidth: 0,
+            lineHeight: 1.35
+          }}>
           {mods || 'No extras'}
         </Typography>
         {lineTotalLabel ? (
           <Typography
             variant="body2"
-            fontWeight={700}
-            sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
-          >
+            sx={{
+              fontWeight: 700,
+              flexShrink: 0,
+              fontVariantNumeric: 'tabular-nums'
+            }}>
             {lineTotalLabel}
           </Typography>
         ) : null}

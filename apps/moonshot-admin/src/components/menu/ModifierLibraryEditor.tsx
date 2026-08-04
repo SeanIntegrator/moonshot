@@ -134,11 +134,20 @@ export function ModifierLibraryEditor({ cafeSlug, token, onLibraryChanged }: Pro
     }
   }
 
-  if (loading) return <Typography color="text.secondary">Loading sections…</Typography>;
+  if (loading) return (
+    <Typography sx={{
+      color: "text.secondary"
+    }}>Loading sections…</Typography>
+  );
 
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 2
+        }}>
         Reusable sections (milks, syrups, toppings). Attach them to items on the Items tab. Set KDS colours
         so baristas recognise brands at a glance.
       </Typography>
@@ -156,9 +165,18 @@ export function ModifierLibraryEditor({ cafeSlug, token, onLibraryChanged }: Pro
         {groups.map((group) => (
           <Accordion key={group.id} disableGutters>
             <AccordionSummary>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', pr: 1 }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                  width: '100%',
+                  pr: 1
+                }}>
                 <Typography sx={{ flex: 1 }}>{group.name || 'Untitled section'}</Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {group.options.length} options · {group.selectionType}
                 </Typography>
               </Stack>
@@ -199,12 +217,16 @@ export function ModifierLibraryEditor({ cafeSlug, token, onLibraryChanged }: Pro
                   />
                 </Stack>
 
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant="subtitle2" sx={{
+                  color: "text.secondary"
+                }}>
                   Options (price in pence)
                 </Typography>
                 {group.options.map((opt) => (
                   <Box key={opt.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{
+                      alignItems: "flex-start"
+                    }}>
                       <TextField
                         label="Name"
                         size="small"

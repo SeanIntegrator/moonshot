@@ -23,7 +23,14 @@ export function PageHeader({ title, backTo, onBack, right }: Props) {
       <BackButton onClick={handleBack} aria-label="Back" size="small">
         <BackButtonIcon />
       </BackButton>
-      <Typography variant="h5" component="h1" fontWeight={700} sx={{ flex: 1, textAlign: 'center' }}>
+      <Typography
+        variant="h5"
+        component="h1"
+        sx={{
+          fontWeight: 700,
+          flex: 1,
+          textAlign: 'center'
+        }}>
         {title}
       </Typography>
       <Box sx={{ width: 36, display: 'flex', justifyContent: 'flex-end' }}>{right ?? null}</Box>

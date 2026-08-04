@@ -48,14 +48,13 @@ export function LoyaltyStampCard({
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography
           variant="caption"
-          fontWeight={600}
           sx={{
+            fontWeight: 600,
             color: hero ? 'inherit' : 'text.secondary',
             letterSpacing: 0.5,
             textTransform: 'uppercase',
-            opacity: hero ? 0.85 : 1,
-          }}
-        >
+            opacity: hero ? 0.85 : 1
+          }}>
           Loyalty
         </Typography>
         {onShowQr &&

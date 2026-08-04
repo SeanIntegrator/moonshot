@@ -31,10 +31,11 @@ export function RewardRow({ description, applied, onToggle, disabled }: Props) {
       </Box>
       <Typography
         variant="body2"
-        fontWeight={600}
         color={applied ? 'success.main' : 'text.secondary'}
-        sx={{ flexShrink: 0 }}
-      >
+        sx={{
+          fontWeight: 600,
+          flexShrink: 0
+        }}>
         {applied ? 'Applied' : 'Apply'}
       </Typography>
       <Switch checked={applied} onChange={(e) => onToggle(e.target.checked)} disabled={disabled} size="small" />

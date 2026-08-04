@@ -29,7 +29,12 @@ export function MenuSetupChoice({ token, onEditTemplate }: Props) {
       <Typography variant="h6" gutterBottom>
         Set up your menu
       </Typography>
-      <Typography variant="body2" color="text.secondary" paragraph>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          marginBottom: "16px"
+        }}>
         Connect Square to pull your live catalogue, or start from our café template. Square supplies
         prices, milks, and syrups; we add kitchen prep options (shots, beans, milk temp) on top. You
         can always edit items later in the dashboard.

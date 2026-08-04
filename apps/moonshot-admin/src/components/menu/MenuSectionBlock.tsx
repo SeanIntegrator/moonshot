@@ -40,8 +40,15 @@ export function MenuSectionBlock({
 
   return (
     <Stack spacing={1} sx={{ mb: 3, minWidth: 0 }}>
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <Typography variant="subtitle2" color="text.secondary" sx={{ flex: 1 }}>
+      <Stack direction="row" spacing={1} sx={{
+        alignItems: "center"
+      }}>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            color: "text.secondary",
+            flex: 1
+          }}>
           {section.label}
           {section.parentKey ? '' : ''}
         </Typography>
@@ -60,7 +67,12 @@ export function MenuSectionBlock({
       </Stack>
 
       {showEmptyFood ? (
-        <Typography variant="body2" color="text.secondary" sx={{ pl: 0.5 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            pl: 0.5
+          }}>
           No current food items
         </Typography>
       ) : (
@@ -82,9 +94,11 @@ export function MenuSectionBlock({
                 <Stack
                   direction="row"
                   spacing={2}
-                  alignItems="center"
-                  sx={{ width: '100%', minWidth: 0 }}
-                >
+                  sx={{
+                    alignItems: "center",
+                    width: '100%',
+                    minWidth: 0
+                  }}>
                   <Typography
                     sx={{
                       flex: 1,
@@ -96,16 +110,22 @@ export function MenuSectionBlock({
                   >
                     {item.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.secondary",
+                      flexShrink: 0
+                    }}>
                     {displayPrice}
                   </Typography>
                   <Stack
                     direction="row"
                     spacing={0.5}
-                    alignItems="center"
-                    sx={{ flexShrink: 0 }}
                     onClick={(e) => e.stopPropagation()}
-                  >
+                    sx={{
+                      alignItems: "center",
+                      flexShrink: 0
+                    }}>
                     <Switch
                       size="small"
                       checked={item.isAvailable}

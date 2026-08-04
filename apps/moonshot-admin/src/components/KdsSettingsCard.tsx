@@ -97,8 +97,10 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
             value={columns}
             onChange={(e) => setColumns(Number(e.target.value))}
             disabled={saving}
-            inputProps={{ min: 1, max: 6, step: 1 }}
             sx={{ width: 120 }}
+            slotProps={{
+              htmlInput: { min: 1, max: 6, step: 1 }
+            }}
           />
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <InputLabel id="kds-groupby-label">Group by</InputLabel>
@@ -114,7 +116,9 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
             </Select>
           </FormControl>
         </Stack>
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" sx={{
+          color: "text.secondary"
+        }}>
           Display
         </Typography>
         <FormControlLabel
@@ -129,7 +133,9 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
           control={<Switch checked={showSource} onChange={(_, v) => setShowSource(v)} disabled={saving} />}
           label="Show order source"
         />
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" sx={{
+          color: "text.secondary"
+        }}>
           Prep ETA hints
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -140,7 +146,9 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
             value={basePrep}
             onChange={(e) => setBasePrep(Number(e.target.value))}
             disabled={saving}
-            inputProps={{ min: 1, max: 120, step: 1 }}
+            slotProps={{
+              htmlInput: { min: 1, max: 120, step: 1 }
+            }}
           />
           <TextField
             label="Per item (minutes)"
@@ -149,10 +157,14 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
             value={perItem}
             onChange={(e) => setPerItem(Number(e.target.value))}
             disabled={saving}
-            inputProps={{ min: 0, max: 30, step: 1 }}
+            slotProps={{
+              htmlInput: { min: 0, max: 30, step: 1 }
+            }}
           />
         </Stack>
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" sx={{
+          color: "text.secondary"
+        }}>
           Ticket timer thresholds (minutes)
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -163,7 +175,9 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
             value={greenMax}
             onChange={(e) => setGreenMax(Number(e.target.value))}
             disabled={saving}
-            inputProps={{ min: 1, max: 60, step: 1 }}
+            slotProps={{
+              htmlInput: { min: 1, max: 60, step: 1 }
+            }}
           />
           <TextField
             label="Amber max"
@@ -172,7 +186,9 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
             value={amberMax}
             onChange={(e) => setAmberMax(Number(e.target.value))}
             disabled={saving}
-            inputProps={{ min: 2, max: 120, step: 1 }}
+            slotProps={{
+              htmlInput: { min: 2, max: 120, step: 1 }
+            }}
           />
         </Stack>
         <TextField
@@ -182,8 +198,10 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
           value={volume}
           onChange={(e) => setVolume(Number(e.target.value))}
           disabled={saving}
-          inputProps={{ min: 0, max: 100, step: 1 }}
           sx={{ maxWidth: 220 }}
+          slotProps={{
+            htmlInput: { min: 0, max: 100, step: 1 }
+          }}
         />
         <Box>
           <Button variant="contained" onClick={() => void save()} disabled={saving}>

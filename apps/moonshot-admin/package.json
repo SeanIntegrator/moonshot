@@ -15,24 +15,24 @@
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@moonshot/domain": "workspace:*",
     "@moonshot/types": "workspace:*",
     "@moonshot/web-runtime": "workspace:*",
-    "@mui/icons-material": "^6.5.0",
-    "@mui/material": "^6.4.7",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^6.28.0",
-    "socket.io-client": "^4.8.3",
-    "@moonshot/domain": "workspace:*"
+    "@mui/icons-material": "^9.2.0",
+    "@mui/material": "^9.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^6.30.4",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
-    "@types/node": "^22.13.0",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.8.3",
-    "vite": "^5.4.14",
-    "vitest": "^3.0.9"
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   }
 }

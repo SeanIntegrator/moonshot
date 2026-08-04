@@ -74,7 +74,12 @@ export function SignupForm({
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
           Café created!
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mt: 1
+          }}>
           Setting up your workspace…
         </Typography>
         <CircularProgress size={24} color="primary" sx={{ mt: 3 }} />
@@ -120,19 +125,21 @@ export function SignupForm({
         margin="normal"
         required
         disabled={submitting}
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position="end">
-              <IconButton
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPassword((s) => !s)}
-                edge="end"
-                size="small"
-              >
-                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-              </IconButton>
-            </InputAdornment>
-          ),
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((s) => !s)}
+                  edge="end"
+                  size="small"
+                >
+                  {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }
         }}
       />
       {password.length > 0 && (

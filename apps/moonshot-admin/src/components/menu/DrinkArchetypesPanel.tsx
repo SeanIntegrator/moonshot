@@ -109,7 +109,11 @@ export function DrinkArchetypesPanel({ cafeSlug, token }: Props) {
   }
 
   if (loading && !recipes) {
-    return <Typography color="text.secondary">Loading drink types…</Typography>;
+    return (
+      <Typography sx={{
+        color: "text.secondary"
+      }}>Loading drink types…</Typography>
+    );
   }
 
   const catalogue = recipes
@@ -118,7 +122,12 @@ export function DrinkArchetypesPanel({ cafeSlug, token }: Props) {
 
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 2
+        }}>
         Drink types control which modifier sections attach by default. Editing a recipe does not
         change existing items until you apply it. Cafés that never charge for alternative milks can
         set all milk option prices to £0 in the Sections tab.
@@ -146,10 +155,17 @@ export function DrinkArchetypesPanel({ cafeSlug, token }: Props) {
               key={id}
               sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}
             >
-              <Typography variant="subtitle1" fontWeight={700}>
+              <Typography variant="subtitle1" sx={{
+                fontWeight: 700
+              }}>
                 {meta.label}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mb: 1
+                }}>
                 {meta.description}
               </Typography>
               <FormGroup row sx={{ mb: 1 }}>
@@ -167,7 +183,9 @@ export function DrinkArchetypesPanel({ cafeSlug, token }: Props) {
                   />
                 ))}
               </FormGroup>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{
+                alignItems: { sm: 'center' }
+              }}>
                 <FormControl size="small" sx={{ minWidth: 200 }} disabled={!hasMilk}>
                   <InputLabel>Alt-milk charge</InputLabel>
                   <Select

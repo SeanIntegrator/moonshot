@@ -9,10 +9,14 @@ type Props = {
 export function ProfileStatCard({ value, label }: Props) {
   return (
     <SurfaceCard sx={{ flex: 1, p: 1.5, textAlign: 'center' }}>
-      <Typography variant="h5" fontWeight={700}>
+      <Typography variant="h5" sx={{
+        fontWeight: 700
+      }}>
         {value}
       </Typography>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" sx={{
+        color: "text.secondary"
+      }}>
         {label}
       </Typography>
     </SurfaceCard>

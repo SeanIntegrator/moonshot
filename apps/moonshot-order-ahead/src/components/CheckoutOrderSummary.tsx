@@ -17,10 +17,14 @@ export function CheckoutOrderSummary(params: {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
-        <Typography variant="subtitle1" fontWeight={700}>
+        <Typography variant="subtitle1" sx={{
+          fontWeight: 700
+        }}>
           Your order
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           {itemCount} items
         </Typography>
       </Box>
@@ -53,10 +57,17 @@ export function CheckoutOrderSummary(params: {
               borderColor: 'divider',
             }}
           >
-            <Typography variant="body2" fontWeight={600}>
+            <Typography variant="body2" sx={{
+              fontWeight: 600
+            }}>
               Loyalty (−1 free)
             </Typography>
-            <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+                fontVariantNumeric: 'tabular-nums'
+              }}>
               −{formatMoney(discountMinor)}
             </Typography>
           </Box>
@@ -72,10 +83,17 @@ export function CheckoutOrderSummary(params: {
             borderColor: 'divider',
           }}
         >
-          <Typography variant="body1" fontWeight={700}>
+          <Typography variant="body1" sx={{
+            fontWeight: 700
+          }}>
             Total
           </Typography>
-          <Typography variant="body1" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+          <Typography
+            variant="body1"
+            sx={{
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums'
+            }}>
             {formatMoney(totalMinor)}
           </Typography>
         </Box>

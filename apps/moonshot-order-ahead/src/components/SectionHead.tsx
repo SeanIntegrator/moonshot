@@ -13,11 +13,22 @@ export function SectionHead({ eyebrow, title, action, sx }: Props) {
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1.5, ...sx }}>
       <Box>
         {eyebrow && (
-          <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5, textTransform: 'uppercase' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              letterSpacing: 0.5,
+              textTransform: 'uppercase'
+            }}>
             {eyebrow}
           </Typography>
         )}
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mt: eyebrow ? 0.25 : 0 }}>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 700,
+            mt: eyebrow ? 0.25 : 0
+          }}>
           {title}
         </Typography>
       </Box>

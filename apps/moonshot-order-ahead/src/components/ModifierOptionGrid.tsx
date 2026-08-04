@@ -79,10 +79,22 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
   if (group.selectionType === 'multi') {
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 700,
+            mb: 1
+          }}>
           {group.name}
           {titleDelta ? (
-            <Typography component="span" variant="body2" color="text.secondary" fontWeight={600} sx={{ ml: 1 }}>
+            <Typography
+              component="span"
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontWeight: 600,
+                ml: 1
+              }}>
               {titleDelta}
             </Typography>
           ) : null}
@@ -159,7 +171,12 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
 
   return (
     <Box sx={{ mt: 2 }}>
-      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 700,
+          mb: 1
+        }}>
         {group.name}
       </Typography>
       <Box
@@ -186,16 +203,24 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
                 {colorDot(opt.colorHex)}
-                <Typography variant="body2" fontWeight={600} sx={{ minWidth: 0, flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    minWidth: 0,
+                    flex: 1
+                  }}>
                   {opt.name}
                 </Typography>
                 {delta ? (
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
-                    sx={{ ml: 'auto', flexShrink: 0 }}
-                  >
+                    sx={{
+                      color: "text.secondary",
+                      fontWeight: 600,
+                      ml: 'auto',
+                      flexShrink: 0
+                    }}>
                     {delta}
                   </Typography>
                 ) : null}
