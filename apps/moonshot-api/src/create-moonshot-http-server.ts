@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { Server } from 'socket.io';
 import { config } from './lib/config.js';
 import { createCorsOriginValidator, parseAllowedOrigins } from './lib/cors-origins.js';
+import { SOCKET_SERVER_OPTIONS } from './realtime/socket-server-options.js';
 import { attachCustomerSocketIO } from './realtime/customer-events.js';
 import { registerCustomerSocketHandlers } from './realtime/customer-socket.js';
 import { attachAdminSocketIO } from './realtime/admin-events.js';
@@ -48,6 +49,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
       origin: corsOrigin,
       credentials: true,
     },
+    ...SOCKET_SERVER_OPTIONS,
   });
 
   attachKdsSocketIO(io);

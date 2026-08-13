@@ -1,7 +1,7 @@
 import type { AdminServerToClientEvent } from '@moonshot/types';
 import { ADMIN_SOCKET_NAMESPACE } from '@moonshot/domain';
+import { useRealtimeConnection } from '@moonshot/web-runtime/react';
 import { useEffect, useRef } from 'react';
-import { io, type Socket } from 'socket.io-client';
 import { getApiBaseUrl } from '../lib/admin-api.js';
 import { getSquareConnectStatus } from '../lib/admin-api.js';
 
@@ -18,6 +18,8 @@ type Options = {
 
 /**
  * Subscribe to `/admin` menu-sync pushes; fall back to 60s status reconcile.
+ * A non-recovered reconnect triggers an immediate reconcile instead of waiting
+ * for the next poll tick.
  */
 export function useAdminMenuSync({
   token,
@@ -32,29 +34,35 @@ export function useAdminMenuSync({
   onMenuSyncedRef.current = onMenuSynced;
   const onReconcileRef = useRef(onReconcileSyncDetected);
   onReconcileRef.current = onReconcileSyncDetected;
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+
+  const { connection } = useRealtimeConnection({
+    enabled: enabled && Boolean(token),
+    baseUrl: getApiBaseUrl(),
+    namespace: ADMIN_SOCKET_NAMESPACE,
+    auth: () => ({ token: tokenRef.current }),
+    onConnect: ({ recovered }) => {
+      if (!recovered) onReconcileRef.current();
+    },
+  });
+
+  useEffect(() => {
+    if (!connection) return;
+    const handler = (...args: unknown[]) => {
+      const ev = args[0] as AdminServerToClientEvent;
+      if (ev.type === 'admin:menu:synced') {
+        syncedAtRef.current = ev.syncedAt;
+        onMenuSyncedRef.current(ev);
+      }
+    };
+    connection.on('admin:event', handler);
+    return () => connection.off('admin:event', handler);
+  }, [connection]);
 
   useEffect(() => {
     if (!enabled || !token) return;
-
     let cancelled = false;
-    let socket: Socket | null = null;
-
-    try {
-      socket = io(`${getApiBaseUrl()}${ADMIN_SOCKET_NAMESPACE}`, {
-        auth: { token },
-        transports: ['websocket', 'polling'],
-      });
-
-      socket.on('admin:event', (ev: AdminServerToClientEvent) => {
-        if (cancelled) return;
-        if (ev.type === 'admin:menu:synced') {
-          syncedAtRef.current = ev.syncedAt;
-          onMenuSyncedRef.current(ev);
-        }
-      });
-    } catch {
-      // Socket unavailable — reconcile interval still runs.
-    }
 
     const interval = window.setInterval(() => {
       void (async () => {
@@ -75,7 +83,6 @@ export function useAdminMenuSync({
     return () => {
       cancelled = true;
       window.clearInterval(interval);
-      socket?.disconnect();
     };
   }, [enabled, token]);
 }

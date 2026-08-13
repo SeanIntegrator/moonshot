@@ -1,12 +1,13 @@
 import './index.css';
 import type { FormEvent } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useGracedStatus } from '@moonshot/web-runtime/react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppHeader } from '@/components/AppHeader';
 import { LoginScreen } from '@/components/LoginScreen';
 import { FlowBoard } from './board/FlowBoard.js';
-import { RecentOrdersDialog } from './board/RecentOrdersDialog.js';
+import { RecentOrdersDialog } from './board/recent-orders/RecentOrdersDialog.js';
 import { useKdsConfig } from './hooks/useKdsConfig.js';
 import { useKdsOrders } from './hooks/useKdsOrders.js';
 import { kdsLogin } from './lib/kds-api.js';
@@ -21,6 +22,8 @@ export function App() {
   const [loginForm, setLoginForm] = useState({ cafeSlug: '', username: '', password: '' });
   const [loginError, setLoginError] = useState<string | null>(null);
   const [recentOpen, setRecentOpen] = useState(false);
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   const clearExpiredSession = useCallback((current: KdsSession): void => {
     setLoginForm((f) => ({
@@ -33,11 +36,18 @@ export function App() {
     setSession(null);
   }, []);
 
+  const onSessionExpired = useCallback((): void => {
+    const current = sessionRef.current;
+    if (current) clearExpiredSession(current);
+  }, [clearExpiredSession]);
+
   const {
     orders,
     error: ordersError,
     setError: setOrdersError,
+    connection,
     dismissingIds,
+    recallSelections,
     complete,
     finalizeDismiss,
     recallOrder,
@@ -46,6 +56,8 @@ export function App() {
     session,
     onSessionExpired: clearExpiredSession,
   });
+
+  const displayConnection = useGracedStatus(connection);
 
   const {
     kdsConfig,
@@ -111,6 +123,7 @@ export function App() {
             cafeName={session.cafeName}
             cafeSlug={session.cafeSlug}
             username={session.username}
+            connection={displayConnection}
             onOpenRecentOrders={() => setRecentOpen(true)}
             onLogout={logout}
           />
@@ -126,6 +139,7 @@ export function App() {
               orders={orders}
               kdsConfig={kdsConfig}
               dismissingIds={dismissingIds}
+              recallSelections={recallSelections}
               onComplete={complete}
               onExited={finalizeDismiss}
               onSetStatus={setStatus}
@@ -142,7 +156,7 @@ export function App() {
             token={session.token}
             kdsConfig={kdsConfig}
             onRecall={recallOrder}
-            onSessionExpired={() => clearExpiredSession(session)}
+            onSessionExpired={onSessionExpired}
           />
         ) : null}
       </div>

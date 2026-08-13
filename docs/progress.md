@@ -56,8 +56,8 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 
 ### Shared packages & realtime
 
-- Workspaces: **`@moonshot/types`**, **`@moonshot/domain`**, **`@moonshot/web-runtime`**.
-- Socket.io namespaces: **`/kds`**, **`/customer`**, **`/admin`**.
+- Workspaces: **`@moonshot/types`**, **`@moonshot/domain`**, **`@moonshot/web-runtime`** (`RealtimeConnection` + `@moonshot/web-runtime/react`).
+- Socket.io namespaces: **`/kds`**, **`/customer`**, **`/admin`**. Tuned heartbeats + connection state recovery; KDS reconnects without a board flash.
 
 ### Deployed on Railway
 

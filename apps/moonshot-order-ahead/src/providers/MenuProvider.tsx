@@ -9,10 +9,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { CUSTOMER_SOCKET_NAMESPACE } from '@moonshot/domain';
+import { RealtimeConnection } from '@moonshot/web-runtime';
 import { useCafeSlugFromRoute } from '../hooks/useCafePath.js';
-import { apiFetch } from '../lib/api.js';
+import { apiFetch, getApiBaseUrl } from '../lib/api.js';
 import { prefetchMenuImages } from '../lib/menu-image-cache.js';
-import { createCustomerSocket } from '../lib/socket.js';
 
 type MenuContextValue = {
   menu: NormalisedMenu | null;
@@ -95,32 +96,39 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   // Push: subscribe to café menu invalidation after Square catalog sync.
   useEffect(() => {
     if (!slug || slug === 'unknown') return;
-    // createCustomerSocket is autoConnect:false — connect after subscribe setup.
-    const socket = createCustomerSocket();
-    let cancelled = false;
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl) return;
 
-    const onEvent = (ev: CustomerServerToClientEvent) => {
+    let cancelled = false;
+    const connection = new RealtimeConnection({
+      baseUrl,
+      namespace: CUSTOMER_SOCKET_NAMESPACE,
+      onConnect: ({ recovered }) => {
+        if (cancelled || recovered) return;
+        connection.emit('customer:subscribeCafe', { cafeSlug: slug }, (err?: unknown) => {
+          if (err) {
+            console.warn('[menu] subscribeCafe failed', err);
+          }
+        });
+      },
+      onResume: () => {
+        if (cancelled) return;
+        void loadMenu(slug, { background: true });
+      },
+    });
+
+    connection.on('customer:event', (...args: unknown[]) => {
       if (cancelled) return;
+      const ev = args[0] as CustomerServerToClientEvent;
       if (ev.type === 'customerMenuUpdated') {
         void loadMenu(slug, { background: true });
       }
-    };
-
-    socket.on('connect', () => {
-      socket.emit('customer:subscribeCafe', { cafeSlug: slug }, (err?: string) => {
-        if (err) {
-          // Non-fatal — menu still loads via HTTP.
-          console.warn('[menu] subscribeCafe failed', err);
-        }
-      });
     });
-    socket.on('customer:event', onEvent);
-    socket.connect();
+    connection.connect();
 
     return () => {
       cancelled = true;
-      socket.off('customer:event', onEvent);
-      socket.disconnect();
+      connection.destroy();
     };
   }, [slug, loadMenu]);
 

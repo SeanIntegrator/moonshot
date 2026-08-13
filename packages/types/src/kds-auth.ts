@@ -47,6 +47,15 @@ export interface KdsRecentOrdersResponse {
   orders: NormalisedOrder[];
 }
 
+/**
+ * Body for `POST /kds/orders/:orderId/recall`.
+ * `lineIds` are the lines to remake (un-crossed). The server ignores this
+ * today; the KDS seeds made-state client-side from the same payload.
+ */
+export interface KdsRecallOrderRequest {
+  lineIds?: string[];
+}
+
 /** Recall a specific completed order by id — same shape as recall-last. */
 export interface KdsRecallOrderResponse {
   order: NormalisedOrder;

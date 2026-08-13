@@ -1,4 +1,6 @@
 import type { CustomerServerToClientEvent } from '@moonshot/types';
+import { CUSTOMER_SOCKET_NAMESPACE } from '@moonshot/domain';
+import { RealtimeConnection, type RealtimeStatus } from '@moonshot/web-runtime';
 import {
   createContext,
   useCallback,
@@ -9,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { createCustomerSocket } from '../lib/socket.js';
+import { getApiBaseUrl } from '../lib/api.js';
 
 export type CustomerConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
@@ -40,6 +42,21 @@ type CustomerEventsContextValue = {
 
 const CustomerEventsContext = createContext<CustomerEventsContextValue | null>(null);
 
+function toCustomerStatus(status: RealtimeStatus): CustomerConnectionStatus {
+  switch (status) {
+    case 'connected':
+      return 'connected';
+    case 'idle':
+      return 'idle';
+    case 'unauthorized':
+    case 'failed':
+      return 'error';
+    case 'connecting':
+    case 'reconnecting':
+      return 'connecting';
+  }
+}
+
 /**
  * Single `/customer` Socket.io connection shared by ActiveOrdersProvider,
  * useOrderTracking, and LoyaltyProvider.
@@ -56,9 +73,8 @@ export function CustomerEventsProvider({ children }: { children: ReactNode }) {
 
   const handlersRef = useRef(new Set<EventHandler>());
   const roomsRef = useRef(new Map<string, RoomEntry>());
-  const socketRef = useRef<ReturnType<typeof createCustomerSocket> | null>(null);
+  const connectionRef = useRef<RealtimeConnection | null>(null);
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Bumps when interest changes so the connection effect re-evaluates.
   const [interestEpoch, setInterestEpoch] = useState(0);
 
   const bumpInterest = useCallback(() => {
@@ -69,38 +85,49 @@ export function CustomerEventsProvider({ children }: { children: ReactNode }) {
     return handlersRef.current.size > 0 || roomsRef.current.size > 0;
   }, []);
 
+  const emitSubscribe = useCallback((orderId: string, entry: RoomEntry): void => {
+    const connection = connectionRef.current;
+    if (!connection?.connected) return;
+    connection.emit(
+      'customer:subscribe',
+      { type: 'customer:subscribe', orderId, authToken: entry.authToken },
+      (err?: string) => {
+        const current = roomsRef.current.get(orderId);
+        if (!current) return;
+        if (!err) current.joined = true;
+        for (const ack of current.pendingAcks) ack(err);
+        current.pendingAcks.clear();
+      },
+    );
+  }, []);
+
   const subscribeAllRooms = useCallback(() => {
-    const socket = socketRef.current;
-    if (!socket?.connected) return;
+    const connection = connectionRef.current;
+    if (!connection?.connected) return;
 
     for (const [orderId, entry] of roomsRef.current) {
       entry.joined = false;
-      socket.emit(
-        'customer:subscribe',
-        { type: 'customer:subscribe', orderId, authToken: entry.authToken },
-        (err?: string) => {
-          const current = roomsRef.current.get(orderId);
-          if (!current) return;
-          if (!err) current.joined = true;
-          for (const ack of current.pendingAcks) ack(err);
-          current.pendingAcks.clear();
-        },
-      );
+      emitSubscribe(orderId, entry);
+    }
+  }, [emitSubscribe]);
+
+  const markRoomsRecovered = useCallback(() => {
+    for (const entry of roomsRef.current.values()) {
+      entry.joined = true;
+      for (const ack of entry.pendingAcks) ack();
+      entry.pendingAcks.clear();
     }
   }, []);
 
-  // Own the socket while any handler or room registration is active.
   useEffect(() => {
     if (!hasInterest()) {
-      // Defer disconnect so StrictMode's unmount→remount does not thrash.
       if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
       disconnectTimerRef.current = setTimeout(() => {
         if (hasInterest()) return;
-        const socket = socketRef.current;
-        if (socket) {
-          socket.removeAllListeners();
-          socket.disconnect();
-          socketRef.current = null;
+        const connection = connectionRef.current;
+        if (connection) {
+          connection.destroy();
+          connectionRef.current = null;
         }
         setConnectionStatus('idle');
         for (const entry of roomsRef.current.values()) {
@@ -115,53 +142,47 @@ export function CustomerEventsProvider({ children }: { children: ReactNode }) {
       disconnectTimerRef.current = null;
     }
 
-    if (socketRef.current) return;
+    if (connectionRef.current) return;
+
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl) {
+      setConnectionStatus('error');
+      return;
+    }
 
     setConnectionStatus('connecting');
-    const socket = createCustomerSocket();
-    socketRef.current = socket;
+    const connection = new RealtimeConnection({
+      baseUrl,
+      namespace: CUSTOMER_SOCKET_NAMESPACE,
+      onStatusChange: (status) => setConnectionStatus(toCustomerStatus(status)),
+      onConnect: ({ recovered }) => {
+        if (recovered) {
+          markRoomsRecovered();
+          return;
+        }
+        subscribeAllRooms();
+      },
+    });
+    connectionRef.current = connection;
 
-    const onEvent = (ev: CustomerServerToClientEvent) => {
+    connection.on('customer:event', (...args: unknown[]) => {
+      const ev = args[0] as CustomerServerToClientEvent;
       for (const handler of handlersRef.current) handler(ev);
-    };
-
-    socket.on('customer:event', onEvent);
-
-    socket.on('connect', () => {
-      setConnectionStatus('connected');
-      subscribeAllRooms();
     });
-
-    socket.on('disconnect', () => {
-      for (const entry of roomsRef.current.values()) {
-        entry.joined = false;
-      }
-      if (socketRef.current === socket) {
-        setConnectionStatus(hasInterest() ? 'connecting' : 'idle');
-      }
-    });
-
-    socket.on('connect_error', () => {
-      setConnectionStatus('error');
-    });
-
-    socket.connect();
+    connection.connect();
 
     return () => {
-      // Effect cleanup only runs when the provider unmounts or deps flip in a
-      // way that tears us down; the deferred path above handles interest→0.
+      // Interest→0 teardown is deferred above; this cleanup is for provider unmount / dep flip.
     };
-  }, [interestEpoch, hasInterest, subscribeAllRooms]);
+  }, [interestEpoch, hasInterest, subscribeAllRooms, markRoomsRecovered]);
 
-  // Tear down on provider unmount.
   useEffect(() => {
     return () => {
       if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
-      const socket = socketRef.current;
-      if (socket) {
-        socket.removeAllListeners();
-        socket.disconnect();
-        socketRef.current = null;
+      const connection = connectionRef.current;
+      if (connection) {
+        connection.destroy();
+        connectionRef.current = null;
       }
     };
   }, []);
@@ -197,33 +218,20 @@ export function CustomerEventsProvider({ children }: { children: ReactNode }) {
         };
         roomsRef.current.set(orderId, entry);
       } else {
-        // Prefer a fresher token if a second consumer registers (e.g. session after guest).
         entry.authToken = authToken;
       }
 
       entry.count += 1;
       if (params.onSubscribeAck) {
-        if (entry.joined && socketRef.current?.connected) {
-          // Already in the room on this connection — ack immediately.
+        if (entry.joined && connectionRef.current?.connected) {
           params.onSubscribeAck();
         } else {
           entry.pendingAcks.add(params.onSubscribeAck);
         }
       }
 
-      const socket = socketRef.current;
-      if (entry.count === 1 && socket?.connected) {
-        socket.emit(
-          'customer:subscribe',
-          { type: 'customer:subscribe', orderId, authToken: entry.authToken },
-          (err?: string) => {
-            const current = roomsRef.current.get(orderId);
-            if (!current) return;
-            if (!err) current.joined = true;
-            for (const ack of current.pendingAcks) ack(err);
-            current.pendingAcks.clear();
-          },
-        );
+      if (entry.count === 1) {
+        emitSubscribe(orderId, entry);
       }
 
       bumpInterest();
@@ -241,7 +249,7 @@ export function CustomerEventsProvider({ children }: { children: ReactNode }) {
         current.count -= 1;
         if (current.count <= 0) {
           roomsRef.current.delete(orderId);
-          const live = socketRef.current;
+          const live = connectionRef.current;
           if (live?.connected) {
             live.emit('customer:unsubscribe', { type: 'customer:unsubscribe', orderId });
           }
@@ -249,7 +257,7 @@ export function CustomerEventsProvider({ children }: { children: ReactNode }) {
         bumpInterest();
       };
     },
-    [bumpInterest],
+    [bumpInterest, emitSubscribe],
   );
 
   const value = useMemo(
@@ -261,9 +269,7 @@ export function CustomerEventsProvider({ children }: { children: ReactNode }) {
     [connectionStatus, subscribe, registerOrderRoom],
   );
 
-  return (
-    <CustomerEventsContext.Provider value={value}>{children}</CustomerEventsContext.Provider>
-  );
+  return <CustomerEventsContext.Provider value={value}>{children}</CustomerEventsContext.Provider>;
 }
 
 export function useCustomerEvents(): CustomerEventsContextValue {

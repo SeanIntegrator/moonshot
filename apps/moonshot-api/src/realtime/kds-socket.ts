@@ -55,6 +55,12 @@ export function registerKdsSocketHandlers(io: Server): void {
       socket.disconnect(true);
       return;
     }
+    console.info('[kds-socket] connection', {
+      cafeId: claims.cafeId,
+      recovered: socket.recovered,
+    });
+    // Rooms are restored automatically on recovery; join is idempotent and
+    // still required when recovery fails and this is a fresh handshake.
     void socket.join(kdsCafeRoom(claims.cafeId));
   });
 }

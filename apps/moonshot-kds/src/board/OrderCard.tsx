@@ -27,6 +27,8 @@ type OrderCardProps = {
   order: NormalisedOrder;
   kdsConfig: KdsConfig;
   dismissing: boolean;
+  /** Pre-crossed line ids for a client-seeded recall. Ignored when status is ready. */
+  initialMadeIds?: ReadonlySet<string>;
   onComplete: (orderId: string) => void;
   onExited: (orderId: string) => void;
   onSetStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
@@ -86,6 +88,7 @@ export function OrderCard({
   order,
   kdsConfig,
   dismissing,
+  initialMadeIds,
   onComplete,
   onExited,
   onSetStatus,
@@ -93,9 +96,12 @@ export function OrderCard({
   const kind = deriveTicketKind(order);
   const timer = useOrderTimer(order, kdsConfig);
   const lineIdsKey = order.items.map((i) => i.id).join('|');
-  const [madeIds, setMadeIds] = useState<Set<string>>(() =>
-    order.status === 'ready' ? new Set(order.items.map((i) => i.id)) : new Set(),
-  );
+  const initialMadeKey =
+    initialMadeIds && initialMadeIds.size > 0 ? [...initialMadeIds].join('|') : '';
+  const [madeIds, setMadeIds] = useState<Set<string>>(() => {
+    if (order.status === 'ready') return new Set(order.items.map((i) => i.id));
+    return new Set(initialMadeIds ?? []);
+  });
   const [foodExpanded, setFoodExpanded] = useState(true);
   const bodyRef = useRef<HTMLDivElement>(null);
   // Prevents socket/poll refreshes from overwriting in-progress barista line toggles.
@@ -140,9 +146,9 @@ export function OrderCard({
     if (order.status === 'ready' && ids.length > 0) {
       setMadeIds(new Set(ids));
     } else {
-      setMadeIds(new Set());
+      setMadeIds(new Set(initialMadeKey ? initialMadeKey.split('|') : []));
     }
-  }, [order.id, order.status, lineIdsKey]);
+  }, [order.id, order.status, lineIdsKey, initialMadeKey]);
 
   useEffect(() => {
     if (lineIds.length === 0) return;

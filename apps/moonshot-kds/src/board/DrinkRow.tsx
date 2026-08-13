@@ -1,4 +1,5 @@
 import type { FlowLineView } from '@moonshot/domain';
+import { CheckSquare, Square } from 'lucide-react';
 import { Fragment } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,8 @@ type DrinkRowProps = {
   hideBottomBorder?: boolean;
   /** `compact` for close-range chrome (e.g. recent orders); board stays glanceable. */
   density?: FlowRowDensity;
+  /** Checkbox affordance for recall line selection; `made` is the inverse of selected. */
+  showSelectControl?: boolean;
 };
 
 /** Shot tags are joined with ` · ` upstream — split for 2px-gap bracket rendering. */
@@ -57,6 +60,7 @@ export function DrinkRow({
   onToggleMade,
   hideBottomBorder = false,
   density = 'board',
+  showSelectControl = false,
 }: DrinkRowProps) {
   const compact = density === 'compact';
   const hasMods = view.milk != null || view.syrups.length > 0;
@@ -68,6 +72,7 @@ export function DrinkRow({
       type="button"
       data-flow-row="drink"
       data-density={density}
+      aria-pressed={showSelectControl ? !made : undefined}
       className={cn(
         'grid w-full cursor-pointer items-stretch gap-0 bg-transparent text-left text-card-foreground outline-none [-webkit-tap-highlight-color:transparent]',
         compact ? 'px-3' : 'px-4',
@@ -87,6 +92,15 @@ export function DrinkRow({
           qtyMulti && 'bg-muted/40',
         )}
       >
+        {showSelectControl ? (
+          <span className="flex shrink-0 items-center text-primary" aria-hidden>
+            {made ? (
+              <Square className={compact ? 'size-4' : 'size-5'} />
+            ) : (
+              <CheckSquare className={compact ? 'size-4' : 'size-5'} />
+            )}
+          </span>
+        ) : null}
         <span
           className={cn(
             'shrink-0 self-center text-center font-bold tabular-nums text-muted-foreground',

@@ -6,3 +6,10 @@ export {
   getPersistentToken,
   setPersistentToken,
 } from './storage.js';
+export {
+  RealtimeConnection,
+  REALTIME_FAILED_AFTER_MS,
+  type RealtimeStatus,
+  type RealtimeConnectContext,
+  type RealtimeConnectionOptions,
+} from './realtime/connection.js';

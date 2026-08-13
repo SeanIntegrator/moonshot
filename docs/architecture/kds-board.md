@@ -73,27 +73,39 @@ stateDiagram-v2
   confirmed --> completed: POST_complete
   preparing --> completed: POST_complete
   ready --> completed: POST_complete
-  completed --> confirmed: POST_recall_last
+  completed --> confirmed: POST_recall
 ```
 
 | Method | Path | Body |
 |--------|------|------|
 | `POST` | `/api/v1/kds/orders/:orderId/status` | `{ status: "confirmed" \| "preparing" \| "ready" }` |
 | `POST` | `/api/v1/kds/orders/:orderId/complete` | (existing) |
-| `POST` | `/api/v1/kds/orders/recall-last` | reopen latest `completed` → `confirmed` |
+| `POST` | `/api/v1/kds/orders/:orderId/recall` | `{ lineIds?: string[] }` reopen that `completed` ticket → `confirmed` |
+| `POST` | `/api/v1/kds/orders/recall-last` | reopen latest `completed` → `confirmed` (API-only; no KDS chrome) |
 
 Flow board interaction:
 
 - Tap a **line** → local strikethrough; when **all** lines made → `POST .../status` `{ status: "ready" }` (demote to `confirmed` if a line is un-crossed).
 - Tap the **header** → `POST .../complete` (emits `customerOrderCompleted` for order-ahead).
-- Top-bar **Recall** → `POST .../recall-last` (emits `kds:order:new` + `customerOrderStatusUpdated`).
+- Header **Recent orders** → dialog of the last 20 completed tickets. Recall is optimistic: the card lands on the board immediately, the dialog closes, and a failure rolls the ticket back into the dialog.
 
 Emits:
 
 - `kds:order:updated` (full order) on status advance / demote
-- `kds:order:new` on recall-last
+- `kds:order:new` on recall
 - `customerOrderStatusUpdated` `{ orderId, cafeId, status }`
 - `customerOrderCompleted` on Done
+
+## Recall line selection (client-only)
+
+Baristas can untick lines in the Recent orders dialog. Only ticked lines come back un-crossed; the rest seed as already made.
+
+- The KDS sends `lineIds` (the ticked remake set) on `POST .../recall` from day one. The server ignores the field today — durable per-line made-state is a later server change, not a UI rewrite.
+- `useKdsOrders` keeps a `recallSelections` map of the **unselected** complement and passes it to `OrderCard` as `initialMadeIds`.
+- This map is **ephemeral and single-device**: a reload, a second iPad, or a Square webhook that delete-and-reinserts `order_items` (fresh line UUIDs) drops it. Until `pos_line_uid` lands, a recalled Square ticket that receives another webhook can un-cross every line.
+
+Pending recalls are `isProtected` in `orders-store` so a poll between the optimistic insert and the server response cannot delete the card. The same hook covers dismissing cards (collapse animation).
+
 ## ETA stretch
 
 | Method | Path | Body |
@@ -116,6 +128,7 @@ Installable SPA: `public/manifest.json` (`display: standalone`) + Apple meta tag
 1. Open the KDS HTTPS URL in **Safari** on the iPad.
 2. Share → **Add to Home Screen**.
 3. Launch from the **home-screen icon** (not a Safari tab) — URL bar is hidden.
-4. Optional shift lock: Settings → Accessibility → **Guided Access** → enable; on the KDS icon, triple-click the side/top button and start Guided Access.
+4. Settings → Display & Brightness → **Auto-Lock → Never**, and keep the iPad on power. Screen sleep suspends JS timers and is the largest real-world disconnect source.
+5. Optional shift lock: Settings → Accessibility → **Guided Access** → enable; on the KDS icon, triple-click the side/top button and start Guided Access.
 
 Opening the same URL as a Safari tab always shows the address bar — that is expected Safari behaviour, not a missing install config.

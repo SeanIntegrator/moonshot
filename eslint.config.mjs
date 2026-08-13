@@ -1,5 +1,6 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 /**
  * Pragmatic monorepo lint baseline.
@@ -25,6 +26,9 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+    },
     rules: {
       // Noisy across the existing codebase — tighten in a follow-up.
       '@typescript-eslint/no-explicit-any': 'off',
@@ -43,6 +47,8 @@ export default tseslint.config(
       'no-useless-assignment': 'off',
       'prefer-const': 'warn',
       'no-console': 'off',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   }
 );

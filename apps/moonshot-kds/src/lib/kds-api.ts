@@ -1,4 +1,4 @@
-import type { KdsAdvanceStatusRequest, KdsAdvanceStatusResponse, KdsCompleteOrderResponse, KdsConfigResponse, KdsLoginRequest, KdsLoginResponse, KdsOrdersResponse, KdsRecallLastOrderResponse, KdsRecallOrderResponse, KdsRecentOrdersResponse } from '@moonshot/types';
+import type { KdsAdvanceStatusRequest, KdsAdvanceStatusResponse, KdsCompleteOrderResponse, KdsConfigResponse, KdsLoginRequest, KdsLoginResponse, KdsOrdersResponse, KdsRecallOrderRequest, KdsRecallOrderResponse, KdsRecentOrdersResponse } from '@moonshot/types';
 import { API_VERSION_PREFIX } from '@moonshot/domain';
 import { parseEnvelope, requireApiBaseUrl } from '@moonshot/web-runtime';
 import { getApiBaseUrl } from './runtime-config.js';
@@ -82,30 +82,20 @@ export async function kdsCompleteOrder(
   return json.data;
 }
 
-export async function kdsRecallLastOrder(token: string): Promise<KdsRecallLastOrderResponse> {
-  const base = requireBase();
-  const url = `${base}${API_VERSION_PREFIX}/kds/orders/recall-last`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (res.status === 401) {
-    throw new Error('SESSION_EXPIRED');
-  }
-  const json = await parseEnvelope<KdsRecallLastOrderResponse>(res);
-  if (!json.ok) throw new Error(json.error ?? 'Recall failed');
-  return json.data;
-}
-
 export async function kdsRecallOrder(
   token: string,
   orderId: string,
+  body: KdsRecallOrderRequest = {},
 ): Promise<KdsRecallOrderResponse> {
   const base = requireBase();
   const url = `${base}${API_VERSION_PREFIX}/kds/orders/${encodeURIComponent(orderId)}/recall`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
   });
   if (res.status === 401) {
     throw new Error('SESSION_EXPIRED');

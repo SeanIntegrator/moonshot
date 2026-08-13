@@ -228,7 +228,7 @@ C&B is on v2 only with OAuth Square, no duplicate POS events, and one clean live
 | Lightspeed (K-Series) adapter | Gated on partner access |
 | Embedded Stripe Elements + Apple/Google Pay | Faster checkout |
 | Stripe refunds | Paid cancel currently sets `refundPending` only |
-| Redis Socket.io adapter | Required before multi-instance API |
+| Redis Socket.io adapter | Required before multi-instance API. Classic `@socket.io/redis-adapter` is incompatible with `connectionStateRecovery` / `SessionAwareAdapter` — use a Redis Streams adapter (or drop recovery) |
 | KDS hold / `layout.columns` grouping / synced line made-state | Board polish beyond iteration 1 |
 | KDS audio alerts; offline (SW + IndexedDB) | After installable shell |
 | Admin invites, audit trail, orders/analytics views | Beyond branding shell |

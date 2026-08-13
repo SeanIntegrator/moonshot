@@ -10,9 +10,58 @@ Two namespaces isolate audiences and middleware:
 | **`/customer`** | moonshot-order-ahead | **No auth on connect.** Emit `customer:subscribe` / `customer:unsubscribe` (order) or `customer:subscribeCafe` (menu). Events on channel `customer:event`. |
 | **`/admin`** | moonshot-admin | Admin JWT in handshake `auth.token` (`purpose: 'admin'`). Auto-joins `admin:cafe:{cafeId}`. Events on channel `admin:event` (`AdminServerToClientEvent`). |
 
-Constants: [`KDS_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts), [`CUSTOMER_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts), [`ADMIN_SOCKET_NAMESPACE`](../../packages/types/src/dataflow.ts).
+Constants: [`KDS_SOCKET_NAMESPACE`](../../packages/domain/src/dataflow.ts), [`CUSTOMER_SOCKET_NAMESPACE`](../../packages/domain/src/dataflow.ts), [`ADMIN_SOCKET_NAMESPACE`](../../packages/domain/src/dataflow.ts).
 
-**Scaling:** Socket.io uses the default in-memory adapter (single API process). Multi-instance requires `@socket.io/redis-adapter` plus shared debounce state for catalog sync — see the roadmap.
+Clients share [`RealtimeConnection`](../../packages/web-runtime/src/realtime/connection.ts) in `@moonshot/web-runtime` (React helpers on `@moonshot/web-runtime/react`). `forceNew` is always on so two consumers of the same namespace do not share a Manager socket.
+
+**Scaling:** Socket.io uses the in-memory `SessionAwareAdapter` (required for connection state recovery). That adapter is **per process**. The classic `@socket.io/redis-adapter` does **not** support recovery — multi-instance needs a Redis Streams adapter (or equivalent) plus shared debounce state for catalog sync. A Railway redeploy drops in-memory sessions; clients reconnect unrecovered and HTTP-refetch.
+
+## Connection lifecycle
+
+```mermaid
+stateDiagram-v2
+  [*] --> idle
+  idle --> connecting: connect()
+  connecting --> connected: connect
+  connecting --> reconnecting: "connect_error (active)"
+  connecting --> unauthorized: "connect_error (not active)"
+  connected --> reconnecting: "disconnect (active)"
+  connected --> unauthorized: "disconnect (io server disconnect)"
+  reconnecting --> connected: "connect (recovered or fresh)"
+  reconnecting --> failed: "30s still down"
+  failed --> connecting: onResume
+  unauthorized --> [*]: app forces re-login
+```
+
+| Status | Meaning |
+|--------|---------|
+| `idle` | No socket (logged out / no interest) |
+| `connecting` | First handshake |
+| `connected` | Live; `socket.recovered` says whether missed packets were replayed |
+| `reconnecting` | Transport drop; Socket.IO is retrying |
+| `failed` | Still retrying, but down long enough to show "Offline — retrying" |
+| `unauthorized` | Handshake rejected (`socket.active === false`) — do not retry the same token |
+
+Wake: `visibilitychange` (visible), `pageshow`, and `online` call `socket.connect()` immediately (bypass backoff) then `onResume` so the app HTTP-reconciles.
+
+Auth is a **callback**, invoked on every handshake including recovery, so a rotated JWT is sent without tearing the socket down.
+
+### Server options
+
+Defined in [`socket-server-options.ts`](../../apps/moonshot-api/src/realtime/socket-server-options.ts). Engine.IO-level, so they apply to `/kds`, `/customer`, and `/admin`.
+
+| Option | Value | Why |
+|--------|-------|-----|
+| `pingInterval` | 20s | Slightly tighter than the 25s default |
+| `pingTimeout` | 40s | Survives a mobile/tablet timer stall. Failure mode is a sleeping iPad, not a dead peer. Worst-case ghost detection ≈ 60s |
+| `connectionStateRecovery.maxDisconnectionDuration` | 2 min | Replay missed `kds:event` / `customer:event` / `admin:event` packets after a brief drop |
+| `connectionStateRecovery.skipMiddlewares` | **false** | Re-verify the JWT on recovery. The Socket.IO default (`true`) skips auth ([socketio/socket.io#5491](https://github.com/socketio/socket.io/issues/5491)) |
+
+On `socket.recovered === true`, clients skip the HTTP board/menu refetch (packets were replayed) and skip re-emitting `customer:subscribe` (rooms restored). A failed recovery is a normal connect: refetch / re-subscribe.
+
+KDS UI holds `connected` for 8s after a drop (`useGracedStatus`) so a one-second blip never paints a chip or shifts the board. Fallback HTTP poll is 90s while connected, 10s while not.
+
+`MenuProvider` still opens its **own** `/customer` connection for `customer:subscribeCafe`. Both connections now use `RealtimeConnection`; merging them onto `CustomerEventsProvider` is a follow-up — do not add a third `/customer` socket.
 
 ## KDS authentication
 

@@ -1,4 +1,5 @@
 import type { FlowLineView } from '@moonshot/domain';
+import { CheckSquare, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FlowRowDensity } from './DrinkRow.js';
 import { formatAllergenLabel } from './formatAllergen.js';
@@ -11,6 +12,8 @@ type FoodRowProps = {
   onToggleMade: () => void;
   /** `compact` for close-range chrome (e.g. recent orders); board stays glanceable. */
   density?: FlowRowDensity;
+  /** Checkbox affordance for recall line selection; `made` is the inverse of selected. */
+  showSelectControl?: boolean;
 };
 
 export function FoodRow({
@@ -20,6 +23,7 @@ export function FoodRow({
   made,
   onToggleMade,
   density = 'board',
+  showSelectControl = false,
 }: FoodRowProps) {
   const compact = density === 'compact';
   const qtyMulti = quantity > 1;
@@ -30,6 +34,7 @@ export function FoodRow({
       type="button"
       data-flow-row="food"
       data-density={density}
+      aria-pressed={showSelectControl ? !made : undefined}
       className={cn(
         'grid w-full cursor-pointer grid-cols-[minmax(10rem,auto)_minmax(0,1fr)] items-stretch gap-0 border-b border-border bg-transparent text-left text-card-foreground outline-none last:border-b-0 [-webkit-tap-highlight-color:transparent]',
         compact ? 'px-3' : 'px-4',
@@ -45,6 +50,15 @@ export function FoodRow({
           qtyMulti && 'bg-muted/40',
         )}
       >
+        {showSelectControl ? (
+          <span className="flex shrink-0 items-center text-primary" aria-hidden>
+            {made ? (
+              <Square className={compact ? 'size-4' : 'size-5'} />
+            ) : (
+              <CheckSquare className={compact ? 'size-4' : 'size-5'} />
+            )}
+          </span>
+        ) : null}
         <span
           className={cn(
             'shrink-0 self-center text-center font-bold tabular-nums text-muted-foreground',
