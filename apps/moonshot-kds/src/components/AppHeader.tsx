@@ -2,12 +2,18 @@ import { History } from 'lucide-react';
 import type { RealtimeStatus } from '@moonshot/web-runtime';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import type { KdsAudioPlayerState } from '../hooks/useKdsAudio.js';
+import { SoundToggle } from './SoundToggle.js';
 
 type AppHeaderProps = {
   cafeName: string;
   cafeSlug: string;
   username: string;
   connection: RealtimeStatus;
+  soundStatus: KdsAudioPlayerState;
+  soundMuted: boolean;
+  cafeSoundEnabled: boolean;
+  onSoundClick: () => void;
   onOpenRecentOrders: () => void;
   onLogout: () => void;
 };
@@ -42,6 +48,10 @@ export function AppHeader({
   cafeSlug: _cafeSlug,
   username: _username,
   connection,
+  soundStatus,
+  soundMuted,
+  cafeSoundEnabled,
+  onSoundClick,
   onOpenRecentOrders,
   onLogout,
 }: AppHeaderProps) {
@@ -50,6 +60,12 @@ export function AppHeader({
       <h1 className="text-lg font-semibold tracking-wide">Moonshot KDS</h1>
       <div className="flex items-center gap-2 sm:gap-3">
         <ConnectionBadge status={connection} />
+        <SoundToggle
+          status={soundStatus}
+          muted={soundMuted}
+          cafeEnabled={cafeSoundEnabled}
+          onClick={onSoundClick}
+        />
         <span className="hidden text-sm text-muted-foreground sm:inline">
           Logged in as {cafeName}
         </span>

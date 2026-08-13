@@ -35,6 +35,7 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 - Status advance (`preparing` / `ready`), ETA stretch, **`GET /kds/config`**.
 - **Recent orders** (`GET /kds/orders/recent`) + **recall** (`POST …/recall`, `…/recall-last`).
 - Line-level free-text notes render on drink/food rows (plain off-white, right-aligned with allergens); **order-level** notes also show on the live `OrderCard`.
+- New-order chime + repeating overdue alarm (`kdsConfig.audio`); login unlocks WebAudio; header mute / **Sound off** indicator.
 
 ### Menu & café ops
 

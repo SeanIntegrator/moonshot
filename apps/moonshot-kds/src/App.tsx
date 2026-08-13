@@ -9,7 +9,9 @@ import { LoginScreen } from '@/components/LoginScreen';
 import { FlowBoard } from './board/FlowBoard.js';
 import { RecentOrdersDialog } from './board/recent-orders/RecentOrdersDialog.js';
 import { useKdsConfig } from './hooks/useKdsConfig.js';
+import { useKdsAudio } from './hooks/useKdsAudio.js';
 import { useKdsOrders } from './hooks/useKdsOrders.js';
+import { useOverdueAlarm } from './hooks/useOverdueAlarm.js';
 import { kdsLogin } from './lib/kds-api.js';
 import {
   loadKdsSession,
@@ -42,6 +44,17 @@ export function App() {
   }, [clearExpiredSession]);
 
   const {
+    kdsConfig,
+    error: configError,
+    setError: setConfigError,
+  } = useKdsConfig({
+    session,
+    onSessionExpired: clearExpiredSession,
+  });
+
+  const audio = useKdsAudio(kdsConfig);
+
+  const {
     orders,
     error: ordersError,
     setError: setOrdersError,
@@ -55,23 +68,23 @@ export function App() {
   } = useKdsOrders({
     session,
     onSessionExpired: clearExpiredSession,
+    onNewOrder: audio.playNewOrder,
+  });
+
+  useOverdueAlarm({
+    orders,
+    dismissingIds,
+    kdsConfig,
+    onAlarm: audio.playOverdue,
   });
 
   const displayConnection = useGracedStatus(connection);
-
-  const {
-    kdsConfig,
-    error: configError,
-    setError: setConfigError,
-  } = useKdsConfig({
-    session,
-    onSessionExpired: clearExpiredSession,
-  });
 
   const error = loginError ?? ordersError ?? configError;
 
   async function handleLogin(e: FormEvent): Promise<void> {
     e.preventDefault();
+    audio.unlock();
     setLoginError(null);
     setOrdersError(null);
     setConfigError(null);
@@ -124,6 +137,10 @@ export function App() {
             cafeSlug={session.cafeSlug}
             username={session.username}
             connection={displayConnection}
+            soundStatus={audio.status}
+            soundMuted={audio.muted}
+            cafeSoundEnabled={audio.cafeEnabled}
+            onSoundClick={audio.onHeaderClick}
             onOpenRecentOrders={() => setRecentOpen(true)}
             onLogout={logout}
           />

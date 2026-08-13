@@ -19,6 +19,7 @@ const POLL_DEGRADED_MS = 10_000;
 export function useKdsOrders(params: {
   session: KdsSession | null;
   onSessionExpired: (session: KdsSession) => void;
+  onNewOrder?: () => void;
 }): {
   orders: NormalisedOrder[];
   error: string | null;
@@ -31,7 +32,7 @@ export function useKdsOrders(params: {
   recallOrder: (order: NormalisedOrder, opts: { lineIds: string[] }) => Promise<void>;
   setStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
 } {
-  const { session, onSessionExpired } = params;
+  const { session, onSessionExpired, onNewOrder } = params;
   const [orders, setOrders] = useState<NormalisedOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(() => new Set());
@@ -40,8 +41,12 @@ export function useKdsOrders(params: {
   );
   const recallingIdsRef = useRef<Set<string>>(new Set());
   const pendingRecallIdsRef = useRef<Set<string>>(new Set());
+  const boardIdsRef = useRef<Set<string>>(new Set());
+  const prevBoardIdsRef = useRef<Set<string>>(new Set());
   const onExpiredRef = useRef(onSessionExpired);
   onExpiredRef.current = onSessionExpired;
+  const onNewOrderRef = useRef(onNewOrder);
+  onNewOrderRef.current = onNewOrder;
   const dismissingRef = useRef(dismissingIds);
   dismissingRef.current = dismissingIds;
   const sessionRef = useRef(session);
@@ -92,6 +97,10 @@ export function useKdsOrders(params: {
 
   const applyEvent = useCallback(
     (ev: Parameters<typeof applyKdsEvent>[1]) => {
+      if (ev.type === 'kds:order:new' && !boardIdsRef.current.has(ev.order.id)) {
+        boardIdsRef.current.add(ev.order.id);
+        onNewOrderRef.current?.();
+      }
       setOrders((prev) => applyKdsEvent(prev, ev, storeCtx()));
       if (ev.type === 'kds:order:removed') {
         setDismissingIds((prev) => {
@@ -138,6 +147,8 @@ export function useKdsOrders(params: {
     if (!session) {
       scheduler.clearAll();
       pendingRecallIdsRef.current.clear();
+      boardIdsRef.current = new Set();
+      prevBoardIdsRef.current = new Set();
       setOrders([]);
       setDismissingIds(new Set());
       setRecallSelections(new Map());
@@ -147,6 +158,18 @@ export function useKdsOrders(params: {
     setError(null);
     void refreshOrders(session.token).catch((e) => handleExpired(e, 'Failed to load orders'));
   }, [session, refreshOrders, scheduler, handleExpired]);
+
+  // Union-sync: keep ids added in applyEvent before setState commits, so a
+  // sibling re-render cannot reopen the chime window for a recall echo.
+  useEffect(() => {
+    const current = new Set(orders.map((o) => o.id));
+    const prev = prevBoardIdsRef.current;
+    prevBoardIdsRef.current = current;
+    for (const id of boardIdsRef.current) {
+      if (prev.has(id) && !current.has(id)) boardIdsRef.current.delete(id);
+    }
+    for (const id of current) boardIdsRef.current.add(id);
+  }, [orders]);
 
   useEffect(() => {
     if (!session) return;
@@ -213,6 +236,7 @@ export function useKdsOrders(params: {
 
       recallingIdsRef.current.add(order.id);
       pendingRecallIdsRef.current.add(order.id);
+      boardIdsRef.current.add(order.id);
       setError(null);
 
       const unselected = unselectedLineIds(order, opts.lineIds);

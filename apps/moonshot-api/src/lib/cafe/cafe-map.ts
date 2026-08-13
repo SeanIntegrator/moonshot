@@ -1,7 +1,12 @@
 import type { BaseThemeId, CafeFeatures, CafeTheme, KdsConfig } from '@moonshot/types';
 import type { FeatureFlagKey } from '@moonshot/types';
 import { FeatureFlagKeys } from '@moonshot/types';
-import { DEFAULT_BEAN_ACCENTS, DEFAULT_MODIFIER_CLASSIFICATION, normalizeCafeHours } from '@moonshot/domain';
+import {
+  DEFAULT_BEAN_ACCENTS,
+  DEFAULT_MODIFIER_CLASSIFICATION,
+  normalizeCafeHours,
+  normalizeKdsAudio,
+} from '@moonshot/domain';
 import type { ResolvedCafe } from '../resolved-cafe.js';
 
 type CafeRow = {
@@ -82,6 +87,7 @@ function normalizeKdsConfig(raw: KdsConfig, cafeId: string): KdsConfig {
       },
       custom: [...(badges?.custom ?? [])],
     },
+    audio: normalizeKdsAudio(raw.audio),
   };
 }
 

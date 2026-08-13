@@ -29,7 +29,7 @@ Implemented in Phase 1.
 | features           | JSONB       | `CafeFeatures` shape |
 | theme_id           | TEXT        | base template id |
 | theme_overrides    | JSONB       | deep-merge overrides |
-| kds_config         | JSONB       | milk colours, timer thresholds, **eta: `{ base_prep_minutes, per_item_minutes }`**, layout |
+| kds_config         | JSONB       | milk colours, timer thresholds, **eta**, layout, **audio** (`enabled`, sound ids, volume, overdue repeat) |
 | drink_archetype_config | JSONB   | café drink-type recipes (slots + milk charge); see `docs/menu-management.md` |
 | hours              | JSONB       | weekly opening hours (**014**); wall-clock in `timezone` |
 | timezone           | TEXT        | default `Europe/London` |

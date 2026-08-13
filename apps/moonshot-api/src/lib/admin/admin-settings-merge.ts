@@ -5,11 +5,12 @@ import type {
   CafeFeatures,
   CafeHours,
   KdsConfig,
+  KdsSoundId,
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
 } from '@moonshot/types';
 import { WEEKDAY_KEYS } from '@moonshot/types';
-import { hhMmToMinutes, normalizeCafeHours, toHhMm } from '@moonshot/domain';
+import { hhMmToMinutes, isKdsSoundId, normalizeCafeHours, toHhMm } from '@moonshot/domain';
 
 const DEFAULT_LOYALTY: LoyaltyFeatureConfig = {
   enabled: true,
@@ -194,6 +195,12 @@ export function mergeKdsConfigSection(
   }
 
   if (patch.audio) {
+    if (patch.audio.enabled !== undefined) {
+      if (typeof patch.audio.enabled !== 'boolean') {
+        return { ok: false, error: 'audio.enabled must be a boolean' };
+      }
+      next.audio.enabled = patch.audio.enabled;
+    }
     if (patch.audio.volume !== undefined) {
       const v = patch.audio.volume;
       if (!Number.isInteger(v) || v < 0 || v > 100) {
@@ -201,16 +208,34 @@ export function mergeKdsConfigSection(
       }
       next.audio.volume = v;
     }
-    if (patch.audio.newOrderSound !== undefined) {
-      const s = patch.audio.newOrderSound;
-      if (s !== null && typeof s !== 'string') {
-        return { ok: false, error: 'audio.newOrderSound must be a string or null' };
+    if (patch.audio.overdueRepeatSeconds !== undefined) {
+      const r = patch.audio.overdueRepeatSeconds;
+      if (!Number.isInteger(r) || r < 0 || r > 600) {
+        return { ok: false, error: 'audio.overdueRepeatSeconds must be an integer from 0 to 600' };
       }
-      next.audio.newOrderSound = s;
+      next.audio.overdueRepeatSeconds = r;
+    }
+    if (patch.audio.newOrderSound !== undefined) {
+      const parsed = parseSoundId(patch.audio.newOrderSound, 'audio.newOrderSound');
+      if (!parsed.ok) return parsed;
+      next.audio.newOrderSound = parsed.value;
+    }
+    if (patch.audio.overdueSound !== undefined) {
+      const parsed = parseSoundId(patch.audio.overdueSound, 'audio.overdueSound');
+      if (!parsed.ok) return parsed;
+      next.audio.overdueSound = parsed.value;
     }
   }
 
   return { ok: true, value: next };
+}
+
+function parseSoundId(value: unknown, field: string): MergeResult<KdsSoundId | null> {
+  if (value === null) return { ok: true, value: null };
+  if (!isKdsSoundId(value)) {
+    return { ok: false, error: `${field} must be a known sound id or null` };
+  }
+  return { ok: true, value };
 }
 
 export function validateCafeHoursPatch(raw: unknown): MergeResult<CafeHours> {

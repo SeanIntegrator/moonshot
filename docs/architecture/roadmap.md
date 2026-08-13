@@ -186,6 +186,11 @@ A customer can Add to Home Screen on iOS and Android and launch fullscreen witho
 - Ops: after Add to Home Screen, use **Guided Access** for shift lockdown. Capacitor stays parked.
 - Safari tabs still show the URL bar by design — only the home-screen icon launches fullscreen.
 
+### Audio — done (August 2026)
+
+- New-order chime on `kds:order:new` (deduped against recall echoes) and a repeating overdue alarm when a ticket goes red.
+- WebAudio catalogue on `kdsConfig.audio`; login submit unlocks the context; header mute + **Sound off** / **Tap to enable sound** so a silent board is never a surprise.
+
 ### Work remaining
 
 None for launch install. Parked: Capacitor / native wrapper.
@@ -230,7 +235,7 @@ C&B is on v2 only with OAuth Square, no duplicate POS events, and one clean live
 | Stripe refunds | Paid cancel currently sets `refundPending` only |
 | Redis Socket.io adapter | Required before multi-instance API. Classic `@socket.io/redis-adapter` is incompatible with `connectionStateRecovery` / `SessionAwareAdapter` — use a Redis Streams adapter (or drop recovery) |
 | KDS hold / `layout.columns` grouping / synced line made-state | Board polish beyond iteration 1 |
-| KDS audio alerts; offline (SW + IndexedDB) | After installable shell |
+| KDS offline (SW + IndexedDB) | After installable shell |
 | Admin invites, audit trail, orders/analytics views | Beyond branding shell |
 | Profile prefs; pickup reschedule | Order-ahead niceties |
 | Capacitor / native KDS wrapper | Only if standalone PWA + Guided Access prove insufficient |

@@ -1,5 +1,5 @@
 import type { CafeFeatures, KdsConfig } from '@moonshot/types';
-import { defaultWeekdayCafeHours, platformDrinkArchetypeConfig } from '@moonshot/domain';
+import { DEFAULT_KDS_AUDIO, defaultWeekdayCafeHours, platformDrinkArchetypeConfig } from '@moonshot/domain';
 import type { PoolClient } from 'pg';
 import { pool } from '../../db.js';
 import { hashKdsPassword } from '../kds-password.js';
@@ -57,7 +57,7 @@ export function defaultNewCafeKdsConfig(): Omit<KdsConfig, 'cafeId'> {
     },
     timerThresholds: { greenMax: 3, amberMax: 5 },
     layout: { columns: 3, groupBy: 'order_type' },
-    audio: { newOrderSound: null, volume: 80 },
+    audio: { ...DEFAULT_KDS_AUDIO },
     display: {
       showCustomerNameInHeader: true,
       showPickupTime: true,

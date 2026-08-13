@@ -59,7 +59,22 @@ GET /api/v1/kds/config   (KDS JWT)
 → { ok: true, data: { kdsConfig } }
 ```
 
-Loaded after login by the KDS app. Admin edits layout / timers / display / ETA via settings PATCH.
+Loaded after login by the KDS app. Admin edits layout / timers / display / ETA / audio via settings PATCH.
+
+## Audio cues
+
+Two WebAudio-synthesised cues, configured on `kdsConfig.audio` (not `display`):
+
+| Cue | Trigger | Default |
+|-----|---------|---------|
+| New order | `kds:order:new` for an order id **not already on the board** | `chime` |
+| Overdue | any non-ready ticket goes red; repeats every `overdueRepeatSeconds` (0 = once) | `knock` |
+
+Recall uses the same `kds:order:new` event. The KDS inserts the ticket **optimistically before** the server echo, so the id is already on the board and the chime is skipped. Connection-state-recovery replays are skipped the same way. The initial HTTP snapshot is not a socket event and never chimes. A recall on a **second** device is genuinely new to this board and does chime.
+
+iOS Safari will not play audio without a prior user gesture. Login submit calls `AudioContext.resume()` **before** `await kdsLogin`. A reload restores the session from `sessionStorage` and skips login — the header control is the recovery gesture (`Tap to enable sound`). Device mute lives in `localStorage` (survives reload). Effective audibility is `audio.enabled && !deviceMuted && context ready`. A silent board always shows **Sound off** (or **Tap to enable sound**) in the header.
+
+The overdue alarm is board-level (one tick, not per card) so five red tickets produce one chime. Tickets with `status === 'ready'` or in the dismiss animation are excluded. Timer thresholds in config are not wired into `computeOrderTimer` yet — red still means past the hardcoded 4-minute SLA / pickup time.
 
 ## Status machine
 

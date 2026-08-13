@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { KdsConfig } from '@moonshot/types';
-import { DEFAULT_MODIFIER_CLASSIFICATION, deriveFlowLine, deriveLinePrep } from '@moonshot/domain';
+import { DEFAULT_KDS_AUDIO, DEFAULT_MODIFIER_CLASSIFICATION, deriveFlowLine, deriveLinePrep } from '@moonshot/domain';
 import type { NormalisedOrderItem } from '@moonshot/types';
 
 function baseConfig(overrides?: Partial<KdsConfig>): KdsConfig {
@@ -23,7 +23,7 @@ function baseConfig(overrides?: Partial<KdsConfig>): KdsConfig {
     },
     timerThresholds: { greenMax: 3, amberMax: 5 },
     layout: { columns: 3, groupBy: 'order_type' },
-    audio: { newOrderSound: null, volume: 80 },
+    audio: { ...DEFAULT_KDS_AUDIO },
     display: {
       showCustomerNameInHeader: true,
       showPickupTime: true,

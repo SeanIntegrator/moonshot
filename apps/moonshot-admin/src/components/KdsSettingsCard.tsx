@@ -1,4 +1,4 @@
-import type { Cafe, KdsGroupBy } from '@moonshot/types';
+import type { Cafe, KdsGroupBy, KdsSoundId } from '@moonshot/types';
 import {
   Alert,
   Box,
@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { patchAdminSettings } from '../lib/admin-api.js';
+import { KdsSoundSelect } from './KdsSoundSelect.js';
 
 type Props = {
   cafe: Cafe;
@@ -36,6 +37,10 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
   const [greenMax, setGreenMax] = useState(k.timerThresholds.greenMax);
   const [amberMax, setAmberMax] = useState(k.timerThresholds.amberMax);
   const [volume, setVolume] = useState(k.audio.volume);
+  const [audioEnabled, setAudioEnabled] = useState(k.audio.enabled);
+  const [newOrderSound, setNewOrderSound] = useState<KdsSoundId | null>(k.audio.newOrderSound);
+  const [overdueSound, setOverdueSound] = useState<KdsSoundId | null>(k.audio.overdueSound);
+  const [overdueRepeat, setOverdueRepeat] = useState(k.audio.overdueRepeatSeconds);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -50,6 +55,10 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
     setGreenMax(k.timerThresholds.greenMax);
     setAmberMax(k.timerThresholds.amberMax);
     setVolume(k.audio.volume);
+    setAudioEnabled(k.audio.enabled);
+    setNewOrderSound(k.audio.newOrderSound);
+    setOverdueSound(k.audio.overdueSound);
+    setOverdueRepeat(k.audio.overdueRepeatSeconds);
   }, [k]);
 
   async function save() {
@@ -66,7 +75,13 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
           },
           eta: { basePrepMinutes: basePrep, perItemMinutes: perItem },
           timerThresholds: { greenMax, amberMax },
-          audio: { volume },
+          audio: {
+            enabled: audioEnabled,
+            newOrderSound,
+            overdueSound,
+            overdueRepeatSeconds: overdueRepeat,
+            volume,
+          },
         },
       });
       onCafeUpdated(data.cafe);
@@ -191,18 +206,61 @@ export function KdsSettingsCard({ cafe, token, onCafeUpdated }: Props) {
             }}
           />
         </Stack>
-        <TextField
-          label="New order sound volume"
-          type="number"
-          size="small"
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          disabled={saving}
-          sx={{ maxWidth: 220 }}
-          slotProps={{
-            htmlInput: { min: 0, max: 100, step: 1 }
-          }}
+        <Typography variant="subtitle2" sx={{
+          color: "text.secondary"
+        }}>
+          Audio
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={audioEnabled}
+              onChange={(_, v) => setAudioEnabled(v)}
+              disabled={saving}
+            />
+          }
+          label="Play kitchen sounds"
         />
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <KdsSoundSelect
+            label="New order sound"
+            value={newOrderSound}
+            onChange={setNewOrderSound}
+            disabled={saving}
+          />
+          <KdsSoundSelect
+            label="Overdue sound"
+            value={overdueSound}
+            onChange={setOverdueSound}
+            disabled={saving}
+          />
+        </Stack>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <TextField
+            label="Volume"
+            type="number"
+            size="small"
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            disabled={saving}
+            sx={{ maxWidth: 220 }}
+            slotProps={{
+              htmlInput: { min: 0, max: 100, step: 1 }
+            }}
+          />
+          <TextField
+            label="Overdue repeat (seconds)"
+            type="number"
+            size="small"
+            value={overdueRepeat}
+            onChange={(e) => setOverdueRepeat(Number(e.target.value))}
+            disabled={saving}
+            helperText="0 disables the repeat"
+            slotProps={{
+              htmlInput: { min: 0, max: 600, step: 1 }
+            }}
+          />
+        </Stack>
         <Box>
           <Button variant="contained" onClick={() => void save()} disabled={saving}>
             Save KDS settings

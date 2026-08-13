@@ -18,5 +18,8 @@ describe('defaultNewCafeKdsConfig', () => {
     expect(kds.eta.basePrepMinutes).toBe(8);
     expect(kds.layout.columns).toBe(3);
     expect(kds.timerThresholds.greenMax).toBe(3);
+    expect(kds.audio.enabled).toBe(true);
+    expect(kds.audio.newOrderSound).toBe('chime');
+    expect(kds.audio.overdueSound).toBe('knock');
   });
 });

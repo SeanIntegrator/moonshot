@@ -170,8 +170,16 @@ export interface KdsLayoutConfig {
   groupBy: KdsGroupBy;
 }
 
+/** Built-in WebAudio tones — catalogue lives in `@moonshot/domain` `KDS_SOUNDS`. */
+export type KdsSoundId = 'chime' | 'ping' | 'marimba' | 'bell' | 'knock';
+
 export interface KdsAudioConfig {
-  newOrderSound: string | null;
+  /** Café-wide kill switch; a device can additionally mute itself. */
+  enabled: boolean;
+  newOrderSound: KdsSoundId | null;
+  overdueSound: KdsSoundId | null;
+  /** Re-chime cadence while a ticket is past due. 0 disables the repeat. */
+  overdueRepeatSeconds: number;
   volume: number;
 }
 
