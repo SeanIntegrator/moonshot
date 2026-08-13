@@ -1,4 +1,4 @@
-import type { KdsServerToClientEvent, NormalisedOrder } from '@moonshot/types';
+import type { KdsServerToClientEvent, NormalisedOrder, NormalisedOrderItem } from '@moonshot/types';
 
 export type OrdersStoreContext = {
   /** Dismissing cards and in-flight optimistic recalls must survive a poll. */
@@ -16,6 +16,24 @@ export function sortOrders(orders: NormalisedOrder[]): NormalisedOrder[] {
   return orders;
 }
 
+function sameStringList(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((value, i) => value === b[i]);
+}
+
+function sameBoardItem(a: NormalisedOrderItem, b: NormalisedOrderItem): boolean {
+  return (
+    a.id === b.id &&
+    a.quantity === b.quantity &&
+    a.itemName === b.itemName &&
+    a.notes === b.notes &&
+    a.category === b.category &&
+    a.unitPriceMinor === b.unitPriceMinor &&
+    sameStringList(a.allergens, b.allergens) &&
+    JSON.stringify(a.modifiers) === JSON.stringify(b.modifiers)
+  );
+}
+
 function sameBoardSnapshot(a: NormalisedOrder, b: NormalisedOrder): boolean {
   return (
     a.id === b.id &&
@@ -25,7 +43,7 @@ function sameBoardSnapshot(a: NormalisedOrder, b: NormalisedOrder): boolean {
     a.notes === b.notes &&
     a.detailsPending === b.detailsPending &&
     a.items.length === b.items.length &&
-    a.items.every((item, i) => item.id === b.items[i]?.id)
+    a.items.every((item, i) => sameBoardItem(item, b.items[i]!))
   );
 }
 

@@ -37,9 +37,10 @@ export function useAdminMenuSync({
   const tokenRef = useRef(token);
   tokenRef.current = token;
 
+  const baseUrl = getApiBaseUrl();
   const { connection } = useRealtimeConnection({
-    enabled: enabled && Boolean(token),
-    baseUrl: getApiBaseUrl(),
+    enabled: enabled && Boolean(token) && Boolean(baseUrl),
+    baseUrl,
     namespace: ADMIN_SOCKET_NAMESPACE,
     auth: () => ({ token: tokenRef.current }),
     onConnect: ({ recovered }) => {

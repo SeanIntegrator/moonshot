@@ -15,7 +15,7 @@ export async function insertOrderItems(
       `INSERT INTO order_items (
         order_id, pos_line_uid, menu_item_id, item_name, quantity, unit_price_minor,
         modifiers, allergens, notes, category
-      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)`,
       [
         orderId,
         `app:${index}`,

@@ -57,6 +57,32 @@ describe('applyKdsEvent', () => {
     expect(next).toBe(prev);
   });
 
+  it('applies an item quantity change even when updatedAt is unchanged', () => {
+    const item = {
+      id: 'line-1',
+      menuItemId: null,
+      itemName: 'Latte',
+      quantity: 1,
+      unitPriceMinor: 350,
+      modifiers: [],
+      allergens: [],
+      notes: null,
+      category: null,
+    };
+    const existing = order({ id: 'a', updatedAt: 't1', items: [item] });
+    const prev = [existing];
+    const next = applyKdsEvent(
+      prev,
+      {
+        type: 'kds:order:updated',
+        order: { ...existing, items: [{ ...item, quantity: 2 }] },
+      },
+      noPending,
+    );
+    expect(next).not.toBe(prev);
+    expect(next[0]?.items[0]?.quantity).toBe(2);
+  });
+
   it('removes an order and no-ops when already gone', () => {
     const a = order({ id: 'a' });
     const prev = [a];
@@ -132,6 +158,30 @@ describe('mergeRemoteOrders', () => {
     const prev = [a];
     const next = mergeRemoteOrders(prev, [{ ...a }], noPending);
     expect(next).toBe(prev);
+  });
+
+  it('replaces the board when a remote line quantity changes at the same updatedAt', () => {
+    const item = {
+      id: 'line-1',
+      menuItemId: null,
+      itemName: 'Latte',
+      quantity: 1,
+      unitPriceMinor: 350,
+      modifiers: [],
+      allergens: [],
+      notes: null,
+      category: null,
+    };
+    const local = order({ id: 'a', updatedAt: 't1', items: [item] });
+    const remote = order({
+      id: 'a',
+      updatedAt: 't1',
+      items: [{ ...item, quantity: 2 }],
+    });
+    const prev = [local];
+    const next = mergeRemoteOrders(prev, [remote], noPending);
+    expect(next).not.toBe(prev);
+    expect(next[0]?.items[0]?.quantity).toBe(2);
   });
 
   it('keeps dismissing cards that the server no longer returns', () => {
