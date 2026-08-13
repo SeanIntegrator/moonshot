@@ -3,13 +3,12 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { CafeTheme, CafeThemeColors } from '@moonshot/types';
-import { boldTheme } from './bold.js';
-import { botanicalTheme } from './botanical.js';
-import { classicTheme } from './classic.js';
-import { heritageTheme } from './heritage.js';
-import { getTheme } from './index.js';
-import { minimalTheme } from './minimal.js';
-import { radiiFromCardStyle } from '../theme/radii.js';
+import {
+  listThemePacks,
+  minimalTheme,
+  radiiFromCardStyle,
+  resolveCafeTheme,
+} from './index.js';
 
 const COLOR_KEYS: (keyof CafeThemeColors)[] = [
   'primary',
@@ -29,13 +28,7 @@ const COLOR_KEYS: (keyof CafeThemeColors)[] = [
   'heroText',
 ];
 
-const packs: CafeTheme[] = [
-  heritageTheme,
-  botanicalTheme,
-  minimalTheme,
-  boldTheme,
-  classicTheme,
-];
+const packs: CafeTheme[] = listThemePacks();
 
 describe('theme pack contract', () => {
   for (const pack of packs) {
@@ -55,10 +48,10 @@ describe('theme pack contract', () => {
     });
   }
 
-  it('getTheme falls back to heritage for unknown ids', () => {
-    // @ts-expect-error intentional invalid id
-    const t = getTheme('not-a-theme');
-    expect(t.colors.primary).toBe(heritageTheme.colors.primary);
+  it('resolveCafeTheme falls back to minimal for unknown ids', () => {
+    const t = resolveCafeTheme('not-a-theme');
+    expect(t.colors.primary).toBe(minimalTheme.colors.primary);
+    expect(t.id).toBe('minimal');
   });
 
   it('pill cardStyle keeps card radius finite (not fully round)', () => {
@@ -72,14 +65,8 @@ describe('theme pack contract', () => {
 describe('no brand hex outside theme packs', () => {
   const srcRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
   const hexRe = /#[0-9a-fA-F]{3,8}\b/g;
-  const allowedRel = new Set([
-    'themes/heritage.ts',
-    'themes/botanical.ts',
-    'themes/minimal.ts',
-    'themes/bold.ts',
-    'themes/classic.ts',
-    'themes/theme-contract.test.ts',
-  ]);
+  // Pack hexes live in @moonshot/domain; OA must not invent brand colours.
+  const allowedRel = new Set(['themes/theme-contract.test.ts']);
 
   function walk(dir: string, out: string[] = []): string[] {
     for (const name of readdirSync(dir, { withFileTypes: true })) {
@@ -99,7 +86,6 @@ describe('no brand hex outside theme packs', () => {
     for (const file of walk(srcRoot)) {
       const rel = file.slice(srcRoot.length + 1).replace(/\\/g, '/');
       if (allowedRel.has(rel)) continue;
-      // Menu data colourHex usage is data-driven, not brand — still no literal hex in source.
       const text = readFileSync(file, 'utf8');
       const matches = text.match(hexRe);
       if (matches?.length) {

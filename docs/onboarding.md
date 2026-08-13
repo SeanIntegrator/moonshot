@@ -35,7 +35,7 @@ Removed from the old journey: separate café / account / confirm signup steps, W
 |---------|----------|--------|
 | Login, signup, onboarding | Café owners | Dark editorial (`signupTheme` — chartreuse accent, Syne headings) via `BrandShell` |
 | Dashboard (post-onboarding) | Café owners | Light MUI (`dashboardTheme`) |
-| `moonshot-order-ahead` themes | End customers | Warm white-label (`heritage`, `botanical`, etc.) |
+| `moonshot-order-ahead` themes | End customers | White-label packs (`minimal`, `organic`, `lively`) + brand colour / heading font |
 
 The dark theme spans the whole pre-dashboard journey so owners never see a mid-flow theme flip.
 
@@ -77,7 +77,7 @@ Response includes `password` only when the server generated one.
 Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe/cafe-provisioning.ts):
 
 - `pos_provider`: `manual` (switches to Square after OAuth connect / POS import)
-- `theme_id`: `heritage`
+- `theme_id`: `organic`
 - `timezone`: `Europe/London` (no signup field)
 - Slug: derived from café name; collisions get `-2`, `-3`, …
 - Kitchen login: `barista` user seeded at signup (password rotatable from dashboard **Your café links** card)

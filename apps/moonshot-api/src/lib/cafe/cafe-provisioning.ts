@@ -125,7 +125,7 @@ async function insertCafeWithAdmin(
 
   const cafeInsert = await client.query<{ id: string }>(
     `INSERT INTO cafes (name, slug, pos_provider, features, theme_id, kds_config, timezone, hours, drink_archetype_config)
-     VALUES ($1, $2, 'manual', $3::jsonb, 'heritage', $4::jsonb, $5, $6::jsonb, $7::jsonb)
+     VALUES ($1, $2, 'manual', $3::jsonb, 'organic', $4::jsonb, $5, $6::jsonb, $7::jsonb)
      RETURNING id`,
     [
       name,

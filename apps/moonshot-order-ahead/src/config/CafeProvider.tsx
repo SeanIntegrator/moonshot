@@ -22,7 +22,7 @@ import {
 } from '../lib/network-error.js';
 import { applyThemeWebfonts } from '../theme/applyThemeWebfonts.js';
 import { createCafeMuiTheme } from '../theme/createCafeMuiTheme.js';
-import { getTheme } from '../themes/index.js';
+import { resolveCafeTheme } from '../themes/index.js';
 
 /** Retries absorb brief blips / cold starts before we show an error screen. */
 const BOOTSTRAP_ATTEMPTS = 3;
@@ -79,7 +79,7 @@ export function CafeProvider({ children }: { children: ReactNode }) {
           const c = data.cafe;
           setCafe(c);
           setActiveFeatures(data.activeFeatures);
-          setTheme(getTheme(c.themeId, c.themeOverrides));
+          setTheme(resolveCafeTheme(c.themeId, c.themeOverrides));
           setError(null);
           setIsConnectivityError(false);
           setLoading(false);
@@ -125,7 +125,9 @@ export function CafeProvider({ children }: { children: ReactNode }) {
   const muiTheme = useMemo(() => createCafeMuiTheme(theme), [theme]);
 
   useEffect(() => {
-    applyThemeWebfonts(theme?.typography.webfontUrls ?? getTheme('heritage').typography.webfontUrls);
+    applyThemeWebfonts(
+      theme?.typography.webfontUrls ?? resolveCafeTheme('minimal').typography.webfontUrls,
+    );
   }, [theme]);
 
   const value = useMemo<CafeContextValue>(

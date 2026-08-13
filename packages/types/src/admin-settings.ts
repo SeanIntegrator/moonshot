@@ -1,9 +1,11 @@
 /**
- * Admin dashboard PATCH — merges into `cafes.features` and `cafes.kds_config`.
+ * Admin dashboard PATCH — merges into `cafes.features`, `kds_config`, hours, theme.
  */
 
 import type {
+  BaseThemeId,
   Cafe,
+  CafeBrandOverrides,
   KdsConfig,
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
@@ -33,6 +35,10 @@ export interface AdminSettingsPatchBody {
   kdsConfigPatch?: AdminKdsConfigPatch;
   /** Replace weekly hours when present (validated server-side). */
   hours?: CafeHours;
+  /** Child theme pack id. */
+  themeId?: BaseThemeId;
+  /** Brand recipe merged into `theme_overrides.brand`. */
+  brand?: CafeBrandOverrides | null;
 }
 
 export interface AdminSettingsResponse {

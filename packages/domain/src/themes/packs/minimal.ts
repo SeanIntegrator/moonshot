@@ -1,24 +1,24 @@
 import type { CafeTheme } from '@moonshot/types';
 
-/** White + blue default aligned with current mobile design direction. */
-export const heritageTheme: CafeTheme = {
-  id: 'heritage',
+/** White / near-black, clinical, sharp edges */
+export const minimalTheme: CafeTheme = {
+  id: 'minimal',
   colors: {
-    primary: '#0d1b3d',
+    primary: '#111827',
     primaryContrast: '#ffffff',
-    secondary: '#334e85',
-    background: '#f4f7fc',
-    surface: '#f8fafd',
+    secondary: '#6b7280',
+    background: '#fafafa',
+    surface: '#fcfcfc',
     surfaceElevated: '#ffffff',
-    text: '#111a30',
-    textMuted: '#5d6780',
-    textOnDark: '#f4f7ff',
-    border: '#dbe3f1',
-    success: '#0f8c62',
-    warning: '#b97816',
+    text: '#111827',
+    textMuted: '#6b7280',
+    textOnDark: '#f9fafb',
+    border: '#e5e7eb',
+    success: '#059669',
+    warning: '#d97706',
     error: '#dc2626',
-    heroBg: '#0d1b3d',
-    heroText: '#f4f7ff',
+    heroBg: '#111827',
+    heroText: '#f9fafb',
   },
   typography: {
     headingFamily: '"Inter", system-ui, sans-serif',
@@ -31,8 +31,8 @@ export const heritageTheme: CafeTheme = {
   },
   layout: {
     menuGrid: '2col',
-    cardStyle: 'rounded',
-    heroStyle: 'full',
+    cardStyle: 'sharp',
+    heroStyle: 'compact',
     navStyle: 'bottom_bar',
   },
 };

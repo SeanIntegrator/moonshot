@@ -58,8 +58,9 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 ### Self-service onboarding + theme
 
 - Marketing → admin signup → wizard (KDS user, Square or template menu, optional Stripe).
-- Order-ahead **theme system**: structural + café packs (`heritage`, etc.), radii, webfonts, `cafeLayout`.
-- Theme **read** path shipped (`theme_id` / `theme_overrides`); Admin **write** path and logo upload not yet (Workstream 4).
+- Order-ahead **theme system**: structural shell + three packs (`minimal` / `organic` / `lively`) in `@moonshot/domain`, brand recipe resolve, radii, webfonts, `cafeLayout`.
+- Admin **Branding** card: pack / brand colour / heading font + live preview; logo parked (Workstream 4 done).
+- New cafés default to `theme_id: organic`.
 
 ### Shared packages & realtime
 

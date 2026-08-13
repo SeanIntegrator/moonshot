@@ -13,7 +13,7 @@ Clay & Bean v2 is "released" when:
 5. Order-ahead and KDS are installable to the home screen (standalone, no URL bar on tablet).
 6. v0.1 is retired and C&B is running solely on v2.
 
-**Already shipped** (do not re-open as launch work): happy-path order flow, Stripe Connect checkout, Square OAuth + catalog sync + token refresh cron, KDS Flow board iteration 1, preparing/ready status + ETA stretch, loyalty ledger, order-ahead theme packs (read path), self-service onboarding. See [progress.md](../progress.md) and [bugs/m1-triage.md](../bugs/m1-triage.md).
+**Already shipped** (do not re-open as launch work): happy-path order flow, Stripe Connect checkout, Square OAuth + catalog sync + token refresh cron, KDS Flow board iteration 1, preparing/ready status + ETA stretch, loyalty ledger, order-ahead theme packs + Admin branding write path (logo parked), self-service onboarding. See [progress.md](../progress.md) and [bugs/m1-triage.md](../bugs/m1-triage.md).
 
 Work through the seven workstreams below as separate planned sessions, in order.
 
@@ -112,32 +112,16 @@ An owner can navigate the admin console via clear sections with consistent hiera
 
 ## Workstream 4 — Café branding and theme picker
 
-### Current state (verified)
+**Status: done (August 2026).** Logo upload remains parked.
 
-- Read path is complete: `cafes.theme_id` + `cafes.theme_overrides` ship via `GET /cafe/:slug`; order-ahead `getTheme(themeId, themeOverrides)` deep-merges packs.
-- Five packs: `heritage`, `botanical`, `minimal`, `bold`, `classic`.
-- **No admin write path** — settings PATCH never updates `theme_id` / `theme_overrides`.
-- **No logo field** anywhere; order-ahead has no logo render slot. Menu image upload (S3 + media proxy) is the reuse pattern.
+- Three packs in `@moonshot/domain`: `minimal` / `organic` / `lively` (legacy ids migrate / coerce).
+- Brand recipe in `theme_overrides.brand` (`color`, `headingFontId`); `resolveCafeTheme` derives surfaces at runtime.
+- Admin **Branding** card on the existing dashboard (WS3 shell still parked): pack picker, colour, heading font, live Home-like preview.
+- Settings PATCH updates `theme_id` + `theme_overrides`; order-ahead matches without a deploy.
 
-### Work
+### Done when (met)
 
-1. Add `themeId` / `themeOverrides` to `AdminSettingsPatchBody` and the cafés UPDATE. Validate `BaseThemeId` and hex colours (manual validation — this endpoint is not zod).
-2. Admin Branding page (depends on Workstream 3 shell): pack picker + colour overrides into `themeOverrides.colors.*`. Fonts already overridable via `themeOverrides.typography.webfontUrls`.
-3. Logo: `cafes.logo_url` column, new object-key allowlist pattern, admin upload route, Home hero render slot. Reuse menu-image S3 / resize / proxy pipeline.
-4. Keep `theme-contract.test.ts` invariant: no brand hex outside pack files.
-
-### Done when
-
-A café owner can pick a pack, override brand colours, upload a logo, and see the change live on order-ahead without a deploy.
-
-### Files
-
-- `packages/types/src/admin-settings.ts`, `packages/types/src/cafe.ts`
-- `apps/moonshot-api/src/lib/admin/admin-settings-merge.ts` (+ settings service UPDATE)
-- `apps/moonshot-api/src/lib/menu/menu-image-object-key.ts`
-- Admin Branding page
-- `apps/moonshot-order-ahead/src/themes/*`, Home / PageHeader logo slot
-- New migration for `cafes.logo_url`
+An owner can pick Minimal / Organic / Lively, set brand colour + heading font, preview, save, and order-ahead updates live. Logo deferred.
 
 ---
 
@@ -242,7 +226,7 @@ C&B is on v2 only with OAuth Square, no duplicate POS events, and one clean live
 | M1 happy-path cards still open on the old board | Closed — see [bugs/m1-triage.md](../bugs/m1-triage.md) |
 | Split oversized `admin-api.ts` | Already a barrel; bulk lives in `adminApi/menu.ts` + menu panels |
 | KDS is a “PWA shell” | Vite SPA + manifest / Apple meta for iPad A2HS (no SW); order-ahead has full PWA SW |
-| Café theme editor is only “post-launch polish” | Read path shipped; write path is launch Workstream 4 |
+| Café theme editor is only “post-launch polish” | Write path shipped (WS4); logo still parked |
 | Review nudge needs thumbs up/down + `feedback_responses` | Launch scope is single CTA (WS2 **done**); thumbs / `feedback_responses` remain parked |
 | Square line notes untested / possibly unmapped | Line notes mapped + plain off-white in allergen column; order-level notes on live `OrderCard` (WS6 notes done; install remaining) |
 
@@ -264,5 +248,5 @@ flowchart LR
 ```
 
 - Loyalty stamp payload on `customerOrderCompleted` (WS1 — **done**) lands before relying on Home-during-complete for the review modal (WS2 — **done**).
-- Branding admin UI (WS4) sits on the redesigned shell (WS3).
+- Branding write path (WS4 — **done**) shipped as a dashboard card while WS3 shell redesign remains parked.
 - Cutover (WS7) waits on product workstreams being good enough for a live shift.

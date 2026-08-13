@@ -135,7 +135,7 @@ export const structuralThemeOptions: ThemeOptions = {
 
 /**
  * Structural shell only — missing palette.cafe until a café pack is merged.
- * Prefer `createCafeMuiTheme(null)` (heritage fallback) for renderable themes.
+ * Prefer `createCafeMuiTheme(null)` (minimal fallback) for renderable themes.
  */
 export const structuralMuiTheme = createTheme(structuralThemeOptions);
 

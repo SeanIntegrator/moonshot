@@ -6,7 +6,8 @@ import type { CafeHours } from './cafe-hours-contract.js';
 import type { FeatureFlagKey } from './feature-flags-contract.js';
 import type { PosProvider } from './pos-contract.js';
 
-export type BaseThemeId = 'heritage' | 'botanical' | 'minimal' | 'bold' | 'classic';
+/** Child theme packs — structural master is separate (MUI structuralThemeOptions). */
+export type BaseThemeId = 'minimal' | 'organic' | 'lively';
 
 export interface CafeThemeColors {
   primary: string;
@@ -55,6 +56,21 @@ export interface CafeTheme {
   colors: CafeThemeColors;
   typography: CafeThemeTypography;
   layout: CafeThemeLayout;
+}
+
+/**
+ * Persisted brand recipe on `cafes.theme_overrides`.
+ * Applied at resolve time — not a dump of derived hexes.
+ */
+export interface CafeBrandOverrides {
+  /** Brand primary; null clears a previously saved colour. */
+  color?: string | null;
+  /** Curated heading font id; null = use pack default. */
+  headingFontId?: string | null;
+}
+
+export interface CafeThemeOverrides {
+  brand?: CafeBrandOverrides;
 }
 
 export interface LoyaltyFeatureConfig {
@@ -226,7 +242,7 @@ export interface Cafe {
   paymentProvider: string;
   features: CafeFeatures;
   themeId: BaseThemeId;
-  themeOverrides: Partial<CafeTheme>;
+  themeOverrides: CafeThemeOverrides;
   kdsConfig: KdsConfig;
   timezone: string;
   /** Weekly local hours; empty days / empty object → treated as closed. */

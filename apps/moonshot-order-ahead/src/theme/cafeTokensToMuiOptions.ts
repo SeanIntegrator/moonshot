@@ -49,6 +49,18 @@ export function cafeTokensToMuiOptions(tokens: CafeTheme): ThemeOptions {
         fontFamily: typography.headingFamily,
         fontWeight: typography.headingWeight,
       },
+      h4: {
+        fontFamily: typography.headingFamily,
+        fontWeight: typography.headingWeight,
+      },
+      h5: {
+        fontFamily: typography.headingFamily,
+        fontWeight: typography.headingWeight,
+      },
+      h6: {
+        fontFamily: typography.headingFamily,
+        fontWeight: typography.headingWeight,
+      },
       subtitle1: { fontFamily: typography.bodyFamily, fontWeight: typography.bodyWeight },
       subtitle2: { fontFamily: typography.bodyFamily, fontWeight: typography.bodyWeight },
       body1: { fontFamily: typography.bodyFamily, fontWeight: typography.bodyWeight },

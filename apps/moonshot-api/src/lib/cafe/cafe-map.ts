@@ -1,7 +1,8 @@
-import type { BaseThemeId, CafeFeatures, CafeTheme, KdsConfig } from '@moonshot/types';
+import type { CafeFeatures, CafeThemeOverrides, KdsConfig } from '@moonshot/types';
 import type { FeatureFlagKey } from '@moonshot/types';
 import { FeatureFlagKeys } from '@moonshot/types';
 import {
+  coerceBaseThemeId,
   DEFAULT_BEAN_ACCENTS,
   DEFAULT_MODIFIER_CLASSIFICATION,
   normalizeCafeHours,
@@ -107,7 +108,7 @@ export function activeFeatureKeys(features: CafeFeatures): FeatureFlagKey[] {
 
 export function mapCafeRow(row: CafeRow): ResolvedCafe {
   const features = row.features as CafeFeatures;
-  const themeOverrides = (row.theme_overrides || {}) as Partial<CafeTheme>;
+  const themeOverrides = (row.theme_overrides || {}) as CafeThemeOverrides;
   const kdsConfig = normalizeKdsConfig(row.kds_config as KdsConfig, row.id);
 
   return {
@@ -119,7 +120,7 @@ export function mapCafeRow(row: CafeRow): ResolvedCafe {
     paymentProvider: row.payment_provider,
     paymentConfig: asRecord(row.payment_config),
     features,
-    themeId: row.theme_id as BaseThemeId,
+    themeId: coerceBaseThemeId(row.theme_id),
     themeOverrides,
     kdsConfig,
     timezone: row.timezone,

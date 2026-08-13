@@ -13,3 +13,4 @@ export * from './menu-provisioning.js';
 export * from './menu-template.js';
 export * from './pos.js';
 export * from './pos-catalog.js';
+export * from './themes/index.js';

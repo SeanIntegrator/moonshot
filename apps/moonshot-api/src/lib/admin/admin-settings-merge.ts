@@ -424,5 +424,17 @@ export function parseAdminSettingsPatchBody(body: unknown): AdminSettingsPatchBo
     out.hours = b.hours as CafeHours;
   }
 
+  if (typeof b.themeId === 'string') {
+    out.themeId = b.themeId as AdminSettingsPatchBody['themeId'];
+  }
+
+  if (Object.prototype.hasOwnProperty.call(b, 'brand')) {
+    if (b.brand === null) {
+      out.brand = null;
+    } else if (b.brand && typeof b.brand === 'object' && !Array.isArray(b.brand)) {
+      out.brand = b.brand as AdminSettingsPatchBody['brand'];
+    }
+  }
+
   return out;
 }

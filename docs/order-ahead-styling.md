@@ -1,33 +1,40 @@
 # Order-ahead styling
 
-How visual styles are layered so café themes (and per-café colour/font overrides) can re-skin the UI without editing page components.
+How visual styles are layered so café themes (and per-café brand colour / heading font) can re-skin the UI without editing page components.
 
 ## Layering
 
 ```mermaid
 flowchart LR
   baseCss["index.css + page-transition.css\n(reset, motion)"]
-  structural["structuralThemeOptions\n(density, type scale, component chrome, radii shell)"]
-  cafePack["1 of 5 CafeTheme packs\n(+ optional cafe overrides)"]
+  structural["structuralThemeOptions\n(density, type scale, component chrome)"]
+  pack["Child pack: minimal | organic | lively"]
+  brand["Brand recipe: colour + headingFontId"]
+  resolved["resolveCafeTheme"]
   merged["createCafeMuiTheme\nThemeProvider"]
-  ui["UI components\n(theme tokens / styled / MUI)"]
+  ui["UI components"]
 
   baseCss --> ui
   structural --> merged
-  cafePack --> merged
+  pack --> resolved
+  brand --> resolved
+  resolved --> merged
   merged --> ui
 ```
 
 1. **Global CSS** — structural reset, motion duration vars, page-route transitions. No brand colours.
 2. **`structuralThemeOptions`** (`theme/muiBaseTheme.ts`) — density, typography *scale* (sizes/line-heights only), named radii shell, `components.styleOverrides`. Overrides must use **theme callbacks**, never hex literals. **No palette or font families here.**
-3. **Café pack + overrides** — one of five `CafeTheme` templates (`heritage`, `botanical`, `minimal`, `bold`, `classic`), optionally deep-merged with café-specific colour/font overrides, mapped via `cafeTokensToMuiOptions`. Packs are the **sole** source of brand colour and font families. `createCafeMuiTheme(null)` falls back to `getTheme('heritage')`.
-4. **UI** — MUI components + shared `styled(...)` primitives that read `theme.palette` / `theme.typography` / `theme.radii` / `theme.cafeLayout`.
+3. **Child pack** — one of three `CafeTheme` templates in `@moonshot/domain` (`minimal`, `organic`, `lively`): radii, layout, default fonts, canvas/text/semantics.
+4. **Brand recipe** — stored as `theme_overrides.brand: { color?, headingFontId? }`, applied at **resolve** time via `resolveCafeTheme` (not a dump of derived hexes). Brand colour seeds primary + related surfaces; pack keeps page background and primary/muted text. Semantic colours stay pack-fixed. Heading font overlays `headingFamily` for **h1–h6** only; body stays pack `bodyFamily`.
+5. **UI** — MUI components + shared `styled(...)` primitives that read `theme.palette` / `theme.typography` / `theme.radii` / `theme.cafeLayout`.
+
+`createCafeMuiTheme(null)` falls back to `resolveCafeTheme('minimal')`. Unknown / legacy theme ids coerce via `coerceBaseThemeId` (`heritage`→`minimal`, `botanical`/`classic`→`organic`, `bold`→`lively`).
 
 ## Adding a child theme
 
-1. Add `src/themes/<id>.ts` exporting a full `CafeTheme` (every colour, typography including `webfontUrls`, layout enums).
-2. Register it in `src/themes/index.ts` and extend `BaseThemeId` in `@moonshot/types`.
-3. Done — no component edits. Contract tests in `themes/theme-contract.test.ts` enforce the pack shape and that no hex appears outside theme packs.
+1. Add `packages/domain/src/themes/packs/<id>.ts` exporting a full `CafeTheme`.
+2. Register in `resolve-cafe-theme.ts` / `BaseThemeId` in `@moonshot/types`.
+3. Done — Admin preview, API validation, and order-ahead share the same pack. Contract tests enforce pack shape and that order-ahead has no hex outside theme resolution.
 
 ## Where styles belong
 
@@ -35,8 +42,8 @@ flowchart LR
 |---------|----------------|
 | Reset, reduced-motion, page transitions | Global CSS (`index.css`, `page-transition.css`) |
 | Type scale, density, component chrome | `structuralThemeOptions` |
-| Palette, font families, webfont URLs | Café packs only (`src/themes/*.ts`) |
-| Named radii (`card` / `control` / `pill`) | `theme/radii.ts` → `theme.radii` (from `cardStyle`) |
+| Palette, font families, webfont URLs | Domain packs + `deriveBrandSurfaces` / heading catalog |
+| Named radii (`card` / `control` / `pill`) | `@moonshot/domain` `radiiFromCardStyle` → `theme.radii` |
 | Elevated secondary card chrome | `theme/surfaceCardChrome.ts` → `MuiPaper` + `SurfaceCard` / `PressableCard` / `LoyaltyCardShell` |
 | Reusable custom controls | `styled(...)` under `src/components/ui/` reading `({ theme }) => …` |
 | Page layout / one-off spacing | `sx` layout-only (`display`, `gap`, `mt`, flex) |
@@ -63,7 +70,7 @@ Use theme tokens (`'primary.main'`, `'divider'`, `'background.paper'`), `sxRadiu
 - **`SurfaceCard`** — shared elevated secondary card. Prefer it over hand-rolled `Box` + `border: 1` for card chrome.
 - **`theme.radii`** — `card` (papers/cards), `control` (buttons/chips/tiles), `pill` (fully round). Derived from `layout.cardStyle`. **Never** assign `999` to `shape.borderRadius` (that used to make every Paper a circle under `pill`).
 - **`cafeLayout`** — `menuGrid` drives Menu columns; `heroStyle` drives Home hero (`full` / `compact` / `none`); `navStyle` drives App chrome (`bottom_bar` / `top_bar`); `cardStyle` drives radii.
-- **Webfonts** — packs declare `typography.webfontUrls`; `CafeProvider` injects `<link data-moonshot-theme-font>` on theme change (no hardcoded fonts in `index.html`).
+- **Webfonts** — packs declare `typography.webfontUrls`; brand heading font URL is merged at resolve. `CafeProvider` injects `<link data-moonshot-theme-font>` on theme change (no hardcoded fonts in `index.html`).
 - **Page column** — `Container maxWidth="sm"` and fixed chrome share `theme/pageLayout.ts`: full-bleed through tablet, then a 600px column from **1024px**. Use `pageContentWidthSx` for nav/cart/snackbar shells.
 
 ## Interactive controls
@@ -72,6 +79,7 @@ Use real MUI primitives (`Button`, `ButtonBase`, `Chip`, `ToggleButton`) or shar
 
 ## Hex is allowed only in
 
-- `src/themes/*.ts` (café packs)
+- `packages/domain/src/themes/packs/*.ts` (café packs)
+- Domain colour derivation helpers (tests / internal)
 
-Not in page/component TSX, and **not** in the structural base theme.
+Not in order-ahead page/component TSX, and **not** in the structural base theme.

@@ -1,4 +1,4 @@
-import type { AdminSettingsResponse } from '@moonshot/types';
+import type { AdminSettingsResponse, CafeThemeOverrides } from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { pool } from '../../db.js';
 import { activeFeatureKeys, mapCafeRow } from '../cafe/cafe-map.js';
@@ -9,13 +9,14 @@ import {
   parseAdminSettingsPatchBody,
   validateCafeHoursPatch,
 } from './admin-settings-merge.js';
+import { mergeThemeOverrides, parseBrandPatch, parseThemeId } from './admin-theme-merge.js';
 import { ApiHttpError } from '../http-errors.js';
 import { toPublicCafe } from '../to-public-cafe.js';
 
 export type AdminSettingsPatchInput = ReturnType<typeof parseAdminSettingsPatchBody>;
 
 /**
- * Merge feature + KDS config patches and persist on the café row.
+ * Merge feature + KDS + hours + theme patches and persist on the café row.
  * Throws {@link ApiHttpError} for validation / not-found cases.
  */
 export async function patchAdminCafeSettings(
@@ -23,11 +24,17 @@ export async function patchAdminCafeSettings(
   body: unknown,
 ): Promise<AdminSettingsResponse> {
   const parsed = parseAdminSettingsPatchBody(body);
-  if (!parsed.featuresPatch && !parsed.kdsConfigPatch && parsed.hours === undefined) {
+  const hasTheme = parsed.themeId !== undefined || parsed.brand !== undefined;
+  if (
+    !parsed.featuresPatch &&
+    !parsed.kdsConfigPatch &&
+    parsed.hours === undefined &&
+    !hasTheme
+  ) {
     throw new ApiHttpError(
       400,
       ApiErrorCode.VALIDATION,
-      'featuresPatch, kdsConfigPatch, or hours is required',
+      'featuresPatch, kdsConfigPatch, hours, themeId, or brand is required',
     );
   }
 
@@ -39,6 +46,8 @@ export async function patchAdminCafeSettings(
   let nextFeatures = resolved.features;
   let nextKds = resolved.kdsConfig;
   let nextHours = resolved.hours;
+  let nextThemeId = resolved.themeId;
+  let nextThemeOverrides: CafeThemeOverrides = resolved.themeOverrides ?? {};
 
   if (parsed.featuresPatch) {
     const merged = mergeCafeFeatures(resolved.features, parsed.featuresPatch);
@@ -64,12 +73,39 @@ export async function patchAdminCafeSettings(
     nextHours = validated.value;
   }
 
+  if (parsed.themeId !== undefined) {
+    const tid = parseThemeId(parsed.themeId);
+    if (!tid.ok) {
+      throw new ApiHttpError(400, ApiErrorCode.VALIDATION, tid.error);
+    }
+    if (tid.value) nextThemeId = tid.value;
+  }
+
+  if (parsed.brand !== undefined) {
+    const brand = parseBrandPatch(parsed.brand);
+    if (!brand.ok) {
+      throw new ApiHttpError(400, ApiErrorCode.VALIDATION, brand.error);
+    }
+    nextThemeOverrides = mergeThemeOverrides(nextThemeOverrides, brand.value);
+  }
+
   const { rows } = await pool.query(
     `UPDATE cafes
-     SET features = $1::jsonb, kds_config = $2::jsonb, hours = $3::jsonb
-     WHERE id = $4
+     SET features = $1::jsonb,
+         kds_config = $2::jsonb,
+         hours = $3::jsonb,
+         theme_id = $4,
+         theme_overrides = $5::jsonb
+     WHERE id = $6
      RETURNING ${CAFE_COLUMNS}`,
-    [JSON.stringify(nextFeatures), JSON.stringify(nextKds), JSON.stringify(nextHours), cafeId],
+    [
+      JSON.stringify(nextFeatures),
+      JSON.stringify(nextKds),
+      JSON.stringify(nextHours),
+      nextThemeId,
+      JSON.stringify(nextThemeOverrides),
+      cafeId,
+    ],
   );
 
   const out = mapCafeRow(rows[0] as Parameters<typeof mapCafeRow>[0]);

@@ -6,7 +6,7 @@ const FEATURES = [
   { title: 'Pickup ETA', copy: 'Queue-aware estimates — customers know when to arrive.' },
   { title: 'Pay in store first', copy: 'Go live without Stripe on day one. Add online payments when it makes sense.' },
   { title: 'Loyalty & reviews', copy: 'Stamps and review nudges — opt-in features, not day-one complexity.' },
-  { title: 'Your brand', copy: 'Heritage, botanical, minimal — themes that feel like your café, not ours.' },
+  { title: 'Your brand', copy: 'Minimal, organic, lively — themes that feel like your café, not ours.' },
 ];
 
 export function FeatureGrid() {
