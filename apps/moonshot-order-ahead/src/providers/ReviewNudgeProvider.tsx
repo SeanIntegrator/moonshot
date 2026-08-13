@@ -37,7 +37,9 @@ export function ReviewNudgeProvider({ children }: { children: ReactNode }) {
 
   const openPrompt = useCallback((url: string | null) => {
     if (dismissedRef.current) return;
-    setReviewUrl(url);
+    // Nudge disabled or URL cleared — do not trap the user with a dead CTA.
+    if (!url?.trim()) return;
+    setReviewUrl(url.trim());
     setOpen(true);
   }, []);
 
