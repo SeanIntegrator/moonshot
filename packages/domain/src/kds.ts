@@ -9,6 +9,13 @@ import type {
   NormalisedOrderLineModifier,
 } from '@moonshot/types';
 
+/** Sit-in / takeaway kitchen SLA — also the fresh clock applied on recall. */
+export const KDS_WALK_UP_SLA_MS = 4 * 60 * 1000;
+
+export function walkUpSlaDeadlineIso(nowMs: number = Date.now()): string {
+  return new Date(nowMs + KDS_WALK_UP_SLA_MS).toISOString();
+}
+
 export type KdsChipShape = 'square' | 'round';
 
 export interface KdsChip {

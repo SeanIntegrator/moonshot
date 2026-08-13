@@ -2,8 +2,10 @@
  * Hybrid order timer: counts down to a deadline, then counts up past-due in red.
  * POS / walk-up: deadline = createdAt + 4 minutes.
  * Pickup (order-ahead): deadline = pickup.pickupTime (falls back to createdAt + 4m).
+ * Recalled tickets: etaMode manual_override + pickupTime = now + 4m (fresh walk-up SLA).
  */
 
+import { KDS_WALK_UP_SLA_MS } from '@moonshot/domain';
 import { useEffect, useState } from 'react';
 import type { KdsConfig, NormalisedOrder } from '@moonshot/types';
 
@@ -20,7 +22,6 @@ export interface OrderTimerState {
   pastDue: boolean;
 }
 
-const POS_SLA_MS = 4 * 60 * 1000;
 /** Switch to amber when this many seconds remain before the deadline. */
 const AMBER_REMAINING_SECONDS = 60;
 
@@ -43,11 +44,14 @@ export function ticketKindLabel(kind: FlowTicketKind): string {
 
 export function orderDeadlineMs(order: NormalisedOrder, kind: FlowTicketKind): number {
   const created = Date.parse(order.createdAt);
-  if (kind === 'pickup') {
-    const pickup = order.pickup.pickupTime ? Date.parse(order.pickup.pickupTime) : NaN;
-    if (Number.isFinite(pickup)) return pickup;
+  const pickup = order.pickup.pickupTime ? Date.parse(order.pickup.pickupTime) : NaN;
+  // Recalled (and stretched) tickets lock a walk-up SLA on pickupTime so they
+  // do not inherit the original createdAt / quoted slot and land already red.
+  if (order.pickup.etaMode === 'manual_override' && Number.isFinite(pickup)) {
+    return pickup;
   }
-  return (Number.isFinite(created) ? created : Date.now()) + POS_SLA_MS;
+  if (kind === 'pickup' && Number.isFinite(pickup)) return pickup;
+  return (Number.isFinite(created) ? created : Date.now()) + KDS_WALK_UP_SLA_MS;
 }
 
 /** Format absolute duration as days / hours / minutes (no seconds). */

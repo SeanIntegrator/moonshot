@@ -39,6 +39,24 @@ describe('toOptimisticRecalledOrder', () => {
     expect(next.pickup.completedAt).toBeNull();
     expect(source.status).toBe('completed');
   });
+
+  it('starts a fresh walk-up SLA instead of keeping the original deadline', () => {
+    const now = Date.parse('2026-01-01T12:00:00.000Z');
+    const source = order({
+      id: 'a',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      pickup: {
+        quotedPickupTime: '2026-01-01T00:08:00.000Z',
+        pickupTime: '2026-01-01T00:08:00.000Z',
+        completedAt: '2026-01-01T00:10:00.000Z',
+        etaMode: 'auto',
+      },
+    });
+    const next = toOptimisticRecalledOrder(source, now);
+    expect(next.pickup.etaMode).toBe('manual_override');
+    expect(next.pickup.pickupTime).toBe('2026-01-01T12:04:00.000Z');
+    expect(source.pickup.pickupTime).toBe('2026-01-01T00:08:00.000Z');
+  });
 });
 
 describe('unselectedLineIds', () => {

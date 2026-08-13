@@ -50,7 +50,10 @@ describe('recallLastCompletedOrderForKds', () => {
     expect(result).toBeNull();
     const upd = query.mock.calls.find((c) => String(c[0]).includes('UPDATE orders'));
     expect(String(upd?.[0])).toContain("$2 * INTERVAL '1 hour'");
-    expect(upd?.[1]).toEqual(['cafe-1', KDS_OPEN_MAX_AGE_HOURS]);
+    expect(String(upd?.[0])).toContain("eta_mode = 'manual_override'");
+    expect(upd?.[1]?.[0]).toBe('cafe-1');
+    expect(upd?.[1]?.[1]).toBe(KDS_OPEN_MAX_AGE_HOURS);
+    expect(typeof upd?.[1]?.[2]).toBe('string');
     expect(fetchOrderWithItems).not.toHaveBeenCalled();
   });
 });

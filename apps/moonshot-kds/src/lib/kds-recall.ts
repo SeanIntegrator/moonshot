@@ -1,11 +1,20 @@
+import { walkUpSlaDeadlineIso } from '@moonshot/domain';
 import type { NormalisedOrder } from '@moonshot/types';
 
-/** Board snapshot for an optimistic recall — reopened as just-placed. */
-export function toOptimisticRecalledOrder(order: NormalisedOrder): NormalisedOrder {
+/** Board snapshot for an optimistic recall — reopened on a fresh walk-up SLA. */
+export function toOptimisticRecalledOrder(
+  order: NormalisedOrder,
+  nowMs: number = Date.now(),
+): NormalisedOrder {
   return {
     ...order,
     status: 'confirmed',
-    pickup: { ...order.pickup, completedAt: null },
+    pickup: {
+      ...order.pickup,
+      completedAt: null,
+      pickupTime: walkUpSlaDeadlineIso(nowMs),
+      etaMode: 'manual_override',
+    },
   };
 }
 

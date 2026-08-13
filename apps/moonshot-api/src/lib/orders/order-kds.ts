@@ -1,4 +1,5 @@
 import type { NormalisedOrder, OrderStatus } from '@moonshot/types';
+import { walkUpSlaDeadlineIso } from '@moonshot/domain';
 import { pool } from '../../db.js';
 import type { OrderRowDb } from '../order-map.js';
 import {
@@ -92,10 +93,12 @@ export async function recallCompletedOrderForKds(
       `UPDATE orders
        SET status = 'confirmed',
            completed_at = NULL,
+           pickup_time = $3::timestamptz,
+           eta_mode = 'manual_override',
            updated_at = NOW()
        WHERE id = $1 AND cafe_id = $2 AND status = 'completed'
        RETURNING ${ORDER_SELECT_COLUMNS}`,
-      [orderId, cafeId],
+      [orderId, cafeId, walkUpSlaDeadlineIso()],
     );
 
     await client.query('COMMIT');
@@ -125,6 +128,8 @@ export async function recallLastCompletedOrderForKds(
       `UPDATE orders
        SET status = 'confirmed',
            completed_at = NULL,
+           pickup_time = $3::timestamptz,
+           eta_mode = 'manual_override',
            updated_at = NOW()
        WHERE id = (
          SELECT id
@@ -136,7 +141,7 @@ export async function recallLastCompletedOrderForKds(
        )
          AND status = 'completed'
        RETURNING ${ORDER_SELECT_COLUMNS}`,
-      [cafeId, KDS_OPEN_MAX_AGE_HOURS],
+      [cafeId, KDS_OPEN_MAX_AGE_HOURS, walkUpSlaDeadlineIso()],
     );
 
     await client.query('COMMIT');

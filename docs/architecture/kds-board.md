@@ -50,6 +50,7 @@ Bean bracket accents (`beanBadges.*.accent`): house `#e8a33d`, decaf `#7aa2d6`, 
 ### Hybrid timer
 
 - Deadline: POS/walk-up → `createdAt + 4m`; pickup → `pickup.pickupTime` (fallback +4m).
+- Recalled tickets lock `etaMode = manual_override` and `pickupTime = now + 4m` so they get a fresh sit-in/takeaway SLA instead of the original (already-late) clock. FIFO ETA recompute skips them.
 - Counts **down** to deadline (green → amber in last 60s), then **up** past-due in red.
 
 ## Config endpoint
@@ -102,7 +103,7 @@ Flow board interaction:
 
 - Tap a **line** → local strikethrough; when **all** lines made → `POST .../status` `{ status: "ready" }` (demote to `confirmed` if a line is un-crossed).
 - Tap the **header** → `POST .../complete` (emits `customerOrderCompleted` for order-ahead).
-- Header **Recent orders** → dialog of the last 20 completed tickets. Recall is optimistic: the card lands on the board immediately, the dialog closes, and a failure rolls the ticket back into the dialog.
+- Header **Recent orders** → dialog of the last 20 completed tickets. Recall is optimistic: the card lands on the board immediately, the dialog closes, and a failure rolls the ticket back into the dialog. The remake starts a fresh 4-minute walk-up timer (`pickupTime` + `manual_override`); it does not keep the original created/pickup deadline.
 
 Emits:
 
