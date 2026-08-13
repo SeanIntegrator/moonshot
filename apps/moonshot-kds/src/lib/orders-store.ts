@@ -23,6 +23,7 @@ function sameBoardSnapshot(a: NormalisedOrder, b: NormalisedOrder): boolean {
     a.updatedAt === b.updatedAt &&
     a.pickup.pickupTime === b.pickup.pickupTime &&
     a.notes === b.notes &&
+    a.detailsPending === b.detailsPending &&
     a.items.length === b.items.length &&
     a.items.every((item, i) => item.id === b.items[i]?.id)
   );

@@ -245,6 +245,11 @@ export function OrderCard({
         </div>
 
         <CardContent className="flex flex-col p-0" ref={bodyRef}>
+          {order.detailsPending ? (
+            <p className="border-b border-border px-4 py-2 text-[1.05rem] font-medium text-[#e8eef2]">
+              Details pending
+            </p>
+          ) : null}
           {drinks.map(({ item, view }, i) => (
             <DrinkRow
               key={item.id}

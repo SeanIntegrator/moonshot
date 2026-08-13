@@ -131,10 +131,13 @@ export function squareOrderToSnapshot(
     totalMinor: moneyMinor(total),
     currency,
     items: mapLineItems(order.lineItems),
+    detailsPending: false,
   };
 }
 
-export async function fetchSquareOrder(params: {
+export const FETCH_SQUARE_ORDER_RETRY_BACKOFF_MS = [0, 200, 500] as const;
+
+async function retrieveSquareOrderOnce(params: {
   accessToken: string;
   orderId: string;
   environment?: SquareClientEnvironment;
@@ -146,6 +149,33 @@ export async function fetchSquareOrder(params: {
   const res = await client.orders.get({ orderId: params.orderId });
   const order = res.order as Record<string, unknown> | undefined;
   return order ?? null;
+}
+
+export async function fetchSquareOrder(params: {
+  accessToken: string;
+  orderId: string;
+  environment?: SquareClientEnvironment;
+  sleep?: (ms: number) => Promise<void>;
+}): Promise<Record<string, unknown> | null> {
+  const sleep = params.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  let lastError: unknown;
+  for (let attempt = 0; attempt < FETCH_SQUARE_ORDER_RETRY_BACKOFF_MS.length; attempt++) {
+    const wait = FETCH_SQUARE_ORDER_RETRY_BACKOFF_MS[attempt]!;
+    if (wait > 0) await sleep(wait);
+    try {
+      const order = await retrieveSquareOrderOnce(params);
+      if (order) return order;
+    } catch (err) {
+      lastError = err;
+      console.error('[square-order] retrieve_order_retry', {
+        orderId: params.orderId,
+        attempt: attempt + 1,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  if (lastError) throw lastError;
+  return null;
 }
 
 /**
@@ -182,7 +212,7 @@ export function mapSquareEnvelopeToWebhookEvent(params: {
   const snapshot = order
     ? squareOrderToSnapshot(cafeId, order)
     : (() => {
-        // Fetch failed or omitted — stub ticket keeps KDS moving; ops must see the empty board.
+        // Fetch failed or omitted — stub ticket with detailsPending, not an empty processed card.
         console.warn('[square-order] square_order_fetch_missing', {
           cafeId,
           posOrderId,
@@ -200,6 +230,7 @@ export function mapSquareEnvelopeToWebhookEvent(params: {
           items: [],
           orderType: 'takeaway' as const,
           notes: null,
+          detailsPending: true,
         };
       })();
 

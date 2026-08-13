@@ -105,6 +105,7 @@ function mockCompletedOrder(): NormalisedOrder {
     posOrderId: null,
     editToken: null,
     parentOrderId: null,
+    detailsPending: false,
   };
 }
 

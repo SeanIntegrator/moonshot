@@ -26,6 +26,7 @@ function order(partial: Partial<NormalisedOrder> & Pick<NormalisedOrder, 'id'>):
     posOrderId: null,
     editToken: null,
     parentOrderId: null,
+    detailsPending: false,
     ...partial,
   };
 }

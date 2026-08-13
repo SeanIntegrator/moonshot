@@ -225,7 +225,7 @@ describe('squareOrderToSnapshot', () => {
 });
 
 describe('mapSquareEnvelopeToWebhookEvent empty fetch fallback', () => {
-  it('builds an empty stub snapshot when order fetch is missing', () => {
+  it('builds a detailsPending stub when order fetch is missing', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const event = mapSquareEnvelopeToWebhookEvent({
       cafeId: 'cafe-1',
@@ -242,6 +242,7 @@ describe('mapSquareEnvelopeToWebhookEvent empty fetch fallback', () => {
       expect(event.posOrderId).toBe('ord-missing');
       expect(event.snapshot?.notes).toBeNull();
       expect(event.snapshot?.items).toEqual([]);
+      expect(event.snapshot?.detailsPending).toBe(true);
     }
     expect(warn).toHaveBeenCalledWith(
       '[square-order] square_order_fetch_missing',

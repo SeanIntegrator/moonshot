@@ -53,8 +53,8 @@ describe.skipIf(!connectionString)(
 
       await pool.query(
         `INSERT INTO order_items (
-          order_id, menu_item_id, item_name, quantity, unit_price_minor, modifiers, allergens
-        ) VALUES ($1, NULL, 'Test Item', 1, 250, '[]', '{}')`,
+          order_id, pos_line_uid, menu_item_id, item_name, quantity, unit_price_minor, modifiers, allergens
+        ) VALUES ($1, 'app:0', NULL, 'Test Item', 1, 250, '[]', '{}')`,
         [orderId],
       );
 

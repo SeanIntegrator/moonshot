@@ -93,6 +93,11 @@ export interface NormalisedOrder {
   editToken: string | null;
   /** When this row is an add-on payment linked to a prior checkout */
   parentOrderId: string | null;
+  /**
+   * Square retrieve failed after retries — show "Details pending" on KDS.
+   * Cleared on the next successful order snapshot.
+   */
+  detailsPending: boolean;
 }
 
 /**

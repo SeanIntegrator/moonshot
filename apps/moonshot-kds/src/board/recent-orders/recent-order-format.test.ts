@@ -40,6 +40,7 @@ function order(
     posOrderId: null,
     editToken: null,
     parentOrderId: null,
+    detailsPending: false,
   };
 }
 

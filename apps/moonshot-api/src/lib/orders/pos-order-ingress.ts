@@ -4,6 +4,7 @@ import type { Pool, PoolClient } from 'pg';
 import { pool } from '../../db.js';
 import type { OrderRowDb } from '../order-map.js';
 import { ORDER_SELECT_COLUMNS } from './order-constants.js';
+import { upsertOrderItems, type UpsertSnapshotLine } from './order-items-upsert.js';
 import { fetchOrderWithItems } from './order-read.js';
 import { emitKdsServerToClient } from '../../realtime/kds-events.js';
 
@@ -15,48 +16,33 @@ export type PersistPosOrderResult =
   | { kind: 'removed'; orderId: string | null; posOrderId: string }
   | { kind: 'ignored'; reason: string };
 
-type SnapshotLine = Pick<
-  NormalisedOrderItem,
-  | 'itemName'
-  | 'quantity'
-  | 'unitPriceMinor'
-  | 'modifiers'
-  | 'allergens'
-  | 'notes'
-  | 'category'
-  | 'menuItemId'
->;
-
 /** Trim free-text notes; empty / whitespace-only → null. */
 function nonemptyNote(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-async function replaceOrderItems(
-  client: PoolClient,
-  orderId: string,
-  items: SnapshotLine[],
-): Promise<void> {
-  await client.query(`DELETE FROM order_items WHERE order_id = $1`, [orderId]);
-  for (const item of items) {
-    await client.query(
-      `INSERT INTO order_items (
-        order_id, menu_item_id, item_name, quantity, unit_price_minor,
-        modifiers, allergens, notes, category
-      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)`,
-      [
-        orderId,
-        item.menuItemId ?? null,
-        item.itemName,
-        item.quantity,
-        item.unitPriceMinor,
-        JSON.stringify(item.modifiers ?? []),
-        item.allergens ?? [],
-        item.notes ?? null,
-        item.category ?? null,
-      ],
-    );
-  }
+function snapshotLines(items: NormalisedOrderItem[] | undefined): UpsertSnapshotLine[] {
+  if (!Array.isArray(items)) return [];
+  return items.map((it, i) => ({
+    posLineUid:
+      typeof it.id === 'string' && it.id.trim() ? it.id.trim() : `pos-line-${i}`,
+    menuItemId: it.menuItemId ?? null,
+    itemName: it.itemName || 'Item',
+    quantity: Math.max(1, it.quantity || 1),
+    unitPriceMinor: Math.max(0, it.unitPriceMinor || 0),
+    modifiers: it.modifiers ?? [],
+    allergens: it.allergens ?? [],
+    notes: nonemptyNote(it.notes),
+    category: it.category ?? null,
+  }));
+}
+
+async function orderHasItems(client: PoolClient, orderId: string): Promise<boolean> {
+  const { rows } = await client.query<{ exists: boolean }>(
+    `SELECT EXISTS(SELECT 1 FROM order_items WHERE order_id = $1) AS exists`,
+    [orderId],
+  );
+  return rows[0]?.exists === true;
 }
 
 async function findByPosOrderId(
@@ -105,6 +91,7 @@ export async function persistPosOrderEvent(
   }
 
   const snap = event.snapshot ?? {};
+  const detailsPending = snap.detailsPending === true;
   const customerName =
     typeof snap.customerName === 'string' && snap.customerName.trim()
       ? snap.customerName.trim().slice(0, 120)
@@ -117,18 +104,7 @@ export async function persistPosOrderEvent(
     typeof snap.currency === 'string' && snap.currency.trim()
       ? snap.currency.trim().toUpperCase()
       : 'GBP';
-  const items: SnapshotLine[] = Array.isArray(snap.items)
-    ? snap.items.map((it) => ({
-        menuItemId: it.menuItemId ?? null,
-        itemName: it.itemName || 'Item',
-        quantity: Math.max(1, it.quantity || 1),
-        unitPriceMinor: Math.max(0, it.unitPriceMinor || 0),
-        modifiers: it.modifiers ?? [],
-        allergens: it.allergens ?? [],
-        notes: nonemptyNote(it.notes),
-        category: it.category ?? null,
-      }))
-    : [];
+  const items = snapshotLines(snap.items);
 
   const client = await db.connect();
   try {
@@ -146,6 +122,11 @@ export async function persistPosOrderEvent(
         return { kind: 'updated', order: full };
       }
 
+      const hasItems = await orderHasItems(client, existing.id);
+      // A failed retrieve must not wipe lines; only mark pending when the card is still empty.
+      const nextDetailsPending = detailsPending ? !hasItems : false;
+      const replaceLines = !detailsPending;
+
       const updated = await client.query<OrderRowDb>(
         `UPDATE orders SET
            customer_name = $1,
@@ -154,34 +135,38 @@ export async function persistPosOrderEvent(
            currency = $4,
            order_type = $5,
            payment_status = $6,
+           details_pending = $7,
            source = 'pos',
            status = CASE
              WHEN status IN ('confirmed', 'preparing', 'ready') THEN status
              ELSE 'confirmed'
            END,
            updated_at = NOW()
-         WHERE id = $7 AND cafe_id = $8
+         WHERE id = $8 AND cafe_id = $9
          RETURNING ${ORDER_SELECT_COLUMNS}`,
         [
-          customerName,
-          notes,
-          totalMinor,
-          currency,
-          orderType,
-          paymentStatus,
+          detailsPending && hasItems ? existing.customer_name : customerName,
+          detailsPending && hasItems ? existing.notes : notes,
+          detailsPending && hasItems ? existing.total_minor : totalMinor,
+          detailsPending && hasItems ? existing.currency : currency,
+          detailsPending && hasItems ? existing.order_type : orderType,
+          detailsPending && hasItems ? existing.payment_status : paymentStatus,
+          nextDetailsPending,
           existing.id,
           event.cafeId,
         ],
       );
       orderRow = updated.rows[0]!;
-      await replaceOrderItems(client, orderRow.id, items);
+      if (replaceLines) {
+        await upsertOrderItems(client, orderRow.id, items);
+      }
       created = false;
     } else {
       const inserted = await client.query<OrderRowDb>(
         `INSERT INTO orders (
            cafe_id, user_id, pos_order_id, customer_name, notes, total_minor, currency,
-           order_type, source, status, payment_status
-         ) VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, 'pos', 'confirmed', $8)
+           order_type, source, status, payment_status, details_pending
+         ) VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, 'pos', 'confirmed', $8, $9)
          RETURNING ${ORDER_SELECT_COLUMNS}`,
         [
           event.cafeId,
@@ -192,10 +177,13 @@ export async function persistPosOrderEvent(
           currency,
           orderType,
           paymentStatus,
+          detailsPending,
         ],
       );
       orderRow = inserted.rows[0]!;
-      await replaceOrderItems(client, orderRow.id, items);
+      if (!detailsPending) {
+        await upsertOrderItems(client, orderRow.id, items);
+      }
       created = true;
     }
 

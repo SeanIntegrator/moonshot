@@ -104,6 +104,7 @@ function mockRecalledOrder(): NormalisedOrder {
     posOrderId: null,
     editToken: null,
     parentOrderId: null,
+    detailsPending: false,
   };
 }
 

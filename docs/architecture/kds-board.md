@@ -102,7 +102,17 @@ Baristas can untick lines in the Recent orders dialog. Only ticked lines come ba
 
 - The KDS sends `lineIds` (the ticked remake set) on `POST .../recall` from day one. The server ignores the field today — durable per-line made-state is a later server change, not a UI rewrite.
 - `useKdsOrders` keeps a `recallSelections` map of the **unselected** complement and passes it to `OrderCard` as `initialMadeIds`.
-- This map is **ephemeral and single-device**: a reload, a second iPad, or a Square webhook that delete-and-reinserts `order_items` (fresh line UUIDs) drops it. Until `pos_line_uid` lands, a recalled Square ticket that receives another webhook can un-cross every line.
+- This map is **ephemeral and single-device**: a reload or a second iPad drops it. Per-line made-state is not persisted; a later durable implementation is a server change.
+
+## Square line identity
+
+POS webhooks upsert `order_items` on `(order_id, pos_line_uid)`. Square's line `uid` is stored as `pos_line_uid`; `order_items.id` (the KDS line key) is preserved across updates so made-state and recall selection survive. App orders use positional `app:${index}` keys at insert.
+
+If Square retrieve fails after three attempts, ingress persists `detailsPending: true` and **does not** wipe existing lines. The KDS card shows **Details pending** until a later webhook fills the snapshot.
+
+## Open-board window
+
+`GET /kds/orders` and `POST /kds/orders/recall-last` only consider rows from the last **16 hours** (`created_at` / `completed_at`). This is a list filter, not auto-cancel — stale open rows keep their status. Specific-id recall and the Recent orders dialog (`LIMIT 20`) are not clock-bounded.
 
 Pending recalls are `isProtected` in `orders-store` so a poll between the optimistic insert and the server response cannot delete the card. The same hook covers dismissing cards (collapse animation).
 

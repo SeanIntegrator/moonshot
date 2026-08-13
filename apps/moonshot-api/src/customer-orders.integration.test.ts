@@ -52,8 +52,8 @@ describe.skipIf(!connectionString)('customer orders HTTP (integration)', () => {
     );
     await pool.query(
       `INSERT INTO order_items (
-        order_id, menu_item_id, item_name, quantity, unit_price_minor, modifiers, allergens
-      ) VALUES ($1, NULL, 'Latte', 1, 300, '[]', '{}')`,
+        order_id, pos_line_uid, menu_item_id, item_name, quantity, unit_price_minor, modifiers, allergens
+      ) VALUES ($1, 'app:0', NULL, 'Latte', 1, 300, '[]', '{}')`,
       [orderId],
     );
 
@@ -101,8 +101,8 @@ describe.skipIf(!connectionString)('customer orders HTTP (integration)', () => {
     );
     await pool.query(
       `INSERT INTO order_items (
-        order_id, menu_item_id, item_name, quantity, unit_price_minor, modifiers, allergens
-      ) VALUES ($1, NULL, 'Flat white', 1, 400, '[]', '{}')`,
+        order_id, pos_line_uid, menu_item_id, item_name, quantity, unit_price_minor, modifiers, allergens
+      ) VALUES ($1, 'app:0', NULL, 'Flat white', 1, 400, '[]', '{}')`,
       [orderId],
     );
 

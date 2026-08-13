@@ -100,6 +100,7 @@ function mockOrder(status: NormalisedOrder['status']): NormalisedOrder {
     posOrderId: null,
     editToken: null,
     parentOrderId: null,
+    detailsPending: false,
   };
 }
 

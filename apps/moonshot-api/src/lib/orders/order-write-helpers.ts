@@ -10,14 +10,15 @@ export async function insertOrderItems(
   orderId: string,
   resolvedLines: ResolvedOrderLine[],
 ): Promise<void> {
-  for (const rl of resolvedLines) {
+  for (const [index, rl] of resolvedLines.entries()) {
     await client.query(
       `INSERT INTO order_items (
-        order_id, menu_item_id, item_name, quantity, unit_price_minor,
+        order_id, pos_line_uid, menu_item_id, item_name, quantity, unit_price_minor,
         modifiers, allergens, notes, category
-      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10)`,
       [
         orderId,
+        `app:${index}`,
         rl.menuItemId,
         rl.itemName,
         rl.quantity,

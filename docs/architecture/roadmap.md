@@ -177,7 +177,7 @@ A customer can Add to Home Screen on iOS and Android and launch fullscreen witho
 - Line-level Square notes render in the right (allergen) column on drink/food rows as **plain off-white** text (`#e8eef2`), right-aligned; allergens keep yellow chrome.
 - Order-level `order.note` renders on the live `OrderCard` footer strip (and Recent Orders).
 - Empty / whitespace notes normalise to `null` at Square normaliser + POS ingress.
-- Failed `fetchSquareOrder` still opens a stub ticket; empty-snapshot path and adapter catch now warn/log for ops.
+- Failed `fetchSquareOrder` (after 3 attempts) opens a **Details pending** stub and does not wipe existing lines; a later webhook fills the snapshot.
 
 ### Install — done (August 2026)
 

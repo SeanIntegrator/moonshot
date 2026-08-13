@@ -1,0 +1,56 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { poolQuery, poolConnect, fetchOrderWithItems, normalisedOrdersFromRows } = vi.hoisted(
+  () => ({
+    poolQuery: vi.fn(),
+    poolConnect: vi.fn(),
+    fetchOrderWithItems: vi.fn(),
+    normalisedOrdersFromRows: vi.fn(),
+  }),
+);
+
+vi.mock('../../db.js', () => ({
+  pool: { query: poolQuery, connect: poolConnect },
+}));
+
+vi.mock('./order-read.js', () => ({
+  fetchOrderWithItems,
+  normalisedOrdersFromRows,
+}));
+
+import { KDS_OPEN_MAX_AGE_HOURS } from './order-constants.js';
+import { listOpenOrdersForKds, recallLastCompletedOrderForKds } from './order-kds.js';
+
+describe('listOpenOrdersForKds', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    normalisedOrdersFromRows.mockResolvedValue([]);
+  });
+
+  it('filters open tickets to the last 16 hours', async () => {
+    poolQuery.mockResolvedValue({ rows: [] });
+    await listOpenOrdersForKds('cafe-1');
+    const [sql, params] = poolQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("$3 * INTERVAL '1 hour'");
+    expect(params[2]).toBe(KDS_OPEN_MAX_AGE_HOURS);
+  });
+});
+
+describe('recallLastCompletedOrderForKds', () => {
+  it('ignores completed tickets older than 16 hours', async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('BEGIN') || sql.includes('COMMIT') || sql.includes('ROLLBACK')) {
+        return { rows: [] };
+      }
+      return { rows: [] };
+    });
+    poolConnect.mockResolvedValue({ query, release: vi.fn() });
+
+    const result = await recallLastCompletedOrderForKds('cafe-1');
+    expect(result).toBeNull();
+    const upd = query.mock.calls.find((c) => String(c[0]).includes('UPDATE orders'));
+    expect(String(upd?.[0])).toContain("$2 * INTERVAL '1 hour'");
+    expect(upd?.[1]).toEqual(['cafe-1', KDS_OPEN_MAX_AGE_HOURS]);
+    expect(fetchOrderWithItems).not.toHaveBeenCalled();
+  });
+});

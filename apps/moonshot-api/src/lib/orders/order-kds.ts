@@ -3,6 +3,7 @@ import { pool } from '../../db.js';
 import type { OrderRowDb } from '../order-map.js';
 import {
   COMPLETABLE_STATUSES,
+  KDS_OPEN_MAX_AGE_HOURS,
   KDS_OPEN_ORDER_STATUSES,
   ORDER_SELECT_COLUMNS,
   UUID_RE,
@@ -14,8 +15,9 @@ export async function listOpenOrdersForKds(cafeId: string): Promise<NormalisedOr
     `SELECT ${ORDER_SELECT_COLUMNS}
      FROM orders
      WHERE cafe_id = $1 AND status = ANY($2::text[])
+       AND created_at > NOW() - ($3 * INTERVAL '1 hour')
      ORDER BY created_at ASC`,
-    [cafeId, [...KDS_OPEN_ORDER_STATUSES]],
+    [cafeId, [...KDS_OPEN_ORDER_STATUSES], KDS_OPEN_MAX_AGE_HOURS],
   );
 
   return normalisedOrdersFromRows(pool, ordersRes.rows);
@@ -128,12 +130,13 @@ export async function recallLastCompletedOrderForKds(
          SELECT id
          FROM orders
          WHERE cafe_id = $1 AND status = 'completed'
+           AND completed_at > NOW() - ($2 * INTERVAL '1 hour')
          ORDER BY completed_at DESC NULLS LAST, updated_at DESC
          LIMIT 1
        )
          AND status = 'completed'
        RETURNING ${ORDER_SELECT_COLUMNS}`,
-      [cafeId],
+      [cafeId, KDS_OPEN_MAX_AGE_HOURS],
     );
 
     await client.query('COMMIT');

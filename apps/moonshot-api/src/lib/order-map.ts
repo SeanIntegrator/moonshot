@@ -31,6 +31,7 @@ export type OrderRowDb = {
   parent_order_id: string | null;
   stripe_checkout_session_id: string | null;
   eta_mode?: string | null;
+  details_pending?: boolean;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -139,5 +140,6 @@ export function mapOrderRow(row: OrderRowDb, items: NormalisedOrderItem[]): Norm
     posOrderId: row.pos_order_id,
     editToken: row.edit_token,
     parentOrderId: row.parent_order_id,
+    detailsPending: row.details_pending === true,
   };
 }
