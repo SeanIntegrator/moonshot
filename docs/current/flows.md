@@ -108,7 +108,7 @@ Also: Admin OAuth connect → optional onboarding import / **`POST /admin/menu/s
 
 ### KDS complete → customer + loyalty
 
-`POST /kds/orders/:id/complete` → mark completed → emit KDS removed + customer completed → loyalty ledger (idempotent) → optional `customerReviewEligible` after 3 on-time app orders.
+`POST /kds/orders/:id/complete` → mark completed → emit KDS removed → loyalty apply (≤2s budget; optional `customerReviewEligible` on 3rd on-time app order **before** complete) → `customerOrderCompleted` (optional `loyalty` snapshot).
 
 `POST /kds/orders/:id/status` `{ status: preparing|ready }` → emit `kds:order:updated` + `customerOrderStatusUpdated`.
 
@@ -123,6 +123,6 @@ Auth details — [architecture/realtime.md](../architecture/realtime.md). Flow b
 ## Planned
 
 - Stripe incremental checkout / order merge (F3) and refunds on cancel
-- Feedback HTTP API + order-ahead review drawer (Phase B) — [feedback-prompt-flow.md](../feedback-prompt-flow.md)
 - KDS hold, synced line made-state, layout.columns grouping — [architecture/kds-board.md](../architecture/kds-board.md)
 - Additional POS providers (Lightspeed, etc.) beyond Square + manual — [pos-normalisation.md](../pos-normalisation.md)
+- Parked review: thumbs + `feedback_responses` — [feedback-prompt-flow.md](../feedback-prompt-flow.md)

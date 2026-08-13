@@ -1,8 +1,10 @@
 /**
- * Post-order review prompt — 3× on-time rule + Google-compliant paths.
+ * Post-order review prompt — 3× on-time rule + single-CTA (Google ToS–aligned).
  *
- * Planned: HTTP submit endpoint + order-ahead drawer wiring still thin;
- * types here are the extension contract for Phase B of docs/feedback-prompt-flow.md.
+ * Phase B (docs/feedback-prompt-flow.md): emit sets `eligible`; client confirms
+ * via POST /feedback/review-prompt → `shown` | `dismissed`.
+ *
+ * Parked: thumbs up/down + `feedback_responses` sentiment capture.
  */
 
 import type { IsoDateTime } from '@moonshot/types';
@@ -15,14 +17,53 @@ export type ReviewSentiment = 'positive' | 'negative';
  */
 export type ReviewPromptPersistenceState =
   | 'not_shown'
+  | 'eligible'
+  | 'shown'
+  | 'dismissed'
+  /** Legacy Phase A burn — treat as terminal (no re-show). */
   | 'shown_positive'
-  | 'shown_negative'
-  | 'dismissed';
+  | 'shown_negative';
 
 /** Same as `ReviewPromptPersistenceState` (DB column `review_prompt_state`). */
 export type ReviewPromptState = ReviewPromptPersistenceState;
 
-/** Ephemeral UI state for the bottom drawer */
+/** States that must never re-open the review modal. */
+const TERMINAL_REVIEW_PROMPT_STATES = new Set<string>([
+  'shown',
+  'dismissed',
+  'shown_positive',
+  'shown_negative',
+]);
+
+export function isTerminalReviewPromptState(state: string): boolean {
+  return TERMINAL_REVIEW_PROMPT_STATES.has(state);
+}
+
+export function isEligibleReviewPromptState(state: string): boolean {
+  return state === 'eligible';
+}
+
+/** Minimal shape for resolving the CTA URL from café features. */
+export type ReviewNudgeUrlSource = {
+  reviewUrl?: string | null;
+  googlePlaceId?: string | null;
+} | null;
+
+/**
+ * Prefer explicit `reviewUrl`; fall back to a Google write-review URL from
+ * legacy `googlePlaceId` when present.
+ */
+export function resolveReviewUrl(config: ReviewNudgeUrlSource): string | null {
+  if (!config) return null;
+  const direct = typeof config.reviewUrl === 'string' ? config.reviewUrl.trim() : '';
+  if (direct) return direct;
+  const placeId =
+    typeof config.googlePlaceId === 'string' ? config.googlePlaceId.trim() : '';
+  if (!placeId) return null;
+  return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+}
+
+/** Ephemeral UI state for the parked bottom drawer */
 export type ReviewDrawerUiState = 'ask' | 'positive' | 'negative' | 'dismissed';
 
 export interface ReviewPromptTrigger {
@@ -37,6 +78,7 @@ export const REVIEW_PROMPT_TRIGGER: ReviewPromptTrigger = {
   onTimeGraceMinutes: 2,
 };
 
+/** Parked — sentiment capture / feedback_responses table. */
 export interface FeedbackResponse {
   id: string;
   cafeId: string;
@@ -50,6 +92,7 @@ export interface FeedbackResponse {
   createdAt: IsoDateTime;
 }
 
+/** Parked — thumbs payload. */
 export interface SubmitFeedbackPayload {
   sentiment: ReviewSentiment;
   ownerMessage?: string | null;

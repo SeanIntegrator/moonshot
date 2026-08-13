@@ -69,7 +69,7 @@ Implemented in Phase 1 with counters; Phase 7 adds **`loyalty_display_id`** and 
 | loyalty_card_progress      | INTEGER     | stamps earned toward the current reward (0..stampsPerReward-1); resets at rollover. Authoritative ledger is `loyalty_transactions` |
 | total_orders               | INTEGER     | optional analytics |
 | on_time_completed_orders   | INTEGER     | **increments only** for `source = app` when S4 on-time rule passes |
-| review_prompt_state        | TEXT        | `not_shown` \| `shown_positive` \| `shown_negative` \| `dismissed` |
+| review_prompt_state        | TEXT        | `not_shown` \| `eligible` \| `shown` \| `dismissed` (legacy `shown_positive` / `shown_negative` treated as terminal) |
 | first_visit                | TIMESTAMPTZ | |
 | loyalty_display_id         | TEXT        | short till / QR code (**Phase 7**); legacy rows may be 8-char hex; **Phase 10** assigns 6-digit numeric IDs for new memberships via `cafes.loyalty_display_counter` |
 

@@ -6,6 +6,7 @@ import { KdsSettingsCard } from '../components/KdsSettingsCard.js';
 import { MenuEditorCard } from '../components/MenuEditorCard.js';
 import { CafeHoursSettingsCard } from '../components/CafeHoursSettingsCard.js';
 import { OrderAheadSettingsCard } from '../components/OrderAheadSettingsCard.js';
+import { ReviewNudgeSettingsCard } from '../components/ReviewNudgeSettingsCard.js';
 import { StripePaymentsCard } from '../components/StripePaymentsCard.js';
 import type { AdminSession } from '../context/AuthContext.js';
 import { fetchPublicCafe } from '../lib/admin-api.js';
@@ -77,6 +78,7 @@ export function DashboardPage({ session }: Props) {
           <StripePaymentsCard token={session.token} />
         </Box>
       </Box>
+      <ReviewNudgeSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
       <MenuEditorCard cafeSlug={session.cafe.slug} token={session.token} />
       <CafeHoursSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />
       <KdsSettingsCard cafe={cafe} token={session.token} onCafeUpdated={setCafe} />

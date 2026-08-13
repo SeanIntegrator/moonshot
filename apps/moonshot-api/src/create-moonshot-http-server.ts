@@ -23,6 +23,7 @@ import { mediaRouter } from './routes/media.js';
 import { menuRouter } from './routes/menu.js';
 import { ordersRouter } from './routes/orders/index.js';
 import { loyaltyRouter } from './routes/loyalty.js';
+import { feedbackRouter } from './routes/feedback.js';
 import { internalPosRouter } from './routes/internal-pos.js';
 import { stripeWebhookRouter } from './routes/webhooks-stripe.js';
 import { squareWebhookRouter } from './routes/webhooks-square.js';
@@ -107,6 +108,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   app.use(`${API_VERSION_PREFIX}/menu`, menuRouter);
   app.use(`${API_VERSION_PREFIX}/orders`, ordersRouter);
   app.use(`${API_VERSION_PREFIX}/loyalty`, loyaltyRouter);
+  app.use(`${API_VERSION_PREFIX}/feedback`, feedbackRouter);
   app.use(`${API_VERSION_PREFIX}/kds`, kdsRouter);
   app.use(`${API_VERSION_PREFIX}/internal/pos`, internalPosRouter);
 

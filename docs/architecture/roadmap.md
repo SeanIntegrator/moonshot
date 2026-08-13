@@ -51,38 +51,30 @@ Completing an order on the KDS while sitting on Home moves the stamp card immedi
 
 ## Workstream 2 — Review nudge (single CTA)
 
-See also [feedback-prompt-flow.md](../feedback-prompt-flow.md) (narrowed to this design).
+See also [feedback-prompt-flow.md](../feedback-prompt-flow.md).
 
-### Current state (verified)
+**Status: done (August 2026).**
 
-- Phase A API is shipped: on the 3rd on-time app order, the API may emit `customerReviewEligible`.
-- **Latent bug:** at emit time the API sets `review_prompt_state = 'shown_positive'` before any UI exists. Users who hit the threshold before the modal ships are permanently excluded.
-- Order-ahead does **not** listen for `customerReviewEligible`.
-- Admin cannot configure review nudge — `AdminFeaturesPatch` only allows `loyalty` and `order_ahead`.
-- Config today is `features.review_nudge.{ enabled, googlePlaceId }`. No `feedback_responses` table.
+- Emit sets `review_prompt_state = 'eligible'` (not premature `shown_positive`); migration `030` backfills burned rows.
+- Config is `features.review_nudge.{ enabled, reviewUrl }` (legacy `googlePlaceId` still resolved).
+- Admin PATCH + **Review nudge** dashboard card.
+- Order-ahead `ReviewNudgeProvider` + single-CTA modal (socket + `/auth/me` + refresh on complete).
+- `POST /api/v1/feedback/review-prompt` → `shown` / `dismissed` only (no thumbs / `feedback_responses`).
 
-### Work
+### Done when (met)
 
-1. Introduce `review_prompt_state = 'eligible'` at emit time; only move to a terminal state (`shown` / `dismissed`) when the client confirms. Backfill rows that were prematurely set to `shown_positive`.
-2. Replace `googlePlaceId` with `reviewUrl` (arbitrary café-configured URL). Keep reading `googlePlaceId` for migration if needed.
-3. Extend `AdminFeaturesPatch` + admin settings merge to accept `review_nudge` (`enabled`, `reviewUrl`); surface in Admin UI.
-4. Order-ahead modal on order-complete / Order Detail: single “Rate us” CTA opening `reviewUrl`. Drive from **both** the socket event and `/auth/me` membership (`reviewPromptState`), so a user who was on Home at completion still sees it next visit.
-5. `POST /feedback/review-prompt` records the terminal state only — no sentiment capture, no mailto path, no `feedback_responses` table. A single CTA shown to everyone is inherently free of rating-gating.
-
-### Done when
-
-After three on-time completed app orders, every eligible user sees the modal once (socket or next visit), the CTA opens the Admin-configured URL, and dismissing/clicking marks the prompt as shown permanently.
+After three on-time completed app orders, every eligible user sees the modal once (socket, same-session refresh, or next visit), the CTA opens the Admin-configured URL, and dismissing/clicking marks the prompt permanently.
 
 ### Files
 
 - `apps/moonshot-api/src/lib/loyalty-after-kds-complete.ts`
-- `packages/types/src/cafe.ts` (`ReviewNudgeFeatureConfig`)
-- `packages/types/src/admin-settings.ts`
-- `packages/types/src/sockets.ts`
+- `apps/moonshot-api/src/routes/feedback.ts`
+- `apps/moonshot-api/migrations/sql/030_review_prompt_eligible.sql`
+- `packages/types/src/cafe.ts`, `admin-settings.ts`, `sockets.ts`
+- `packages/domain/src/feedback.ts`
 - `apps/moonshot-api/src/lib/admin/admin-settings-merge.ts`
-- `apps/moonshot-order-ahead/src/pages/OrderDetail.tsx` (and/or OrderConfirmed)
-- Admin settings card for review nudge
-- New feedback route (terminal-state only)
+- `apps/moonshot-admin/src/components/ReviewNudgeSettingsCard.tsx`
+- `apps/moonshot-order-ahead/src/providers/ReviewNudgeProvider.tsx`
 
 ---
 
@@ -251,7 +243,7 @@ C&B is on v2 only with OAuth Square, no duplicate POS events, and one clean live
 | Split oversized `admin-api.ts` | Already a barrel; bulk lives in `adminApi/menu.ts` + menu panels |
 | KDS is a “PWA shell” | Vite SPA + manifest / Apple meta for iPad A2HS (no SW); order-ahead has full PWA SW |
 | Café theme editor is only “post-launch polish” | Read path shipped; write path is launch Workstream 4 |
-| Review nudge needs thumbs up/down + `feedback_responses` | Launch scope is single CTA to configurable URL (Workstream 2) |
+| Review nudge needs thumbs up/down + `feedback_responses` | Launch scope is single CTA (WS2 **done**); thumbs / `feedback_responses` remain parked |
 | Square line notes untested / possibly unmapped | Line notes mapped + plain off-white in allergen column; order-level notes on live `OrderCard` (WS6 notes done; install remaining) |
 
 ---
@@ -271,6 +263,6 @@ flowchart LR
   WS6 --> WS7
 ```
 
-- Loyalty stamp payload on `customerOrderCompleted` (WS1 — **done**) lands before relying on Home-during-complete for the review modal (WS2).
+- Loyalty stamp payload on `customerOrderCompleted` (WS1 — **done**) lands before relying on Home-during-complete for the review modal (WS2 — **done**).
 - Branding admin UI (WS4) sits on the redesigned shell (WS3).
 - Cutover (WS7) waits on product workstreams being good enough for a live shift.

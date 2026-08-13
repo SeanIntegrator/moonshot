@@ -6,6 +6,7 @@ import { CafeProvider } from './config/CafeProvider.js';
 import { AuthProvider } from './hooks/useAuth.js';
 import { CustomerEventsProvider } from './providers/CustomerEventsProvider.js';
 import { LoyaltyProvider } from './providers/LoyaltyProvider.js';
+import { ReviewNudgeProvider } from './providers/ReviewNudgeProvider.js';
 import { MenuProvider } from './providers/MenuProvider.js';
 import { ActiveOrdersProvider } from './providers/ActiveOrdersProvider.js';
 import { CartProvider } from './providers/CartProvider.js';
@@ -21,14 +22,16 @@ function CafeAppTree() {
       <AuthProvider>
         <CustomerEventsProvider>
           <LoyaltyProvider>
-            <MenuProvider>
-              {/* Remount cart when café slug changes so sessionStorage keys never cross tenants */}
-              <CartProvider key={cafeSlug}>
-                <ActiveOrdersProvider>
-                  <App />
-                </ActiveOrdersProvider>
-              </CartProvider>
-            </MenuProvider>
+            <ReviewNudgeProvider>
+              <MenuProvider>
+                {/* Remount cart when café slug changes so sessionStorage keys never cross tenants */}
+                <CartProvider key={cafeSlug}>
+                  <ActiveOrdersProvider>
+                    <App />
+                  </ActiveOrdersProvider>
+                </CartProvider>
+              </MenuProvider>
+            </ReviewNudgeProvider>
           </LoyaltyProvider>
         </CustomerEventsProvider>
       </AuthProvider>

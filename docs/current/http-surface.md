@@ -50,6 +50,8 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
   - `GET /api/v1/loyalty/transactions` — paginated ledger (`limit`, `cursor`).
   - `GET /api/v1/loyalty/rewards` — unredeemed rewards.
   - `POST /api/v1/loyalty/rewards/:rewardId/redeem` — sets **`redeemed_at`**, appends **`reward_redeemed`** ledger row.
+- **Feedback (signed-in, café context)**
+  - `POST /api/v1/feedback/review-prompt` — `{ action: 'opened_url' | 'dismissed' }`; transitions `eligible` → `shown` / `dismissed` (idempotent when already terminal). See [feedback-prompt-flow.md](../feedback-prompt-flow.md).
 - **Webhooks**
   - `POST /api/v1/webhooks/stripe` — **raw body**; **`Stripe-Signature`** verification. Handles `checkout.session.completed` and `account.updated` (idempotent via `webhook_events` with **`processing_status`** so failed deliveries remain retryable).
   - `POST /api/v1/webhooks/square` — **raw body**; Square signature verification. Catalog version updates enqueue sync; order events normalise → `persistPosOrderEvent` → KDS emit (idempotent via `webhook_events` + `(cafe_id, pos_order_id)`).
@@ -69,7 +71,7 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
     - `GET /api/v1/admin/connect/square/return` — OAuth **redirect** (no JWT); signed `state` → code exchange → **302** to admin
   - `POST /api/v1/admin/auth/login` — `{ email, password }` → JWT (`purpose: admin`)
   - `GET /api/v1/admin/auth/me` — `Authorization: Bearer`
-  - `PATCH /api/v1/admin/settings` — `Authorization: Bearer`; body `featuresPatch` (`loyalty`, `order_ahead`) and/or `kdsConfigPatch` (whitelisted KDS keys); merges into `cafes.features` / `cafes.kds_config`
+  - `PATCH /api/v1/admin/settings` — `Authorization: Bearer`; body `featuresPatch` (`loyalty`, `order_ahead`, `review_nudge`) and/or `kdsConfigPatch` (whitelisted KDS keys); merges into `cafes.features` / `cafes.kds_config`
   - `POST /api/v1/admin/menu/sync-pos` — admin JWT; pull Square catalog for the café now (same upsert path as webhook / cron sync)
   - `POST /api/v1/admin/payments/stripe/onboarding-link` — `Authorization: Bearer`; creates Express connected account if needed, returns Stripe-hosted **Account Link** URL.
   - `GET /api/v1/admin/payments/stripe/status` — `Authorization: Bearer`; syncs **`chargesEnabled`** etc. into `cafes.payment_config.stripe`.

@@ -8,9 +8,16 @@ import type {
   KdsSoundId,
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
+  ReviewNudgeFeatureConfig,
 } from '@moonshot/types';
 import { WEEKDAY_KEYS } from '@moonshot/types';
-import { hhMmToMinutes, isKdsSoundId, normalizeCafeHours, toHhMm } from '@moonshot/domain';
+import {
+  hhMmToMinutes,
+  isKdsSoundId,
+  normalizeCafeHours,
+  resolveReviewUrl,
+  toHhMm,
+} from '@moonshot/domain';
 
 const DEFAULT_LOYALTY: LoyaltyFeatureConfig = {
   enabled: true,
@@ -26,6 +33,12 @@ const DEFAULT_ORDER_AHEAD: OrderAheadFeatureConfig = {
   defaultPickupMinutes: 10,
   maxPickupMinutes: 60,
   notesEnabled: true,
+};
+
+const DEFAULT_REVIEW_NUDGE: ReviewNudgeFeatureConfig = {
+  enabled: false,
+  reviewUrl: null,
+  googlePlaceId: null,
 };
 
 const KDS_GROUP_BY = new Set(['order_type', 'none']);
@@ -60,6 +73,18 @@ export function mergeCafeFeatures(
     const v = validateOrderAhead(merged);
     if (!v.ok) return v;
     next = { ...next, order_ahead: v.value };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'review_nudge')) {
+    if (patch.review_nudge === null) {
+      next = { ...next, review_nudge: null };
+    } else if (patch.review_nudge && Object.keys(patch.review_nudge).length > 0) {
+      const base = existing.review_nudge ?? DEFAULT_REVIEW_NUDGE;
+      const merged: ReviewNudgeFeatureConfig = { ...base, ...patch.review_nudge };
+      const v = validateReviewNudge(merged);
+      if (!v.ok) return v;
+      next = { ...next, review_nudge: v.value };
+    }
   }
 
   return { ok: true, value: next };
@@ -100,6 +125,62 @@ function validateOrderAhead(merged: OrderAheadFeatureConfig): MergeResult<OrderA
     };
   }
   return { ok: true, value: merged };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function validateReviewNudge(
+  merged: ReviewNudgeFeatureConfig,
+): MergeResult<ReviewNudgeFeatureConfig> {
+  if (typeof merged.enabled !== 'boolean') {
+    return { ok: false, error: 'review_nudge.enabled must be a boolean' };
+  }
+
+  let reviewUrl: string | null = null;
+  if (merged.reviewUrl !== undefined && merged.reviewUrl !== null) {
+    if (typeof merged.reviewUrl !== 'string') {
+      return { ok: false, error: 'reviewUrl must be a string or null' };
+    }
+    const trimmed = merged.reviewUrl.trim();
+    if (trimmed.length === 0) {
+      reviewUrl = null;
+    } else if (!isHttpUrl(trimmed)) {
+      return { ok: false, error: 'reviewUrl must be an http(s) URL' };
+    } else {
+      reviewUrl = trimmed;
+    }
+  }
+
+  let googlePlaceId: string | null | undefined = merged.googlePlaceId;
+  if (googlePlaceId !== undefined && googlePlaceId !== null) {
+    if (typeof googlePlaceId !== 'string') {
+      return { ok: false, error: 'googlePlaceId must be a string or null' };
+    }
+    const trimmed = googlePlaceId.trim();
+    googlePlaceId = trimmed.length > 0 ? trimmed : null;
+  }
+
+  const normalised: ReviewNudgeFeatureConfig = {
+    enabled: merged.enabled,
+    reviewUrl,
+    ...(googlePlaceId !== undefined ? { googlePlaceId } : {}),
+  };
+
+  if (normalised.enabled && !resolveReviewUrl(normalised)) {
+    return {
+      ok: false,
+      error: 'reviewUrl (or legacy googlePlaceId) is required when review nudge is enabled',
+    };
+  }
+
+  return { ok: true, value: normalised };
 }
 
 export function mergeKdsConfigSection(
@@ -303,6 +384,13 @@ export function parseAdminSettingsPatchBody(body: unknown): AdminSettingsPatchBo
       !Array.isArray(fp.order_ahead)
     ) {
       featuresPatch.order_ahead = fp.order_ahead as Partial<OrderAheadFeatureConfig>;
+    }
+    if (Object.prototype.hasOwnProperty.call(fp, 'review_nudge')) {
+      if (fp.review_nudge === null) {
+        featuresPatch.review_nudge = null;
+      } else if (typeof fp.review_nudge === 'object' && !Array.isArray(fp.review_nudge)) {
+        featuresPatch.review_nudge = fp.review_nudge as Partial<ReviewNudgeFeatureConfig>;
+      }
     }
     if (Object.keys(featuresPatch).length > 0) {
       out.featuresPatch = featuresPatch;

@@ -86,7 +86,12 @@ function mockFeatures(overrides: Partial<CafeFeatures> = {}): CafeFeatures {
   };
 }
 
-function mockClient() {
+function mockClient(opts?: {
+  onTimeCompletedOrders?: number;
+  reviewPromptState?: string;
+}) {
+  const onTimeCompletedOrders = opts?.onTimeCompletedOrders ?? 1;
+  const reviewPromptState = opts?.reviewPromptState ?? 'not_shown';
   const client = {
     query: vi.fn(),
     release: vi.fn(),
@@ -95,9 +100,14 @@ function mockClient() {
     if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
       return { rows: [] };
     }
-    if (typeof sql === 'string' && sql.includes('UPDATE cafe_users SET')) {
+    if (typeof sql === 'string' && sql.includes('total_orders = total_orders + 1')) {
       return {
-        rows: [{ on_time_completed_orders: 1, review_prompt_state: 'not_shown' }],
+        rows: [
+          {
+            on_time_completed_orders: onTimeCompletedOrders,
+            review_prompt_state: reviewPromptState,
+          },
+        ],
       };
     }
     return { rows: [] };
@@ -257,5 +267,106 @@ describe('applyLoyaltyAfterKdsComplete', () => {
       stampsPerReward: 10,
       rewardsAvailable: 0,
     });
+  });
+
+  it('sets eligible and emits customerReviewEligible on the 3rd on-time order when nudge is enabled', async () => {
+    const reviewUrl = 'https://g.page/r/example/review';
+    findCafeById.mockResolvedValue({
+      cafeId: CAFE_ID,
+      features: mockFeatures({
+        review_nudge: { enabled: true, reviewUrl, googlePlaceId: null },
+      }),
+      timezone: 'Europe/London',
+    });
+    const client = mockClient({ onTimeCompletedOrders: 3, reviewPromptState: 'not_shown' });
+    poolConnect.mockResolvedValue(client);
+
+    const { applyLoyaltyAfterKdsComplete } = await import('./loyalty-after-kds-complete.js');
+
+    await applyLoyaltyAfterKdsComplete({
+      cafeId: CAFE_ID,
+      order: mockOrder(),
+    });
+
+    const eligibleUpdate = client.query.mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.includes("review_prompt_state = 'eligible'"),
+    );
+    expect(eligibleUpdate).toBeTruthy();
+    expect(emitCustomerServerToClient).toHaveBeenCalledWith(ORDER_ID, {
+      type: 'customerReviewEligible',
+      orderId: ORDER_ID,
+      cafeId: CAFE_ID,
+      reviewUrl,
+    });
+  });
+
+  it('does not emit review when review_nudge is disabled', async () => {
+    findCafeById.mockResolvedValue({
+      cafeId: CAFE_ID,
+      features: mockFeatures({ review_nudge: null }),
+      timezone: 'Europe/London',
+    });
+    poolConnect.mockResolvedValue(
+      mockClient({ onTimeCompletedOrders: 3, reviewPromptState: 'not_shown' }),
+    );
+
+    const { applyLoyaltyAfterKdsComplete } = await import('./loyalty-after-kds-complete.js');
+
+    await applyLoyaltyAfterKdsComplete({
+      cafeId: CAFE_ID,
+      order: mockOrder(),
+    });
+
+    expect(emitCustomerServerToClient).not.toHaveBeenCalled();
+  });
+
+  it('does not emit review when state is already terminal', async () => {
+    findCafeById.mockResolvedValue({
+      cafeId: CAFE_ID,
+      features: mockFeatures({
+        review_nudge: { enabled: true, reviewUrl: 'https://example.com/review', googlePlaceId: null },
+      }),
+      timezone: 'Europe/London',
+    });
+    poolConnect.mockResolvedValue(
+      mockClient({ onTimeCompletedOrders: 3, reviewPromptState: 'shown' }),
+    );
+
+    const { applyLoyaltyAfterKdsComplete } = await import('./loyalty-after-kds-complete.js');
+
+    await applyLoyaltyAfterKdsComplete({
+      cafeId: CAFE_ID,
+      order: mockOrder(),
+    });
+
+    expect(emitCustomerServerToClient).not.toHaveBeenCalled();
+  });
+
+  it('resolves reviewUrl from legacy googlePlaceId when reviewUrl is absent', async () => {
+    findCafeById.mockResolvedValue({
+      cafeId: CAFE_ID,
+      features: mockFeatures({
+        review_nudge: { enabled: true, reviewUrl: null, googlePlaceId: 'ChIJlegacy' },
+      }),
+      timezone: 'Europe/London',
+    });
+    poolConnect.mockResolvedValue(
+      mockClient({ onTimeCompletedOrders: 3, reviewPromptState: 'not_shown' }),
+    );
+
+    const { applyLoyaltyAfterKdsComplete } = await import('./loyalty-after-kds-complete.js');
+
+    await applyLoyaltyAfterKdsComplete({
+      cafeId: CAFE_ID,
+      order: mockOrder(),
+    });
+
+    expect(emitCustomerServerToClient).toHaveBeenCalledWith(
+      ORDER_ID,
+      expect.objectContaining({
+        type: 'customerReviewEligible',
+        reviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJlegacy',
+      }),
+    );
   });
 });

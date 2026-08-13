@@ -7,14 +7,16 @@ import type {
   KdsConfig,
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
+  ReviewNudgeFeatureConfig,
 } from './cafe.js';
 import type { CafeHours } from './cafe-hours-contract.js';
 import type { FeatureFlagKey } from './feature-flags-contract.js';
 
-/** Partial updates merged server-side into existing `features` (only loyalty + order_ahead). */
+/** Partial updates merged server-side into existing `features`. */
 export interface AdminFeaturesPatch {
   loyalty?: Partial<LoyaltyFeatureConfig> | null;
   order_ahead?: Partial<OrderAheadFeatureConfig>;
+  review_nudge?: Partial<ReviewNudgeFeatureConfig> | null;
 }
 
 /** Whitelisted KDS keys merged into existing `kds_config`. */

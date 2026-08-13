@@ -49,6 +49,12 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 - New self-service cafés: **loyalty enabled by default** (10 stamps → free drink).
 - Stamp card on Home **hot-updates** on KDS complete via optional `loyalty` on `customerOrderCompleted` (Workstream 1 done).
 
+### Review nudge
+
+- After **3 on-time** signed-in **app** orders: `review_prompt_state = eligible`, emit `customerReviewEligible` with `reviewUrl`.
+- Order-ahead single-CTA modal (`ReviewNudgeProvider`); confirm via `POST /feedback/review-prompt` → `shown` / `dismissed`.
+- Admin **Review nudge** card (`enabled` + `reviewUrl`).
+
 ### Self-service onboarding + theme
 
 - Marketing → admin signup → wizard (KDS user, Square or template menu, optional Stripe).
@@ -79,8 +85,7 @@ Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`
 1. Seed / Stripe cafés fail `POST /orders` until Connect is ready (or switch to `pay_in_store`).
 2. Stripe cancel does not refund — paid → `refundPending: true`.
 3. No incremental / merge Stripe checkout (F3).
-4. **Review nudge**: API may emit `customerReviewEligible` but order-ahead has no UI; Phase A also sets `review_prompt_state = 'shown_positive'` at emit time (burns eligibility before the modal ships — roadmap WS2).
-5. Admin invites, audit trail, and café theme/logo editor still missing (roadmap WS3–WS4).
+4. Admin invites, audit trail, and café theme/logo editor still missing (roadmap WS3–WS4).
 
 ---
 
@@ -88,10 +93,9 @@ Set **`CORS_ORIGINS`** to frontend HTTPS origins. Stripe + Square secrets on **`
 
 Tackle as planned sessions per [architecture/roadmap.md](architecture/roadmap.md):
 
-1. **WS2** — Review nudge single-CTA modal + `eligible` state + Admin `reviewUrl`.
-2. **WS3** — Admin dashboard redesign (unified brand, sidebar, primitives).
-3. **WS4** — Café branding write path (theme picker, colour overrides, logo).
-4. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
+1. **WS3** — Admin dashboard redesign (unified brand, sidebar, primitives).
+2. **WS4** — Café branding write path (theme picker, colour overrides, logo).
+3. **WS7** — C&B OAuth cutover, hardening, live barista shift, retire v0.1.
 
 Parked (post-launch): Stripe refunds, Redis socket adapter, KDS hold / line made-state, Lightspeed, Capacitor wrapper.
 

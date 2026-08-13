@@ -81,7 +81,7 @@ export type CustomerServerToClientEvent =
       type: 'customerReviewEligible';
       orderId: string;
       cafeId: string;
-      googlePlaceId: string | null;
+      reviewUrl: string | null;
     }
   | {
       type: 'customerMenuUpdated';

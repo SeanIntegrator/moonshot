@@ -85,7 +85,10 @@ export interface OrderAheadFeatureConfig {
 
 export interface ReviewNudgeFeatureConfig {
   enabled: boolean;
-  googlePlaceId: string | null;
+  /** Arbitrary review / ratings URL (Google, TripAdvisor, etc.). */
+  reviewUrl: string | null;
+  /** Legacy — readable for migration; prefer `reviewUrl`. */
+  googlePlaceId?: string | null;
 }
 
 export interface SavedOrdersFeatureConfig {

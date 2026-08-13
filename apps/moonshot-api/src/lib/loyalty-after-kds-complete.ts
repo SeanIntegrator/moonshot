@@ -1,4 +1,5 @@
 import type { NormalisedOrder } from '@moonshot/types';
+import { resolveReviewUrl, REVIEW_PROMPT_TRIGGER } from '@moonshot/domain';
 import { pool } from '../db.js';
 import { emitCustomerServerToClient } from '../realtime/customer-events.js';
 import { ensureCafeMembership } from './cafe/cafe-membership.js';
@@ -33,7 +34,7 @@ export async function applyLoyaltyAfterKdsComplete(params: {
 
   const loyaltyEnabled = features.loyalty?.enabled === true;
   const reviewEnabled = features.review_nudge?.enabled === true;
-  const googlePlaceId = features.review_nudge?.googlePlaceId ?? null;
+  const reviewUrl = resolveReviewUrl(features.review_nudge);
 
   const completedAtIso = order.pickup.completedAt;
   const completedDate = completedAtIso ? new Date(completedAtIso) : new Date();
@@ -121,10 +122,11 @@ export async function applyLoyaltyAfterKdsComplete(params: {
       reviewEnabled &&
       onTime &&
       row.review_prompt_state === 'not_shown' &&
-      row.on_time_completed_orders === 3
+      row.on_time_completed_orders === REVIEW_PROMPT_TRIGGER.threshold
     ) {
+      // Intermediate state — client confirms via POST /feedback/review-prompt.
       await client.query(
-        `UPDATE cafe_users SET review_prompt_state = 'shown_positive' WHERE cafe_id = $1 AND user_id = $2`,
+        `UPDATE cafe_users SET review_prompt_state = 'eligible' WHERE cafe_id = $1 AND user_id = $2`,
         [cafeId, userId],
       );
       shouldEmitReview = true;
@@ -132,12 +134,14 @@ export async function applyLoyaltyAfterKdsComplete(params: {
 
     await client.query('COMMIT');
 
+    // Emit before notifyOrderCompleted's customerOrderCompleted so the order room
+    // is still subscribed (ActiveOrdersProvider drops it on complete).
     if (shouldEmitReview) {
       emitCustomerServerToClient(order.id, {
         type: 'customerReviewEligible',
         orderId: order.id,
         cafeId,
-        googlePlaceId,
+        reviewUrl,
       });
     }
 

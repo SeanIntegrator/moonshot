@@ -10,12 +10,8 @@ See [architecture/roadmap.md](architecture/roadmap.md) Workstream 2.
 
 | Phase | Status | What |
 |-------|--------|------|
-| **A** | Shipped (with a state bug) | On KDS complete for signed-in **app** orders: increment `cafe_users.on_time_completed_orders` (2-minute grace vs `pickup_time`); when counter hits **3**, `review_nudge` is enabled, and state is `not_shown`, emit `customerReviewEligible`. |
-| **B** | Planned (this doc) | Fix premature terminal state; Admin-configurable `reviewUrl`; order-ahead modal with one CTA; client confirms terminal state via `POST /feedback/review-prompt`. |
-
-### Latent bug in Phase A
-
-Today the API sets `review_prompt_state = 'shown_positive'` **at emit time**, before any UI exists. Users who reach three on-time orders before Phase B ships are permanently excluded. Phase B must introduce an intermediate **`eligible`** state and only move to a terminal state when the client confirms.
+| **A** | Shipped | On KDS complete for signed-in **app** orders: increment `cafe_users.on_time_completed_orders` (2-minute grace vs `pickup_time`); when counter hits **3**, `review_nudge` is enabled, and state is `not_shown`, emit `customerReviewEligible`. |
+| **B** | **Shipped (August 2026)** | Intermediate `eligible` state; Admin-configurable `reviewUrl`; order-ahead modal with one CTA; client confirms via `POST /feedback/review-prompt`. |
 
 ---
 
@@ -32,7 +28,9 @@ Today the API sets `review_prompt_state = 'shown_positive'` **at emit time**, be
 When `on_time_completed_orders` becomes **3**, `features.review_nudge.enabled` is true, and `review_prompt_state = 'not_shown'`:
 
 1. Set `review_prompt_state = 'eligible'`.
-2. Emit `customerReviewEligible` to the customer order room (payload includes `reviewUrl`).
+2. Emit `customerReviewEligible` to the customer order room (payload includes `reviewUrl`) **before** `customerOrderCompleted`, so the order room is still subscribed.
+
+Migration `030_review_prompt_eligible.sql` backfills Phase A rows that were prematurely set to `shown_positive` → `eligible`.
 
 ---
 
@@ -50,44 +48,39 @@ interface ReviewNudgeFeatureConfig {
 }
 ```
 
-Admin settings PATCH must accept `featuresPatch.review_nudge` (today only `loyalty` and `order_ahead` are whitelisted).
+Admin settings PATCH accepts `featuresPatch.review_nudge` (`enabled`, `reviewUrl`). Admin UI: **Review nudge** card on the dashboard. When enabled, a resolvable URL is required (`reviewUrl` or legacy `googlePlaceId`).
+
+URL resolution (`resolveReviewUrl` in `@moonshot/domain`): prefer `reviewUrl`; else Google write-review URL from `googlePlaceId`.
 
 ---
 
 ## Client UI
 
-On Order Detail / order-complete, when either:
+`ReviewNudgeProvider` (app-level under `CustomerEventsProvider`) opens a modal when:
 
-- a `customerReviewEligible` socket event arrives for this user, **or**
-- `/auth/me` (membership) shows `reviewPromptState === 'eligible'`,
-
-show a **modal** (not a thumbs drawer):
+- a `customerReviewEligible` socket event arrives, **or**
+- `/auth/me` membership shows `reviewPromptState === 'eligible'`, **or**
+- after `customerOrderCompleted`, `auth.refresh()` finds `eligible` (covers a missed live review event when loyalty apply overruns its budget).
 
 | Element | Behaviour |
 |---------|-----------|
-| Copy | Short “How was your visit?” / rate-us prompt |
-| Primary CTA | Opens `reviewUrl` in a new tab (or browser) |
-| Dismiss | Closes without opening the URL |
-
-Drive from **both** socket and persisted membership so a user who was on Home at completion still sees the prompt on a later visit.
+| Copy | “How was your visit?” |
+| Primary CTA | Opens `reviewUrl` in a new tab, then POST `opened_url` |
+| Dismiss | POST `dismissed` without opening the URL |
 
 ---
 
 ## Persistence / API
 
-On CTA click or dismiss, client calls:
-
 `POST /api/v1/feedback/review-prompt`
-
-Body (sketch):
 
 ```ts
 { action: 'opened_url' | 'dismissed' }
 ```
 
-Server sets `review_prompt_state` to a terminal value (e.g. `shown` or `dismissed`). Do **not** re-show.
+Server sets `review_prompt_state` to `shown` or `dismissed`. Already-terminal → 200 no-op. Do **not** re-show.
 
-**Out of scope for launch:**
+**Out of scope (parked):**
 
 - Thumbs up / thumbs down
 - `mailto:` to `owner_feedback_email`
@@ -100,14 +93,12 @@ Server sets `review_prompt_state` to a terminal value (e.g. `shown` or `dismisse
 
 ```ts
 {
-  type: 'customerReviewEligible';
+  type: 'customerReviewEligible',
   orderId: string,
   cafeId: string,
   reviewUrl: string | null,
 }
 ```
-
-(Replace or supersede the current `googlePlaceId` field on the event.)
 
 ---
 

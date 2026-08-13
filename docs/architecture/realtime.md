@@ -90,6 +90,8 @@ Room membership is **refcounted**: two consumers for the same `orderId` share on
 | **Order detail** (`useOrderTracking`) | shared bus → order room | 5s poll while active |
 | **Home / Profile lists** (`ActiveOrdersProvider`) | shared bus → each active order id | 30s poll |
 | **Stamp card** (`LoyaltyProvider`) | shared bus → `loyalty` on complete | `GET /loyalty/me` when payload absent |
+| **Review nudge** (`ReviewNudgeProvider`) | shared bus → `customerReviewEligible` (before complete); refresh on complete | `/auth/me` `reviewPromptState === 'eligible'` |
+
 
 Subscribing requires **one** of:
 
@@ -113,7 +115,7 @@ The raw order UUID alone is **not** sufficient — this avoids unauthenticated l
 | Queue/ETA recompute (FIFO; skips `manual_override`) | `/kds` | `kds:eta:updated` |
 | Same ETA recompute / barista stretch | `/customer` room `customer:order:{id}` | `customerEtaUpdated` |
 | Same complete route (after loyalty apply, ≤2s budget) | `/customer` room `customer:order:{id}` | `customerOrderCompleted` (optional `loyalty` snapshot) |
-| Loyalty/review threshold (optional) | `/customer` | `customerReviewEligible` |
+| Review threshold (inside loyalty apply, **before** complete) | `/customer` room `customer:order:{id}` | `customerReviewEligible` (`reviewUrl`) |
 | Square catalog sync success | `/admin` room `admin:cafe:{id}` | `admin:menu:synced` |
 | Same catalog sync | `/customer` room `customer:cafe:{id}` | `customerMenuUpdated` |
 
