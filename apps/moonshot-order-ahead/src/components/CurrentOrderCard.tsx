@@ -3,7 +3,8 @@ import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import type { NormalisedOrder } from '@moonshot/types';
 import { Box, Button, Chip, Divider, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { formatTime, modifierSummary } from '../lib/format.js';
+import { formatTime } from '../lib/format.js';
+import { customerModifierSummary } from '../lib/modifier-display.js';
 import { getOrderStatusMeta } from '../lib/order-status.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useMenu } from '../providers/MenuProvider.js';
@@ -73,6 +74,7 @@ export function CurrentOrderCard({ order }: Props) {
           const menuItem = li.menuItemId
             ? menu?.items.find((i) => i.id === li.menuItemId)
             : undefined;
+          const mods = customerModifierSummary(li.modifiers, menuItem);
           return (
             <Box key={li.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1.25 }}>
               <MenuItemImage
@@ -102,13 +104,13 @@ export function CurrentOrderCard({ order }: Props) {
                     </Typography>
                   )}
                 </Typography>
-                {li.modifiers.length > 0 && (
+                {mods ? (
                   <Typography variant="caption" sx={{
                     color: "text.secondary"
                   }}>
-                    {modifierSummary(li.modifiers)}
+                    {mods}
                   </Typography>
-                )}
+                ) : null}
               </Box>
             </Box>
           );

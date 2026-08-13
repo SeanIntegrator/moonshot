@@ -3,6 +3,7 @@ import type {
   NormalisedOrderLineModifier,
   OrderLineModifierSelectionInput,
 } from '@moonshot/types';
+import { modifierSummary } from './format.js';
 
 /**
  * True when the selected option is the group's / size's standard variant.
@@ -23,6 +24,18 @@ export function isStandardModifierVariant(
 
   const group = menuItem.modifierGroups.find((g) => g.id === mod.groupId);
   return group?.options.some((o) => o.id === mod.optionId && o.isDefault) === true;
+}
+
+/**
+ * Customer-facing caption under a drink name — non-default options only.
+ * Hides Hot / Whole / House (etc.) so captions read "Oat" or "Extra Hot".
+ */
+export function customerModifierSummary(
+  modifiers: NormalisedOrderLineModifier[],
+  menuItem?: NormalisedMenuItem | null,
+): string {
+  const custom = modifiers.filter((m) => !isStandardModifierVariant(m, menuItem));
+  return modifierSummary(custom);
 }
 
 type CartLineSelections = {

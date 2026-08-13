@@ -1,6 +1,7 @@
 import type { NormalisedOrder } from '@moonshot/types';
 import { Box, Button, Typography } from '@mui/material';
-import { formatMoney, formatOrderDate, modifierSummary } from '../lib/format.js';
+import { formatMoney, formatOrderDate } from '../lib/format.js';
+import { customerModifierSummary } from '../lib/modifier-display.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { MenuItemImage } from './MenuItemImage.js';
 import { SurfaceCard } from './ui/SurfaceCard.js';
@@ -29,6 +30,7 @@ export function RecentOrderCard({ order, orderingAvailable, onReorder }: Props) 
         const menuItem = li.menuItemId
           ? menu?.items.find((i) => i.id === li.menuItemId)
           : undefined;
+        const mods = customerModifierSummary(li.modifiers, menuItem);
         return (
           <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>
             <MenuItemImage
@@ -45,13 +47,13 @@ export function RecentOrderCard({ order, orderingAvailable, onReorder }: Props) 
               }}>
                 {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
               </Typography>
-              {li.modifiers.length > 0 && (
+              {mods ? (
                 <Typography variant="caption" sx={{
                   color: "text.secondary"
                 }}>
-                  {modifierSummary(li.modifiers)}
+                  {mods}
                 </Typography>
-              )}
+              ) : null}
             </Box>
             <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
               {formatMoney(li.unitPriceMinor * li.quantity, order.currency)}

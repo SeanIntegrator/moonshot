@@ -29,8 +29,8 @@ import {
   formatMoney,
   formatTime,
   minutesUntil,
-  modifierSummary,
 } from '../lib/format.js';
+import { customerModifierSummary } from '../lib/modifier-display.js';
 import type { SnackbarLocationState } from '../lib/order-gate-messages.js';
 import { getOrderStatusMeta } from '../lib/order-status.js';
 import { pageContentWidthSx, toastBottomPx } from '../theme/pageLayout.js';
@@ -287,6 +287,7 @@ export function OrderDetail() {
                 const menuItem = li.menuItemId
                   ? menu?.items?.find((i) => i.id === li.menuItemId)
                   : undefined;
+                const mods = customerModifierSummary(li.modifiers, menuItem);
                 return (
                   <Box key={li.id} sx={{ display: 'flex', gap: 1.5, py: 1.25, alignItems: 'center' }}>
                     <MenuItemImage
@@ -303,13 +304,13 @@ export function OrderDetail() {
                       }}>
                         {li.quantity > 1 ? `${li.quantity}× ${li.itemName}` : li.itemName}
                       </Typography>
-                      {li.modifiers.length > 0 && (
+                      {mods ? (
                         <Typography variant="caption" sx={{
                           color: "text.secondary"
                         }}>
-                          {modifierSummary(li.modifiers)}
+                          {mods}
                         </Typography>
-                      )}
+                      ) : null}
                     </Box>
                     <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
                       {formatMoney(li.unitPriceMinor * li.quantity, order.currency)}

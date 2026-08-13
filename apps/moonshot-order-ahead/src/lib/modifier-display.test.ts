@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { NormalisedMenuItem, NormalisedOrderLineModifier } from '@moonshot/types';
-import { isStandardModifierVariant, nonStandardCartLineLabels } from './modifier-display.js';
+import {
+  customerModifierSummary,
+  isStandardModifierVariant,
+  nonStandardCartLineLabels,
+} from './modifier-display.js';
 
 function mod(
   partial: Partial<NormalisedOrderLineModifier> &
@@ -40,6 +44,26 @@ const menuItem: NormalisedMenuItem = {
       options: [
         { id: 'o-whole', posOptionId: null, name: 'Whole', priceMinor: 0, isDefault: true },
         { id: 'o-oat', posOptionId: null, name: 'Oat', priceMinor: 50, isDefault: false },
+      ],
+    },
+    {
+      id: 'g-temp',
+      name: 'Milk Temperature',
+      selectionType: 'single',
+      required: true,
+      options: [
+        { id: 'o-hot', posOptionId: null, name: 'Hot', priceMinor: 0, isDefault: true },
+        { id: 'o-xh', posOptionId: null, name: 'Extra Hot', priceMinor: 0, isDefault: false },
+      ],
+    },
+    {
+      id: 'g-beans',
+      name: 'Beans',
+      selectionType: 'single',
+      required: true,
+      options: [
+        { id: 'o-house', posOptionId: null, name: 'House', priceMinor: 0, isDefault: true },
+        { id: 'o-decaf', posOptionId: null, name: 'Decaf', priceMinor: 0, isDefault: false },
       ],
     },
     {
@@ -135,5 +159,105 @@ describe('nonStandardCartLineLabels', () => {
         modifiers: [{ groupId: 'g-milk', optionId: 'o-oat' }],
       }),
     ).toEqual([]);
+  });
+});
+
+describe('customerModifierSummary', () => {
+  it('shows oat and hides default hot / whole / house', () => {
+    expect(
+      customerModifierSummary([
+        mod({
+          groupId: 'g-temp',
+          groupName: 'Milk Temperature',
+          optionId: 'o-hot',
+          optionName: 'Hot',
+          isDefault: true,
+        }),
+        mod({
+          groupId: 'g-milk',
+          optionId: 'o-oat',
+          optionName: 'Oat',
+          isDefault: false,
+        }),
+        mod({
+          groupId: 'g-beans',
+          groupName: 'Beans',
+          optionId: 'o-house',
+          optionName: 'House',
+          isDefault: true,
+        }),
+      ]),
+    ).toBe('Oat');
+  });
+
+  it('shows extra hot and hides default whole / house', () => {
+    expect(
+      customerModifierSummary([
+        mod({
+          groupId: 'g-temp',
+          groupName: 'Milk Temperature',
+          optionId: 'o-xh',
+          optionName: 'Extra Hot',
+          isDefault: false,
+        }),
+        mod({
+          groupId: 'g-milk',
+          optionId: 'o-whole',
+          optionName: 'Whole',
+          isDefault: true,
+        }),
+        mod({
+          groupId: 'g-beans',
+          groupName: 'Beans',
+          optionId: 'o-house',
+          optionName: 'House',
+          isDefault: true,
+        }),
+      ]),
+    ).toBe('Extra Hot');
+  });
+
+  it('returns empty when every option is default', () => {
+    expect(
+      customerModifierSummary([
+        mod({
+          groupId: 'g-temp',
+          groupName: 'Milk Temperature',
+          optionId: 'o-hot',
+          optionName: 'Hot',
+          isDefault: true,
+        }),
+        mod({
+          groupId: 'g-milk',
+          optionId: 'o-whole',
+          optionName: 'Whole',
+          isDefault: true,
+        }),
+        mod({
+          groupId: 'g-beans',
+          groupName: 'Beans',
+          optionId: 'o-house',
+          optionName: 'House',
+          isDefault: true,
+        }),
+      ]),
+    ).toBe('');
+  });
+
+  it('hides legacy whole via live menu when isDefault is missing', () => {
+    expect(
+      customerModifierSummary(
+        [
+          mod({ groupId: 'g-milk', optionId: 'o-whole', optionName: 'Whole' }),
+          mod({
+            groupId: 'g-temp',
+            groupName: 'Milk Temperature',
+            optionId: 'o-xh',
+            optionName: 'Extra Hot',
+          }),
+        ],
+        menuItem,
+      ),
+    ).toBe('Extra Hot');
   });
 });

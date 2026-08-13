@@ -3,8 +3,8 @@ import { Box, Button, Typography } from '@mui/material';
 import { MenuItemImage } from './MenuItemImage.js';
 import { SectionHead } from './SectionHead.js';
 import { SurfaceCard } from './ui/SurfaceCard.js';
-import { formatMoney, modifierSummary } from '../lib/format.js';
-import { isStandardModifierVariant } from '../lib/modifier-display.js';
+import { formatMoney } from '../lib/format.js';
+import { customerModifierSummary } from '../lib/modifier-display.js';
 import { whyNotTryTotalMinor } from '../lib/why-not-try.js';
 
 type LineView = {
@@ -36,8 +36,7 @@ function linesFromUsual(order: NormalisedOrder, menu: NormalisedMenu | null): Li
     const menuItem = li.menuItemId
       ? menu?.items?.find((i) => i.id === li.menuItemId)
       : undefined;
-    const custom = li.modifiers.filter((m) => !isStandardModifierVariant(m, menuItem));
-    const summary = modifierSummary(custom);
+    const summary = customerModifierSummary(li.modifiers, menuItem);
     return {
       key: li.id,
       name: li.itemName,
