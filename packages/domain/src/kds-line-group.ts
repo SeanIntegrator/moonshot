@@ -147,12 +147,19 @@ function compareTuples(a: readonly (string | number)[], b: readonly (string | nu
 /**
  * Merge identical lines then sort drinks (section → beans → milk → other) and
  * food (section → name). Returns rows ready for DrinkRow / FoodRow.
+ *
+ * @param options.partitionKey — Extra bucket key so identical catalogue lines can
+ *   stay separate (e.g. made vs open after a partial recall). Without this,
+ *   pre-crossed and remake duplicates collapse into one row whose toggle would
+ *   clear the crossed ids.
  */
 export function groupKdsLines(
   items: readonly NormalisedOrderItem[],
   config: KdsConfig,
+  options?: { partitionKey?: (item: NormalisedOrderItem) => string },
 ): GroupedKdsLine[] {
   const classification = resolveClassification(config);
+  const partitionKey = options?.partitionKey;
 
   const buckets = new Map<
     string,
@@ -161,7 +168,8 @@ export function groupKdsLines(
   const bucketOrder: string[] = [];
 
   items.forEach((item, index) => {
-    const key = kdsLineIdentityKey(item);
+    const part = partitionKey ? partitionKey(item) : '';
+    const key = part ? `${kdsLineIdentityKey(item)}::p:${part}` : kdsLineIdentityKey(item);
     const existing = buckets.get(key);
     if (existing) {
       existing.items.push(item);

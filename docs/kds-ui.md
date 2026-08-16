@@ -45,7 +45,7 @@ Domain ticket layout (shot columns, milk wraps, allergen hazard stripes) stays a
 
 **Ready chrome** is line-driven (`allMade`) so promote and demote are optimistic both ways; status POSTs are debounced (~250ms) and idempotent in `useKdsOrders`. **Timer** badges use `d` / `h` / `m` (no seconds).
 
-**Line grouping** (`groupKdsLines` in `@moonshot/domain`): identical lines (same item, modifiers, notes, allergens) merge into one row with summed quantity; drinks then sort by menu section (`drinkSectionKeys`) → beans → milk → other modifiers. Food merges the same way and sorts by `foodSectionKeys`. Crossing a merged row toggles every source line id together. Recent-orders recall stays unmerged (1:1 with line ids).
+**Line grouping** (`groupKdsLines` in `@moonshot/domain`): identical lines (same item, modifiers, notes, allergens) merge into one row with summed quantity; drinks then sort by menu section (`drinkSectionKeys`) → beans → milk → other modifiers. Food merges the same way and sorts by `foodSectionKeys`. Crossing a merged row toggles every source line id together. After a **partial recall**, identical lines are partitioned by made state so a pre-crossed duplicate stays its own crossed row and does not share toggles with the remake. Recent-orders recall picker stays unmerged (1:1 with line ids).
 
 **Fulfillment icons** sit above the quantity in the shot column (walking = takeaway / pickup, table SVG = eat in). Preview only — all lines on a ticket currently share `order.orderType`; a future per-line cup flag slots into the same cell. Compact density hides the icon.
 

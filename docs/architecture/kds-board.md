@@ -22,6 +22,8 @@ Socket payloads stay `NormalisedOrder`; the KDS app derives Flow chrome via `der
 2. **Sort drinks** by `drinkSectionKeys` (menu section order) → beans → milk → other modifiers → name.
 3. **Sort food** by `foodSectionKeys` → name.
 
+Optional `partitionKey` keeps identical lines in separate rows when they must not share made-state (partial recall: pre-crossed vs remake duplicates). The board partitions by whether each line id is in `madeIds`.
+
 `drinkSectionKeys` / `foodSectionKeys` are mirrored from `menu_sections` (`kind` + `sort_order`) via `syncFoodSectionKeys`.
 
 ## Prep derivation

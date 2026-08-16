@@ -76,7 +76,11 @@ export function OrderCard({
   const userEditedMadeRef = useRef(false);
   const prevOrderIdRef = useRef(order.id);
 
-  const grouped: GroupedKdsLine[] = groupKdsLines(order.items, kdsConfig);
+  // Partition by made state so a partial recall of duplicate lines stays as two
+  // rows (pre-crossed vs remake) instead of one mixed group that toggleMade would corrupt.
+  const grouped: GroupedKdsLine[] = groupKdsLines(order.items, kdsConfig, {
+    partitionKey: (item) => (madeIds.has(item.id) ? 'made' : 'open'),
+  });
   const drinks: GroupedKdsLine[] = grouped.filter((l) => !l.view.isFood);
   const foods: GroupedKdsLine[] = grouped.filter((l) => l.view.isFood);
   const lineIds = order.items.map((i) => i.id);

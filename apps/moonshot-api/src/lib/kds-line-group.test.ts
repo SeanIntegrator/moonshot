@@ -221,4 +221,36 @@ describe('groupKdsLines', () => {
     );
     expect(grouped).toHaveLength(2);
   });
+
+  it('keeps identical lines separate when partitionKey differs (partial recall)', () => {
+    const madeIds = new Set(['b']);
+    const grouped = groupKdsLines(
+      [
+        line({ id: 'a', menuItemId: 'mi-latte', itemName: 'Latte' }),
+        line({ id: 'b', menuItemId: 'mi-latte', itemName: 'Latte' }),
+      ],
+      baseConfig(),
+      { partitionKey: (item) => (madeIds.has(item.id) ? 'made' : 'open') },
+    );
+
+    expect(grouped).toHaveLength(2);
+    expect(grouped.map((g) => g.sourceIds)).toEqual([['a'], ['b']]);
+    expect(grouped.every((g) => g.quantity === 1)).toBe(true);
+  });
+
+  it('still merges identical lines that share the same partition', () => {
+    const madeIds = new Set(['a', 'b']);
+    const grouped = groupKdsLines(
+      [
+        line({ id: 'a', menuItemId: 'mi-latte', itemName: 'Latte' }),
+        line({ id: 'b', menuItemId: 'mi-latte', itemName: 'Latte' }),
+      ],
+      baseConfig(),
+      { partitionKey: (item) => (madeIds.has(item.id) ? 'made' : 'open') },
+    );
+
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0]!.sourceIds).toEqual(['a', 'b']);
+    expect(grouped[0]!.quantity).toBe(2);
+  });
 });
