@@ -118,7 +118,18 @@ function groupNamesMatch(groupName: string, names: string[]): boolean {
   return names.some((n) => n.trim().toLowerCase() === g);
 }
 
-function resolveClassification(config: KdsConfig) {
+/** Resolved modifier group-name lists for Flow prep / line grouping. */
+export type KdsResolvedClassification = {
+  coffeeModifiers: string[];
+  additions: string[];
+  shots: string[];
+  beans: string[];
+  milkTemperature: string[];
+  milkTexture: string[];
+  iceLevel: string[];
+};
+
+export function resolveClassification(config: KdsConfig): KdsResolvedClassification {
   const mc = config.modifierClassification;
   return {
     coffeeModifiers:
@@ -146,6 +157,11 @@ function resolveClassification(config: KdsConfig) {
         ? mc.iceLevel
         : [...DEFAULT_MODIFIER_CLASSIFICATION.iceLevel],
   };
+}
+
+/** True when `groupName` matches any configured classification name (case-insensitive). */
+export function modifierGroupMatches(groupName: string, names: readonly string[]): boolean {
+  return groupNamesMatch(groupName, [...names]);
 }
 
 function milkColorFromMod(

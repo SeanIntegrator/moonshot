@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type TransitionEvent } from 'react';
 import type { KdsAdvanceStatusRequest, KdsConfig, NormalisedOrder } from '@moonshot/types';
-import { deriveFlowLine } from '@moonshot/domain';
-import { ChevronDown, MoreVertical } from 'lucide-react';
+import { groupKdsLines, type GroupedKdsLine } from '@moonshot/domain';
+import { MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { DrinkRow } from './DrinkRow.js';
-import { FoodRow } from './FoodRow.js';
+import { FoodSection } from './FoodSection.js';
 import { useEqualizeShotColumnWidth } from './useEqualizeShotColumnWidth.js';
 import {
   deriveTicketKind,
@@ -52,38 +52,6 @@ const TIMER_BY_TONE: Record<TimerTone, string> = {
 const TIMER_READY =
   'border-transparent bg-[#3d6b52] text-[#e8f5ee] tracking-wide';
 
-/** Muted slate-blue strip — separates drinks from food; food rows stay on the dark card. */
-function FoodStrip({
-  only,
-  expanded,
-  onToggle,
-}: {
-  only: boolean;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-expanded={expanded}
-      aria-label={expanded ? 'Collapse food items' : 'Expand food items'}
-      className="relative flex w-full cursor-pointer items-center justify-center bg-[#3a4555] px-4 py-1.5 text-[#a8b4c4] outline-none [-webkit-tap-highlight-color:transparent]"
-      onClick={onToggle}
-    >
-      <span className="text-base font-bold tracking-[0.12em] uppercase">
-        {only ? 'FOOD ONLY' : 'FOOD'}
-      </span>
-      <ChevronDown
-        aria-hidden
-        className={cn(
-          'absolute right-3 size-5 shrink-0 transition-transform duration-200',
-          expanded && 'rotate-180',
-        )}
-      />
-    </button>
-  );
-}
-
 export function OrderCard({
   order,
   kdsConfig,
@@ -108,13 +76,10 @@ export function OrderCard({
   const userEditedMadeRef = useRef(false);
   const prevOrderIdRef = useRef(order.id);
 
-  const lines = order.items.map((item) => ({
-    item,
-    view: deriveFlowLine(item, kdsConfig),
-  }));
-  const drinks = lines.filter((l) => !l.view.isFood);
-  const foods = lines.filter((l) => l.view.isFood);
-  const lineIds = lines.map((l) => l.item.id);
+  const grouped: GroupedKdsLine[] = groupKdsLines(order.items, kdsConfig);
+  const drinks: GroupedKdsLine[] = grouped.filter((l) => !l.view.isFood);
+  const foods: GroupedKdsLine[] = grouped.filter((l) => l.view.isFood);
+  const lineIds = order.items.map((i) => i.id);
   const allMade = lineIds.length > 0 && lineIds.every((id) => madeIds.has(id));
   // Ready chrome is line-driven so demote (un-cross) is instant, not waiting on API.
   const showReadyChrome = allMade;
@@ -124,12 +89,13 @@ export function OrderCard({
     Boolean(order.customerName?.trim());
 
   // Content that affects natural shot-column width (remeasure when it changes).
-  const shotContentKey = drinks
-    .map(
-      ({ item, view }) =>
-        `${item.id}:${item.quantity}:${item.itemName}:${view.shotLabel ?? ''}:${view.sizeLabel ?? ''}`,
-    )
-    .join('|');
+  const shotContentKey = [
+    order.orderType,
+    ...drinks.map(
+      ({ item, view, quantity }) =>
+        `${item.id}:${quantity}:${item.itemName}:${view.shotLabel ?? ''}:${view.sizeLabel ?? ''}`,
+    ),
+  ].join('|');
 
   useEqualizeShotColumnWidth(bodyRef, shotContentKey);
 
@@ -165,12 +131,15 @@ export function OrderCard({
     onSetStatus(order.id, 'confirmed');
   }, [allMade, lineIds.length, onSetStatus, order.id, order.status]);
 
-  function toggleMade(lineId: string): void {
+  function toggleMade(sourceIds: readonly string[]): void {
     userEditedMadeRef.current = true;
     setMadeIds((prev) => {
       const next = new Set(prev);
-      if (next.has(lineId)) next.delete(lineId);
-      else next.add(lineId);
+      const allMadeNow = sourceIds.every((id) => next.has(id));
+      for (const id of sourceIds) {
+        if (allMadeNow) next.delete(id);
+        else next.add(id);
+      }
       return next;
     });
   }
@@ -250,39 +219,28 @@ export function OrderCard({
               Details pending
             </p>
           ) : null}
-          {drinks.map(({ item, view }, i) => (
+          {drinks.map(({ item, view, sourceIds, quantity }, i) => (
             <DrinkRow
-              key={item.id}
+              key={sourceIds.join('|')}
               itemName={item.itemName}
-              quantity={item.quantity}
+              quantity={quantity}
               view={view}
-              made={madeIds.has(item.id)}
-              onToggleMade={() => toggleMade(item.id)}
+              made={sourceIds.every((id) => madeIds.has(id))}
+              onToggleMade={() => toggleMade(sourceIds)}
               hideBottomBorder={foods.length > 0 && i === drinks.length - 1}
+              orderType={order.orderType}
             />
           ))}
 
-          {foods.length > 0 ? (
-            <>
-              <FoodStrip
-                only={drinks.length === 0}
-                expanded={foodExpanded}
-                onToggle={() => setFoodExpanded((prev) => !prev)}
-              />
-              {foodExpanded
-                ? foods.map(({ item, view }) => (
-                    <FoodRow
-                      key={item.id}
-                      itemName={item.itemName}
-                      quantity={item.quantity}
-                      view={view}
-                      made={madeIds.has(item.id)}
-                      onToggleMade={() => toggleMade(item.id)}
-                    />
-                  ))
-                : null}
-            </>
-          ) : null}
+          <FoodSection
+            foods={foods}
+            drinksEmpty={drinks.length === 0}
+            expanded={foodExpanded}
+            onToggle={() => setFoodExpanded((prev) => !prev)}
+            madeIds={madeIds}
+            onToggleMade={toggleMade}
+            orderType={order.orderType}
+          />
 
           {order.notes?.trim() ? (
             <p className="border-t border-border px-4 py-2 text-[1.05rem] font-normal text-[#e8eef2]">

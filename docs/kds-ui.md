@@ -43,7 +43,13 @@ Flow ticket colours (headers, timers, milk/syrup chips, allergen hazard) stay ap
 
 Domain ticket layout (shot columns, milk wraps, allergen hazard stripes) stays app-local Tailwind + thin CSS helpers in `src/index.css`. For new interactive custom pieces, prefer composing **Base UI** / shadcn primitives under `components/ui` rather than inventing a parallel CSS system.
 
-**Ready chrome** is line-driven (`allMade`) so promote and demote are optimistic both ways; status POSTs are debounced (~250ms) and idempotent in `useKdsOrders`. **Timer** badges use `d` / `h` / `m` (no seconds). **Food strip** is a muted slate-blue accent between drinks and food rows on the board.
+**Ready chrome** is line-driven (`allMade`) so promote and demote are optimistic both ways; status POSTs are debounced (~250ms) and idempotent in `useKdsOrders`. **Timer** badges use `d` / `h` / `m` (no seconds).
+
+**Line grouping** (`groupKdsLines` in `@moonshot/domain`): identical lines (same item, modifiers, notes, allergens) merge into one row with summed quantity; drinks then sort by menu section (`drinkSectionKeys`) → beans → milk → other modifiers. Food merges the same way and sorts by `foodSectionKeys`. Crossing a merged row toggles every source line id together. Recent-orders recall stays unmerged (1:1 with line ids).
+
+**Fulfillment icons** sit above the quantity in the shot column (walking = takeaway / pickup, table SVG = eat in). Preview only — all lines on a ticket currently share `order.orderType`; a future per-line cup flag slots into the same cell. Compact density hides the icon.
+
+**Food strip** is a muted slate-blue accent between drinks and food. When every food line is crossed it turns the same forest green as the READY header. Collapse keeps rows mounted and animates `max-height` over **300ms ease-in-out** (same cadence as ticket dismiss) so tickets below slide instead of jumping.
 
 **Line density:** `DrinkRow` / `FoodRow` accept `density="board" | "compact"` (default `board`). Compact shrinks type/padding for close-range UI and uses `.flow-allergen-sm`.
 

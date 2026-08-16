@@ -1,7 +1,9 @@
 import type { FlowLineView } from '@moonshot/domain';
+import type { OrderType } from '@moonshot/types';
 import { CheckSquare, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FlowRowDensity } from './DrinkRow.js';
+import { FulfillmentQtyCell } from './FulfillmentQtyCell.js';
 import { formatAllergenLabel } from './formatAllergen.js';
 
 type FoodRowProps = {
@@ -14,6 +16,8 @@ type FoodRowProps = {
   density?: FlowRowDensity;
   /** Checkbox affordance for recall line selection; `made` is the inverse of selected. */
   showSelectControl?: boolean;
+  /** Order-level fulfillment preview until per-line cups exist. */
+  orderType?: OrderType;
 };
 
 export function FoodRow({
@@ -24,6 +28,7 @@ export function FoodRow({
   onToggleMade,
   density = 'board',
   showSelectControl = false,
+  orderType = 'takeaway',
 }: FoodRowProps) {
   const compact = density === 'compact';
   const qtyMulti = quantity > 1;
@@ -59,16 +64,13 @@ export function FoodRow({
             )}
           </span>
         ) : null}
-        <span
-          className={cn(
-            'shrink-0 self-center text-center font-bold tabular-nums text-muted-foreground',
-            compact ? 'w-4 text-sm' : 'w-5 text-[1.4rem]',
-            py,
-            qtyMulti && 'text-card-foreground',
-          )}
-        >
-          {quantity}
-        </span>
+        <FulfillmentQtyCell
+          orderType={orderType}
+          quantity={quantity}
+          compact={compact}
+          qtyMulti={qtyMulti}
+          className={py}
+        />
         <span
           className={cn('w-px shrink-0 self-stretch bg-border', qtyMulti && 'w-0.5 bg-foreground/50')}
           aria-hidden

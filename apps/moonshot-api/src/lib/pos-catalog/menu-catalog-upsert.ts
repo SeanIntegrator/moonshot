@@ -545,22 +545,29 @@ export async function syncKdsModifierClassification(
   ]);
 }
 
-/** Mirror menu_sections.kind=food into kds_config.foodSectionKeys. */
+/**
+ * Mirror menu_sections into kds_config section key lists (food + drink),
+ * ordered by sort_order so the KDS board can group lines by section.
+ */
 export async function syncFoodSectionKeys(
   client: { query: PoolClient['query'] },
   cafeId: string,
 ): Promise<void> {
-  const { rows } = await client.query<{ key: string }>(
-    `SELECT key FROM menu_sections WHERE cafe_id = $1 AND kind = 'food' ORDER BY sort_order, label`,
+  const { rows } = await client.query<{ key: string; kind: string }>(
+    `SELECT key, kind FROM menu_sections
+     WHERE cafe_id = $1
+     ORDER BY sort_order, label`,
     [cafeId],
   );
-  const keys = rows.map((r) => r.key);
+  const foodKeys = rows.filter((r) => r.kind === 'food').map((r) => r.key);
+  const drinkKeys = rows.filter((r) => r.kind === 'drink').map((r) => r.key);
   const { rows: cafeRows } = await client.query<{ kds_config: Record<string, unknown> }>(
     `SELECT kds_config FROM cafes WHERE id = $1`,
     [cafeId],
   );
   const kds = { ...(cafeRows[0]?.kds_config ?? {}) };
-  kds.foodSectionKeys = keys.length > 0 ? keys : ['food'];
+  kds.foodSectionKeys = foodKeys.length > 0 ? foodKeys : ['food'];
+  kds.drinkSectionKeys = drinkKeys;
   await client.query(`UPDATE cafes SET kds_config = $1::jsonb WHERE id = $2`, [
     JSON.stringify(kds),
     cafeId,

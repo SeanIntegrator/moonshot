@@ -232,6 +232,11 @@ export interface KdsConfig {
    * Maintained from menu_sections.kind; replaces the legacy `category === 'food'` check.
    */
   foodSectionKeys?: string[];
+  /**
+   * Drink section keys in menu_sections.sort_order — KDS groups drinks by this
+   * order (e.g. coffee before matcha). Synced with foodSectionKeys from the registry.
+   */
+  drinkSectionKeys?: string[];
 }
 
 export interface Cafe {

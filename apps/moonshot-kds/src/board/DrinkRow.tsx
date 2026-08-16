@@ -1,8 +1,10 @@
 import type { FlowLineView } from '@moonshot/domain';
+import type { OrderType } from '@moonshot/types';
 import { CheckSquare, Square } from 'lucide-react';
 import { Fragment } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { FulfillmentQtyCell } from './FulfillmentQtyCell.js';
 import { formatAllergenLabel } from './formatAllergen.js';
 
 export type FlowRowDensity = 'board' | 'compact';
@@ -19,6 +21,11 @@ type DrinkRowProps = {
   density?: FlowRowDensity;
   /** Checkbox affordance for recall line selection; `made` is the inverse of selected. */
   showSelectControl?: boolean;
+  /**
+   * Order-level fulfillment (preview until per-line cups exist).
+   * Required on the live board; optional in compact recall rows.
+   */
+  orderType?: OrderType;
 };
 
 /** Shot tags are joined with ` · ` upstream — split for 2px-gap bracket rendering. */
@@ -61,6 +68,7 @@ export function DrinkRow({
   hideBottomBorder = false,
   density = 'board',
   showSelectControl = false,
+  orderType = 'takeaway',
 }: DrinkRowProps) {
   const compact = density === 'compact';
   const hasMods = view.milk != null || view.syrups.length > 0;
@@ -101,16 +109,13 @@ export function DrinkRow({
             )}
           </span>
         ) : null}
-        <span
-          className={cn(
-            'shrink-0 self-center text-center font-bold tabular-nums text-muted-foreground',
-            compact ? 'w-4 text-sm' : 'w-5 text-[1.4rem]',
-            py,
-            qtyMulti && 'text-card-foreground',
-          )}
-        >
-          {quantity}
-        </span>
+        <FulfillmentQtyCell
+          orderType={orderType}
+          quantity={quantity}
+          compact={compact}
+          qtyMulti={qtyMulti}
+          className={py}
+        />
         <span
           className={cn('w-px shrink-0 self-stretch bg-border', qtyMulti && 'w-0.5 bg-foreground/50')}
           aria-hidden

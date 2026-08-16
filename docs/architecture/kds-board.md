@@ -12,18 +12,31 @@ Socket payloads stay `NormalisedOrder`; the KDS app derives Flow chrome via `der
 | `modifiers[].chipLabel` | Short chip text (e.g. `Oa`) |
 | `modifiers[].isSize` | Size rows (skipped as chips) |
 | `modifiers[].isDefault` | KDS hides default options (Whole milk, Double shot, House bean, …) |
-| `category` | Menu category snapshot — category containing `food` → food row |
+| `category` | Menu category snapshot — keys in `foodSectionKeys` → food row |
+
+## Line grouping (client)
+
+`groupKdsLines(items, kdsConfig)` consolidates the live board (not recall UI):
+
+1. **Merge** lines with the same menu item (or name), category, notes, allergens, and modifier `groupId`+`optionId` set — quantity sums; `sourceIds` keep original line ids for made/ready.
+2. **Sort drinks** by `drinkSectionKeys` (menu section order) → beans → milk → other modifiers → name.
+3. **Sort food** by `foodSectionKeys` → name.
+
+`drinkSectionKeys` / `foodSectionKeys` are mirrored from `menu_sections` (`kind` + `sort_order`) via `syncFoodSectionKeys`.
 
 ## Prep derivation
 
 ```ts
-import { deriveFlowLine, deriveLinePrep } from '@moonshot/types';
+import { deriveFlowLine, deriveLinePrep, groupKdsLines } from '@moonshot/domain';
 
 const flow = deriveFlowLine(orderItem, kdsConfig);
 // flow.isFood, shotLabel, beanAccent, sizeLabel, milk, syrups, notes, allergens
 
 const prep = deriveLinePrep(orderItem, kdsConfig);
 // prep.milkColorHex, prep.beanBadgeKey, prep.chips[]
+
+const rows = groupKdsLines(order.items, kdsConfig);
+// rows[].item, view, sourceIds, quantity
 ```
 
 Classification roles on `kdsConfig.modifierClassification`:
@@ -46,6 +59,10 @@ Bean bracket accents (`beanBadges.*.accent`): house `#e8a33d`, decaf `#7aa2d6`, 
 | SIT IN | `orderType === 'eat_in'` | No |
 | TAKEAWAY | `orderType === 'takeaway'` + `source === 'pos'` | No |
 | PICKUP | `orderType === 'takeaway'` + app/web/whatsapp | Yes (when `display.showCustomerNameInHeader`) |
+
+### Fulfillment icons (preview)
+
+Each board row shows an icon above the quantity: **walking** for `takeaway` (includes pickup), **table** (custom SVG) for `eat_in`. All lines on a ticket currently share `order.orderType`; per-line cup type is not stored yet.
 
 ### Hybrid timer
 

@@ -6,6 +6,7 @@ export * from './drink-archetypes.js';
 export * from './feature-flags.js';
 export * from './feedback.js';
 export * from './kds.js';
+export * from './kds-line-group.js';
 export * from './kds-audio.js';
 export * from './loyalty.js';
 export * from './menu-images.js';
