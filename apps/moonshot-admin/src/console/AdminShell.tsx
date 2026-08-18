@@ -16,6 +16,7 @@ export function AdminShell() {
   const status = resolveServiceStatus({
     isOpen: openStatus.isOpen,
     timeZone: cafe.timezone,
+    pausedUntil: cafe.pausedUntil,
   });
 
   return (

@@ -10,7 +10,7 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
 ## Versioned
 
 - `GET /api/v1/health`
-- `GET /api/v1/cafe/:slug` — public café + active feature flags (`X-Cafe-Slug` optional on other routes)
+  - `GET /api/v1/cafe/:slug` — public café + active feature flags (`X-Cafe-Slug` optional on other routes). Response includes `pausedUntil`, `lastOrderBufferMinutes`, `hoursOverrides`. `isOpen` is accepting-orders (hours + overrides + pause + last-order buffer). Not CDN-cached. Pause / hours / buffer / override writes emit `customerCafeUpdated` so order-ahead refetches.
 - **Auth (Google / customer JWT)**
   - `POST /api/v1/auth/google` — `{ credential, cafeSlug }` → JWT
   - `GET /api/v1/auth/me` — `Authorization` + café context
@@ -37,7 +37,7 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
 - **Media**
   - `GET /api/v1/media/*` — public catalogue thumbnails streamed from the private bucket (allowlisted object keys only). See [menu-images.md](../menu-images.md).
 - **Orders**
-  - `POST /api/v1/orders` — guest or **optional** `Authorization: Bearer` session JWT; sets `orders.user_id` when signed in. **`X-Cafe-Slug`** required. Behaviour depends on `features.order_ahead.paymentProvider`:
+  - `POST /api/v1/orders` — guest or **optional** `Authorization: Bearer` session JWT; sets `orders.user_id` when signed in. **`X-Cafe-Slug`** required. Rejects `400 VALIDATION` when the café is closed, paused, or past the last-order buffer. Behaviour depends on `features.order_ahead.paymentProvider`:
     - **`pay_in_store`** — persists **`confirmed` / `unpaid`**, emits **`kds:order:new`** immediately, validates **modifiers** against menu JSON.
     - **`stripe`** — requires **Stripe Connect onboarding complete** (`chargesEnabled` on the connected account). Creates **`pending` / `unpaid`** order + **Stripe Checkout** session; response includes **`checkoutUrl`**. **`kds:order:new`** fires only after **`checkout.session.completed`** webhook marks the order **`paid` / `confirmed`**. Guests receive **`trackingToken`** when `JWT_SECRET` is set (same as pay-in-store).
   - `GET /api/v1/orders/me` — signed-in customer active + recent orders (`Authorization` + café context).
@@ -71,7 +71,12 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
     - `GET /api/v1/admin/connect/square/return` — OAuth **redirect** (no JWT); signed `state` → code exchange → **302** to admin
   - `POST /api/v1/admin/auth/login` — `{ email, password }` → JWT (`purpose: admin`)
   - `GET /api/v1/admin/auth/me` — `Authorization: Bearer`
-  - `PATCH /api/v1/admin/settings` — `Authorization: Bearer`; body `featuresPatch` (`loyalty`, `order_ahead`, `review_nudge`) and/or `kdsConfigPatch` (whitelisted KDS keys); merges into `cafes.features` / `cafes.kds_config`
+  - `PATCH /api/v1/admin/settings` — `Authorization: Bearer`; body `featuresPatch` (`loyalty`, `order_ahead`, `review_nudge`) and/or `kdsConfigPatch` (whitelisted KDS keys) and/or `hours` and/or `lastOrderBufferMinutes` (0, 10, 15, 20, 30, 45, 60); merges into `cafes.features` / `cafes.kds_config` / `cafes.hours` / `cafes.last_order_buffer_minutes`
+  - `POST /api/v1/admin/service/pause` — `{ duration: '15m' | '30m' | '1h' | 'rest_of_today' }`; sets `cafes.paused_until`
+  - `POST /api/v1/admin/service/resume` — clears `paused_until`
+  - `POST /api/v1/admin/service/extend` — `{ minutes: 15 }`
+  - `PUT /api/v1/admin/hours/overrides` — upsert one-off date (`date`, optional `label`, `closed`, `intervals`)
+  - `DELETE /api/v1/admin/hours/overrides/:date` — `:date` is `YYYY-MM-DD`
   - `POST /api/v1/admin/menu/sync-pos` — admin JWT; pull Square catalog for the café now (same upsert path as webhook / cron sync)
   - `POST /api/v1/admin/payments/stripe/onboarding-link` — `Authorization: Bearer`; creates Express connected account if needed, returns Stripe-hosted **Account Link** URL.
   - `GET /api/v1/admin/payments/stripe/status` — `Authorization: Bearer`; syncs **`chargesEnabled`** etc. into `cafes.payment_config.stripe`.

@@ -5,6 +5,7 @@ import { MenuItemImageField } from '../../../components/menu/MenuItemImageField.
 import { SizeEditor } from '../../../components/menu/SizeEditor.js';
 import { formatGbpMinor } from '../../../lib/format.js';
 import { ReadOnlyPanel } from '../../primitives/ReadOnlyPanel.js';
+import { minorToPoundsInput, poundsToMinor } from './extra-price.js';
 import { isPosOwnedItem, toDraft, type DraftItem } from './menu-item-draft.js';
 
 type CategoryOption = { value: string; label: string };
@@ -57,7 +58,7 @@ export function ItemDetailsCard({
 
   const nameField = useBlurField(draft.name);
   const descriptionField = useBlurField(draft.description ?? '');
-  const priceField = useBlurField(String(draft.priceMinor / 100));
+  const priceField = useBlurField(minorToPoundsInput(draft.priceMinor));
 
   const selectOptions = categoryOptions.some((c) => c.value === draft.category)
     ? categoryOptions
@@ -179,15 +180,7 @@ export function ItemDetailsCard({
                   onChange={(e) => priceField.setValue(e.target.value)}
                   onBlur={(e) => {
                     priceField.endFocus();
-                    const raw = e.target.value.trim();
-                    if (raw === '') {
-                      onChange({ ...draftRef.current, priceMinor: 0 });
-                      return;
-                    }
-                    const v = Number.parseFloat(raw);
-                    if (Number.isFinite(v)) {
-                      onChange({ ...draftRef.current, priceMinor: Math.round(v * 100) });
-                    }
+                    onChange({ ...draftRef.current, priceMinor: poundsToMinor(e.target.value) });
                   }}
                   sx={{ maxWidth: 200 }}
                   slotProps={{ htmlInput: { min: 0, step: 0.01 } }}

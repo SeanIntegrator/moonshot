@@ -14,6 +14,15 @@ import {
 import { buildAdminLoginResponse } from '../lib/admin/admin-auth-tokens.js';
 import { findCafeById } from '../lib/cafes-repository.js';
 import { patchAdminCafeSettings } from '../lib/admin/admin-settings-service.js';
+import {
+  extendCafePause,
+  pauseCafeService,
+  resumeCafeService,
+} from '../lib/admin/cafe-service-pause.js';
+import {
+  deleteCafeHoursOverride,
+  upsertCafeHoursOverride,
+} from '../lib/cafe/hours-overrides-service.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
 import {
@@ -95,6 +104,72 @@ adminRouter.patch('/settings', requireAdminAuth, async (req, res) => {
   }
 
   const data = await patchAdminCafeSettings(cafeId, req.body);
+  return res.json({ ok: true, data });
+});
+
+adminRouter.post('/service/pause', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser?.cafeId;
+  if (!cafeId) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Missing admin context',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+  const data = await pauseCafeService(cafeId, req.body);
+  return res.json({ ok: true, data });
+});
+
+adminRouter.post('/service/resume', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser?.cafeId;
+  if (!cafeId) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Missing admin context',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+  const data = await resumeCafeService(cafeId);
+  return res.json({ ok: true, data });
+});
+
+adminRouter.post('/service/extend', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser?.cafeId;
+  if (!cafeId) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Missing admin context',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+  const data = await extendCafePause(cafeId, req.body);
+  return res.json({ ok: true, data });
+});
+
+adminRouter.put('/hours/overrides', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser?.cafeId;
+  if (!cafeId) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Missing admin context',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+  const data = await upsertCafeHoursOverride(cafeId, req.body);
+  return res.json({ ok: true, data });
+});
+
+adminRouter.delete('/hours/overrides/:date', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser?.cafeId;
+  if (!cafeId) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Missing admin context',
+      code: ApiErrorCode.INTERNAL,
+    });
+  }
+  const date = typeof req.params.date === 'string' ? req.params.date : '';
+  const data = await deleteCafeHoursOverride(cafeId, date);
   return res.json({ ok: true, data });
 });
 

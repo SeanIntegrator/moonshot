@@ -11,7 +11,7 @@ import type {
   OrderAheadFeatureConfig,
   ReviewNudgeFeatureConfig,
 } from './cafe.js';
-import type { CafeHours } from './cafe-hours-contract.js';
+import type { CafeHours, LastOrderBufferMinutes } from './cafe-hours-contract.js';
 import type { FeatureFlagKey } from './feature-flags-contract.js';
 
 /** Partial updates merged server-side into existing `features`. */
@@ -35,6 +35,8 @@ export interface AdminSettingsPatchBody {
   kdsConfigPatch?: AdminKdsConfigPatch;
   /** Replace weekly hours when present (validated server-side). */
   hours?: CafeHours;
+  /** Minutes before close after which order-ahead stops. Saved with weekly hours. */
+  lastOrderBufferMinutes?: LastOrderBufferMinutes;
   /** Child theme pack id. */
   themeId?: BaseThemeId;
   /** Brand recipe merged into `theme_overrides.brand`. */

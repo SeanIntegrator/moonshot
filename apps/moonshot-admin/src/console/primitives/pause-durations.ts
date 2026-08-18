@@ -1,4 +1,6 @@
-export type PauseDuration = '15m' | '30m' | '1h' | 'rest_of_today';
+import type { PauseDuration } from '@moonshot/types';
+
+export type { PauseDuration };
 
 export const PAUSE_DURATION_OPTIONS: ReadonlyArray<{
   value: PauseDuration;

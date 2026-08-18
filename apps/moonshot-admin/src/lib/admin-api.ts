@@ -7,8 +7,13 @@ export {
   type AdminSessionPayload,
 } from './adminApi/auth.js';
 export {
+  deleteHoursOverride,
+  extendCafePause,
   fetchPublicCafe,
   patchAdminSettings,
+  pauseCafeOrders,
+  resumeCafeOrders,
+  upsertHoursOverride,
   type PublicCafePayload,
 } from './adminApi/settings.js';
 export {

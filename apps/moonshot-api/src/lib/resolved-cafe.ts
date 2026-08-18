@@ -5,7 +5,7 @@ import type {
   KdsConfig,
   RequestCafeContext,
 } from '@moonshot/types';
-import type { CafeHours } from '@moonshot/types';
+import type { CafeHours, CafeHoursOverride } from '@moonshot/types';
 
 /** `cafes` row mapped to API-facing camelCase + request context */
 export interface ResolvedCafe extends RequestCafeContext {
@@ -20,5 +20,8 @@ export interface ResolvedCafe extends RequestCafeContext {
   kdsConfig: KdsConfig;
   timezone: string;
   hours: CafeHours;
+  pausedUntil: string | null;
+  lastOrderBufferMinutes: number;
+  hoursOverrides: CafeHoursOverride[];
   ownerFeedbackEmail: string | null;
 }

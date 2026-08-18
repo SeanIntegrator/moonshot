@@ -32,6 +32,15 @@ describe('todayHoursLine', () => {
     const sun = new Date('2026-08-16T10:00:00.000Z');
     expect(todayHoursLine(weekday, 'UTC', sun)).toBe('Sunday · Closed — no online ordering.');
   });
+
+  it('uses a date override in place of the weekday', () => {
+    const tue = new Date('2026-08-11T10:00:00.000Z');
+    expect(
+      todayHoursLine(weekday, 'UTC', tue, [
+        { date: '2026-08-11', label: 'bank holiday', closed: true, intervals: [] },
+      ]),
+    ).toBe('Tuesday · Closed — bank holiday.');
+  });
 });
 
 describe('overviewHeroHeading', () => {
@@ -40,6 +49,7 @@ describe('overviewHeroHeading', () => {
     expect(overviewHeroHeading(weekday, 'UTC', tue)).toEqual({
       heading: 'Taking orders until 16:00',
       isOpen: true,
+      sub: 'Last order-ahead slot is 15:40.',
     });
   });
 
@@ -56,6 +66,17 @@ describe('overviewHeroHeading', () => {
     expect(overviewHeroHeading(weekday, 'UTC', sun)).toEqual({
       heading: 'Closed',
       isOpen: false,
+    });
+  });
+
+  it('shows pause copy while pausedUntil is in the future', () => {
+    const tue = new Date('2026-08-11T10:00:00.000Z');
+    expect(
+      overviewHeroHeading(weekday, 'UTC', tue, { pausedUntil: '2026-08-11T12:15:00.000Z' }),
+    ).toEqual({
+      heading: 'Orders paused until 12:15',
+      isOpen: false,
+      sub: "Customers see 'back shortly'. Your hours are unchanged.",
     });
   });
 });

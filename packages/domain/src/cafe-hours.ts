@@ -9,11 +9,10 @@ import {
   WEEKDAY_KEYS,
   type CafeHours,
   type CafeHoursInterval,
-  type CafeOpenStatus,
   type WeekdayKey,
 } from '@moonshot/types';
 
-export type { CafeHours, CafeHoursInterval, CafeOpenStatus, WeekdayKey };
+export type { CafeHours, CafeHoursInterval, WeekdayKey };
 export { WEEKDAY_KEYS };
 
 const HH_MM = /^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/;
@@ -64,29 +63,32 @@ export function hhMmToMinutes(value: string): number | null {
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
+export function normalizeCafeHoursIntervals(raw: unknown): CafeHoursInterval[] {
+  if (!Array.isArray(raw)) return [];
+  const cleaned: CafeHoursInterval[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const openRaw =
+      typeof (item as { open?: unknown }).open === 'string' ? (item as { open: string }).open : '';
+    const closeRaw =
+      typeof (item as { close?: unknown }).close === 'string' ? (item as { close: string }).close : '';
+    const open = toHhMm(openRaw);
+    const close = toHhMm(closeRaw);
+    if (!open || !close) continue;
+    const o = hhMmToMinutes(open)!;
+    const c = hhMmToMinutes(close)!;
+    if (o >= c) continue;
+    cleaned.push({ open, close });
+  }
+  return cleaned;
+}
+
 export function normalizeCafeHours(raw: unknown): CafeHours {
   const out = emptyCafeHours();
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   const rec = raw as Record<string, unknown>;
   for (const day of WEEKDAY_KEYS) {
-    const intervals = rec[day];
-    if (!Array.isArray(intervals)) continue;
-    const cleaned: CafeHoursInterval[] = [];
-    for (const item of intervals) {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
-      const openRaw =
-        typeof (item as { open?: unknown }).open === 'string' ? (item as { open: string }).open : '';
-      const closeRaw =
-        typeof (item as { close?: unknown }).close === 'string' ? (item as { close: string }).close : '';
-      const open = toHhMm(openRaw);
-      const close = toHhMm(closeRaw);
-      if (!open || !close) continue;
-      const o = hhMmToMinutes(open)!;
-      const c = hhMmToMinutes(close)!;
-      if (o >= c) continue;
-      cleaned.push({ open, close });
-    }
-    out[day] = cleaned;
+    out[day] = normalizeCafeHoursIntervals(rec[day]);
   }
   return out;
 }
@@ -115,7 +117,7 @@ export function cafeHoursConfigured(hours: CafeHours): boolean {
   return WEEKDAY_KEYS.some((d) => hours[d].length > 0);
 }
 
-function localParts(
+export function localParts(
   timezone: string,
   now: Date,
 ): { weekday: WeekdayKey; minutes: number } | null {
@@ -143,7 +145,7 @@ function localParts(
   }
 }
 
-function formatCaptionTime(hhMm: string): string {
+export function formatCaptionTime(hhMm: string): string {
   const mins = hhMmToMinutes(hhMm);
   if (mins == null) return hhMm;
   const h = Math.floor(mins / 60);
@@ -153,37 +155,20 @@ function formatCaptionTime(hhMm: string): string {
   return m === 0 ? `${h12}:00 ${period}` : `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-function findOpenInterval(
-  hours: CafeHours,
-  weekday: WeekdayKey,
+export function findIntervalContaining(
+  intervals: CafeHoursInterval[],
   minutes: number,
 ): CafeHoursInterval | null {
-  for (const iv of hours[weekday]) {
-    const o = hhMmToMinutes(iv.open)!;
-    const c = hhMmToMinutes(iv.close)!;
+  for (const iv of intervals) {
+    const o = hhMmToMinutes(iv.open);
+    const c = hhMmToMinutes(iv.close);
+    if (o == null || c == null) continue;
     if (minutes >= o && minutes < c) return iv;
   }
   return null;
 }
 
-function nextOpenAfter(
-  hours: CafeHours,
-  weekday: WeekdayKey,
-  minutes: number,
-): { dayOffset: number; open: string } | null {
-  for (let offset = 0; offset < 7; offset++) {
-    const dayIndex = (WEEKDAY_KEYS.indexOf(weekday) + offset) % 7;
-    const day = WEEKDAY_KEYS[dayIndex]!;
-    for (const iv of hours[day]) {
-      const o = hhMmToMinutes(iv.open)!;
-      if (offset === 0 && o <= minutes) continue;
-      return { dayOffset: offset, open: iv.open };
-    }
-  }
-  return null;
-}
-
-function localCalendarDate(
+export function localCalendarDate(
   timezone: string,
   now: Date,
 ): { year: number; month: number; day: number } | null {
@@ -204,7 +189,7 @@ function localCalendarDate(
   }
 }
 
-function addCalendarDays(
+export function addCalendarDays(
   year: number,
   month: number,
   day: number,
@@ -215,7 +200,7 @@ function addCalendarDays(
 }
 
 /** Convert a wall-clock local datetime in `timeZone` to a UTC instant. */
-function zonedWallClockToUtc(
+export function zonedWallClockToUtc(
   timeZone: string,
   year: number,
   month: number,
@@ -252,76 +237,29 @@ function zonedWallClockToUtc(
   return new Date(instant.getTime() + (wantedUtc - asLocalUtc2));
 }
 
-/**
- * Instant of the next café opening after `now`.
- * When currently open, this is the opening *after* the current interval ends
- * (so "Out today" mid-service returns at tomorrow's open, not a later split).
- * Unconfigured hours → null.
- */
-export function nextCafeOpenAt(
-  hoursInput: CafeHours | null | undefined,
-  timezone: string,
-  now: Date = new Date(),
-): Date | null {
-  const hours = hoursInput ? normalizeCafeHours(hoursInput) : emptyCafeHours();
-  if (!cafeHoursConfigured(hours)) return null;
-  const tz = timezone || 'UTC';
-  const local = localParts(tz, now);
-  if (!local) return null;
-
-  const openNow = findOpenInterval(hours, local.weekday, local.minutes);
-  const searchMinutes = openNow ? hhMmToMinutes(openNow.close)! : local.minutes;
-  const next = nextOpenAfter(hours, local.weekday, searchMinutes);
-  if (!next) return null;
-
-  const cal = localCalendarDate(tz, now);
-  if (!cal) return null;
-  const openMins = hhMmToMinutes(next.open);
-  if (openMins == null) return null;
-  const target = addCalendarDays(cal.year, cal.month, cal.day, next.dayOffset);
-  return zonedWallClockToUtc(
-    tz,
-    target.year,
-    target.month,
-    target.day,
-    Math.floor(openMins / 60),
-    openMins % 60,
-  );
+export function minutesToHhMm(minutes: number): string {
+  const clamped = Math.max(0, Math.min(24 * 60 - 1, Math.floor(minutes)));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/**
- * Compute open/closed for `now` in the café timezone.
- * Unconfigured / empty hours → closed (safe launch default).
- */
-export function cafeOpenStatus(
-  hoursInput: CafeHours | null | undefined,
-  timezone: string,
-  now: Date = new Date(),
-): CafeOpenStatus {
-  const hours = hoursInput ? normalizeCafeHours(hoursInput) : emptyCafeHours();
-  if (!cafeHoursConfigured(hours)) {
-    return { isOpen: false, caption: 'Closed' };
-  }
+export function calendarDateToIso(cal: { year: number; month: number; day: number }): string {
+  return `${cal.year}-${String(cal.month).padStart(2, '0')}-${String(cal.day).padStart(2, '0')}`;
+}
 
-  const local = localParts(timezone || 'UTC', now);
-  if (!local) {
-    return { isOpen: false, caption: 'Closed' };
-  }
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-  const openNow = findOpenInterval(hours, local.weekday, local.minutes);
-  if (openNow) {
-    return {
-      isOpen: true,
-      caption: `Open · closes ${formatCaptionTime(openNow.close)}`,
-    };
-  }
+export function weekdayKeyFromIsoDate(isoDate: string): WeekdayKey | null {
+  const m = ISO_DATE.exec(isoDate);
+  if (!m) return null;
+  const utc = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const day = new Date(utc).getUTCDay();
+  return WEEKDAY_KEYS[(day + 6) % 7] ?? null;
+}
 
-  const next = nextOpenAfter(hours, local.weekday, local.minutes);
-  if (!next) {
-    return { isOpen: false, caption: 'Closed' };
-  }
-  return {
-    isOpen: false,
-    caption: `Closed · opens ${formatCaptionTime(next.open)}`,
-  };
+export function formatTime24FromInstant(instant: Date, timezone: string): string {
+  const local = localParts(timezone, instant);
+  if (!local) return '';
+  return minutesToHhMm(local.minutes);
 }

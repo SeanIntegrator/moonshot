@@ -123,7 +123,9 @@ export async function putOptionAvailability(
     );
   } else {
     const cafe = await findCafeById(cafeId);
-    const nextOpen = cafe ? nextCafeOpenAt(cafe.hours, cafe.timezone) : null;
+    const nextOpen = cafe
+      ? nextCafeOpenAt(cafe.hours, cafe.timezone, new Date(), { overrides: cafe.hoursOverrides })
+      : null;
     if (!nextOpen) {
       throw new ApiHttpError(
         400,

@@ -1,4 +1,13 @@
-import { normalizeCafeHours, type CafeHours, type WeekdayKey } from '@moonshot/domain';
+import {
+  calendarDateToIso,
+  currentLastOrderSlotHhMm,
+  effectiveIntervalsForDate,
+  formatTime24FromInstant,
+  lastOrderSlotHhMm,
+  localCalendarDate,
+  normalizeCafeHours,
+} from '@moonshot/domain';
+import type { CafeHours, CafeHoursOverride, WeekdayKey } from '@moonshot/types';
 
 const WEEKDAY_LONG: Record<WeekdayKey, string> = {
   mon: 'Monday',
@@ -64,34 +73,81 @@ function formatIntervals(intervals: { open: string; close: string }[]): string {
 }
 
 /** `Tuesday · 08:00 – 16:00` or closed copy. */
-export function todayHoursLine(hoursInput: CafeHours, timezone: string, now: Date = new Date()): string {
+export function todayHoursLine(
+  hoursInput: CafeHours,
+  timezone: string,
+  now: Date = new Date(),
+  overrides?: CafeHoursOverride[],
+): string {
   const hours = normalizeCafeHours(hoursInput);
   const day = localWeekdayKey(timezone, now);
   if (!day) return 'Hours unavailable';
-  const intervals = hours[day];
+  const cal = localCalendarDate(timezone, now);
+  const iso = cal ? calendarDateToIso(cal) : null;
+  const intervals = iso ? effectiveIntervalsForDate(hours, overrides, iso) : hours[day];
   const name = WEEKDAY_LONG[day];
-  if (intervals.length === 0) return `${name} · Closed — no online ordering.`;
+  const override = iso ? overrides?.find((o) => o.date === iso) : undefined;
+  if (intervals.length === 0) {
+    const why = override?.label ? `Closed — ${override.label}.` : 'Closed — no online ordering.';
+    return `${name} · ${why}`;
+  }
   return `${name} · ${formatIntervals(intervals)}`;
 }
+
+export type OverviewHeroCopy = {
+  heading: string;
+  isOpen: boolean;
+  sub?: string;
+};
 
 export function overviewHeroHeading(
   hoursInput: CafeHours,
   timezone: string,
   now: Date = new Date(),
-): { heading: string; isOpen: boolean } {
+  extras: {
+    pausedUntil?: string | null;
+    lastOrderBufferMinutes?: number;
+    overrides?: CafeHoursOverride[];
+  } = {},
+): OverviewHeroCopy {
+  if (extras.pausedUntil) {
+    const until = new Date(extras.pausedUntil);
+    if (!Number.isNaN(until.getTime()) && until.getTime() > now.getTime()) {
+      return {
+        heading: `Orders paused until ${formatTime24FromInstant(until, timezone)}`,
+        isOpen: false,
+        sub: "Customers see 'back shortly'. Your hours are unchanged.",
+      };
+    }
+  }
+
   const hours = normalizeCafeHours(hoursInput);
   const day = localWeekdayKey(timezone, now);
   const minutes = localMinutes(timezone, now);
   if (!day || minutes == null) {
     return { heading: 'Closed', isOpen: false };
   }
-  const intervals = hours[day];
+  const cal = localCalendarDate(timezone, now);
+  const iso = cal ? calendarDateToIso(cal) : null;
+  const intervals = iso ? effectiveIntervalsForDate(hours, extras.overrides, iso) : hours[day];
   for (const iv of intervals) {
     const open = hhMmToMinutes(iv.open);
     const close = hhMmToMinutes(iv.close);
     if (open == null || close == null) continue;
     if (minutes >= open && minutes < close) {
-      return { heading: `Taking orders until ${iv.close}`, isOpen: true };
+      const slot =
+        currentLastOrderSlotHhMm({
+          hours,
+          timezone,
+          now,
+          overrides: extras.overrides,
+          lastOrderBufferMinutes: extras.lastOrderBufferMinutes,
+        }) ?? lastOrderSlotHhMm(iv, extras.lastOrderBufferMinutes ?? 20);
+      return {
+        heading: `Taking orders until ${iv.close}`,
+        isOpen: true,
+        sub: slot ? `Last order-ahead slot is ${slot}.` : undefined,
+      };
     }
   }
   const later = intervals.find((iv) => {

@@ -29,6 +29,7 @@ export const CUSTOMER_SOCKET_SERVER_EVENT = {
   ORDER_COMPLETED: 'customerOrderCompleted',
   ETA_UPDATED: 'customerEtaUpdated',
   MENU_UPDATED: 'customerMenuUpdated',
+  CAFE_UPDATED: 'customerCafeUpdated',
 } as const;
 
 export type CustomerSocketServerEventName =

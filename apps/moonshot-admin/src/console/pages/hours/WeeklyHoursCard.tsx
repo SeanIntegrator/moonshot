@@ -1,10 +1,17 @@
-import { Alert, Box } from '@mui/material';
-import { WEEKDAY_KEYS, type CafeHoursInterval, type WeekdayKey } from '@moonshot/types';
+import { Alert, Box, FormControl, MenuItem, Select, Typography } from '@mui/material';
+import { currentLastOrderSlotHhMm, isLastOrderBufferMinutes } from '@moonshot/domain';
+import {
+  type CafeHoursInterval,
+  type LastOrderBufferMinutes,
+  type WeekdayKey,
+  WEEKDAY_KEYS,
+} from '@moonshot/types';
 import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { localWeekdayKey } from '../overview/today-hours.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
 import { HoursDayRow } from './HoursDayRow.js';
+import { LAST_ORDER_BUFFER_OPTIONS } from './last-order-buffer.js';
 import {
   DEFAULT_INTERVAL,
   dayWindowsError,
@@ -15,20 +22,33 @@ import {
   type HoursDraft,
 } from './hours-draft.js';
 
+function asBuffer(value: number): LastOrderBufferMinutes {
+  return isLastOrderBufferMinutes(value) ? value : 20;
+}
+
 export function WeeklyHoursCard() {
   const { cafe, patchSettings } = useCafe();
   const saved = hoursToDraft(cafe.hours);
+  const savedBuffer = asBuffer(cafe.lastOrderBufferMinutes);
   const [draft, setDraft] = useState<HoursDraft>(saved);
+  const [buffer, setBuffer] = useState<LastOrderBufferMinutes>(savedBuffer);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const today = localWeekdayKey(cafe.timezone, new Date());
 
   useEffect(() => {
     setDraft(hoursToDraft(cafe.hours));
-  }, [cafe.hours]);
+    setBuffer(asBuffer(cafe.lastOrderBufferMinutes));
+  }, [cafe.hours, cafe.lastOrderBufferMinutes]);
 
-  const dirty = !hoursDraftEqual(draft, saved);
+  const dirty = !hoursDraftEqual(draft, saved) || buffer !== savedBuffer;
   const valid = hoursDraftError(draft) === null;
+  const exampleSlot = currentLastOrderSlotHhMm({
+    hours: draftToHours(draft),
+    timezone: cafe.timezone,
+    overrides: cafe.hoursOverrides,
+    lastOrderBufferMinutes: buffer,
+  });
 
   function setDayOpen(day: WeekdayKey, open: boolean) {
     setDraft((prev) => ({
@@ -69,7 +89,7 @@ export function WeeklyHoursCard() {
     setSaving(true);
     setError(null);
     try {
-      await patchSettings({ hours: draftToHours(draft) });
+      await patchSettings({ hours: draftToHours(draft), lastOrderBufferMinutes: buffer });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
@@ -119,7 +139,30 @@ export function WeeklyHoursCard() {
           );
         })}
       </Box>
-      {/* Last order-ahead buffer is not in cafe settings yet — omit the "N minutes before you close" control. */}
+      <Box sx={{ mt: 2.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <Typography variant="body2">
+          Last order-ahead slot closes
+          <FormControl size="small" sx={{ mx: 1, minWidth: 160, verticalAlign: 'middle' }}>
+            <Select
+              value={buffer}
+              onChange={(e) => setBuffer(asBuffer(Number(e.target.value)))}
+              aria-label="Last order-ahead buffer"
+            >
+              {LAST_ORDER_BUFFER_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          before you close.
+        </Typography>
+        {exampleSlot ? (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Right now that&apos;s {exampleSlot}.
+          </Typography>
+        ) : null}
+      </Box>
     </SettingsCard>
   );
 }

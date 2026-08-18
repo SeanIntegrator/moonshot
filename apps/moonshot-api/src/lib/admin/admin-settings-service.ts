@@ -12,6 +12,7 @@ import {
 import { mergeThemeOverrides, parseBrandPatch, parseThemeId } from './admin-theme-merge.js';
 import { ApiHttpError } from '../http-errors.js';
 import { toPublicCafe } from '../to-public-cafe.js';
+import { emitCustomerCafeUpdated } from '../../realtime/customer-events.js';
 
 export type AdminSettingsPatchInput = ReturnType<typeof parseAdminSettingsPatchBody>;
 
@@ -24,17 +25,31 @@ export async function patchAdminCafeSettings(
   body: unknown,
 ): Promise<AdminSettingsResponse> {
   const parsed = parseAdminSettingsPatchBody(body);
+  if (
+    body &&
+    typeof body === 'object' &&
+    !Array.isArray(body) &&
+    Object.prototype.hasOwnProperty.call(body, 'lastOrderBufferMinutes') &&
+    parsed.lastOrderBufferMinutes === undefined
+  ) {
+    throw new ApiHttpError(
+      400,
+      ApiErrorCode.VALIDATION,
+      'lastOrderBufferMinutes must be 0, 10, 15, 20, 30, 45, or 60',
+    );
+  }
   const hasTheme = parsed.themeId !== undefined || parsed.brand !== undefined;
   if (
     !parsed.featuresPatch &&
     !parsed.kdsConfigPatch &&
     parsed.hours === undefined &&
+    parsed.lastOrderBufferMinutes === undefined &&
     !hasTheme
   ) {
     throw new ApiHttpError(
       400,
       ApiErrorCode.VALIDATION,
-      'featuresPatch, kdsConfigPatch, hours, themeId, or brand is required',
+      'featuresPatch, kdsConfigPatch, hours, lastOrderBufferMinutes, themeId, or brand is required',
     );
   }
 
@@ -46,6 +61,7 @@ export async function patchAdminCafeSettings(
   let nextFeatures = resolved.features;
   let nextKds = resolved.kdsConfig;
   let nextHours = resolved.hours;
+  let nextBuffer = resolved.lastOrderBufferMinutes;
   let nextThemeId = resolved.themeId;
   let nextThemeOverrides: CafeThemeOverrides = resolved.themeOverrides ?? {};
 
@@ -73,6 +89,10 @@ export async function patchAdminCafeSettings(
     nextHours = validated.value;
   }
 
+  if (parsed.lastOrderBufferMinutes !== undefined) {
+    nextBuffer = parsed.lastOrderBufferMinutes;
+  }
+
   if (parsed.themeId !== undefined) {
     const tid = parseThemeId(parsed.themeId);
     if (!tid.ok) {
@@ -95,8 +115,9 @@ export async function patchAdminCafeSettings(
          kds_config = $2::jsonb,
          hours = $3::jsonb,
          theme_id = $4,
-         theme_overrides = $5::jsonb
-     WHERE id = $6
+         theme_overrides = $5::jsonb,
+         last_order_buffer_minutes = $6
+     WHERE id = $7
      RETURNING ${CAFE_COLUMNS}`,
     [
       JSON.stringify(nextFeatures),
@@ -104,11 +125,15 @@ export async function patchAdminCafeSettings(
       JSON.stringify(nextHours),
       nextThemeId,
       JSON.stringify(nextThemeOverrides),
+      nextBuffer,
       cafeId,
     ],
   );
 
   const out = mapCafeRow(rows[0] as Parameters<typeof mapCafeRow>[0]);
+  if (parsed.hours !== undefined || parsed.lastOrderBufferMinutes !== undefined) {
+    emitCustomerCafeUpdated({ cafeId, updatedAt: new Date().toISOString() });
+  }
 
   return {
     cafe: toPublicCafe(out),

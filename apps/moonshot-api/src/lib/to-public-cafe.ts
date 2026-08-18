@@ -15,6 +15,9 @@ export function toPublicCafe(c: ResolvedCafe): Cafe {
     kdsConfig: c.kdsConfig,
     timezone: c.timezone,
     hours: c.hours,
+    pausedUntil: c.pausedUntil,
+    lastOrderBufferMinutes: c.lastOrderBufferMinutes,
+    hoursOverrides: c.hoursOverrides,
     ownerFeedbackEmail: c.ownerFeedbackEmail,
   };
 }

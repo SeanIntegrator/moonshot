@@ -118,6 +118,7 @@ The raw order UUID alone is **not** sufficient — this avoids unauthenticated l
 | Review threshold (inside loyalty apply, **before** complete) | `/customer` room `customer:order:{id}` | `customerReviewEligible` (`reviewUrl`) |
 | Square catalog sync success | `/admin` room `admin:cafe:{id}` | `admin:menu:synced` |
 | Same catalog sync | `/customer` room `customer:cafe:{id}` | `customerMenuUpdated` |
+| Pause / hours / buffer / date-override writes | `/customer` room `customer:cafe:{id}` | `customerCafeUpdated` |
 
 ## Admin menu sync
 
@@ -126,3 +127,5 @@ Admin JWT handshake only (mirrors KDS). After `runCatalogSyncForCafe` succeeds (
 ## Customer menu invalidation
 
 `MenuProvider` emits `customer:subscribeCafe` with the café slug (public — same as unauthenticated `GET /menu`). On `customerMenuUpdated` it refetches with `cache: 'no-store'` to bypass the 5-minute `Cache-Control` on `GET /menu`.
+
+`CafeProvider` uses the same subscribe. On `customerCafeUpdated` it refetches `GET /cafe/:slug` (`Cache-Control: private, no-store`) so pause and last-order buffer show without a full reload. `POST /orders` remains the hard gate.

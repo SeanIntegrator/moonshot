@@ -2,7 +2,7 @@
  * Café config, feature flags, theme tokens, and KDS display config.
  */
 
-import type { CafeHours } from './cafe-hours-contract.js';
+import type { CafeHours, CafeHoursOverride } from './cafe-hours-contract.js';
 import type { FeatureFlagKey } from './feature-flags-contract.js';
 import type { PosProvider } from './pos-contract.js';
 
@@ -252,6 +252,11 @@ export interface Cafe {
   timezone: string;
   /** Weekly local hours; empty days / empty object → treated as closed. */
   hours: CafeHours;
+  /** ISO timestamp; null / past = not paused. Evaluated lazily at read time. */
+  pausedUntil: string | null;
+  /** Minutes before close after which order-ahead stops. `0` = at closing time. */
+  lastOrderBufferMinutes: number;
+  hoursOverrides: CafeHoursOverride[];
   ownerFeedbackEmail: string | null;
 }
 

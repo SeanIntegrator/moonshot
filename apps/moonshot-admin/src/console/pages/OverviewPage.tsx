@@ -13,7 +13,13 @@ export function OverviewPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      <OverviewHero hours={cafe.hours} timeZone={cafe.timezone} />
+      <OverviewHero
+        hours={cafe.hours}
+        timeZone={cafe.timezone}
+        pausedUntil={cafe.pausedUntil}
+        lastOrderBufferMinutes={cafe.lastOrderBufferMinutes}
+        hoursOverrides={cafe.hoursOverrides}
+      />
       <Box
         sx={{
           display: 'grid',
@@ -22,7 +28,11 @@ export function OverviewPage() {
           alignItems: 'start',
         }}
       >
-        <HoursSummaryCard hours={cafe.hours} timeZone={cafe.timezone} />
+        <HoursSummaryCard
+          hours={cafe.hours}
+          timeZone={cafe.timezone}
+          hoursOverrides={cafe.hoursOverrides}
+        />
         <ConnectionsCard token={session.token} timeZone={cafe.timezone} />
       </Box>
       <OutOfStockCard token={session.token} />

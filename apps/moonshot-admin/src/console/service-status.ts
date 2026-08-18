@@ -9,8 +9,7 @@ export type ServiceStatus = {
 
 /**
  * Header / Hours / Overview pill. Pause wins while `pausedUntil` is in the
- * future; otherwise hours decide open vs closed. `pausedUntil` is unused until
- * the Pause conversation lands the column.
+ * future; otherwise hours (plus last-order buffer) decide open vs closed.
  */
 export function resolveServiceStatus(params: {
   isOpen: boolean;

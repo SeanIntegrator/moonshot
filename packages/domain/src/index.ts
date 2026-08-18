@@ -1,5 +1,7 @@
 export * from './allergens.js';
 export * from './cafe-hours.js';
+export * from './cafe-open-status.js';
+export * from './cafe-pause.js';
 export * from './cafe-slug.js';
 export * from './dataflow.js';
 export * from './drink-archetypes.js';

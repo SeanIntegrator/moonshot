@@ -27,5 +27,7 @@ describe('pounds input round-trip', () => {
   it('formats minor units for the field', () => {
     expect(minorToPoundsInput(0)).toBe('0.00');
     expect(minorToPoundsInput(40)).toBe('0.40');
+    expect(minorToPoundsInput(380)).toBe('3.80');
+    expect(String(380 / 100)).toBe('3.8');
   });
 });

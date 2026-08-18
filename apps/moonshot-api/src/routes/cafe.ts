@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { cafeOpenStatus } from '@moonshot/domain';
+import { cafeOpenStatusForCafe } from '@moonshot/domain';
 import { activeFeatureKeys } from '../lib/cafe/cafe-map.js';
 import { toPublicCafe } from '../lib/to-public-cafe.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
@@ -9,10 +9,10 @@ export const cafeRouter: Router = Router();
 cafeRouter.get('/:slug', requireCafeContext, (req, res) => {
   const c = req.cafe!;
   const cafe = toPublicCafe(c);
-  const open = cafeOpenStatus(cafe.hours, cafe.timezone);
+  const open = cafeOpenStatusForCafe(c);
 
-  // Hours are cacheable; isOpen is recomputed here and also client-side from hours.
-  res.set('Cache-Control', 'public, max-age=60');
+  // Pause and last-order buffer change within the hour — do not CDN-cache isOpen.
+  res.set('Cache-Control', 'private, no-store');
   return res.json({
     ok: true,
     data: {

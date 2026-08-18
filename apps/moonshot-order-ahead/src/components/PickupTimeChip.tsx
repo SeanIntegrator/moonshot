@@ -1,8 +1,10 @@
+import { pickupDelayFitsLastSlot } from '@moonshot/domain';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import type { PickupEstimateResponse } from '@moonshot/types';
 import { Box, Chip, Menu, MenuItem, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
+import { useCafe } from '../hooks/useCafe.js';
 import { formatTime } from '../lib/format.js';
 import {
   pickupDelayOptions,
@@ -45,8 +47,23 @@ export function PickupTimeChip({
   maxPickupMinutes = 60,
   variant = 'chip',
 }: Props) {
+  const { cafe } = useCafe();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const options = useMemo(() => pickupDelayOptions(maxPickupMinutes), [maxPickupMinutes]);
+  const options = useMemo(() => {
+    const now = new Date();
+    return pickupDelayOptions(maxPickupMinutes, (delay) =>
+      cafe
+        ? pickupDelayFitsLastSlot({
+            delayMinutes: delay,
+            now,
+            timezone: cafe.timezone,
+            hours: cafe.hours,
+            overrides: cafe.hoursOverrides,
+            lastOrderBufferMinutes: cafe.lastOrderBufferMinutes,
+          })
+        : true,
+    );
+  }, [maxPickupMinutes, cafe]);
   const safeValue = options.includes(value) ? value : 0;
   const displayTime = formatTime(pickupTimeForDelay(estimate, safeValue).toISOString());
 

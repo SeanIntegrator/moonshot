@@ -95,10 +95,10 @@ amber are not used for any other purpose except Stripe/Square status dots.
 |---------|--------|-------|
 | Eight-tab shell, routing | Exists | `/` redirects to `/overview`; login and onboarding-complete land there |
 | Read-only field system | Partial | `ReadOnlyPanel` / `SourceLabel` primitives exist; pages not wired |
-| Derived status line, today's hours | Exists | Overview hero + today's hours card (24h). One-off preview waits on §4.3 |
+| Derived status line, today's hours | Exists | Overview hero + today's hours card (24h). Date overrides feed the preview. |
 | Out-of-stock summary | Exists | Overview card from `GET /admin/stock`; deep link to `/stock` |
 | **Connections card** | **Exists** | Square + Stripe rows on Overview; disconnect client included |
-| Pause orders | New | §4.2 |
+| Pause orders | Exists | `cafes.paused_until`; POST `/admin/service/pause` / `resume` / `extend`. Header pill, Overview hero, Hours rail. |
 
 The Connections card needs **no new backend**:
 
@@ -147,9 +147,9 @@ lists stay fully editable on cafés with no POS.
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Weekly grid, split shifts, closed days | Exists | `/hours` — SaveFooter + Undo; overlap rejected client and server |
-| One-off date overrides | **New** | §4.3 |
-| Last-order buffer dropdown | **New** | §4.4 |
-| Pause control (mirrors Overview) | New | §4.2 |
+| One-off date overrides | Exists | `cafe_hours_overrides`; PUT/DELETE `/admin/hours/overrides`. Replaces the weekday for that date. |
+| Last-order buffer dropdown | Exists | `cafes.last_order_buffer_minutes` (default 20). Saved with weekly hours. |
+| Pause control (mirrors Overview) | Exists | Same `paused_until` as Overview; applies immediately |
 | Validation (close before open, overlaps) | Exists | Client helper + `validateCafeHoursPatch` |
 
 ### Order ahead
@@ -217,8 +217,9 @@ is hidden when Square is not connected.
 
 ## 4. Data model decisions
 
-Migration ceiling is **032** (`032_modifier_option_availability.sql`). Node-pg-migrate
-wrappers exist through 032 (including previously-missing 030/031 `.cjs` entries).
+Migration ceiling is **033** (`033_cafe_hours_service.sql` — `paused_until`,
+`last_order_buffer_minutes`, `cafe_hours_overrides`). Node-pg-migrate wrappers
+exist through 033.
 
 ### 4.1 Stock — use a side table, not the options JSON
 
@@ -286,47 +287,41 @@ deliberately keeps the different behaviour ("comes off the menu while out").
 
 ### 4.2 Pause — one concept, one field
 
-There is no manual override today; open/closed is derived entirely from
-`cafes.hours` via `cafeOpenStatus`. Add a single nullable timestamp
-(`cafes.paused_until`) and treat closed-by-hours and paused-by-owner as **different
-reasons**, because the customer app shows different copy for each.
+Shipped: `cafes.paused_until`. Closed-by-hours and paused-by-owner are different
+`CafeOpenStatus.reason` values (`closed` vs `paused`) so the customer app can
+show different copy.
 
-`CafeOpenStatus` currently carries only two fields and will need extending:
-
-```27:31:packages/types/src/cafe-hours-contract.ts
+```ts
 export interface CafeOpenStatus {
   isOpen: boolean;
-  /** Short Home caption, e.g. `Open · closes 4:00 pm` / `Closed · opens 8:00 am`. */
   caption: string;
+  reason: 'open' | 'closed' | 'paused' | 'buffer';
 }
 ```
 
-`cafeOpenStatus(hours, timezone, now)` in `packages/domain/src/cafe-hours.ts` is
-called from the API (`routes/cafe.ts`) and the order-ahead app
-(`useCafeOpenStatus.ts`). Changing its signature touches both — do it in one pass.
+`cafeOpenStatus(hours, timezone, now, extras)` in
+`packages/domain/src/cafe-open-status.ts` is used by the API (`routes/cafe.ts`),
+admin, and order-ahead. Pause duration is resolved server-side
+(`15m` / `30m` / `1h` / `rest_of_today` = local start of tomorrow).
 
-Durations offered: 15 min, 30 min, 1 hour, rest of today. Surfaces that must show
-the paused state identically: header pill, Overview hero, Hours right rail. There
-is **no separate Open/Closed toggle** anywhere — that was explicitly cut.
+Durations offered: 15 min, 30 min, 1 hour, rest of today. Surfaces: header pill,
+Overview hero, Hours right rail. There is **no separate Open/Closed toggle**.
 
 Customer copy: closed → `Closed · opens 08:00`; paused → `Taking a short break —
 back at 15:10`.
 
 ### 4.3 One-off hours overrides
 
-`cafes.hours` is `Record<WeekdayKey, CafeHoursInterval[]>` — a weekday map with
-nowhere to hang a date. Overrides need their own shape: a date, an optional short
-label, and either "closed all day" or a set of intervals. A small table keyed by
-`(cafe_id, date)` is the natural fit, and it must be consulted by `cafeOpenStatus`
-ahead of the weekly map.
+Shipped: `cafe_hours_overrides` keyed by `(cafe_id, override_date)`. A row
+replaces that calendar day entirely (closed all day or custom intervals).
+`cafeOpenStatus` and `nextCafeOpenAt` consult it ahead of the weekly map.
 
 ### 4.4 Last-order buffer
 
-New integer field (minutes before close after which no more order-ahead slots are
-offered). Dropdown values: at closing time, 10, 15, 20, 30, 45, 60. Default 20.
-
-There is no closing buffer today — `cafeOpenStatus` is binary — so this also has to
-feed the customer app's slot generation, not just the admin display.
+Shipped: `cafes.last_order_buffer_minutes` (0 / 10 / 15 / 20 / 30 / 45 / 60,
+default 20). `0` means last orders at closing time. `cafeOpenStatus` uses
+`reason: 'buffer'` after that instant; pickup delays that land after the last
+slot are rejected on `POST /orders`.
 
 ### 4.5 Featured items need an order
 
@@ -454,15 +449,13 @@ Order ahead.
 1. **Presentation, zero schema change.** Eight-tab shell, read-only field system,
    Brand, Reports placeholder, Menu Items tab (Square lock is presentational),
    Connections card. Shippable on its own and de-risks the component library.
-2. **Pause + last-order buffer.** Small, and they share the `cafeOpenStatus`
-   signature change.
+2. **Pause + last-order buffer + hours overrides.** Shipped (migration 033).
 3. **Stock**, on its own side table (§4.1). Include the customer menu and KDS read
    paths, not just the admin UI.
-4. **Hours overrides.**
-5. **Order ahead build-out** — loyalty card with weekday pills, notes toggle,
+4. **Order ahead build-out** — loyalty card with weekday pills, notes toggle,
    Home screen card (featured ordering + why-not-try id).
-6. **Kitchen** once the §5 mismatches are settled.
-7. **Last:** double-stamp hours, review-nudge stats.
+5. **Kitchen** once the §5 mismatches are settled.
+6. **Last:** double-stamp hours, review-nudge stats.
 
 ---
 

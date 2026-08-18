@@ -3,6 +3,7 @@ import { DEFAULT_KDS_AUDIO, defaultWeekdayCafeHours } from '@moonshot/domain';
 import {
   mergeCafeFeatures,
   mergeKdsConfigSection,
+  parseAdminSettingsPatchBody,
   validateCafeHoursPatch,
 } from './admin-settings-merge.js';
 import { defaultNewCafeKdsConfig } from '../cafe/cafe-provisioning.js';
@@ -81,6 +82,21 @@ describe('validateCafeHoursPatch', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toMatch(/overlap/);
+  });
+});
+
+describe('parseAdminSettingsPatchBody lastOrderBufferMinutes', () => {
+  it('whitelists known buffer values including 0', () => {
+    expect(parseAdminSettingsPatchBody({ lastOrderBufferMinutes: 0 }).lastOrderBufferMinutes).toBe(0);
+    expect(parseAdminSettingsPatchBody({ lastOrderBufferMinutes: 20 }).lastOrderBufferMinutes).toBe(
+      20,
+    );
+  });
+
+  it('drops unknown buffer values', () => {
+    expect(
+      parseAdminSettingsPatchBody({ lastOrderBufferMinutes: 12 }).lastOrderBufferMinutes,
+    ).toBeUndefined();
   });
 });
 

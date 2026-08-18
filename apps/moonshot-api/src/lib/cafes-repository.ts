@@ -12,7 +12,21 @@ type Executor = Pool | PoolClient;
  */
 export const CAFE_COLUMNS = `
   id, name, slug, pos_provider, pos_config, payment_provider, payment_config,
-  features, theme_id, theme_overrides, kds_config, timezone, hours, owner_feedback_email
+  features, theme_id, theme_overrides, kds_config, timezone, hours, owner_feedback_email,
+  paused_until, last_order_buffer_minutes,
+  COALESCE((
+    SELECT jsonb_agg(
+      jsonb_build_object(
+        'date', to_char(o.override_date, 'YYYY-MM-DD'),
+        'label', o.label,
+        'closed', o.closed,
+        'intervals', o.intervals
+      )
+      ORDER BY o.override_date
+    )
+    FROM cafe_hours_overrides o
+    WHERE o.cafe_id = cafes.id
+  ), '[]'::jsonb) AS hours_overrides
 `;
 
 type CafeRowRaw = {
@@ -30,6 +44,9 @@ type CafeRowRaw = {
   timezone: string;
   hours: unknown;
   owner_feedback_email: string | null;
+  paused_until: Date | string | null;
+  last_order_buffer_minutes: number | string | null;
+  hours_overrides: unknown;
 };
 
 export async function findCafeBySlug(

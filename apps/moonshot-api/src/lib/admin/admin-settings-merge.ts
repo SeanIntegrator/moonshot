@@ -6,6 +6,7 @@ import type {
   CafeHours,
   KdsConfig,
   KdsSoundId,
+  LastOrderBufferMinutes,
   LoyaltyFeatureConfig,
   OrderAheadFeatureConfig,
   ReviewNudgeFeatureConfig,
@@ -15,6 +16,7 @@ import {
   cafeHoursIntervalsOverlap,
   hhMmToMinutes,
   isKdsSoundId,
+  isLastOrderBufferMinutes,
   normalizeCafeHours,
   resolveReviewUrl,
   toHhMm,
@@ -436,6 +438,10 @@ export function parseAdminSettingsPatchBody(body: unknown): AdminSettingsPatchBo
 
   if (b.hours !== undefined) {
     out.hours = b.hours as CafeHours;
+  }
+
+  if (typeof b.lastOrderBufferMinutes === 'number' && isLastOrderBufferMinutes(b.lastOrderBufferMinutes)) {
+    out.lastOrderBufferMinutes = b.lastOrderBufferMinutes as LastOrderBufferMinutes;
   }
 
   if (typeof b.themeId === 'string') {

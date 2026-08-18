@@ -4,8 +4,11 @@ import { FeatureFlagKeys } from '@moonshot/types';
 import {
   coerceBaseThemeId,
   DEFAULT_BEAN_ACCENTS,
+  DEFAULT_LAST_ORDER_BUFFER_MINUTES,
   DEFAULT_MODIFIER_CLASSIFICATION,
+  isLastOrderBufferMinutes,
   normalizeCafeHours,
+  normalizeCafeHoursOverrides,
   normalizeKdsAudio,
 } from '@moonshot/domain';
 import type { ResolvedCafe } from '../resolved-cafe.js';
@@ -25,6 +28,9 @@ type CafeRow = {
   timezone: string;
   hours: unknown;
   owner_feedback_email: string | null;
+  paused_until?: Date | string | null;
+  last_order_buffer_minutes?: number | string | null;
+  hours_overrides?: unknown;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -110,6 +116,12 @@ export function mapCafeRow(row: CafeRow): ResolvedCafe {
   const features = row.features as CafeFeatures;
   const themeOverrides = (row.theme_overrides || {}) as CafeThemeOverrides;
   const kdsConfig = normalizeKdsConfig(row.kds_config as KdsConfig, row.id);
+  const bufferRaw = Number(row.last_order_buffer_minutes);
+  const paused = row.paused_until
+    ? row.paused_until instanceof Date
+      ? row.paused_until.toISOString()
+      : new Date(row.paused_until).toISOString()
+    : null;
 
   return {
     cafeId: row.id,
@@ -125,6 +137,11 @@ export function mapCafeRow(row: CafeRow): ResolvedCafe {
     kdsConfig,
     timezone: row.timezone,
     hours: normalizeCafeHours(row.hours),
+    pausedUntil: paused && !Number.isNaN(Date.parse(paused)) ? paused : null,
+    lastOrderBufferMinutes: isLastOrderBufferMinutes(bufferRaw)
+      ? bufferRaw
+      : DEFAULT_LAST_ORDER_BUFFER_MINUTES,
+    hoursOverrides: normalizeCafeHoursOverrides(row.hours_overrides),
     ownerFeedbackEmail: row.owner_feedback_email,
     enabledFlags: activeFeatureKeys(features),
   };

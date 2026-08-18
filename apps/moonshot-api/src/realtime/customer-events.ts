@@ -43,3 +43,14 @@ export function emitCustomerMenuUpdated(payload: {
     syncedAt: payload.syncedAt,
   });
 }
+
+export function emitCustomerCafeUpdated(payload: {
+  cafeId: string;
+  updatedAt: string;
+}): void {
+  emitCustomerCafeEvent(payload.cafeId, {
+    type: 'customerCafeUpdated',
+    cafeId: payload.cafeId,
+    updatedAt: payload.updatedAt,
+  });
+}

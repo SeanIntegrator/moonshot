@@ -14,6 +14,10 @@ import { createStripeCheckoutOrderResponse } from '../../lib/orders-checkout-ser
 import { parseCreateOrderBody } from '../../lib/orders/parse-create-order-body.js';
 import { parseOrderAheadPaymentMode } from '../../lib/orders/order-payment-mode.js';
 import { resolveRequestedPickupNotBefore } from '../../lib/requested-pickup.js';
+import {
+  assertCafeAcceptingOrders,
+  assertPickupDelayWithinLastSlot,
+} from '../../lib/cafe/assert-accepting-orders.js';
 
 export const createOrderRouter: IRouter = Router();
 
@@ -28,6 +32,8 @@ createOrderRouter.post('/', requireCustomerAuth, async (req, res) => {
 
   const { customerName, notes, orderType, items, redeemRewardId, pickupDelayMinutes } = parsed.value;
   const userId = req.customerUserId ?? null;
+  assertCafeAcceptingOrders(req.cafe!);
+  assertPickupDelayWithinLastSlot(req.cafe!, pickupDelayMinutes);
   const paymentMode = parseOrderAheadPaymentMode(req.cafe!.features.order_ahead);
   const requestedPickupNotBefore = resolveRequestedPickupNotBefore({
     pickupDelayMinutes,

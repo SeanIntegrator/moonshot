@@ -1,5 +1,6 @@
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import type { Cafe, FeatureFlagKey } from '@moonshot/types';
+import type { Cafe, CafeTheme, CustomerServerToClientEvent, FeatureFlagKey } from '@moonshot/types';
+import { CUSTOMER_SOCKET_NAMESPACE } from '@moonshot/domain';
 import {
   createContext,
   useCallback,
@@ -9,10 +10,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { CafeTheme } from '@moonshot/types';
+import { RealtimeConnection } from '@moonshot/web-runtime';
 import { CafeLoadError } from '../components/CafeLoadError.js';
 import { useCafeSlugFromRoute } from '../hooks/useCafePath.js';
-import { apiFetch, setRuntimeCafeSlug } from '../lib/api.js';
+import { apiFetch, getApiBaseUrl, setRuntimeCafeSlug } from '../lib/api.js';
 import {
   isAbortError,
   isNetworkError,
@@ -119,6 +120,48 @@ export function CafeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => {
       setRuntimeCafeSlug(null);
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    if (!slug || slug === 'unknown') return;
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl) return;
+
+    let cancelled = false;
+    const connection = new RealtimeConnection({
+      baseUrl,
+      namespace: CUSTOMER_SOCKET_NAMESPACE,
+      onConnect: ({ recovered }) => {
+        if (cancelled || recovered) return;
+        connection.emit('customer:subscribeCafe', { cafeSlug: slug }, (err?: unknown) => {
+          if (err) console.warn('[cafe] subscribeCafe failed', err);
+        });
+      },
+    });
+
+    connection.on('customer:event', (...args: unknown[]) => {
+      if (cancelled) return;
+      const ev = args[0] as CustomerServerToClientEvent;
+      if (ev.type !== 'customerCafeUpdated') return;
+      void apiFetch<{ cafe: Cafe; activeFeatures: FeatureFlagKey[] }>(
+        `/cafe/${encodeURIComponent(slug)}`,
+      )
+        .then((data) => {
+          if (cancelled) return;
+          setCafe(data.cafe);
+          setActiveFeatures(data.activeFeatures);
+          setTheme(resolveCafeTheme(data.cafe.themeId, data.cafe.themeOverrides));
+        })
+        .catch(() => {
+          /* keep the last good café; POST /orders is still the hard gate */
+        });
+    });
+    connection.connect();
+
+    return () => {
+      cancelled = true;
+      connection.destroy();
     };
   }, [slug]);
 

@@ -88,6 +88,11 @@ export type CustomerServerToClientEvent =
       type: 'customerMenuUpdated';
       cafeId: string;
       syncedAt: IsoDateTime;
+    }
+  | {
+      type: 'customerCafeUpdated';
+      cafeId: string;
+      updatedAt: IsoDateTime;
     };
 
 // --- Customer room: client → server ---

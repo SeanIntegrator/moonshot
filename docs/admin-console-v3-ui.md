@@ -15,9 +15,8 @@ Tabs:
 `/overview` · `/stock` · `/menu` · `/hours` · `/order-ahead` · `/kitchen` · `/brand` · `/reports`
 
 Overview, Brand, Reports, Hours, Order ahead, Kitchen, Stock, and Menu are real
-pages. Pause, hours date overrides, last-order-ahead buffer, featured ordering,
-and KDS mark-out are still deferred. The Hours sidebar shows open/closed from
-weekly hours only.
+pages. Pause, hours date overrides, and last-order-ahead buffer are live.
+Featured ordering and KDS mark-out are still deferred.
 
 ## Stack
 
@@ -27,8 +26,8 @@ Tokens are `theme.console` ([console-tokens.ts](../apps/moonshot-admin/src/theme
 ## Layout
 
 - [AdminShell.tsx](../apps/moonshot-admin/src/console/AdminShell.tsx) — wordmark, café name, status pill, email, sign out, underline tabs
-- [CafeProvider.tsx](../apps/moonshot-admin/src/console/CafeProvider.tsx) — one `GET /cafe/:slug`, `patchSettings`, `reload`, client `cafeOpenStatus`
-- Status pill: [service-status.ts](../apps/moonshot-admin/src/console/service-status.ts) (hours-derived until `paused_until` exists)
+- [CafeProvider.tsx](../apps/moonshot-admin/src/console/CafeProvider.tsx) — one `GET /cafe/:slug`, `patchSettings`, pause/override helpers, client `cafeOpenStatusForCafe`
+- Status pill: [service-status.ts](../apps/moonshot-admin/src/console/service-status.ts) (pause wins while `pausedUntil` is in the future)
 - Kitchen is two-column from `md` up: Pickup + Alerts | Kitchen display + Access ([KitchenPage.tsx](../apps/moonshot-admin/src/console/pages/KitchenPage.tsx))
 
 ## Conventions
