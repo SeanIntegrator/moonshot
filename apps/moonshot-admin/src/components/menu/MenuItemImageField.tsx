@@ -110,7 +110,13 @@ export function MenuItemImageField({
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'center',
         }}
-        aria-label={imageUrl ? `${itemName} photo` : 'Item photo square, 800x800'}
+        aria-label={
+          imageUrl
+            ? `${itemName} photo`
+            : square
+              ? 'Item photo square, 800x800'
+              : 'Item photo, 4 by 3'
+        }
       />
       <Box sx={{ mt: 1 }}>
         {!itemId ? (

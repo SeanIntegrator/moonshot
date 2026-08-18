@@ -5,13 +5,13 @@ import { KdsSoundSelect } from '../../../components/KdsSoundSelect.js';
 import { useCafe } from '../../CafeProvider.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
 import { ThresholdSlider } from '../../primitives/ThresholdSlider.js';
+import { KitchenSection, kitchenFieldGridSx } from './KitchenSection.js';
 
 export function AlertsCard() {
   const { cafe, patchSettings } = useCafe();
   const k = cafe.kdsConfig;
   const [greenMax, setGreenMax] = useState(k.timerThresholds.greenMax);
   const [amberMax, setAmberMax] = useState(k.timerThresholds.amberMax);
-  const [volume, setVolume] = useState(k.audio.volume);
   const [newOrderSound, setNewOrderSound] = useState<KdsSoundId | null>(k.audio.newOrderSound);
   const [overdueSound, setOverdueSound] = useState<KdsSoundId | null>(k.audio.overdueSound);
   const [overdueRepeat, setOverdueRepeat] = useState(k.audio.overdueRepeatSeconds);
@@ -22,7 +22,6 @@ export function AlertsCard() {
   useEffect(() => {
     setGreenMax(k.timerThresholds.greenMax);
     setAmberMax(k.timerThresholds.amberMax);
-    setVolume(k.audio.volume);
     setNewOrderSound(k.audio.newOrderSound);
     setOverdueSound(k.audio.overdueSound);
     setOverdueRepeat(k.audio.overdueRepeatSeconds);
@@ -31,15 +30,11 @@ export function AlertsCard() {
   const dirty =
     greenMax !== k.timerThresholds.greenMax ||
     amberMax !== k.timerThresholds.amberMax ||
-    volume !== k.audio.volume ||
     newOrderSound !== k.audio.newOrderSound ||
     overdueSound !== k.audio.overdueSound ||
     overdueRepeat !== k.audio.overdueRepeatSeconds;
 
   const valid =
-    Number.isInteger(volume) &&
-    volume >= 0 &&
-    volume <= 100 &&
     Number.isInteger(overdueRepeat) &&
     overdueRepeat >= 0 &&
     overdueRepeat <= 600 &&
@@ -69,7 +64,6 @@ export function AlertsCard() {
             newOrderSound,
             overdueSound,
             overdueRepeatSeconds: overdueRepeat,
-            volume,
           },
         },
       });
@@ -80,10 +74,12 @@ export function AlertsCard() {
     }
   }
 
+  const soundsOff = !k.audio.enabled;
+
   return (
     <SettingsCard
-      title="Alerts and sounds"
-      description="When a waiting ticket turns amber, then late — and what the kitchen hears."
+      title="Alerts & sounds"
+      description="When a waiting order starts to look late, and what the tablet plays."
       save={{
         label: 'Save alerts',
         dirty,
@@ -105,50 +101,55 @@ export function AlertsCard() {
           setAmberMax(lateAfter);
         }}
       />
-      <FormControlLabel
-        sx={{ display: 'flex', mt: 2 }}
-        control={
-          <Switch
-            checked={k.audio.enabled}
-            disabled={savingToggle}
-            onChange={(_, v) => void onEnabled(v)}
+      <Box sx={{ mt: 2.5 }}>
+        <KitchenSection title="KDS SOUNDS">
+          <FormControlLabel
+            sx={{ display: 'flex', ml: 0, mb: 1.5 }}
+            control={
+              <Switch
+                checked={k.audio.enabled}
+                disabled={savingToggle}
+                onChange={(_, v) => void onEnabled(v)}
+              />
+            }
+            label="Play sounds on the kitchen display"
           />
-        }
-        label="Play kitchen sounds"
-      />
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1.5 }}>
-        <KdsSoundSelect
-          label="New order sound"
-          value={newOrderSound}
-          onChange={setNewOrderSound}
-          disabled={saving}
-        />
-        <KdsSoundSelect
-          label="Overdue sound"
-          value={overdueSound}
-          onChange={setOverdueSound}
-          disabled={saving}
-        />
-      </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
-        <TextField
-          label="Volume"
-          type="number"
-          size="small"
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          sx={{ maxWidth: 140 }}
-          slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
-        />
-        <TextField
-          label="Overdue repeat (seconds)"
-          type="number"
-          size="small"
-          value={overdueRepeat}
-          onChange={(e) => setOverdueRepeat(Number(e.target.value))}
-          helperText="0 disables the repeat"
-          slotProps={{ htmlInput: { min: 0, max: 600, step: 1 } }}
-        />
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              opacity: soundsOff ? 0.55 : 1,
+              pointerEvents: soundsOff ? 'none' : 'auto',
+            }}
+          >
+            <Box sx={kitchenFieldGridSx}>
+              <KdsSoundSelect
+                label="New order"
+                value={newOrderSound}
+                onChange={setNewOrderSound}
+                disabled={saving || soundsOff}
+              />
+              <KdsSoundSelect
+                label="Order goes late"
+                value={overdueSound}
+                onChange={setOverdueSound}
+                disabled={saving || soundsOff}
+              />
+            </Box>
+            <TextField
+              label="Overdue repeat (seconds)"
+              type="number"
+              size="small"
+              value={overdueRepeat}
+              onChange={(e) => setOverdueRepeat(Number(e.target.value))}
+              helperText="0 disables the repeat"
+              disabled={saving || soundsOff}
+              sx={{ maxWidth: 280 }}
+              slotProps={{ htmlInput: { min: 0, max: 600, step: 1 } }}
+            />
+          </Box>
+        </KitchenSection>
       </Box>
     </SettingsCard>
   );

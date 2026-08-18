@@ -17,7 +17,7 @@ type Props = {
 
 export function KdsSoundSelect({ label, value, onChange, disabled }: Props) {
   return (
-    <FormControl size="small" sx={{ minWidth: 180 }}>
+    <FormControl size="small" fullWidth sx={{ minWidth: 180 }}>
       <InputLabel>{label}</InputLabel>
       <Select
         label={label}

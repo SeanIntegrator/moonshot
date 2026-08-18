@@ -40,7 +40,7 @@ export function AccessCard() {
   return (
     <SettingsCard
       title="Kitchen access"
-      description="Baristas sign in with the café slug and this username. Generate a new password anytime — the previous one stops working immediately."
+      description="Open this on the tablet by the machine."
     >
       {error ? (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -48,14 +48,21 @@ export function AccessCard() {
         </Alert>
       ) : null}
       <ReadOnlyPanel source="generated" helper="These can't be changed.">
-        <Typography variant="body2">Café slug</Typography>
-        <Typography sx={{ fontWeight: 700, mb: 1.5 }}>{cafe.slug}</Typography>
-        <Typography variant="body2">Username</Typography>
-        <Typography sx={{ fontWeight: 700, mb: 1.5 }}>{KDS_USERNAME}</Typography>
-        <Typography variant="body2" sx={{ mb: 0.75 }}>
-          Kitchen display
-        </Typography>
         <CopyText value={kdsUrl} aria-label="Copy kitchen display link" />
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1.5 }}>
+          <Typography variant="body2">
+            Café:{' '}
+            <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              {cafe.slug}
+            </Box>
+          </Typography>
+          <Typography variant="body2">
+            User:{' '}
+            <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              {KDS_USERNAME}
+            </Box>
+          </Typography>
+        </Box>
       </ReadOnlyPanel>
       {password ? (
         <Box sx={{ mt: 2 }}>
@@ -65,9 +72,18 @@ export function AccessCard() {
           </ReadOnlyPanel>
         </Box>
       ) : null}
-      <Box sx={{ mt: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          pt: 2,
+          mt: 2,
+          borderTop: 1,
+          borderColor: 'divider',
+        }}
+      >
         <Button variant="outlined" onClick={() => void rotate()} disabled={busy}>
-          {busy ? 'Generating…' : 'Generate new password'}
+          {busy ? 'Generating…' : 'New kitchen password'}
         </Button>
       </Box>
     </SettingsCard>

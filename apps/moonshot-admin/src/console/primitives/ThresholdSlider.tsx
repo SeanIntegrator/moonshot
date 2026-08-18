@@ -66,11 +66,23 @@ export function ThresholdSlider({
             onChange({ amberAfter: nextAmber, lateAfter: nextLate });
           }}
           valueLabelDisplay="off"
-          sx={{
+          sx={(theme) => ({
             '& .MuiSlider-track': { opacity: 0 },
             '& .MuiSlider-rail': { opacity: 0 },
-            '& .MuiSlider-thumb': { zIndex: 1 },
-          }}
+            '& .MuiSlider-thumb': {
+              zIndex: 1,
+              width: 16,
+              height: 16,
+              border: '2px solid #fff',
+              boxShadow: '0 0 0 1px rgba(17, 24, 39, 0.12)',
+            },
+            '& .MuiSlider-thumb[data-index="0"]': {
+              bgcolor: theme.console.stock.outToday,
+            },
+            '& .MuiSlider-thumb[data-index="1"]': {
+              bgcolor: theme.console.stock.out,
+            },
+          })}
         />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: -0.5 }}>
           <Typography variant="caption">0 min</Typography>

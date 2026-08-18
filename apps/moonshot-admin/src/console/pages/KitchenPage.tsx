@@ -2,9 +2,7 @@ import { Box } from '@mui/material';
 import { PageHeader } from '../primitives/PageHeader.js';
 import { AccessCard } from './kitchen/AccessCard.js';
 import { AlertsCard } from './kitchen/AlertsCard.js';
-import { DisplayCard } from './kitchen/DisplayCard.js';
-import { EtaCard } from './kitchen/EtaCard.js';
-import { LayoutCard } from './kitchen/LayoutCard.js';
+import { KitchenDisplayCard } from './kitchen/KitchenDisplayCard.js';
 import { PickupCard } from './kitchen/PickupCard.js';
 
 export function KitchenPage() {
@@ -14,12 +12,23 @@ export function KitchenPage() {
         title="Kitchen"
         description="How orders reach the kitchen display, and how it behaves."
       />
-      <PickupCard />
-      <DisplayCard />
-      <LayoutCard />
-      <EtaCard />
-      <AlertsCard />
-      <AccessCard />
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2.5,
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+          alignItems: 'start',
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, minWidth: 0 }}>
+          <PickupCard />
+          <AlertsCard />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, minWidth: 0 }}>
+          <KitchenDisplayCard />
+          <AccessCard />
+        </Box>
+      </Box>
     </Box>
   );
 }

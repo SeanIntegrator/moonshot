@@ -1,68 +1,60 @@
-import { Alert, Box, FormControlLabel, Switch } from '@mui/material';
-import { useState } from 'react';
-import { useCafe } from '../../CafeProvider.js';
-import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { Box, FormControlLabel, Switch } from '@mui/material';
+import { KitchenSection } from './KitchenSection.js';
 
-export function DisplayCard() {
-  const { cafe, patchSettings } = useCafe();
-  const display = cafe.kdsConfig.display;
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+type DisplayFlag = 'showCustomerNameInHeader' | 'showPickupTime' | 'showOrderSource';
 
-  async function patchFlag(
-    field: 'showCustomerNameInHeader' | 'showPickupTime' | 'showOrderSource',
-    value: boolean,
-  ) {
-    setError(null);
-    setBusy(field);
-    try {
-      await patchSettings({ kdsConfigPatch: { display: { [field]: value } } });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update display');
-    } finally {
-      setBusy(null);
-    }
-  }
+type Props = {
+  showCustomerNameInHeader: boolean;
+  showPickupTime: boolean;
+  showOrderSource: boolean;
+  disabled?: boolean;
+  onChange: (field: DisplayFlag, value: boolean) => void;
+};
 
+export function DisplayCard({
+  showCustomerNameInHeader,
+  showPickupTime,
+  showOrderSource,
+  disabled,
+  onChange,
+}: Props) {
   return (
-    <SettingsCard title="Display" description="What each ticket shows on the kitchen screen.">
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
+    <KitchenSection title="WHAT'S SHOWN">
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
         <FormControlLabel
+          sx={{ ml: 0 }}
           control={
             <Switch
-              checked={display.showCustomerNameInHeader}
-              disabled={busy !== null}
-              onChange={(_, v) => void patchFlag('showCustomerNameInHeader', v)}
+              checked={showCustomerNameInHeader}
+              disabled={disabled}
+              onChange={(_, v) => onChange('showCustomerNameInHeader', v)}
             />
           }
-          label="Show customer name in header"
+          label="Customer name in the ticket header"
         />
         <FormControlLabel
+          sx={{ ml: 0 }}
           control={
             <Switch
-              checked={display.showPickupTime}
-              disabled={busy !== null}
-              onChange={(_, v) => void patchFlag('showPickupTime', v)}
+              checked={showOrderSource}
+              disabled={disabled}
+              onChange={(_, v) => onChange('showOrderSource', v)}
             />
           }
-          label="Show pickup time"
+          label="Order type"
         />
         <FormControlLabel
+          sx={{ ml: 0 }}
           control={
             <Switch
-              checked={display.showOrderSource}
-              disabled={busy !== null}
-              onChange={(_, v) => void patchFlag('showOrderSource', v)}
+              checked={showPickupTime}
+              disabled={disabled}
+              onChange={(_, v) => onChange('showPickupTime', v)}
             />
           }
-          label="Show order source"
+          label="Pickup time"
         />
       </Box>
-    </SettingsCard>
+    </KitchenSection>
   );
 }

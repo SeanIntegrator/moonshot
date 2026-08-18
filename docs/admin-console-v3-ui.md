@@ -29,6 +29,7 @@ Tokens are `theme.console` ([console-tokens.ts](../apps/moonshot-admin/src/theme
 - [AdminShell.tsx](../apps/moonshot-admin/src/console/AdminShell.tsx) — wordmark, café name, status pill, email, sign out, underline tabs
 - [CafeProvider.tsx](../apps/moonshot-admin/src/console/CafeProvider.tsx) — one `GET /cafe/:slug`, `patchSettings`, `reload`, client `cafeOpenStatus`
 - Status pill: [service-status.ts](../apps/moonshot-admin/src/console/service-status.ts) (hours-derived until `paused_until` exists)
+- Kitchen is two-column from `md` up: Pickup + Alerts | Kitchen display + Access ([KitchenPage.tsx](../apps/moonshot-admin/src/console/pages/KitchenPage.tsx))
 
 ## Conventions
 
