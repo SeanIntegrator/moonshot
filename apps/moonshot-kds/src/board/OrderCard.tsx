@@ -29,6 +29,7 @@ type OrderCardProps = {
   dismissing: boolean;
   /** Pre-crossed line ids for a client-seeded recall. Ignored when status is ready. */
   initialMadeIds?: ReadonlySet<string>;
+  outOptionIds?: ReadonlySet<string>;
   onComplete: (orderId: string) => void;
   onExited: (orderId: string) => void;
   onSetStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
@@ -57,6 +58,7 @@ export function OrderCard({
   kdsConfig,
   dismissing,
   initialMadeIds,
+  outOptionIds,
   onComplete,
   onExited,
   onSetStatus,
@@ -233,6 +235,7 @@ export function OrderCard({
               onToggleMade={() => toggleMade(sourceIds)}
               hideBottomBorder={foods.length > 0 && i === drinks.length - 1}
               orderType={order.orderType}
+              outOptionIds={outOptionIds}
             />
           ))}
 

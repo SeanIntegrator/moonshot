@@ -42,6 +42,7 @@ export {
   checkSlugAvailable,
 } from './adminApi/onboarding.js';
 export {
+  disconnectSquare,
   getSquareConnectStatus,
   importPosMenu,
   startSquareConnect,
@@ -51,3 +52,4 @@ export {
   type SquareConnectStatus,
   type SquareOnboardResponse,
 } from './adminApi/pos.js';
+export { fetchAdminStock, putAdminStockOption } from './adminApi/stock.js';

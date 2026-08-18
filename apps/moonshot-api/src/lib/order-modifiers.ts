@@ -174,7 +174,7 @@ export function resolveModifiersForLine(
 
     if (!picked || picked.size === 0) {
       if (!required) continue;
-      const defaults = g.options.filter((o) => o.isDefault);
+      const defaults = g.options.filter((o) => o.isDefault && o.isAvailable !== false);
       if (defaults.length === 1) {
         const opt = defaults[0]!;
         delta += opt.priceMinor;
@@ -211,6 +211,13 @@ export function resolveModifiersForLine(
           400,
           ApiErrorCode.VALIDATION,
           `Unknown modifier option ${optionId} in group "${g.name}" for "${menuItem.name}"`,
+        );
+      }
+      if (opt.isAvailable === false) {
+        throw new ApiHttpError(
+          400,
+          ApiErrorCode.VALIDATION,
+          `"${opt.name}" is currently unavailable for "${menuItem.name}"`,
         );
       }
       delta += opt.priceMinor;

@@ -39,6 +39,7 @@ export type ModifierGroupRow = {
   max_select: number | null;
   options: unknown;
   sort_order: number;
+  pos_group_id?: string | null;
 };
 
 function parseSizes(raw: unknown): NormalisedItemSize[] {
@@ -72,6 +73,7 @@ function parseModifierGroupFromJson(g: Record<string, unknown>): NormalisedModif
           isDefault: o.isDefault === true,
           colorHex: typeof o.colorHex === 'string' ? o.colorHex : null,
           chipLabel: typeof o.chipLabel === 'string' ? o.chipLabel : null,
+          isAvailable: o.isAvailable !== false,
         }))
         .filter((o) => o.id && o.name)
     : [];
@@ -175,6 +177,7 @@ export function applyAllowNoMilk(
             isDefault: true,
             colorHex: null,
             chipLabel: null,
+            isAvailable: true,
           },
           ...withoutSynthetic.map((o) => ({ ...o, isDefault: false })),
         ];

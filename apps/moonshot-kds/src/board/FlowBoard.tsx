@@ -6,6 +6,7 @@ type FlowBoardProps = {
   kdsConfig: KdsConfig;
   dismissingIds: ReadonlySet<string>;
   recallSelections: ReadonlyMap<string, ReadonlySet<string>>;
+  outOptionIds?: ReadonlySet<string>;
   onComplete: (orderId: string) => void;
   onExited: (orderId: string) => void;
   onSetStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
@@ -16,6 +17,7 @@ export function FlowBoard({
   kdsConfig,
   dismissingIds,
   recallSelections,
+  outOptionIds,
   onComplete,
   onExited,
   onSetStatus,
@@ -40,6 +42,7 @@ export function FlowBoard({
           kdsConfig={kdsConfig}
           dismissing={dismissingIds.has(order.id)}
           initialMadeIds={recallSelections.get(order.id)}
+          outOptionIds={outOptionIds}
           onComplete={onComplete}
           onExited={onExited}
           onSetStatus={onSetStatus}

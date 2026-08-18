@@ -10,10 +10,11 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { ApiErrorCode, type MenuSectionKind, type NormalisedMenuItem } from '@moonshot/types';
-import { platformDrinkArchetypeConfig, type MenuProvisionResult, type ModifierRoleHint, type PosCatalog, type PosCatalogModifierGroup, type PosCatalogSection } from '@moonshot/domain';
+import { platformDrinkArchetypeConfig, preserveOptionIds, type MenuProvisionResult, type ModifierRoleHint, type PosCatalog, type PosCatalogModifierGroup, type PosCatalogSection } from '@moonshot/domain';
 import { parseCafeDrinkArchetypeConfig } from '../drink-archetype-resolve.js';
 import { MenuProvisionError } from '../menu/menu-provisioners/errors.js';
 import { setMenuItemModifierGroups } from '../menu/menu-modifier-library.js';
+import { pruneOrphanOptionAvailability } from '../menu/option-availability.js';
 import { readMenuImageStorageConfig } from '../menu/menu-image-storage.js';
 import {
   parseExistingMenuItemImageState,
@@ -115,6 +116,7 @@ export async function upsertPosCatalog(
 
   await syncKdsModifierClassification(client, cafeId, catalog.groupsByPosId);
   await syncFoodSectionKeys(client, cafeId);
+  await pruneOrphanOptionAvailability(client, cafeId);
 
   return {
     upsertedItems,
@@ -250,14 +252,29 @@ export async function upsertPosSections(
   }
 }
 
+function parseOptionIdCarriers(raw: unknown): Array<{ id: string; posOptionId: string | null }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((o): o is Record<string, unknown> => o != null && typeof o === 'object')
+    .map((o) => ({
+      id: typeof o.id === 'string' ? o.id : '',
+      posOptionId: typeof o.posOptionId === 'string' ? o.posOptionId : null,
+    }))
+    .filter((o) => o.id.length > 0);
+}
+
+function optionsJsonPreservingIds(existingRaw: unknown, incoming: PosCatalogModifierGroup['options']): string {
+  return JSON.stringify(preserveOptionIds(parseOptionIdCarriers(existingRaw), incoming));
+}
+
 export async function upsertModifierGroup(
   client: PoolClient,
   cafeId: string,
   group: PosCatalogModifierGroup,
   sortOrder: number,
 ): Promise<string> {
-  const byPos = await client.query<{ id: string }>(
-    `SELECT id FROM modifier_groups WHERE cafe_id = $1 AND pos_group_id = $2 LIMIT 1`,
+  const byPos = await client.query<{ id: string; options: unknown }>(
+    `SELECT id, options FROM modifier_groups WHERE cafe_id = $1 AND pos_group_id = $2 LIMIT 1`,
     [cafeId, group.posGroupId],
   );
   if (byPos.rows[0]) {
@@ -271,7 +288,7 @@ export async function upsertModifierGroup(
         group.selectionType,
         group.required,
         group.maxSelect ?? null,
-        JSON.stringify(group.options),
+        optionsJsonPreservingIds(byPos.rows[0].options, group.options),
         sortOrder,
         byPos.rows[0].id,
         cafeId,
@@ -281,8 +298,8 @@ export async function upsertModifierGroup(
   }
 
   // Claim a seeded group with the same name and no pos_group_id (avoid unique collision).
-  const byName = await client.query<{ id: string; pos_group_id: string | null }>(
-    `SELECT id, pos_group_id FROM modifier_groups WHERE cafe_id = $1 AND name = $2 LIMIT 1`,
+  const byName = await client.query<{ id: string; pos_group_id: string | null; options: unknown }>(
+    `SELECT id, pos_group_id, options FROM modifier_groups WHERE cafe_id = $1 AND name = $2 LIMIT 1`,
     [cafeId, group.name],
   );
   if (byName.rows[0] && byName.rows[0].pos_group_id == null) {
@@ -296,7 +313,7 @@ export async function upsertModifierGroup(
         group.selectionType,
         group.required,
         group.maxSelect ?? null,
-        JSON.stringify(group.options),
+        optionsJsonPreservingIds(byName.rows[0].options, group.options),
         sortOrder,
         byName.rows[0].id,
         cafeId,

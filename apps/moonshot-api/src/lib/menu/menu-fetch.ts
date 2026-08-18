@@ -1,6 +1,10 @@
 import type { NormalisedMenu } from '@moonshot/types';
 import type { Pool, PoolClient } from 'pg';
 import { mapMenuItemRow, mapModifierGroupRow, type MenuItemRow, type ModifierGroupRow } from './menu-map.js';
+import {
+  loadOptionAvailabilityMap,
+  overlayGroupAvailability,
+} from './option-availability.js';
 import { ensureSystemMenuSections, listMenuSectionsForCafe } from './menu-sections.js';
 
 type Db = Pool | PoolClient;
@@ -61,6 +65,8 @@ export async function fetchMenuForCafe(db: Db, cafeId: string, availableOnly = t
     [itemIds],
   );
 
+  const availability = await loadOptionAvailabilityMap(db, cafeId);
+  const now = new Date();
   const groupsByItem = new Map<string, ReturnType<typeof mapModifierGroupRow>[]>();
   for (const row of attachRows) {
     const groupRow: ModifierGroupRow = {
@@ -73,7 +79,7 @@ export async function fetchMenuForCafe(db: Db, cafeId: string, availableOnly = t
       sort_order: row.group_sort_order,
     };
     const list = groupsByItem.get(row.menu_item_id) ?? [];
-    list.push(mapModifierGroupRow(groupRow));
+    list.push(overlayGroupAvailability(mapModifierGroupRow(groupRow), availability, now));
     groupsByItem.set(row.menu_item_id, list);
   }
 
@@ -123,6 +129,8 @@ export async function fetchMenuItemsByIds(
     [itemIds],
   );
 
+  const availability = await loadOptionAvailabilityMap(db, cafeId);
+  const now = new Date();
   const groupsByItem = new Map<string, ReturnType<typeof mapModifierGroupRow>[]>();
   for (const row of attachRows) {
     const groupRow: ModifierGroupRow = {
@@ -135,7 +143,7 @@ export async function fetchMenuItemsByIds(
       sort_order: row.group_sort_order,
     };
     const list = groupsByItem.get(row.menu_item_id) ?? [];
-    list.push(mapModifierGroupRow(groupRow));
+    list.push(overlayGroupAvailability(mapModifierGroupRow(groupRow), availability, now));
     groupsByItem.set(row.menu_item_id, list);
   }
 

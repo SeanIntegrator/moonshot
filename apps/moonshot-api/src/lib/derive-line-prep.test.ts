@@ -190,7 +190,7 @@ describe('deriveFlowLine', () => {
     expect(view.beanKey).toBe('house');
     expect(view.beanAccent).toBe('#e8a33d');
     expect(view.milk).toBeNull();
-    expect(view.syrups).toEqual([{ label: 'Caramel', colorHex: '#c68642' }]);
+    expect(view.syrups).toEqual([{ label: 'Caramel', colorHex: '#c68642', optionId: 'caramel' }]);
   });
 
   it('builds Single · Decaf shot label with decaf accent', () => {
@@ -301,6 +301,7 @@ describe('deriveFlowLine', () => {
       name: 'Oat',
       bg: '#e8dcc8',
       text: '#1a1a1a',
+      optionId: 'oat',
       temperature: 'Warm',
       texture: 'Dry',
     });
@@ -337,7 +338,7 @@ describe('deriveFlowLine', () => {
     };
 
     const view = deriveFlowLine(item, baseConfig());
-    expect(view.syrups).toEqual([{ label: 'Vanilla', colorHex: '#f5e6c8' }]);
+    expect(view.syrups).toEqual([{ label: 'Vanilla', colorHex: '#f5e6c8', optionId: 'vanilla' }]);
   });
 
   it('shows non-default size and marks food by category', () => {

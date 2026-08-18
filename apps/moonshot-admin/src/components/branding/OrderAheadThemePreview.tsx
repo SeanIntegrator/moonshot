@@ -7,6 +7,8 @@ type Props = {
   themeId: BaseThemeId;
   brandColor: string | null;
   headingFontId: string | null;
+  /** Home = full mock; Prompt = greeting only (same tokens). */
+  variant?: 'home' | 'prompt';
 };
 
 function injectPreviewFonts(urls: string[]) {
@@ -22,7 +24,12 @@ function injectPreviewFonts(urls: string[]) {
 }
 
 /** Scaled Home-like mock driven by resolveCafeTheme tokens (unsaved-safe). */
-export function OrderAheadThemePreview({ themeId, brandColor, headingFontId }: Props) {
+export function OrderAheadThemePreview({
+  themeId,
+  brandColor,
+  headingFontId,
+  variant = 'home',
+}: Props) {
   const theme: CafeTheme = resolveCafeTheme(themeId, {
     brand: {
       ...(brandColor ? { color: brandColor } : {}),
@@ -79,6 +86,7 @@ export function OrderAheadThemePreview({ themeId, brandColor, headingFontId }: P
         </Typography>
       </Box>
 
+      {variant === 'prompt' ? null : (
       <Stack spacing={1.25} sx={{ p: 1.5 }}>
         {[
           { name: 'Flat White', price: '£3.40' },
@@ -159,6 +167,7 @@ export function OrderAheadThemePreview({ themeId, brandColor, headingFontId }: P
           Add to order
         </Button>
       </Stack>
+      )}
     </Box>
   );
 }

@@ -102,7 +102,7 @@ export function OnboardingWizard() {
       await adminCompleteOnboarding(session.token);
       await refreshOnboardingStatus();
       sessionStorage.removeItem(stepStorageKey(session.cafe.id));
-      navigate('/', { replace: true });
+      navigate('/overview', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not complete setup');
     } finally {

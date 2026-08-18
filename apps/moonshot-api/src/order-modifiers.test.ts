@@ -110,4 +110,28 @@ describe('resolveModifiersForLine', () => {
     };
     expect(() => resolveModifiersForLine(flatWhiteItem(), line)).toThrow(ApiHttpError);
   });
+
+  it('rejects an 86d option', () => {
+    const item = flatWhiteItem();
+    item.modifierGroups[0]!.options[1] = {
+      ...item.modifierGroups[0]!.options[1]!,
+      isAvailable: false,
+    };
+    const line: CreateOrderLineInput = {
+      menuItemId: 'mi-1',
+      quantity: 1,
+      modifiers: [{ groupId: 'g-milk', optionId: 'o-oat' }],
+    };
+    expect(() => resolveModifiersForLine(item, line)).toThrow(/unavailable/);
+  });
+
+  it('does not auto-pick an 86d required default', () => {
+    const item = flatWhiteItem();
+    item.modifierGroups[0]!.options[0] = {
+      ...item.modifierGroups[0]!.options[0]!,
+      isAvailable: false,
+    };
+    const line: CreateOrderLineInput = { menuItemId: 'mi-1', quantity: 1 };
+    expect(() => resolveModifiersForLine(item, line)).toThrow(/no selection/);
+  });
 });

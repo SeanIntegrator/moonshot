@@ -20,6 +20,7 @@ export function useKdsOrders(params: {
   session: KdsSession | null;
   onSessionExpired: (session: KdsSession) => void;
   onNewOrder?: () => void;
+  onStockUpdated?: (outOptionIds: string[]) => void;
 }): {
   orders: NormalisedOrder[];
   error: string | null;
@@ -32,7 +33,7 @@ export function useKdsOrders(params: {
   recallOrder: (order: NormalisedOrder, opts: { lineIds: string[] }) => Promise<void>;
   setStatus: (orderId: string, status: KdsAdvanceStatusRequest['status']) => void;
 } {
-  const { session, onSessionExpired, onNewOrder } = params;
+  const { session, onSessionExpired, onNewOrder, onStockUpdated } = params;
   const [orders, setOrders] = useState<NormalisedOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(() => new Set());
@@ -47,6 +48,8 @@ export function useKdsOrders(params: {
   onExpiredRef.current = onSessionExpired;
   const onNewOrderRef = useRef(onNewOrder);
   onNewOrderRef.current = onNewOrder;
+  const onStockUpdatedRef = useRef(onStockUpdated);
+  onStockUpdatedRef.current = onStockUpdated;
   const dismissingRef = useRef(dismissingIds);
   dismissingRef.current = dismissingIds;
   const sessionRef = useRef(session);
@@ -97,6 +100,10 @@ export function useKdsOrders(params: {
 
   const applyEvent = useCallback(
     (ev: Parameters<typeof applyKdsEvent>[1]) => {
+      if (ev.type === 'kds:stock:updated') {
+        onStockUpdatedRef.current?.(ev.outOptionIds);
+        return;
+      }
       if (ev.type === 'kds:order:new' && !boardIdsRef.current.has(ev.order.id)) {
         boardIdsRef.current.add(ev.order.id);
         onNewOrderRef.current?.();

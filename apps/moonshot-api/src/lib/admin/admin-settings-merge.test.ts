@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_KDS_AUDIO } from '@moonshot/domain';
-import { mergeKdsConfigSection } from './admin-settings-merge.js';
+import { DEFAULT_KDS_AUDIO, defaultWeekdayCafeHours } from '@moonshot/domain';
+import {
+  mergeCafeFeatures,
+  mergeKdsConfigSection,
+  validateCafeHoursPatch,
+} from './admin-settings-merge.js';
 import { defaultNewCafeKdsConfig } from '../cafe/cafe-provisioning.js';
-import type { KdsConfig } from '@moonshot/types';
+import type { CafeFeatures, KdsConfig } from '@moonshot/types';
 
 function existing(): KdsConfig {
   return { ...defaultNewCafeKdsConfig(), cafeId: 'cafe-1' };
@@ -53,5 +57,53 @@ describe('mergeKdsConfigSection audio', () => {
       audio: { enabled: 'yes' as unknown as boolean },
     });
     expect(merged.ok).toBe(false);
+  });
+});
+
+describe('validateCafeHoursPatch', () => {
+  it('accepts split shifts that only touch', () => {
+    const hours = defaultWeekdayCafeHours();
+    hours.wed = [
+      { open: '08:00', close: '11:30' },
+      { open: '11:30', close: '16:00' },
+    ];
+    const result = validateCafeHoursPatch(hours);
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects overlapping windows on the same day', () => {
+    const hours = defaultWeekdayCafeHours();
+    hours.tue = [
+      { open: '08:00', close: '12:00' },
+      { open: '11:00', close: '16:00' },
+    ];
+    const result = validateCafeHoursPatch(hours);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatch(/overlap/);
+  });
+});
+
+describe('mergeCafeFeatures loyalty', () => {
+  const features: CafeFeatures = {
+    loyalty: {
+      enabled: true,
+      stampsPerReward: 10,
+      rewardDescription: 'Free drink',
+      doubleStampDays: [],
+    },
+    events: null,
+    promotions: null,
+    order_ahead: null,
+    review_nudge: null,
+    saved_orders: null,
+    whatsapp_ordering: null,
+  };
+
+  it('rejects a blank reward label when loyalty is enabled', () => {
+    const result = mergeCafeFeatures(features, { loyalty: { rewardDescription: '   ' } });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatch(/rewardDescription/);
   });
 });

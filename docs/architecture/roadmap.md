@@ -78,35 +78,9 @@ After three on-time completed app orders, every eligible user sees the modal onc
 
 ---
 
-## Workstream 3 — Admin dashboard redesign
+### Workstream 3 — Admin dashboard redesign
 
-### Current state (verified)
-
-- MUI v6 + Emotion, ~5.8k lines across 45 files. No Tailwind/shadcn.
-- Two clashing themes: polished dark/lime `signupTheme` (BrandShell) vs a minimal light `dashboardTheme` (one primary colour, grey AppBar).
-- Post-onboarding is a single scrolling `DashboardPage` of stacked Paper cards — no sidebar, no nested routes.
-- No shared `components/ui/` primitives; styling is per-page `sx`.
-- `admin-api.ts` is already a **53-line barrel** re-exporting `lib/adminApi/*` (old roadmap claim of an oversized monolith is stale). Oversized targets now: `MenuItemsPanel.tsx` (~530 lines), `adminApi/menu.ts` (~361).
-
-### Work
-
-1. Extend `brandPalette` in `adminTheme.ts` into a full `dashboardTheme` so signup and dashboard share one visual language.
-2. Add shared primitives (`PageHeader`, `SettingsCard`, `FormRow`, `SectionNav`) to kill the repeated Paper + Typography + save-button pattern.
-3. Replace the single-scroll dashboard with persistent sidebar nav and real sub-routes: Overview, Menu, Branding, Hours, Payments, KDS, Access.
-4. Split oversized menu panels / API modules as they are touched (file-size guardrail).
-
-### Done when
-
-An owner can navigate the admin console via clear sections with consistent hierarchy and brand chrome; settings cards no longer each reinvent layout.
-
-### Files
-
-- `apps/moonshot-admin/src/theme/adminTheme.ts`
-- `apps/moonshot-admin/src/App.tsx`
-- `apps/moonshot-admin/src/pages/DashboardPage.tsx`
-- New `apps/moonshot-admin/src/components/ui/*`
-- `apps/moonshot-admin/src/components/menu/MenuItemsPanel.tsx`
-- `apps/moonshot-admin/src/lib/adminApi/menu.ts`
+**Superseded by [admin-console-v3.md](../admin-console-v3.md) and [admin-console-v3-ui.md](../admin-console-v3-ui.md).** Eight-tab horizontal console (not a sidebar); MUI `dashboardTheme` restyle (not Tailwind). Foundation (shell, primitives, café context) is in `apps/moonshot-admin/src/console/`; signed-in `/` redirects to `/overview`.
 
 ---
 

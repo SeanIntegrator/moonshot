@@ -91,6 +91,25 @@ export function normalizeCafeHours(raw: unknown): CafeHours {
   return out;
 }
 
+/**
+ * True when two windows on the same day share any open time.
+ * Adjacent windows that only touch (11:30–12:30 and 12:30–16:00) do not overlap.
+ */
+export function cafeHoursIntervalsOverlap(intervals: CafeHoursInterval[]): boolean {
+  const parsed: Array<{ open: number; close: number }> = [];
+  for (const iv of intervals) {
+    const open = hhMmToMinutes(toHhMm(iv.open) ?? iv.open);
+    const close = hhMmToMinutes(toHhMm(iv.close) ?? iv.close);
+    if (open == null || close == null) continue;
+    parsed.push({ open, close });
+  }
+  parsed.sort((a, b) => a.open - b.open);
+  for (let i = 1; i < parsed.length; i++) {
+    if (parsed[i]!.open < parsed[i - 1]!.close) return true;
+  }
+  return false;
+}
+
 /** True when at least one day has an interval (café has configured hours). */
 export function cafeHoursConfigured(hours: CafeHours): boolean {
   return WEEKDAY_KEYS.some((d) => hours[d].length > 0);
@@ -162,6 +181,112 @@ function nextOpenAfter(
     }
   }
   return null;
+}
+
+function localCalendarDate(
+  timezone: string,
+  now: Date,
+): { year: number; month: number; day: number } | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+    const year = Number(parts.find((p) => p.type === 'year')?.value);
+    const month = Number(parts.find((p) => p.type === 'month')?.value);
+    const day = Number(parts.find((p) => p.type === 'day')?.value);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+    return { year, month, day };
+  } catch {
+    return null;
+  }
+}
+
+function addCalendarDays(
+  year: number,
+  month: number,
+  day: number,
+  offset: number,
+): { year: number; month: number; day: number } {
+  const utc = new Date(Date.UTC(year, month - 1, day + offset));
+  return { year: utc.getUTCFullYear(), month: utc.getUTCMonth() + 1, day: utc.getUTCDate() };
+}
+
+/** Convert a wall-clock local datetime in `timeZone` to a UTC instant. */
+function zonedWallClockToUtc(
+  timeZone: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+): Date | null {
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const asLocal = localCalendarDate(timeZone, new Date(utcGuess));
+  const parts = localParts(timeZone, new Date(utcGuess));
+  if (!asLocal || !parts) return null;
+  const asLocalUtc = Date.UTC(
+    asLocal.year,
+    asLocal.month - 1,
+    asLocal.day,
+    Math.floor(parts.minutes / 60),
+    parts.minutes % 60,
+    0,
+  );
+  const instant = new Date(utcGuess - (asLocalUtc - utcGuess));
+  // Second pass in case DST shifted the offset between the guess and the result.
+  const asLocal2 = localCalendarDate(timeZone, instant);
+  const parts2 = localParts(timeZone, instant);
+  if (!asLocal2 || !parts2) return instant;
+  const asLocalUtc2 = Date.UTC(
+    asLocal2.year,
+    asLocal2.month - 1,
+    asLocal2.day,
+    Math.floor(parts2.minutes / 60),
+    parts2.minutes % 60,
+    0,
+  );
+  const wantedUtc = Date.UTC(year, month - 1, day, hour, minute, 0);
+  return new Date(instant.getTime() + (wantedUtc - asLocalUtc2));
+}
+
+/**
+ * Instant of the next café opening after `now`.
+ * When currently open, this is the opening *after* the current interval ends
+ * (so "Out today" mid-service returns at tomorrow's open, not a later split).
+ * Unconfigured hours → null.
+ */
+export function nextCafeOpenAt(
+  hoursInput: CafeHours | null | undefined,
+  timezone: string,
+  now: Date = new Date(),
+): Date | null {
+  const hours = hoursInput ? normalizeCafeHours(hoursInput) : emptyCafeHours();
+  if (!cafeHoursConfigured(hours)) return null;
+  const tz = timezone || 'UTC';
+  const local = localParts(tz, now);
+  if (!local) return null;
+
+  const openNow = findOpenInterval(hours, local.weekday, local.minutes);
+  const searchMinutes = openNow ? hhMmToMinutes(openNow.close)! : local.minutes;
+  const next = nextOpenAfter(hours, local.weekday, searchMinutes);
+  if (!next) return null;
+
+  const cal = localCalendarDate(tz, now);
+  if (!cal) return null;
+  const openMins = hhMmToMinutes(next.open);
+  if (openMins == null) return null;
+  const target = addCalendarDays(cal.year, cal.month, cal.day, next.dayOffset);
+  return zonedWallClockToUtc(
+    tz,
+    target.year,
+    target.month,
+    target.day,
+    Math.floor(openMins / 60),
+    openMins % 60,
+  );
 }
 
 /**

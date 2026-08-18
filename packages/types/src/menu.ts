@@ -83,6 +83,11 @@ export interface NormalisedModifierOption extends ModifierDisplayMeta {
   /** Minor units; 0 for free options */
   priceMinor: number;
   isDefault: boolean;
+  /**
+   * Overlay from `modifier_option_availability` — never stored on the JSONB array.
+   * Missing / true = sellable; false = greyed out on the customer menu.
+   */
+  isAvailable?: boolean;
 }
 
 export interface NormalisedModifierGroup {
@@ -150,6 +155,8 @@ export const NO_MILK_OPTION_ID = '00000000-0000-4000-8000-00000000a001';
 /** Café-scoped reusable modifier section (Milks, Syrups, Toppings) — admin library shape */
 export interface CafeModifierGroup extends NormalisedModifierGroup {
   sortOrder: number;
+  /** Set when this list is Square/POS-owned; null for Moonshot prep groups. */
+  posGroupId?: string | null;
 }
 
 export interface NormalisedMenu {

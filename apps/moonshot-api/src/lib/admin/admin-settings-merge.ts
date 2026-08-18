@@ -12,6 +12,7 @@ import type {
 } from '@moonshot/types';
 import { WEEKDAY_KEYS } from '@moonshot/types';
 import {
+  cafeHoursIntervalsOverlap,
   hhMmToMinutes,
   isKdsSoundId,
   normalizeCafeHours,
@@ -97,6 +98,12 @@ function validateLoyalty(merged: LoyaltyFeatureConfig): MergeResult<LoyaltyFeatu
       return {
         ok: false,
         error: 'stampsPerReward must be an integer between 1 and 50 when loyalty is enabled',
+      };
+    }
+    if (typeof merged.rewardDescription !== 'string' || merged.rewardDescription.trim().length === 0) {
+      return {
+        ok: false,
+        error: 'rewardDescription is required when loyalty is enabled',
       };
     }
   }
@@ -349,6 +356,13 @@ export function validateCafeHoursPatch(raw: unknown): MergeResult<CafeHours> {
       if (hhMmToMinutes(openNorm)! >= hhMmToMinutes(closeNorm)!) {
         return { ok: false, error: `hours.${day} open must be before close` };
       }
+    }
+    const normalisedDay = intervals.map((item) => {
+      const rec = item as { open: string; close: string };
+      return { open: toHhMm(rec.open)!, close: toHhMm(rec.close)! };
+    });
+    if (cafeHoursIntervalsOverlap(normalisedDay)) {
+      return { ok: false, error: `hours.${day} intervals must not overlap` };
     }
   }
   return { ok: true, value: normalizeCafeHours(raw) };

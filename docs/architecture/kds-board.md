@@ -76,8 +76,13 @@ Each board row shows an icon above the quantity: **walking** for `takeaway` (inc
 
 ```
 GET /api/v1/kds/config   (KDS JWT)
-→ { ok: true, data: { kdsConfig } }
+→ { ok: true, data: { kdsConfig, outOptionIds } }
 ```
+
+`outOptionIds` is the live 86 set (lazy expiry applied). The KDS also listens for
+`kds:stock:updated` `{ cafeId, outOptionIds }` and greys matching milk/syrup chips
+on already-placed tickets. Grouping is unchanged. There is no barista mark-out
+control — admin `/stock` is the write surface.
 
 Loaded after login by the KDS app. Admin edits layout / timers / display / ETA / audio via settings PATCH.
 

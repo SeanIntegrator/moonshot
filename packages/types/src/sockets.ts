@@ -18,7 +18,8 @@ export type KdsServerToClientEvent =
   | {
       type: 'kds:eta:updated';
       updates: Array<{ orderId: string; pickupTime: IsoDateTime }>;
-    };
+    }
+  | { type: 'kds:stock:updated'; cafeId: string; outOptionIds: string[] };
 
 /** @alias KdsServerToClientEvent — plan/doc shorthand */
 export type KdsSocketEvent = KdsServerToClientEvent;

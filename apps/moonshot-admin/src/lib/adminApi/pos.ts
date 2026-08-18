@@ -51,6 +51,17 @@ export async function getSquareConnectStatus(token: string): Promise<SquareConne
   return envelope.data;
 }
 
+export async function disconnectSquare(token: string): Promise<void> {
+  const res = await fetch(apiUrl('/admin/connect/square/disconnect'), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const envelope = await parseEnvelope<{ disconnected: boolean }>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Square disconnect failed (${res.status})`);
+  }
+}
+
 export async function syncPosMenuFromSquare(
   token: string,
   opts?: { forceFull?: boolean },

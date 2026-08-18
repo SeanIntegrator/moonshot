@@ -8,6 +8,7 @@ type RecentOrderLinesProps = {
   kdsConfig: KdsConfig;
   selectedLineIds: ReadonlySet<string>;
   onToggleLine: (lineId: string) => void;
+  outOptionIds?: ReadonlySet<string>;
 };
 
 export function RecentOrderLines({
@@ -15,6 +16,7 @@ export function RecentOrderLines({
   kdsConfig,
   selectedLineIds,
   onToggleLine,
+  outOptionIds,
 }: RecentOrderLinesProps) {
   const lines = order.items.map((item) => ({
     item,
@@ -36,6 +38,7 @@ export function RecentOrderLines({
           hideBottomBorder={foods.length > 0 && i === drinks.length - 1}
           density="compact"
           showSelectControl
+          outOptionIds={outOptionIds}
         />
       ))}
       {foods.length > 0 ? (

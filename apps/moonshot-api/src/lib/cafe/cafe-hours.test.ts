@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cafeOpenStatus, defaultWeekdayCafeHours, emptyCafeHours, normalizeCafeHours } from '@moonshot/domain';
+import { cafeOpenStatus, defaultWeekdayCafeHours, emptyCafeHours, nextCafeOpenAt, normalizeCafeHours } from '@moonshot/domain';
 
 describe('cafeOpenStatus', () => {
   it('treats empty hours as closed', () => {
@@ -23,6 +23,25 @@ describe('cafeOpenStatus', () => {
     const status = cafeOpenStatus(hours, 'Europe/London', now);
     expect(status.isOpen).toBe(false);
     expect(status.caption).toMatch(/Closed · opens/);
+  });
+
+  it('returns tomorrow morning when currently open', () => {
+    const hours = defaultWeekdayCafeHours();
+    // Tuesday 10:00 UTC = 11:00 BST — inside 08:00–16:00
+    const now = new Date('2026-07-21T10:00:00.000Z');
+    const next = nextCafeOpenAt(hours, 'Europe/London', now);
+    expect(next?.toISOString()).toBe('2026-07-22T07:00:00.000Z');
+  });
+
+  it('returns tomorrow morning when already closed', () => {
+    const hours = defaultWeekdayCafeHours();
+    const now = new Date('2026-07-21T20:00:00.000Z');
+    const next = nextCafeOpenAt(hours, 'Europe/London', now);
+    expect(next?.toISOString()).toBe('2026-07-22T07:00:00.000Z');
+  });
+
+  it('returns null when hours are empty', () => {
+    expect(nextCafeOpenAt(emptyCafeHours(), 'Europe/London')).toBeNull();
   });
 
   it('normalises junk intervals away', () => {

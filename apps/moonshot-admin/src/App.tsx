@@ -1,15 +1,16 @@
-import {
-  AppBar,
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  Toolbar,
-  Typography,
-} from '@mui/material';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { AdminShell } from './console/AdminShell.js';
+import { CafeProvider } from './console/CafeProvider.js';
+import { BrandPage } from './console/pages/BrandPage.js';
+import { HoursPage } from './console/pages/HoursPage.js';
+import { KitchenPage } from './console/pages/KitchenPage.js';
+import { MenuPage } from './console/pages/MenuPage.js';
+import { OrderAheadPage } from './console/pages/OrderAheadPage.js';
+import { OverviewPage } from './console/pages/OverviewPage.js';
+import { ReportsPage } from './console/pages/ReportsPage.js';
+import { StockPage } from './console/pages/StockPage.js';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
-import { DashboardPage } from './pages/DashboardPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { OnboardingPosImportPage } from './pages/OnboardingPosImportPage.js';
 import { OnboardingWizard } from './pages/OnboardingWizard.js';
@@ -21,34 +22,24 @@ function OnboardingRedirect() {
   return <Navigate to={{ pathname: '/onboarding', search }} replace />;
 }
 
-function ProtectedDashboard() {
-  const { session, logout } = useAuth();
-  if (!session) return null;
+/** Preserve search so Stripe Connect return still lands on Overview. */
+function SignedInHome() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/overview', search }} replace />;
+}
 
+function RequireSignedIn() {
+  const { session, onboardingStatus } = useAuth();
+  if (!session) return <Navigate to="/login" replace />;
+  if (onboardingStatus && !onboardingStatus.completed) return <OnboardingRedirect />;
+  return <Outlet />;
+}
+
+function ConsoleLayout() {
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.100' }}>
-      <AppBar position="static" color="default" elevation={0}>
-        <Toolbar sx={{ gap: 2 }}>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Moonshot Admin
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-              display: { xs: 'none', sm: 'block' }
-            }}>
-            {session.adminUser.email} · {session.cafe.name}
-          </Typography>
-          <Button color="inherit" onClick={logout}>
-            Sign out
-          </Button>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <DashboardPage session={session} />
-      </Container>
-    </Box>
+    <CafeProvider>
+      <AdminShell />
+    </CafeProvider>
   );
 }
 
@@ -77,11 +68,11 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/login"
-        element={session ? (needsOnboarding ? <OnboardingRedirect /> : <Navigate to="/" replace />) : <LoginPage />}
+        element={session ? (needsOnboarding ? <OnboardingRedirect /> : <SignedInHome />) : <LoginPage />}
       />
       <Route
         path="/signup"
-        element={session ? (needsOnboarding ? <OnboardingRedirect /> : <Navigate to="/" replace />) : <SignupPage />}
+        element={session ? (needsOnboarding ? <OnboardingRedirect /> : <SignedInHome />) : <SignupPage />}
       />
       <Route
         path="/onboarding/import-pos"
@@ -91,7 +82,7 @@ function AppRoutes() {
           ) : needsOnboarding ? (
             <OnboardingPosImportPage />
           ) : (
-            <Navigate to="/" replace />
+            <SignedInHome />
           )
         }
       />
@@ -103,22 +94,23 @@ function AppRoutes() {
           ) : needsOnboarding ? (
             <OnboardingWizard />
           ) : (
-            <Navigate to="/" replace />
+            <SignedInHome />
           )
         }
       />
-      <Route
-        path="/"
-        element={
-          !session ? (
-            <Navigate to="/login" replace />
-          ) : needsOnboarding ? (
-            <OnboardingRedirect />
-          ) : (
-            <ProtectedDashboard />
-          )
-        }
-      />
+      <Route element={<RequireSignedIn />}>
+        <Route path="/" element={<SignedInHome />} />
+        <Route element={<ConsoleLayout />}>
+          <Route path="overview" element={<OverviewPage />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route path="menu" element={<MenuPage />} />
+          <Route path="hours" element={<HoursPage />} />
+          <Route path="order-ahead" element={<OrderAheadPage />} />
+          <Route path="kitchen" element={<KitchenPage />} />
+          <Route path="brand" element={<BrandPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+        </Route>
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -17,6 +17,7 @@ function parseOptions(raw: unknown): NormalisedModifierGroup['options'] {
       isDefault: o.isDefault === true,
       colorHex: typeof o.colorHex === 'string' ? o.colorHex : null,
       chipLabel: typeof o.chipLabel === 'string' ? o.chipLabel : null,
+      isAvailable: true,
     }))
     .filter((o) => o.name.length > 0);
 }
@@ -36,15 +37,23 @@ function normalizeSizes(raw: unknown): NormalisedItemSize[] {
     .filter((s) => s.name.length > 0);
 }
 
+function toCafeModifierGroup(row: ModifierGroupRow): CafeModifierGroup {
+  return {
+    ...mapModifierGroupRow(row),
+    sortOrder: row.sort_order,
+    posGroupId: row.pos_group_id ?? null,
+  };
+}
+
 export async function listModifierGroupsForCafe(db: Db, cafeId: string): Promise<CafeModifierGroup[]> {
   const { rows } = await db.query<ModifierGroupRow>(
-    `SELECT id, name, selection_type, required, max_select, options, sort_order
+    `SELECT id, name, selection_type, required, max_select, options, sort_order, pos_group_id
      FROM modifier_groups
      WHERE cafe_id = $1
      ORDER BY sort_order ASC, name ASC`,
     [cafeId],
   );
-  return rows.map((r) => ({ ...mapModifierGroupRow(r), sortOrder: r.sort_order }));
+  return rows.map(toCafeModifierGroup);
 }
 
 export async function createModifierGroup(
@@ -65,11 +74,11 @@ export async function createModifierGroup(
   const { rows } = await db.query<ModifierGroupRow>(
     `INSERT INTO modifier_groups (cafe_id, name, selection_type, required, max_select, options, sort_order)
      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
-     RETURNING id, name, selection_type, required, max_select, options, sort_order`,
+     RETURNING id, name, selection_type, required, max_select, options, sort_order, pos_group_id`,
     [cafeId, name, selectionType, required, maxSelect, JSON.stringify(options), sortOrder],
   );
   const row = rows[0]!;
-  return { ...mapModifierGroupRow(row), sortOrder: row.sort_order };
+  return toCafeModifierGroup(row);
 }
 
 export async function updateModifierGroup(
@@ -113,12 +122,12 @@ export async function updateModifierGroup(
   const { rows } = await db.query<ModifierGroupRow>(
     `UPDATE modifier_groups SET ${sets.join(', ')}
      WHERE id = $${i++} AND cafe_id = $${i++}
-     RETURNING id, name, selection_type, required, max_select, options, sort_order`,
+     RETURNING id, name, selection_type, required, max_select, options, sort_order, pos_group_id`,
     values,
   );
   const row = rows[0];
   if (!row) return null;
-  return { ...mapModifierGroupRow(row), sortOrder: row.sort_order };
+  return toCafeModifierGroup(row);
 }
 
 export async function deleteModifierGroup(db: Db, cafeId: string, groupId: string): Promise<boolean> {

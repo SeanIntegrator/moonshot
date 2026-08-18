@@ -26,6 +26,8 @@ type DrinkRowProps = {
    * Required on the live board; optional in compact recall rows.
    */
   orderType?: OrderType;
+  /** Live 86'd modifier option ids — greys matching chips. */
+  outOptionIds?: ReadonlySet<string>;
 };
 
 /** Shot tags are joined with ` · ` upstream — split for 2px-gap bracket rendering. */
@@ -69,6 +71,7 @@ export function DrinkRow({
   density = 'board',
   showSelectControl = false,
   orderType = 'takeaway',
+  outOptionIds,
 }: DrinkRowProps) {
   const compact = density === 'compact';
   const hasMods = view.milk != null || view.syrups.length > 0;
@@ -156,6 +159,7 @@ export function DrinkRow({
               className={cn(
                 'inline-flex shrink-0 items-stretch overflow-hidden rounded-[2px]',
                 compact ? 'mr-2 min-w-24' : 'mr-4 min-w-32',
+                view.milk.optionId && outOptionIds?.has(view.milk.optionId) && 'opacity-40',
               )}
             >
               {view.milk.temperature ? (
@@ -200,6 +204,7 @@ export function DrinkRow({
                 compact
                   ? 'min-w-14 px-1.5 py-0.5 text-xs'
                   : 'min-w-20 px-2.5 py-1 text-[1.15rem]',
+                s.optionId && outOptionIds?.has(s.optionId) && 'opacity-40',
               )}
               style={{
                 borderColor: s.colorHex ?? '#4a3f6b',

@@ -20,6 +20,7 @@ Start here when onboarding or verifying behaviour against production.
 - [Stripe checkout return](stripe-checkout-return.md) — `ORDER_AHEAD_BASE_URL`, recovery endpoint
 - [Square OAuth](square-oauth.md) — Connect, catalog sync, webhooks
 - [Admin console v3](admin-console-v3.md) — eight-tab redesign: build status, data-model decisions, what was cut
+- [Admin console v3 UI](admin-console-v3-ui.md) — signed-in shell, tokens, primitives, cutover
 - [Review nudge](feedback-prompt-flow.md) — single-CTA launch design
 - [M1 bug triage](bugs/m1-triage.md) — discrete cards for remaining UI glitches
 - [API module layout](architecture/api-modules.md) — where order/loyalty/admin/menu logic lives

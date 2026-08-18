@@ -114,18 +114,24 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
           >
             {group.options.map((opt) => {
               const selected = picked.has(opt.id);
+              const unavailable = opt.isAvailable === false;
               return (
                 <OptionChip
                   key={opt.id}
-                  clickable
+                  clickable={!unavailable}
                   selected={selected}
+                  disabled={unavailable}
                   label={
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       {colorDot(opt.colorHex)}
                       {opt.name}
                     </Box>
                   }
-                  onClick={() => onSelect(group.id, opt.id, 'multi', !selected)}
+                  onClick={() => {
+                    if (unavailable) return;
+                    onSelect(group.id, opt.id, 'multi', !selected);
+                  }}
+                  sx={unavailable ? { opacity: 0.4 } : undefined}
                 />
               );
             })}
@@ -189,17 +195,21 @@ export function ModifierOptionGrid({ group, selections, onSelect }: Props) {
         {group.options.map((opt) => {
           const selected = picked.has(opt.id);
           const delta = formatModifierDelta(opt.priceMinor);
+          const unavailable = opt.isAvailable === false;
           return (
             <OptionTile
               key={opt.id}
               selected={selected}
+              disabled={unavailable}
               onClick={() => {
+                if (unavailable) return;
                 if (group.selectionType === 'single') {
                   onSelect(group.id, opt.id, 'single', true);
                 } else {
                   onSelect(group.id, opt.id, 'multi', !selected);
                 }
               }}
+              sx={unavailable ? { opacity: 0.4 } : undefined}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
                 {colorDot(opt.colorHex)}

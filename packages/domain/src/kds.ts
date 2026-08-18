@@ -61,6 +61,7 @@ export interface FlowMilkChip {
   name: string;
   bg: string;
   text: string;
+  optionId?: string | null;
   /** Shown italic before the milk name when non-default. */
   temperature?: string | null;
   /** Shown italic after the milk name when non-default. */
@@ -70,6 +71,7 @@ export interface FlowMilkChip {
 export interface FlowSyrupChip {
   label: string;
   colorHex?: string | null;
+  optionId?: string | null;
 }
 
 /**
@@ -356,6 +358,7 @@ export function deriveFlowLine(item: NormalisedOrderItem, config: KdsConfig): Fl
     syrups.push({
       label: mod.optionName.trim() || chipLabelFor(mod),
       colorHex: mod.colorHex ?? null,
+      optionId: mod.optionId,
     });
   }
 
@@ -388,6 +391,7 @@ export function deriveFlowLine(item: NormalisedOrderItem, config: KdsConfig): Fl
         name: milkMod.optionName.trim(),
         bg,
         text: milkTextFromMod(milkMod, config.milkColors ?? {}, bg),
+        optionId: milkMod.optionId,
         temperature,
         texture,
       };
@@ -398,6 +402,7 @@ export function deriveFlowLine(item: NormalisedOrderItem, config: KdsConfig): Fl
         name: milkMod?.optionName.trim() || 'Milk',
         bg,
         text: '#1a1a1a',
+        optionId: milkMod?.optionId,
         temperature,
         texture,
       };

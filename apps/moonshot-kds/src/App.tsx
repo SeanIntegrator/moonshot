@@ -1,6 +1,6 @@
 import './index.css';
 import type { FormEvent } from 'react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useGracedStatus } from '@moonshot/web-runtime/react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -45,6 +45,8 @@ export function App() {
 
   const {
     kdsConfig,
+    outOptionIds,
+    setOutOptionIds,
     error: configError,
     setError: setConfigError,
   } = useKdsConfig({
@@ -69,6 +71,7 @@ export function App() {
     session,
     onSessionExpired: clearExpiredSession,
     onNewOrder: audio.playNewOrder,
+    onStockUpdated: setOutOptionIds,
   });
 
   useOverdueAlarm({
@@ -78,6 +81,7 @@ export function App() {
     onAlarm: audio.playOverdue,
   });
 
+  const outOptionIdSet = useMemo(() => new Set(outOptionIds), [outOptionIds]);
   const displayConnection = useGracedStatus(connection);
 
   const error = loginError ?? ordersError ?? configError;
@@ -157,6 +161,7 @@ export function App() {
               kdsConfig={kdsConfig}
               dismissingIds={dismissingIds}
               recallSelections={recallSelections}
+              outOptionIds={outOptionIdSet}
               onComplete={complete}
               onExited={finalizeDismiss}
               onSetStatus={setStatus}

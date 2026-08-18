@@ -11,6 +11,8 @@ import {
   uploadMenuItemImage,
 } from '../lib/menu/menu-admin-service.js';
 import { fetchMenuForCafe } from '../lib/menu/menu-fetch.js';
+import { listOutOptionIds } from '../lib/menu/option-availability.js';
+import { notifyStockChanged } from '../lib/menu/stock-notify.js';
 import { ensureSystemMenuSections, listMenuSectionsForCafe } from '../lib/menu/menu-sections.js';
 import { UUID_RE } from '../lib/uuid.js';
 import { requireCafeContext } from '../middleware/cafe-context.js';
@@ -62,6 +64,13 @@ menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
     itemId,
     req.body as Record<string, unknown>,
   );
+  const body = req.body as Record<string, unknown>;
+  if ('isAvailable' in body) {
+    notifyStockChanged({
+      cafeId: req.cafe!.cafeId,
+      outOptionIds: await listOutOptionIds(pool, req.cafe!.cafeId),
+    });
+  }
   return res.json({ ok: true, data: item });
 });
 
@@ -101,6 +110,10 @@ menuRouter.delete('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const rawDel = req.params.itemId;
   const itemId = assertMenuItemId(Array.isArray(rawDel) ? rawDel[0] : rawDel);
   await softHideMenuItem(pool, req.cafe!.cafeId, itemId);
+  notifyStockChanged({
+    cafeId: req.cafe!.cafeId,
+    outOptionIds: await listOutOptionIds(pool, req.cafe!.cafeId),
+  });
   return res.json({ ok: true, data: { removed: true } });
 });
 

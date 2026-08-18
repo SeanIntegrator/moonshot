@@ -13,6 +13,7 @@ import {
   type KdsStretchEtaResponse,
 } from '@moonshot/types';
 import { findCafeById, findCafeBySlug } from '../lib/cafes-repository.js';
+import { listOutOptionIds } from '../lib/menu/option-availability.js';
 import { config } from '../lib/config.js';
 import { verifyKdsPassword } from '../lib/kds-password.js';
 import { findKdsUserForLogin, touchKdsUserLogin } from '../lib/kds-users-repository.js';
@@ -113,7 +114,10 @@ kdsRouter.get('/config', requireKdsAuth, async (req, res) => {
   }
   return res.json({
     ok: true,
-    data: { kdsConfig: cafe.kdsConfig } satisfies KdsConfigResponse,
+    data: {
+      kdsConfig: cafe.kdsConfig,
+      outOptionIds: await listOutOptionIds(pool, cafeId),
+    } satisfies KdsConfigResponse,
   });
 });
 

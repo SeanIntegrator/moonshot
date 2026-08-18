@@ -12,3 +12,4 @@ export * from './order.js';
 export * from './payment.js';
 export * from './pos-contract.js';
 export * from './sockets.js';
+export * from './stock.js';

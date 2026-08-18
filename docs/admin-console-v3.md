@@ -1,12 +1,13 @@
 # Admin console v3 — build handover
 
-**Status: design approved, not yet built.** This document is the handover from the
-v1 → v3 design review to implementation. It records what was decided, what
-infrastructure already exists, what has to be built, and the order to build it in.
+**Status: eight tabs live.** Shell, theme, café context and shared primitives live
+under `apps/moonshot-admin/src/console/` — see
+[admin-console-v3-ui.md](admin-console-v3-ui.md). Signed-in `/` redirects to
+`/overview`. Stock and Menu are real pages.
 
-The current admin app is a **single scrolling dashboard at `/`**
-(`apps/moonshot-admin/src/pages/DashboardPage.tsx`) with a stack of settings
-cards. v3 replaces it with an eight-tab console.
+The legacy scrolling dashboard
+(`apps/moonshot-admin/src/pages/DashboardPage.tsx`) stays in the tree as a
+reference and is not routed. v3 replaces it with an eight-tab console.
 
 Read this alongside [onboarding.md](onboarding.md),
 [current/http-surface.md](current/http-surface.md) and
@@ -92,11 +93,11 @@ amber are not used for any other purpose except Stripe/Square status dots.
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Eight-tab shell, routing | New (UI only) | Today's admin is one page at `/` |
-| Read-only field system | New (UI only) | Purely presentational |
-| Derived status line, today's hours, one-off preview | Exists | `cafeOpenStatus`, `cafes.hours` |
-| Out-of-stock summary | Depends on §4.1 | Read-only projection of Stock |
-| **Connections card** | **Exists** | All five endpoints live — see below |
+| Eight-tab shell, routing | Exists | `/` redirects to `/overview`; login and onboarding-complete land there |
+| Read-only field system | Partial | `ReadOnlyPanel` / `SourceLabel` primitives exist; pages not wired |
+| Derived status line, today's hours | Exists | Overview hero + today's hours card (24h). One-off preview waits on §4.3 |
+| Out-of-stock summary | Exists | Overview card from `GET /admin/stock`; deep link to `/stock` |
+| **Connections card** | **Exists** | Square + Stripe rows on Overview; disconnect client included |
 | Pause orders | New | §4.2 |
 
 The Connections card needs **no new backend**:
@@ -116,21 +117,21 @@ trading.
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Option availability (milks, syrups, beans) | **New** | §4.1 — **read this before coding** |
-| Timed auto-return ("Out today") | New | Lazy evaluation, no cron |
-| Food availability | Exists | `menu_items.is_available` |
-| "on N drinks" impact counts | New (derived) | Join `menu_item_modifier_groups` |
-| "Drinks affected right now" summary | New (derived) | Same join, collapsed by default |
+| Option availability (milks, syrups, beans) | Exists | `/stock` — side table `modifier_option_availability`; radios PATCH immediately |
+| Timed auto-return ("Out today") | Exists | `nextCafeOpenAt`; lazy expiry at read time |
+| Food availability | Exists | In stock / Out only (`menu_items.is_available`); food leaves the menu |
+| "on N drinks" impact counts | Exists | Join `menu_item_modifier_groups` |
+| "Drinks affected right now" summary | Exists | Count on the Stock card |
 
 ### Menu & prices
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Item CRUD, photo upload, on-menu toggle | Exists | `/api/v1/menu/*` |
-| Recipe (drink archetype) selection + apply | Exists | `/menu/drink-archetypes`, `POST .../apply` |
+| Item CRUD, photo upload, on-menu toggle | Exists | `/menu` — Square-linked name/price/sizes in `ReadOnlyPanel` |
+| Recipe (drink archetype) selection + apply | Exists | Drink types tab |
 | `waiveMilkSurcharge` checkbox | Exists | Per-item field |
-| Square lock presentation | Exists (UI only) | Gate on `posItemId != null` |
-| Modifier list tabs (Milk, Syrup, Beans, Shots, Toppings) | Exists | `/menu/modifier-groups`; POS-linked groups (`pos_group_id NOT NULL`) are read-only |
+| Square lock presentation | Exists | `posItemId` / `posGroupId` (now returned on library GET) |
+| Modifier list tabs (Milk, Syrup, Beans, Shots, Toppings) | Exists | POS-linked groups read-only; Moonshot lists editable + SaveFooter |
 | `Featured` badge + deep link | Partial | Tag exists; ordering does not — §4.5 |
 
 **Important:** POS-linked modifier groups have their `options` array rewritten on
@@ -142,25 +143,25 @@ fully editable. Both variants need building.
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Weekly grid, split shifts, closed days | Exists | `cafes.hours`, `PATCH /admin/settings { hours }` |
+| Weekly grid, split shifts, closed days | Exists | `/hours` — SaveFooter + Undo; overlap rejected client and server |
 | One-off date overrides | **New** | §4.3 |
 | Last-order buffer dropdown | **New** | §4.4 |
 | Pause control (mirrors Overview) | New | §4.2 |
-| Validation (close before open, overlaps) | New | `normalizeCafeHours` / `validateCafeHoursPatch` exist as a starting point |
+| Validation (close before open, overlaps) | Exists | Client helper + `validateCafeHoursPatch` |
 
 ### Order ahead
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Loyalty enable + `stampsPerReward` | Exists | Already has UI today |
-| `rewardDescription` ("Reward" field) | Exists | Field live, **no UI today** |
-| Double stamp **weekdays** | **Exists** | `doubleStampDays` — see the format gotcha below |
+| Loyalty enable + `stampsPerReward` | Exists | `/order-ahead` — switch PATCHes immediately; do not send `loyalty: null` |
+| `rewardDescription` ("Reward" field) | Exists | Same loyalty form; blank rejected when enabled |
+| Double stamp **weekdays** | **Exists** | `WeekdayPillGroup` emits en-GB long names |
 | Double stamp **hours** | **New** | §4.6 — defer |
-| `notesEnabled` toggle | Exists | Field live, no UI today |
+| `notesEnabled` toggle | Exists | Field live; omitted from v3 until the customer app has a notes field |
 | Featured carousel picker (1–5, reorderable) | Partial | §4.5 |
 | "Why not try" item picker | Partial | §4.7 |
-| Payments status (read-only) | Exists | `GET /admin/payments/stripe/status` |
-| Customer order link | Exists | Derived from slug |
+| Payments status (read-only) | Exists | From Stripe panel; connect/setup stays on Overview |
+| Customer order link | Exists | `Generated for you` + CopyText |
 
 **Gotcha:** `doubleStampDays` holds **en-GB long weekday names** (`'Monday'`,
 `'Tuesday'`), not the `WeekdayKey` (`'mon'`) used by `cafes.hours`. Two different
@@ -186,34 +187,35 @@ export function stampsEarnedForCompletedOrder(params: {
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Pickup timing (`defaultPickupMinutes`, `maxPickupMinutes`) | Exists | Moved here from Order ahead |
-| `pickupTimeEnabled` toggle | Exists | Field live, no UI today |
-| Display preferences | Exists | See §5 mismatches |
+| Pickup timing (`defaultPickupMinutes`, `maxPickupMinutes`) | Exists | `/kitchen` — moved from Order ahead |
+| `pickupTimeEnabled` toggle | Exists | Immediate PATCH |
+| Display preferences | Exists | Name, pickup time, order source — immediate switches |
 | Timer thresholds (dual-handle slider) | Exists | `{ greenMax, amberMax }` |
-| Audio (sound per event, volume) | Exists | See §5 mismatches |
-| Layout (columns, group by) | Exists | See §5 mismatches |
+| Audio (sound per event, volume) | Exists | Real five sounds + volume + overdue repeat |
+| Layout (columns, group by) | Exists | Columns 1–6; Group by Order type / Don't group |
 | "Smart order line items" toggle | **New** | `groupKdsLines` is currently unconditional |
-| Kitchen access + password rotation | Exists | `POST /admin/onboarding/kds-user` |
+| Kitchen access + password rotation | Exists | `POST /admin/onboarding/kds-users` |
 
 ### Brand
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Theme pack, brand colour, heading font, preview | Exists | Already has UI today |
-| Review nudge enable + `reviewUrl` | Exists | Already has UI today |
+| Theme pack, brand colour, heading font, preview | Exists | `/brand` — SaveFooter + live Home/Prompt preview |
+| Review nudge enable + `reviewUrl` | Exists | Toggle PATCHes immediately; URL is a form with client validation |
 | "Asked after 3 on-time orders" | Exists (static text) | Threshold is hardcoded — do **not** make configurable |
 | "Shown to N · M opened the review link" | **New** | Aggregate over `review_prompt_state` + `opened_url` confirmations |
 
 ### Reports
 
-Placeholder screen only. No endpoints, no charts, no KPIs. `Open Square ↗` must be
-hidden for cafés without a Square connection.
+Placeholder screen only (`/reports`). No endpoints, no charts, no KPIs. `Open Square ↗`
+is hidden when Square is not connected.
 
 ---
 
 ## 4. Data model decisions
 
-Migration ceiling is **031** (`031_theme_packs_three.sql`); new work starts at **032**.
+Migration ceiling is **032** (`032_modifier_option_availability.sql`). Node-pg-migrate
+wrappers exist through 032 (including previously-missing 030/031 `.cjs` entries).
 
 ### 4.1 Stock — use a side table, not the options JSON
 
@@ -238,6 +240,11 @@ groups on every catalog sync — the Square webhook, the manual "Sync now" butto
 the daily stale-catalog cron (`POST /internal/pos/sync-catalogs`). Milks and syrups
 are exactly the groups Square owns and exactly the things a café 86s, so a sync
 would silently restore stock mid-service.
+
+POS sync still mints new option UUIDs in the Square adapter. `upsertModifierGroup`
+reuses existing JSON `id` values where `posOptionId` matches (`preserveOptionIds`),
+or availability rows would orphan on every webhook. After upsert, orphan
+availability rows (option no longer in any group JSON) are deleted.
 
 Keep availability in its own table so sync and availability never touch the same
 rows:
@@ -266,8 +273,10 @@ State mapping:
 **Evaluate lazily at read time. No scheduler, no cron.** "Out today" resolves to
 the café's next opening time, computed from `cafes.hours`.
 
-Consumers that must apply it: the customer menu read path (option greys out) and
-the KDS (`docs/architecture/kds-board.md` — baristas see the same greyed options).
+Consumers that apply it: public `GET /menu` overlays `isAvailable` on options
+(never drops them); checkout rejects 86'd selections; KDS loads `outOptionIds` on
+`GET /kds/config` and greys chips on `kds:stock:updated`. Admin is the write
+surface — there is no KDS mark-out control.
 
 Food is unaffected — it already uses `menu_items.is_available`, and the design
 deliberately keeps the different behaviour ("comes off the menu while out").
@@ -456,13 +465,10 @@ Order ahead.
 
 ## 8. Open questions
 
-- **Who marks stock out?** The design assumes the owner in admin, but the person
-  who discovers the oat milk is gone is the barista at the machine, already on the
-  KDS tablet. The Stock tab is designed to work at 390px for this reason, but a
-  KDS-side "mark out" control is not designed. Decide before §4.1 ships — it
-  changes whether admin is the input surface or the review surface.
+- **Who marks stock out?** v1: the owner in admin (`/stock`). A KDS-side "mark
+  out" control is not designed; still deferred. The Stock tab is usable at 390px.
 - **No account surface.** Café name, slug and owner email are read-only with no
   edit path anywhere in the product. `cafes.ownerFeedbackEmail` also has no UI.
-- **Designs still outstanding:** the paused state (all four surfaces), the
-  POS-locked vs editable modifier list tabs, the non-Square variant of the Menu
-  screen, and validation states generally.
+- **Designs still outstanding:** the paused state (all four surfaces) and
+  validation states generally. POS-locked vs editable modifier lists and the
+  non-Square Menu variant are built.

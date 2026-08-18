@@ -1,5 +1,8 @@
 import { createTheme, type ThemeOptions } from '@mui/material/styles';
 
+export { dashboardTheme } from './dashboardTheme.js';
+export { consoleTokens } from './console-tokens.js';
+
 /** Brand palette shared by signup/onboarding surfaces. */
 export const brandPalette = {
   lime: '#e8ff47',
@@ -156,8 +159,3 @@ export const signupTheme = createTheme({
   },
 });
 
-/** Light theme for the post-onboarding dashboard. */
-export const dashboardTheme = createTheme({
-  palette: { mode: 'light', primary: { main: '#0f172a' } },
-  components: numberInputReset,
-});

@@ -63,6 +63,8 @@ export interface KdsRecallOrderResponse {
 
 export interface KdsConfigResponse {
   kdsConfig: KdsConfig;
+  /** Option ids currently 86'd (lazy expiry applied). */
+  outOptionIds: string[];
 }
 
 export interface KdsAdvanceStatusRequest {

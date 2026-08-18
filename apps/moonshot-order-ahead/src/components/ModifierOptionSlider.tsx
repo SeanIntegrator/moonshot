@@ -59,7 +59,7 @@ export function ModifierOptionSlider({ group, selections, onSelect }: Props) {
     (idx: number) => {
       const clamped = Math.max(0, Math.min(lastIndex, idx));
       const opt = options[clamped];
-      if (opt) onSelect(group.id, opt.id);
+      if (opt && opt.isAvailable !== false) onSelect(group.id, opt.id);
     },
     [group.id, lastIndex, onSelect, options],
   );

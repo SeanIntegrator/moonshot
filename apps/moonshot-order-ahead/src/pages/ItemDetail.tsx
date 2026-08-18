@@ -28,8 +28,9 @@ function defaultModifiers(item: NormalisedMenuItem): OrderLineModifierSelectionI
   for (const g of item.modifierGroups) {
     // Multi groups (e.g. syrups) are optional extras — never pre-select a default.
     if (g.selectionType !== 'single') continue;
-    const defaults = g.options.filter((o) => o.isDefault);
-    const pick = defaults[0] ?? g.options[0];
+    const sellable = g.options.filter((o) => o.isAvailable !== false);
+    const defaults = sellable.filter((o) => o.isDefault);
+    const pick = defaults[0] ?? sellable[0];
     if (pick) out.push({ groupId: g.id, optionId: pick.id });
   }
   return out;

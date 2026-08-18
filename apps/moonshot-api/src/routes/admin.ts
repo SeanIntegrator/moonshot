@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   ApiErrorCode,
   type AdminLoginResponse,
+  type AdminStockOptionPutBody,
   type AdminStripeAccountLinkResponse,
   type AdminStripeAccountStatusResponse,
 } from '@moonshot/types';
@@ -24,6 +25,9 @@ import { adminOnboardingRouter } from './admin-onboarding.js';
 import { stripeConnectCallbacksRouter } from './stripe-connect-callbacks.js';
 import { runCatalogSyncForCafe } from '../lib/pos-adapters/square/catalog-sync.js';
 import { adminLoginBodySchema, parseBody } from '../lib/validation/auth-bodies.js';
+import { getAdminStock, putOptionAvailability } from '../lib/menu/admin-stock.js';
+import { UUID_RE } from '../lib/uuid.js';
+import { pool } from '../db.js';
 
 export const adminRouter: Router = Router();
 
@@ -141,6 +145,28 @@ adminRouter.post('/payments/stripe/onboarding-link', requireAdminAuth, async (re
 adminRouter.get('/payments/stripe/status', requireAdminAuth, async (req, res) => {
   const cafeId = req.adminUser!.cafeId;
   const data: AdminStripeAccountStatusResponse = await syncAdminStripeAccountStatus(cafeId);
+  return res.json({ ok: true, data });
+});
+
+adminRouter.get('/stock', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+  const data = await getAdminStock(pool, cafeId);
+  return res.json({ ok: true, data });
+});
+
+adminRouter.put('/stock/options/:optionId', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+  const rawId = req.params.optionId;
+  const optionId = Array.isArray(rawId) ? rawId[0] : rawId;
+  if (!optionId || !UUID_RE.test(optionId)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'optionId must be a UUID',
+      code: ApiErrorCode.VALIDATION,
+    });
+  }
+  const body = (req.body ?? {}) as AdminStockOptionPutBody;
+  const data = await putOptionAvailability(pool, cafeId, optionId, body);
   return res.json({ ok: true, data });
 });
 
