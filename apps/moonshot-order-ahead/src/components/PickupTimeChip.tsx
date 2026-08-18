@@ -3,11 +3,10 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import type { PickupEstimateResponse } from '@moonshot/types';
 import { Box, Chip, Menu, MenuItem, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import { useCafe } from '../hooks/useCafe.js';
+import { usePickupDelayOptions } from '../hooks/usePickupDelayOptions.js';
 import { formatTime } from '../lib/format.js';
 import {
   clampPickupDelayMinutes,
-  pickupDelaysForCafe,
   type PickupDelayMinutes,
 } from '../lib/pickup-delay-options.js';
 import { PickupTimeFieldButton, pickupChipSx } from './ui/PickupTimeFieldButton.js';
@@ -34,6 +33,11 @@ type Props = {
   /** Café `order_ahead.maxPickupMinutes` (default 60). */
   maxPickupMinutes?: number;
   /**
+   * Last-order-filtered delays from a parent that also POSTs them.
+   * Omit on pages that only display the chip — it keeps its own clock.
+   */
+  allowedDelays?: number[];
+  /**
    * `chip` — compact control for page headers (menu).
    * `field` — full-width form control for checkout.
    */
@@ -46,15 +50,15 @@ export function PickupTimeChip({
   onChange,
   maxPickupMinutes = 60,
   variant = 'chip',
+  allowedDelays,
 }: Props) {
-  const { cafe } = useCafe();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const options = useMemo(
-    () => pickupDelaysForCafe(maxPickupMinutes, cafe),
-    [maxPickupMinutes, cafe],
-  );
+  const derivedDelays = usePickupDelayOptions(maxPickupMinutes, {
+    enabled: allowedDelays == null,
+  });
+  const options = allowedDelays ?? derivedDelays;
   const safeValue = clampPickupDelayMinutes(value, options);
-  // Last-order filtering used to be display-only; write the clamped slot back so checkout POSTs it.
+  // Keep cart.pickupDelayMinutes on a slot the chip still lists.
   useEffect(() => {
     if (value !== safeValue) onChange(safeValue);
   }, [value, safeValue, onChange]);

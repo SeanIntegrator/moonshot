@@ -64,14 +64,24 @@ describe('clampPickupDelayMinutes', () => {
 });
 
 describe('pickupDelaysForCafe', () => {
+  const cafe = {
+    timezone: 'UTC',
+    hours: defaultWeekdayCafeHours(),
+    lastOrderBufferMinutes: 20,
+  };
+
   it('keeps only delays that still land before the last-order slot', () => {
-    const cafe = {
-      timezone: 'UTC',
-      hours: defaultWeekdayCafeHours(),
-      lastOrderBufferMinutes: 20,
-    };
     // Tuesday 15:25, close 16:00, last slot 15:40 → 20+ min delays miss the slot.
     const now = new Date('2026-08-11T15:25:00.000Z');
     expect(pickupDelaysForCafe(60, cafe, now)).toEqual([0, 10]);
+  });
+
+  it('keeps a delay the chip still lists when a later now would drop it', () => {
+    const chipNow = new Date('2026-08-11T15:25:00.000Z');
+    const submitNow = new Date('2026-08-11T15:32:00.000Z');
+    const chipOptions = pickupDelaysForCafe(60, cafe, chipNow);
+    expect(chipOptions).toEqual([0, 10]);
+    expect(clampPickupDelayMinutes(10, chipOptions)).toBe(10);
+    expect(clampPickupDelayMinutes(10, pickupDelaysForCafe(60, cafe, submitNow))).toBe(0);
   });
 });
