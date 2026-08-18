@@ -137,19 +137,25 @@ export function MenuPage() {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       <PageHeader
         title="Menu & prices"
-        description="Prices and content come from Square. Add photos and choose which options each drink offers."
+        description={
+          squareConnected
+            ? 'Prices and content come from Square. Add photos and choose which options each drink offers.'
+            : 'Add photos and choose which options each drink offers. Name, description, sizes and prices are all yours.'
+        }
         action={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-            <Typography variant="body2">Synced {syncedLabel}</Typography>
-            <Button
-              variant="outlined"
-              startIcon={syncing ? <CircularProgress size={16} /> : <SyncIcon />}
-              disabled={syncing || !squareConnected || squareStatus?.status === 'needs_reauth'}
-              onClick={() => void handleSyncFromSquare()}
-            >
-              Sync from Square
-            </Button>
-          </Box>
+          squareConnected ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              <Typography variant="body2">Synced {syncedLabel}</Typography>
+              <Button
+                variant="outlined"
+                startIcon={syncing ? <CircularProgress size={16} /> : <SyncIcon />}
+                disabled={syncing || squareStatus?.status === 'needs_reauth'}
+                onClick={() => void handleSyncFromSquare()}
+              >
+                Sync from Square
+              </Button>
+            </Box>
+          ) : undefined
         }
       />
 

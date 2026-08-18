@@ -6,7 +6,7 @@ import { fetchDrinkArchetypes, patchMenuItem } from '../../../lib/admin-api.js';
 import { SaveFooter } from '../../primitives/SaveFooter.js';
 import { ItemEditorFields } from './ItemEditorFields.js';
 import { ItemsSidebar } from './ItemsSidebar.js';
-import { itemDraftDirty, toDraft, type DraftItem } from './menu-item-draft.js';
+import { itemDraftDirty, itemPatchBody, toDraft, type DraftItem } from './menu-item-draft.js';
 
 type Props = {
   cafeSlug: string;
@@ -24,7 +24,6 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Record<string, DrinkArchetypeDef>>({});
-  const [priceText, setPriceText] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id ?? null);
 
@@ -51,20 +50,7 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
     setSavingId(next.id);
     setError(null);
     try {
-      const updated = await patchMenuItem(token, cafeSlug, next.id, {
-        name: next.name,
-        description: next.description,
-        priceMinor: next.priceMinor,
-        category: next.category,
-        subcategory: next.subcategory,
-        imageUrl: next.imageUrl,
-        isAvailable: next.isAvailable,
-        sizes: next.sizes,
-        modifierGroupIds: next.attachedGroupIds,
-        archetype: next.archetype,
-        waiveMilkSurcharge: next.waiveMilkSurcharge,
-        allowNoMilk: next.allowNoMilk,
-      });
+      const updated = await patchMenuItem(token, cafeSlug, next.id, itemPatchBody(next));
       setDrafts((prev) => {
         const copy = { ...prev };
         delete copy[next.id];
@@ -101,11 +87,6 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
   function undo() {
     if (!selected) return;
     setDrafts((prev) => {
-      const copy = { ...prev };
-      delete copy[selected.id];
-      return copy;
-    });
-    setPriceText((prev) => {
       const copy = { ...prev };
       delete copy[selected.id];
       return copy;
@@ -152,10 +133,8 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
                 recipes={recipes}
                 sections={sections}
                 categoryOptions={categoryOptions}
-                priceText={priceText[selected.id] ?? String(draft.priceMinor / 100)}
                 saving={savingId === selected.id}
                 toggling={togglingId === selected.id}
-                onPriceText={(raw) => setPriceText((prev) => ({ ...prev, [selected.id]: raw }))}
                 onChange={(next) => setDrafts((prev) => ({ ...prev, [selected.id]: next }))}
                 onSaved={(updated) => setDrafts((prev) => ({ ...prev, [selected.id]: updated }))}
                 onToggleMenu={(next) => void toggleMenu(selected, next)}

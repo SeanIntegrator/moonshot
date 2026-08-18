@@ -34,7 +34,7 @@ Tokens are `theme.console` ([console-tokens.ts](../apps/moonshot-admin/src/theme
 ## Conventions
 
 - Switches apply immediately. Forms have one Save, disabled until dirty and valid.
-- A value the user cannot change is never an input. Use `ReadOnlyPanel` + `SourceLabel` (`From Square` / `From Stripe` / `Generated for you`).
+- A value the user cannot change is never an input. Use `ReadOnlyPanel` + `SourceLabel` (`From Square` / `From Stripe` / `Generated for you`). Square catalogue fields (item name/prices, modifier names/prices, Just one / Any number, required, defaults, Square list attachments) follow this. Moonshot-owned lists stay editable.
 - Copy is text + a Copy button (`CopyText`), never an input.
 - UK only: GBP, 24-hour clock, `DD MMM` dates, en-GB. No timezone UI.
 - Amber / red are stock (and Stripe/Square status dots). See tokens.

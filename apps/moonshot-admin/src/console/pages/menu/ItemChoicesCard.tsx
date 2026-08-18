@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { applyArchetypeToDraft, toggleAttachedGroup, type DraftItem } from './menu-item-draft.js';
+import { choiceMetaLine, isPosOwnedGroup } from './modifier-list-copy.js';
 
 type Props = {
   draft: DraftItem;
@@ -33,6 +34,7 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
 
   const milkGroup = library.find((g) => g.name === 'Milks' || g.name === 'Milk');
   const milkAttached = milkGroup ? draft.attachedGroupIds.includes(milkGroup.id) : false;
+  const hasSquareLists = library.some(isPosOwnedGroup);
 
   return (
     <Box
@@ -42,9 +44,14 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
         p: { xs: 2, sm: 2.5 },
       })}
     >
-      <Typography variant="h3" component="h2" sx={{ mb: 2 }}>
+      <Typography variant="h3" component="h2" sx={{ mb: hasSquareLists ? 0.75 : 2 }}>
         Choices on this drink
       </Typography>
+      {hasSquareLists ? (
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          Square lists stay attached as they are in Square. Change those there, then sync.
+        </Typography>
+      ) : null}
       {Object.keys(recipes).length > 0 ? (
         <FormControl size="small" sx={{ maxWidth: 320, mb: 2, display: 'block' }}>
           <InputLabel>Recipe</InputLabel>
@@ -65,6 +72,7 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
       {library.map((g) => {
         const attached = draft.attachedGroupIds.includes(g.id);
         const isMilk = milkGroup?.id === g.id;
+        const fromSquare = isPosOwnedGroup(g);
         return (
           <Box
             key={g.id}
@@ -78,10 +86,7 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
           >
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography sx={{ fontWeight: 600 }}>{g.name}</Typography>
-              <Typography variant="body2">
-                {g.selectionType === 'single' ? 'Pick one' : 'Any number'}
-                {g.required ? ' · required' : ''}
-              </Typography>
+              <Typography variant="body2">{choiceMetaLine(g)}</Typography>
             </Box>
             {isMilk && attached ? (
               <FormControlLabel
@@ -98,7 +103,8 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
             ) : null}
             <Switch
               checked={attached}
-              onChange={() => onChange(toggleAttachedGroup(draft, g.id))}
+              disabled={fromSquare}
+              onChange={() => onChange(toggleAttachedGroup(draft, g.id, library))}
               slotProps={{ input: { 'aria-label': `Offer ${g.name}` } }}
             />
           </Box>

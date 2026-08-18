@@ -1,10 +1,11 @@
 import type { CafeModifierGroup } from '@moonshot/types';
 import { Box, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
 import { MenuItemImageField } from '../../../components/menu/MenuItemImageField.js';
 import { SizeEditor } from '../../../components/menu/SizeEditor.js';
 import { formatGbpMinor } from '../../../lib/format.js';
 import { ReadOnlyPanel } from '../../primitives/ReadOnlyPanel.js';
-import { toDraft, type DraftItem } from './menu-item-draft.js';
+import { isPosOwnedItem, toDraft, type DraftItem } from './menu-item-draft.js';
 
 type CategoryOption = { value: string; label: string };
 
@@ -15,12 +16,29 @@ type Props = {
   token: string;
   library: CafeModifierGroup[];
   categoryOptions: CategoryOption[];
-  priceText: string;
   saving: boolean;
-  onPriceText: (raw: string) => void;
   onChange: (next: DraftItem) => void;
   onSaved: (updated: DraftItem) => void;
 };
+
+/** Local string so typing does not rewrite the item editor on every keystroke. */
+function useBlurField(external: string) {
+  const [value, setValue] = useState(external);
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setValue(external);
+  }, [external]);
+  return {
+    value,
+    setValue,
+    onFocus: () => {
+      focused.current = true;
+    },
+    endFocus: () => {
+      focused.current = false;
+    },
+  };
+}
 
 export function ItemDetailsCard({
   draft,
@@ -29,13 +47,18 @@ export function ItemDetailsCard({
   token,
   library,
   categoryOptions,
-  priceText,
   saving,
-  onPriceText,
   onChange,
   onSaved,
 }: Props) {
-  const fromSquare = Boolean(draft.posItemId);
+  const fromSquare = isPosOwnedItem(draft);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
+  const nameField = useBlurField(draft.name);
+  const descriptionField = useBlurField(draft.description ?? '');
+  const priceField = useBlurField(String(draft.priceMinor / 100));
+
   const selectOptions = categoryOptions.some((c) => c.value === draft.category)
     ? categoryOptions
     : [...categoryOptions, { value: draft.category, label: draft.category }];
@@ -120,8 +143,13 @@ export function ItemDetailsCard({
                 size="small"
                 required
                 fullWidth
-                value={draft.name}
-                onChange={(e) => onChange({ ...draft, name: e.target.value })}
+                value={nameField.value}
+                onFocus={nameField.onFocus}
+                onChange={(e) => nameField.setValue(e.target.value)}
+                onBlur={(e) => {
+                  nameField.endFocus();
+                  onChange({ ...draftRef.current, name: e.target.value });
+                }}
               />
               <TextField
                 label="Description"
@@ -129,24 +157,36 @@ export function ItemDetailsCard({
                 multiline
                 minRows={2}
                 fullWidth
-                value={draft.description ?? ''}
-                onChange={(e) => onChange({ ...draft, description: e.target.value || null })}
+                value={descriptionField.value}
+                onFocus={descriptionField.onFocus}
+                onChange={(e) => descriptionField.setValue(e.target.value)}
+                onBlur={(e) => {
+                  descriptionField.endFocus();
+                  onChange({
+                    ...draftRef.current,
+                    description: e.target.value || null,
+                  });
+                }}
               />
               {draft.sizes.length === 0 ? (
                 <TextField
                   label={`Base price (${draft.currency})`}
                   type="number"
                   size="small"
-                  value={priceText}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    onPriceText(raw);
-                    if (raw.trim() === '') {
-                      onChange({ ...draft, priceMinor: 0 });
+                  value={priceField.value}
+                  onFocus={priceField.onFocus}
+                  onChange={(e) => priceField.setValue(e.target.value)}
+                  onBlur={(e) => {
+                    priceField.endFocus();
+                    const raw = e.target.value.trim();
+                    if (raw === '') {
+                      onChange({ ...draftRef.current, priceMinor: 0 });
                       return;
                     }
                     const v = Number.parseFloat(raw);
-                    if (Number.isFinite(v)) onChange({ ...draft, priceMinor: Math.round(v * 100) });
+                    if (Number.isFinite(v)) {
+                      onChange({ ...draftRef.current, priceMinor: Math.round(v * 100) });
+                    }
                   }}
                   sx={{ maxWidth: 200 }}
                   slotProps={{ htmlInput: { min: 0, step: 0.01 } }}

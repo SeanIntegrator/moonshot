@@ -72,13 +72,46 @@ export function applyArchetypeToDraft(
   };
 }
 
-export function toggleAttachedGroup(draft: DraftItem, groupId: string): DraftItem {
+export function isPosOwnedItem(item: Pick<NormalisedMenuItem, 'posItemId'>): boolean {
+  return item.posItemId != null && item.posItemId !== '';
+}
+
+export function toggleAttachedGroup(
+  draft: DraftItem,
+  groupId: string,
+  library: CafeModifierGroup[] = [],
+): DraftItem {
+  const group = library.find((g) => g.id === groupId);
+  // Square list attachments are rewritten on catalog sync — don't let admin toggle them.
+  if (group?.posGroupId) return draft;
   const has = draft.attachedGroupIds.includes(groupId);
   return {
     ...draft,
     attachedGroupIds: has
       ? draft.attachedGroupIds.filter((id) => id !== groupId)
       : [...draft.attachedGroupIds, groupId],
+  };
+}
+
+/** PATCH body: POS-linked items omit catalogue fields Square will overwrite. */
+export function itemPatchBody(draft: DraftItem): Record<string, unknown> {
+  const display = {
+    imageUrl: draft.imageUrl,
+    isAvailable: draft.isAvailable,
+    modifierGroupIds: draft.attachedGroupIds,
+    archetype: draft.archetype,
+    waiveMilkSurcharge: draft.waiveMilkSurcharge,
+    allowNoMilk: draft.allowNoMilk,
+  };
+  if (isPosOwnedItem(draft)) return display;
+  return {
+    name: draft.name,
+    description: draft.description,
+    priceMinor: draft.priceMinor,
+    category: draft.category,
+    subcategory: draft.subcategory,
+    sizes: draft.sizes,
+    ...display,
   };
 }
 

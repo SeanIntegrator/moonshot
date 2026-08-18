@@ -4,6 +4,7 @@ import { SourceLabel } from '../../primitives/SourceLabel.js';
 import { SaveFooter } from '../../primitives/SaveFooter.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
 import { offeredOnCount, offeredOnLabel } from './item-sidebar.js';
+import { isPosOwnedGroup } from './modifier-list-copy.js';
 import { ModifierListHeader } from './ModifierListHeader.js';
 import { ModifierListTable } from './ModifierListTable.js';
 
@@ -29,7 +30,7 @@ type Props = {
 };
 
 export function ModifierListCard({ group, original, items, saving, onChange, onSave }: Props) {
-  const locked = Boolean(group.posGroupId);
+  const locked = isPosOwnedGroup(group);
   const dirty = JSON.stringify(group) !== JSON.stringify(original);
   const offered = offeredOnCount(items, group.id);
   const valid = locked || group.options.every((o) => o.name.trim().length > 0);
@@ -42,6 +43,7 @@ export function ModifierListCard({ group, original, items, saving, onChange, onS
         <ModifierListHeader
           selectionType={group.selectionType}
           required={group.required}
+          locked={locked}
           onSelectionType={(selectionType) => {
             if (selectionType === 'single') {
               const firstDefault = group.options.find((o) => o.isDefault) ?? group.options[0];
@@ -83,14 +85,14 @@ export function ModifierListCard({ group, original, items, saving, onChange, onS
           ? 'Change these in Square, then sync.'
           : 'Yours to edit. Change a price here and it changes on every drink that offers it.'}
       </Typography>
-      <SaveFooter
-        label={saving ? 'Saving…' : 'Save list'}
-        dirty={dirty}
-        valid={valid}
-        saving={saving}
-        onSave={onSave}
-        start={
-          locked ? undefined : (
+      {locked ? null : (
+        <SaveFooter
+          label={saving ? 'Saving…' : 'Save list'}
+          dirty={dirty}
+          valid={valid}
+          saving={saving}
+          onSave={onSave}
+          start={
             <Button
               variant="outlined"
               size="small"
@@ -98,9 +100,9 @@ export function ModifierListCard({ group, original, items, saving, onChange, onS
             >
               + Add an option
             </Button>
-          )
-        }
-      />
+          }
+        />
+      )}
     </SettingsCard>
   );
 }

@@ -17,10 +17,8 @@ type Props = {
   recipes: Record<string, DrinkArchetypeDef>;
   sections: CafeMenuSection[];
   categoryOptions: CategoryOption[];
-  priceText: string;
   saving: boolean;
   toggling: boolean;
-  onPriceText: (raw: string) => void;
   onChange: (next: DraftItem) => void;
   onSaved: (updated: DraftItem) => void;
   onToggleMenu: (next: boolean) => void;
@@ -35,10 +33,8 @@ export function ItemEditorFields({
   recipes,
   sections,
   categoryOptions,
-  priceText,
   saving,
   toggling,
-  onPriceText,
   onChange,
   onSaved,
   onToggleMenu,
@@ -112,9 +108,7 @@ export function ItemEditorFields({
         token={token}
         library={library}
         categoryOptions={categoryOptions}
-        priceText={priceText}
         saving={saving}
-        onPriceText={onPriceText}
         onChange={onChange}
         onSaved={onSaved}
       />

@@ -131,13 +131,13 @@ trading.
 | Recipe (drink archetype) selection + apply | Exists | Drink types tab |
 | `waiveMilkSurcharge` checkbox | Exists | Per-item field |
 | Square lock presentation | Exists | `posItemId` / `posGroupId` (now returned on library GET) |
-| Modifier list tabs (Milk, Syrup, Beans, Shots, Toppings) | Exists | POS-linked groups read-only; Moonshot lists editable + SaveFooter |
+| Modifier list tabs (Milk, Syrup, Beans, Shots, Toppings) | Exists | POS-linked groups: names, prices, Just one / Any number, required, and defaults are read-only. Moonshot lists are editable + SaveFooter + Remove |
 | `Featured` badge + deep link | Partial | Tag exists; ordering does not — §4.5 |
 
 **Important:** POS-linked modifier groups have their `options` array rewritten on
-catalog sync. The `Milk` and `Syrup` tabs are therefore read-only for
-Square-connected cafés; `Shots`, `Beans` and `Toppings` are Moonshot-owned and
-fully editable. Both variants need building.
+catalog sync, including selection type, required, and defaults. Square item
+attachments are also reset on sync, so offer switches for those lists are
+disabled. Moonshot-owned lists (`Shots`, `Beans`, prep) stay fully editable.
 
 ### Hours
 
