@@ -1,7 +1,6 @@
 import type { MenuItemImageSource, NormalisedMenuItem } from '@moonshot/types';
 import { resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/domain';
 import {
-  Alert,
   Box,
   Button,
   FormControlLabel,
@@ -10,7 +9,9 @@ import {
   Typography,
 } from '@mui/material';
 import { useRef, useState } from 'react';
+import { buttonLoader, switchLoader } from '../../console/primitives/button-loader.js';
 import { SourceLabel } from '../../console/primitives/SourceLabel.js';
+import { useOptionalToast } from '../../console/primitives/ToastProvider.js';
 import {
   setMenuItemUseDefaultImage,
   uploadMenuItemImage,
@@ -48,9 +49,9 @@ export function MenuItemImageField({
   onUploaded,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const toast = useOptionalToast();
   const [uploading, setUploading] = useState(false);
   const [togglingDefault, setTogglingDefault] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const isPosItem = posItemId != null;
   const hasCustomImage = imageSource === 'pos' || imageSource === 'upload';
@@ -63,12 +64,14 @@ export function MenuItemImageField({
   async function handleFile(file: File | null) {
     if (!file || !itemId || isPosItem) return;
     setUploading(true);
-    setError(null);
     try {
       const updated = await uploadMenuItemImage(token, cafeSlug, itemId, file);
       onUploaded(updated);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Image upload failed');
+      toast?.({
+        severity: 'error',
+        message: e instanceof Error ? e.message : 'Image upload failed',
+      });
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -78,12 +81,14 @@ export function MenuItemImageField({
   async function handleDefaultToggle(next: boolean) {
     if (!itemId || defaultToggleDisabled) return;
     setTogglingDefault(true);
-    setError(null);
     try {
       const updated = await setMenuItemUseDefaultImage(token, cafeSlug, itemId, next);
       onUploaded(updated);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update default image');
+      toast?.({
+        severity: 'error',
+        message: e instanceof Error ? e.message : 'Could not update default image',
+      });
     } finally {
       setTogglingDefault(false);
     }
@@ -130,12 +135,15 @@ export function MenuItemImageField({
               <Box sx={{ mt: 1.25 }}>
                 <FormControlLabel
                   control={
-                    <Switch
-                      size="small"
-                      checked={defaultToggleChecked}
-                      disabled={defaultToggleDisabled}
-                      onChange={(_, checked) => void handleDefaultToggle(checked)}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
+                      <Switch
+                        size="small"
+                        checked={defaultToggleChecked}
+                        disabled={defaultToggleDisabled}
+                        onChange={(_, checked) => void handleDefaultToggle(checked)}
+                      />
+                      {switchLoader(togglingDefault)}
+                    </Box>
                   }
                   label="Use default image"
                 />
@@ -161,6 +169,7 @@ export function MenuItemImageField({
               variant="outlined"
               size="small"
               disabled={disabled || uploading}
+              startIcon={buttonLoader(uploading)}
               onClick={() => inputRef.current?.click()}
             >
               {imageUrl ? 'Replace photo' : 'Upload photo'}
@@ -174,11 +183,6 @@ export function MenuItemImageField({
           </>
         )}
         {(uploading || togglingDefault) && <LinearProgress sx={{ mt: 1 }} />}
-        {error && (
-          <Alert severity="error" sx={{ mt: 1 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
       </Box>
       {isPosItem ? null : (
         <input

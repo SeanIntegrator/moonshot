@@ -1,8 +1,9 @@
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
 import type { DrinkArchetypeDef } from '@moonshot/domain';
-import { Alert, Box, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { fetchDrinkArchetypes, patchMenuItem } from '../../../lib/admin-api.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { ItemEditorFields } from './ItemEditorFields.js';
 import { ItemsSidebar } from './ItemsSidebar.js';
 import { firstSidebarItemId } from './item-sidebar.js';
@@ -18,11 +19,10 @@ type Props = {
 };
 
 export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsChanged }: Props) {
+  const toast = useToast();
   const [drafts, setDrafts] = useState<Record<string, DraftItem>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Record<string, DrinkArchetypeDef>>({});
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(() =>
@@ -50,7 +50,6 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
   async function saveItem(next: DraftItem) {
     if (!next.id) return;
     setSavingId(next.id);
-    setError(null);
     try {
       const updated = await patchMenuItem(token, cafeSlug, next.id, itemPatchBody(next));
       setDrafts((prev) => {
@@ -59,10 +58,10 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
         copy[updated.id] = toDraft(updated, library);
         return copy;
       });
-      setNotice(`Saved “${updated.name}”.`);
+      toast({ severity: 'success', message: `Saved “${updated.name}”.` });
       onItemsChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Save failed' });
     } finally {
       setSavingId(null);
     }
@@ -70,17 +69,19 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
 
   async function toggleMenu(item: NormalisedMenuItem, next: boolean) {
     setTogglingId(item.id);
-    setError(null);
     try {
       const updated = await patchMenuItem(token, cafeSlug, item.id, { isAvailable: next });
       setDrafts((prev) => ({
         ...prev,
         [updated.id]: { ...(prev[updated.id] ?? toDraft(item, library)), isAvailable: updated.isAvailable },
       }));
-      setNotice(next ? `“${item.name}” is on the menu.` : `“${item.name}” is hidden.`);
+      toast({
+        severity: 'success',
+        message: next ? `“${item.name}” is on the menu.` : `“${item.name}” is hidden.`,
+      });
       onItemsChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Update failed');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Update failed' });
     } finally {
       setTogglingId(null);
     }
@@ -97,16 +98,6 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
 
   return (
     <Box>
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
-      {notice ? (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>
-          {notice}
-        </Alert>
-      ) : null}
       <Box
         sx={{
           display: 'flex',

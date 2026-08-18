@@ -1,7 +1,9 @@
-import { Alert, Box, FormControlLabel, Switch, TextField, Typography } from '@mui/material';
+import { Box, FormControlLabel, Switch, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
+import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
 import { kitchenFieldGridSx } from './KitchenSection.js';
 import { earliestPickupSlot, isPickupTimingValid, pickupTimingError } from './pickup-timing.js';
@@ -17,7 +19,7 @@ export function PickupCard() {
   const [furthest, setFurthest] = useState(savedFurthest);
   const [savingToggle, setSavingToggle] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     setEarliest(savedEarliest);
@@ -33,12 +35,11 @@ export function PickupCard() {
       : null;
 
   async function onToggle(next: boolean) {
-    setError(null);
     setSavingToggle(true);
     try {
       await patchSettings({ featuresPatch: { order_ahead: { pickupTimeEnabled: next } } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update pickup');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update pickup' });
     } finally {
       setSavingToggle(false);
     }
@@ -47,7 +48,6 @@ export function PickupCard() {
   async function save() {
     if (!valid) return;
     setSaving(true);
-    setError(null);
     try {
       await patchSettings({
         featuresPatch: {
@@ -58,7 +58,7 @@ export function PickupCard() {
         },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save pickup');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save pickup' });
     } finally {
       setSaving(false);
     }
@@ -76,19 +76,17 @@ export function PickupCard() {
         onSave: () => void save(),
       }}
     >
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <FormControlLabel
         sx={{ display: 'flex', mb: 2, ml: 0 }}
         control={
-          <Switch
-            checked={savedEnabled}
-            disabled={savingToggle}
-            onChange={(_, v) => void onToggle(v)}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
+            <Switch
+              checked={savedEnabled}
+              disabled={savingToggle}
+              onChange={(_, v) => void onToggle(v)}
+            />
+            {switchLoader(savingToggle)}
+          </Box>
         }
         label="Let customers choose a pickup time"
       />

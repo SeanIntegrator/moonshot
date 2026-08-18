@@ -6,6 +6,7 @@ import {
   DialogTitle,
   Typography,
 } from '@mui/material';
+import { buttonLoader } from '../../primitives/button-loader.js';
 
 type Props = {
   open: boolean;
@@ -28,7 +29,13 @@ export function DisconnectSquareDialog({ open, busy, onClose, onConfirm }: Props
         <Button variant="text" onClick={onClose} disabled={busy}>
           Cancel
         </Button>
-        <Button variant="contained" color="error" onClick={onConfirm} disabled={busy}>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={onConfirm}
+          disabled={busy}
+          startIcon={buttonLoader(busy)}
+        >
           {busy ? 'Disconnecting…' : 'Disconnect Square'}
         </Button>
       </DialogActions>

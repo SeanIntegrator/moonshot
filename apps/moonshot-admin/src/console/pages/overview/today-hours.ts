@@ -1,8 +1,9 @@
 import {
   calendarDateToIso,
-  currentLastOrderSlotHhMm,
+  DEFAULT_LAST_ORDER_BUFFER_MINUTES,
   effectiveIntervalsForDate,
   formatTime24FromInstant,
+  lastOrderMinutesForInterval,
   lastOrderSlotHhMm,
   localCalendarDate,
   normalizeCafeHours,
@@ -130,25 +131,24 @@ export function overviewHeroHeading(
   const cal = localCalendarDate(timezone, now);
   const iso = cal ? calendarDateToIso(cal) : null;
   const intervals = iso ? effectiveIntervalsForDate(hours, extras.overrides, iso) : hours[day];
+  const buffer =
+    extras.lastOrderBufferMinutes != null && Number.isFinite(extras.lastOrderBufferMinutes)
+      ? Math.max(0, Math.floor(extras.lastOrderBufferMinutes))
+      : DEFAULT_LAST_ORDER_BUFFER_MINUTES;
   for (const iv of intervals) {
     const open = hhMmToMinutes(iv.open);
     const close = hhMmToMinutes(iv.close);
     if (open == null || close == null) continue;
-    if (minutes >= open && minutes < close) {
-      const slot =
-        currentLastOrderSlotHhMm({
-          hours,
-          timezone,
-          now,
-          overrides: extras.overrides,
-          lastOrderBufferMinutes: extras.lastOrderBufferMinutes,
-        }) ?? lastOrderSlotHhMm(iv, extras.lastOrderBufferMinutes ?? 20);
-      return {
-        heading: `Taking orders until ${iv.close}`,
-        isOpen: true,
-        sub: slot ? `Last order-ahead slot is ${slot}.` : undefined,
-      };
-    }
+    if (minutes < open || minutes >= close) continue;
+    const lastMins = lastOrderMinutesForInterval(iv, buffer);
+    // Same cut-off as cafeOpenStatus / POST /orders: still inside hours, but last orders done.
+    if (lastMins != null && minutes >= lastMins) continue;
+    const slot = lastOrderSlotHhMm(iv, buffer);
+    return {
+      heading: `Taking orders until ${iv.close}`,
+      isOpen: true,
+      sub: slot ? `Last order-ahead slot is ${slot}.` : undefined,
+    };
   }
   const later = intervals.find((iv) => {
     const open = hhMmToMinutes(iv.open);

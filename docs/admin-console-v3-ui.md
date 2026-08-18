@@ -38,4 +38,10 @@ Tokens are `theme.console` ([console-tokens.ts](../apps/moonshot-admin/src/theme
 - UK only: GBP, 24-hour clock, `DD MMM` dates, en-GB. No timezone UI.
 - Amber / red are stock (and Stripe/Square status dots). See tokens.
 
+## Feedback
+
+- **Action results** (save, hide, sync, stock, pause, generate password, image upload) are overlay toasts from `ToastProvider` / `useToast()`. Stack at the bottom centre, newest nearest the bottom, auto-hide (success/info 4s, warning 5s, error 6s). Field validation stays inline (`ValidationMessage`). Café boot failure stays a full-page Alert with Retry. Persistent status (`ReadOnlyPanel`, “Coming soon”) stays in place.
+- **Page load** uses layout-matching skeletons under `console/primitives/skeletons/` (chrome while `CafeProvider` loads; Menu / Stock / Overview cards / Payments while their data loads). Auth boot in `App.tsx` stays a full-viewport spinner. Soft menu reload keeps last content; only Sync shows a spinner.
+- **In-flight actions** disable the control and show a spinner: `buttonLoader` on Save / Pause / stock-adjacent buttons, `switchLoader` beside immediate switches, overlay on a busy `StockControl` segment.
+
 Primitives live in [apps/moonshot-admin/src/console/primitives](../apps/moonshot-admin/src/console/primitives).

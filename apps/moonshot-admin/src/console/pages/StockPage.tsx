@@ -1,4 +1,4 @@
-import { Alert, Box, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import type { AdminStockResponse, StockChipKey } from '@moonshot/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
@@ -7,6 +7,8 @@ import { FilterChips } from '../primitives/FilterChips.js';
 import { PageHeader } from '../primitives/PageHeader.js';
 import { SettingsCard } from '../primitives/SettingsCard.js';
 import { StockControl, type StockAvailability } from '../primitives/StockControl.js';
+import { useToast } from '../primitives/ToastProvider.js';
+import { StockPageSkeleton } from '../primitives/skeletons/StockPageSkeleton.js';
 import { STOCK_CHIP_OPTIONS } from './stock/stock-chips.js';
 import { StockChipIcon } from './stock/StockChipIcon.js';
 import { StockOptionRow, StockRowList } from './stock/StockOptionRow.js';
@@ -19,10 +21,10 @@ import {
 
 export function StockPage() {
   const { session } = useAuth();
+  const toast = useToast();
   const [stock, setStock] = useState<AdminStockResponse | null>(null);
   const [chip, setChip] = useState<StockChipKey>('milk');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const token = session?.token;
@@ -30,13 +32,14 @@ export function StockPage() {
 
   const load = useCallback(() => {
     if (!token) return;
-    setError(null);
     setLoading(true);
     fetchAdminStock(token)
       .then(setStock)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load stock'))
+      .catch((e) =>
+        toast({ severity: 'error', message: e instanceof Error ? e.message : 'Failed to load stock' }),
+      )
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, toast]);
 
   useEffect(() => {
     load();
@@ -64,11 +67,10 @@ export function StockPage() {
   async function onOptionChange(optionId: string, availability: StockAvailability) {
     if (!token) return;
     setBusyId(optionId);
-    setError(null);
     try {
       setStock(await putAdminStockOption(token, optionId, availability));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update stock');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update stock' });
     } finally {
       setBusyId(null);
     }
@@ -77,12 +79,11 @@ export function StockPage() {
   async function onFoodChange(itemId: string, availability: 'in' | 'out') {
     if (!token || !cafeSlug) return;
     setBusyId(itemId);
-    setError(null);
     try {
       await patchMenuItem(token, cafeSlug, itemId, { isAvailable: availability === 'in' });
       setStock(await fetchAdminStock(token));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update food');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update food' });
     } finally {
       setBusyId(null);
     }
@@ -94,91 +95,90 @@ export function StockPage() {
         title="Stock"
         description="Turning items off greys them out for customers immediately."
       />
-      {error ? (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
-      <SettingsCard
-        title="What's on"
-        description={
-          stock && stock.drinksAffectedCount > 0
-            ? `${stock.drinksAffectedCount} drink${stock.drinksAffectedCount === 1 ? '' : 's'} affected right now.`
-            : 'Out today comes back when you next open.'
-        }
-      >
-        <Box sx={{ mb: chip === 'food' && foodRows.length > 0 ? 1 : 0 }}>
-          <FilterChips
-            value={chip}
-            options={visibleChips}
-            onChange={(next) => setChip(next as StockChipKey)}
-          />
-        </Box>
-        {loading && !stock ? <Typography variant="body2">Loading…</Typography> : null}
-        {!loading && chip === 'food' && foodRows.length === 0 ? (
-          <Typography variant="body2" sx={{ mt: 2 }}>
-            No food items yet.
-          </Typography>
-        ) : null}
-        {!loading && chip !== 'food' && optionRows.length === 0 ? (
-          <Typography variant="body2" sx={{ mt: 2 }}>
-            Nothing in this list.
-          </Typography>
-        ) : null}
-        {chip === 'food' && foodRows.length > 0 ? (
-          <StockRowList>
-            {foodRows.map((row) => (
-              <StockOptionRow
-                key={row.itemId}
-                name={row.name}
-                meta={foodStockMeta(row.availability)}
-                availability={row.availability}
-                badge={<StockChipIcon chip="food" />}
-                control={
-                  <StockControl
-                    value={row.availability}
-                    states={['in', 'out']}
-                    disabled={busyId === row.itemId}
-                    onChange={(next) => {
-                      if (next === 'in' || next === 'out') void onFoodChange(row.itemId, next);
-                    }}
-                  />
-                }
+      {loading && !stock ? <StockPageSkeleton /> : null}
+      {stock ? (
+        <>
+          <SettingsCard
+            title="What's on"
+            description={
+              stock.drinksAffectedCount > 0
+                ? `${stock.drinksAffectedCount} drink${stock.drinksAffectedCount === 1 ? '' : 's'} affected right now.`
+                : 'Out today comes back when you next open.'
+            }
+          >
+            <Box sx={{ mb: chip === 'food' && foodRows.length > 0 ? 1 : 0 }}>
+              <FilterChips
+                value={chip}
+                options={visibleChips}
+                onChange={(next) => setChip(next as StockChipKey)}
               />
-            ))}
-          </StockRowList>
-        ) : null}
-      </SettingsCard>
-      {chip !== 'food'
-        ? groups.map((group) => (
-            <SettingsCard
-              key={group.groupId}
-              title={group.groupName}
-              headerAction={
-                <Typography variant="body2">{usedOnLabel(group.usedOnCount)}</Typography>
-              }
-            >
+            </Box>
+            {chip === 'food' && foodRows.length === 0 ? (
+              <Typography variant="body2" sx={{ mt: 2 }}>
+                No food items yet.
+              </Typography>
+            ) : null}
+            {chip !== 'food' && optionRows.length === 0 ? (
+              <Typography variant="body2" sx={{ mt: 2 }}>
+                Nothing in this list.
+              </Typography>
+            ) : null}
+            {chip === 'food' && foodRows.length > 0 ? (
               <StockRowList>
-                {group.options.map((row) => (
+                {foodRows.map((row) => (
                   <StockOptionRow
-                    key={row.optionId}
+                    key={row.itemId}
                     name={row.name}
-                    meta={optionStockMeta(row.availability, row.usedOnCount)}
+                    meta={foodStockMeta(row.availability)}
                     availability={row.availability}
-                    badge={<StockChipIcon chip={row.chip} />}
+                    badge={<StockChipIcon chip="food" />}
                     control={
                       <StockControl
                         value={row.availability}
-                        disabled={busyId === row.optionId}
-                        onChange={(next) => void onOptionChange(row.optionId, next)}
+                        states={['in', 'out']}
+                        disabled={busyId === row.itemId}
+                        onChange={(next) => {
+                          if (next === 'in' || next === 'out') void onFoodChange(row.itemId, next);
+                        }}
                       />
                     }
                   />
                 ))}
               </StockRowList>
-            </SettingsCard>
-          ))
-        : null}
+            ) : null}
+          </SettingsCard>
+          {chip !== 'food'
+            ? groups.map((group) => (
+                <SettingsCard
+                  key={group.groupId}
+                  title={group.groupName}
+                  headerAction={
+                    <Typography variant="body2">{usedOnLabel(group.usedOnCount)}</Typography>
+                  }
+                >
+                  <StockRowList>
+                    {group.options.map((row) => (
+                      <StockOptionRow
+                        key={row.optionId}
+                        name={row.name}
+                        meta={optionStockMeta(row.availability, row.usedOnCount)}
+                        availability={row.availability}
+                        badge={<StockChipIcon chip={row.chip} />}
+                        control={
+                          <StockControl
+                            value={row.availability}
+                            disabled={busyId === row.optionId}
+                            onChange={(next) => void onOptionChange(row.optionId, next)}
+                          />
+                        }
+                      />
+                    ))}
+                  </StockRowList>
+                </SettingsCard>
+              ))
+            : null}
+        </>
+      ) : null}
     </Box>
   );
 }

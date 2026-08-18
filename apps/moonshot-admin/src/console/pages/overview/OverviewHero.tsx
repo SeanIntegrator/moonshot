@@ -4,6 +4,7 @@ import { overviewHeroHeading } from './today-hours.js';
 import type { CafeHours, CafeHoursOverride } from '@moonshot/types';
 import { PauseControl } from '../../primitives/PauseControl.js';
 import { useCafe } from '../../CafeProvider.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { formatTime24 } from '../../../lib/format.js';
 
 type Props = {
@@ -22,6 +23,12 @@ export function OverviewHero({
   hoursOverrides,
 }: Props) {
   const { pauseOrders, resumeOrders, extendPause } = useCafe();
+  const toast = useToast();
+  const fail = (e: unknown) =>
+    toast({
+      severity: 'error',
+      message: e instanceof Error ? e.message : 'Could not update pause',
+    });
   const now = new Date();
   const { heading, sub } = overviewHeroHeading(hours, timeZone, now, {
     pausedUntil,
@@ -79,9 +86,9 @@ export function OverviewHero({
       <Box sx={{ flexShrink: 0 }}>
         <PauseControl
           pausedUntilLabel={pausedUntilLabel}
-          onPause={(duration) => void pauseOrders(duration)}
-          onResume={() => void resumeOrders()}
-          onExtend15={() => void extendPause()}
+          onPause={(duration) => pauseOrders(duration).catch(fail)}
+          onResume={() => resumeOrders().catch(fail)}
+          onExtend15={() => extendPause().catch(fail)}
         />
       </Box>
     </Box>

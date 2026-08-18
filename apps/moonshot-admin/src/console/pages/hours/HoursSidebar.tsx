@@ -3,11 +3,18 @@ import { formatTime24 } from '../../../lib/format.js';
 import { useCafe } from '../../CafeProvider.js';
 import { PauseControl } from '../../primitives/PauseControl.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { resolveServiceStatus } from '../../service-status.js';
 import { HoursOverridesCard } from './HoursOverridesCard.js';
 
 export function HoursSidebar() {
   const { cafe, openStatus, pauseOrders, resumeOrders, extendPause } = useCafe();
+  const toast = useToast();
+  const fail = (e: unknown) =>
+    toast({
+      severity: 'error',
+      message: e instanceof Error ? e.message : 'Could not update pause',
+    });
   const status = resolveServiceStatus({
     isOpen: openStatus.isOpen,
     timeZone: cafe.timezone,
@@ -44,9 +51,9 @@ export function HoursSidebar() {
         </Typography>
         <PauseControl
           pausedUntilLabel={pausedUntilLabel}
-          onPause={(duration) => void pauseOrders(duration)}
-          onResume={() => void resumeOrders()}
-          onExtend15={() => void extendPause()}
+          onPause={(duration) => pauseOrders(duration).catch(fail)}
+          onResume={() => resumeOrders().catch(fail)}
+          onExtend15={() => extendPause().catch(fail)}
         />
         {status.kind !== 'paused' ? (
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>

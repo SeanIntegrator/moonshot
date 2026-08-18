@@ -79,4 +79,24 @@ describe('overviewHeroHeading', () => {
       sub: "Customers see 'back shortly'. Your hours are unchanged.",
     });
   });
+
+  it('is closed after the last-order slot while weekly hours are still open', () => {
+    const afterSlot = new Date('2026-08-11T15:50:00.000Z');
+    expect(
+      overviewHeroHeading(weekday, 'UTC', afterSlot, { lastOrderBufferMinutes: 20 }),
+    ).toEqual({
+      heading: 'Closed',
+      isOpen: false,
+    });
+  });
+
+  it('points at the next split after a morning last-order slot', () => {
+    const wedBuffer = new Date('2026-08-12T11:20:00.000Z');
+    expect(
+      overviewHeroHeading(weekday, 'UTC', wedBuffer, { lastOrderBufferMinutes: 20 }),
+    ).toEqual({
+      heading: 'Closed · opens 12:30',
+      isOpen: false,
+    });
+  });
 });

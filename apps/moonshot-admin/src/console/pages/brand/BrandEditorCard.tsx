@@ -1,7 +1,6 @@
 import type { BaseThemeId, Cafe, CafeBrandOverrides } from '@moonshot/types';
 import { HEADING_FONT_CATALOG, isHexColor, normalizeHex } from '@moonshot/domain';
 import {
-  Alert,
   Box,
   Button,
   FormControl,
@@ -17,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { OrderAheadThemePreview } from '../../../components/branding/OrderAheadThemePreview.js';
 import { useCafe } from '../../CafeProvider.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
 import { BRAND_COLOUR_PRESETS, THEME_PACKS } from './brand-presets.js';
 
@@ -49,7 +49,7 @@ export function BrandEditorCard() {
   const [headingFontId, setHeadingFontId] = useState(saved.headingFontId);
   const [previewFrame, setPreviewFrame] = useState<PreviewFrame>('home');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const next = brandFromCafe(cafe);
@@ -74,13 +74,11 @@ export function BrandEditorCard() {
     setThemeId(saved.themeId);
     setColor(saved.color);
     setHeadingFontId(saved.headingFontId);
-    setError(null);
   }
 
   async function save() {
     if (!valid) return;
     setSaving(true);
-    setError(null);
     try {
       const brand: CafeBrandOverrides = {
         color: color.trim() ? color.trim() : null,
@@ -88,7 +86,7 @@ export function BrandEditorCard() {
       };
       await patchSettings({ themeId, brand });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Save failed' });
     } finally {
       setSaving(false);
     }
@@ -108,11 +106,6 @@ export function BrandEditorCard() {
         onSecondary: undo,
       }}
     >
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <Box
         sx={{
           display: 'grid',

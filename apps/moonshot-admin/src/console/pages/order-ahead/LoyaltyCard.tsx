@@ -1,5 +1,4 @@
 import {
-  Alert,
   Box,
   FormControlLabel,
   Switch,
@@ -8,9 +7,11 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
+import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
 import { WeekdayPillGroup } from '../../primitives/WeekdayPillGroup.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import {
   doubleStampSummary,
   isLoyaltyFormValid,
@@ -35,7 +36,7 @@ export function LoyaltyCard() {
   const [days, setDays] = useState<string[]>([...savedDays]);
   const [savingToggle, setSavingToggle] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     setStamps(savedStamps);
@@ -53,7 +54,6 @@ export function LoyaltyCard() {
   const valid = isLoyaltyFormValid({ enabled: savedEnabled, stamps, reward });
 
   async function onToggle(next: boolean) {
-    setError(null);
     setSavingToggle(true);
     try {
       await patchSettings({
@@ -67,7 +67,7 @@ export function LoyaltyCard() {
         },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update loyalty');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update loyalty' });
     } finally {
       setSavingToggle(false);
     }
@@ -76,7 +76,6 @@ export function LoyaltyCard() {
   async function saveForm() {
     if (!valid) return;
     setSavingForm(true);
-    setError(null);
     try {
       await patchSettings({
         featuresPatch: {
@@ -89,7 +88,7 @@ export function LoyaltyCard() {
         },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save loyalty');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save loyalty' });
     } finally {
       setSavingForm(false);
     }
@@ -106,17 +105,20 @@ export function LoyaltyCard() {
           : "Loyalty is off. Customers don't see a stamp card, and existing stamps are kept until you switch it back on."
       }
       headerAction={
-        <FormControlLabel
-          sx={{ mr: 0 }}
-          control={
-            <Switch
-              checked={savedEnabled}
-              disabled={savingToggle}
-              onChange={(_, v) => void onToggle(v)}
-            />
-          }
-          label={savedEnabled ? 'On' : 'Off'}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {switchLoader(savingToggle)}
+          <FormControlLabel
+            sx={{ mr: 0 }}
+            control={
+              <Switch
+                checked={savedEnabled}
+                disabled={savingToggle}
+                onChange={(_, v) => void onToggle(v)}
+              />
+            }
+            label={savedEnabled ? 'On' : 'Off'}
+          />
+        </Box>
       }
       save={{
         label: 'Save loyalty',
@@ -126,11 +128,6 @@ export function LoyaltyCard() {
         onSave: () => void saveForm(),
       }}
     >
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <Box
         sx={{
           display: 'flex',

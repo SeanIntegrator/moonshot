@@ -1,5 +1,6 @@
 import { Box, Button, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
+import { buttonLoader } from './button-loader.js';
 import { canSubmitSaveFooter, canUndoSaveFooter } from './save-footer.js';
 
 type Props = {
@@ -62,7 +63,7 @@ export function SaveFooter({
       </Button>
     ) : null;
   const save = (
-    <Button variant="contained" onClick={onSave} disabled={!enabled}>
+    <Button variant="contained" onClick={onSave} disabled={!enabled} startIcon={buttonLoader(saving)}>
       {saving ? 'Saving…' : label}
     </Button>
   );

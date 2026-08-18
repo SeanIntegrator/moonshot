@@ -1,4 +1,4 @@
-import { Alert, Box, FormControl, MenuItem, Select, Typography } from '@mui/material';
+import { Box, FormControl, MenuItem, Select, Typography } from '@mui/material';
 import { currentLastOrderSlotHhMm, isLastOrderBufferMinutes } from '@moonshot/domain';
 import {
   type CafeHoursInterval,
@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { localWeekdayKey } from '../overview/today-hours.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { HoursDayRow } from './HoursDayRow.js';
 import { LAST_ORDER_BUFFER_OPTIONS } from './last-order-buffer.js';
 import {
@@ -28,12 +29,12 @@ function asBuffer(value: number): LastOrderBufferMinutes {
 
 export function WeeklyHoursCard() {
   const { cafe, patchSettings } = useCafe();
+  const toast = useToast();
   const saved = hoursToDraft(cafe.hours);
   const savedBuffer = asBuffer(cafe.lastOrderBufferMinutes);
   const [draft, setDraft] = useState<HoursDraft>(saved);
   const [buffer, setBuffer] = useState<LastOrderBufferMinutes>(savedBuffer);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const today = localWeekdayKey(cafe.timezone, new Date());
 
   useEffect(() => {
@@ -87,11 +88,10 @@ export function WeeklyHoursCard() {
   async function save() {
     if (!valid) return;
     setSaving(true);
-    setError(null);
     try {
       await patchSettings({ hours: draftToHours(draft), lastOrderBufferMinutes: buffer });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Save failed' });
     } finally {
       setSaving(false);
     }
@@ -108,11 +108,6 @@ export function WeeklyHoursCard() {
         showUnsaved: false,
       }}
     >
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <Box
         sx={{
           mx: { xs: -2, sm: -3 },

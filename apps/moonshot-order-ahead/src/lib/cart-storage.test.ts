@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { defaultWeekdayCafeHours } from '@moonshot/domain';
 import { parseStoredCart } from './cart-storage.js';
-import { pickupDelayOptions } from './pickup-delay-options.js';
+import {
+  clampPickupDelayMinutes,
+  pickupDelayOptions,
+  pickupDelaysForCafe,
+} from './pickup-delay-options.js';
 
 describe('parseStoredCart', () => {
   it('returns empty for null / corrupt', () => {
@@ -43,5 +48,30 @@ describe('pickupDelayOptions', () => {
     expect(pickupDelayOptions(60)).toEqual([0, 10, 20, 30, 40, 50, 60]);
     expect(pickupDelayOptions(25)).toEqual([0, 10, 20, 25]);
     expect(pickupDelayOptions(0)).toEqual([0]);
+  });
+
+  it('drops delays the last-order filter rejects', () => {
+    expect(pickupDelayOptions(60, (d) => d <= 10)).toEqual([0, 10]);
+  });
+});
+
+describe('clampPickupDelayMinutes', () => {
+  it('falls back to ASAP when the stored delay is no longer offered', () => {
+    expect(clampPickupDelayMinutes(40, [0, 10])).toBe(0);
+    expect(clampPickupDelayMinutes(10, [0, 10])).toBe(10);
+    expect(clampPickupDelayMinutes(0, [])).toBe(0);
+  });
+});
+
+describe('pickupDelaysForCafe', () => {
+  it('keeps only delays that still land before the last-order slot', () => {
+    const cafe = {
+      timezone: 'UTC',
+      hours: defaultWeekdayCafeHours(),
+      lastOrderBufferMinutes: 20,
+    };
+    // Tuesday 15:25, close 16:00, last slot 15:40 → 20+ min delays miss the slot.
+    const now = new Date('2026-08-11T15:25:00.000Z');
+    expect(pickupDelaysForCafe(60, cafe, now)).toEqual([0, 10]);
   });
 });

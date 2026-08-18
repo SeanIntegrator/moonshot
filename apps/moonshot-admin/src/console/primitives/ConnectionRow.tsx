@@ -2,6 +2,7 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { useState, type MouseEvent, type ReactNode } from 'react';
 import { connectionDotColor, type ConnectionTone } from './connection-tone.js';
+import { buttonLoader } from './button-loader.js';
 
 export type ConnectionOverflowAction = {
   label: string;
@@ -88,7 +89,13 @@ export function ConnectionRow({
         </Typography>
       </Box>
       {actionLabel && onAction ? (
-        <Button variant="outlined" size="small" onClick={onAction} disabled={actionBusy}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={onAction}
+          disabled={actionBusy}
+          startIcon={buttonLoader(Boolean(actionBusy))}
+        >
           {actionBusy ? (actionBusyLabel ?? 'Syncing…') : actionLabel}
         </Button>
       ) : null}

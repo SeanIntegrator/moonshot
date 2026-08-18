@@ -1,5 +1,5 @@
 import type { AdminStripeAccountStatusResponse } from '@moonshot/types';
-import { Alert, Box, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext.js';
 import { adminStripeStatus } from '../../../lib/admin-api.js';
@@ -8,11 +8,14 @@ import { connectionDotColor } from '../../primitives/connection-tone.js';
 import { DeepLinkFooter } from '../../primitives/DeepLinkFooter.js';
 import { ReadOnlyPanel } from '../../primitives/ReadOnlyPanel.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { CardSkeleton } from '../../primitives/skeletons/CardSkeleton.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 
 export function PaymentsCard() {
   const { session } = useAuth();
+  const toast = useToast();
   const [stripe, setStripe] = useState<AdminStripeAccountStatusResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -30,20 +33,20 @@ export function PaymentsCard() {
           });
           return;
         }
-        setError(msg);
-      });
-  }, [session]);
+        toast({ severity: 'error', message: msg });
+      })
+      .finally(() => setLoaded(true));
+  }, [session, toast]);
 
   const view = useMemo(() => stripeRowView(stripe), [stripe]);
   const dot = connectionDotColor(view.tone);
 
+  if (!loaded) {
+    return <CardSkeleton lines={3} />;
+  }
+
   return (
     <SettingsCard title="Payments" description="Managed in your Stripe dashboard.">
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <ReadOnlyPanel source="stripe" helper="Change this on Overview.">
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           <Box

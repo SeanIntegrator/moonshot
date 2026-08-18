@@ -7,7 +7,7 @@ import type {
   CafeOpenStatus,
   PauseDuration,
 } from '@moonshot/types';
-import { Alert, Box, Button, CircularProgress } from '@mui/material';
+import { Alert, Box, Button } from '@mui/material';
 import {
   createContext,
   useCallback,
@@ -27,6 +27,7 @@ import {
   resumeCafeOrders,
   upsertHoursOverride,
 } from '../lib/admin-api.js';
+import { ConsoleChromeSkeleton } from './primitives/skeletons/ConsoleChromeSkeleton.js';
 
 type CafeContextValue = {
   cafe: Cafe;
@@ -168,11 +169,7 @@ export function CafeProvider({ children }: { children: ReactNode }) {
   }
 
   if (!value) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        {loading ? <CircularProgress /> : null}
-      </Box>
-    );
+    return loading ? <ConsoleChromeSkeleton /> : null;
   }
 
   return <CafeContext.Provider value={value}>{children}</CafeContext.Provider>;

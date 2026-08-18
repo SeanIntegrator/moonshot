@@ -2,6 +2,7 @@ import { Box, CircularProgress } from '@mui/material';
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AdminShell } from './console/AdminShell.js';
 import { CafeProvider } from './console/CafeProvider.js';
+import { ToastProvider } from './console/primitives/ToastProvider.js';
 import { BrandPage } from './console/pages/BrandPage.js';
 import { HoursPage } from './console/pages/HoursPage.js';
 import { KitchenPage } from './console/pages/KitchenPage.js';
@@ -38,7 +39,9 @@ function RequireSignedIn() {
 function ConsoleLayout() {
   return (
     <CafeProvider>
-      <AdminShell />
+      <ToastProvider>
+        <AdminShell />
+      </ToastProvider>
     </CafeProvider>
   );
 }

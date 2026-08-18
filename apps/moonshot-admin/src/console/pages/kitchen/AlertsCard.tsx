@@ -1,10 +1,12 @@
 import type { KdsSoundId } from '@moonshot/types';
-import { Alert, Box, FormControlLabel, Switch, TextField } from '@mui/material';
+import { Box, FormControlLabel, Switch, TextField } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { KdsSoundSelect } from '../../../components/KdsSoundSelect.js';
 import { useCafe } from '../../CafeProvider.js';
+import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
 import { ThresholdSlider } from '../../primitives/ThresholdSlider.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { KitchenSection, kitchenFieldGridSx } from './KitchenSection.js';
 
 export function AlertsCard() {
@@ -17,7 +19,7 @@ export function AlertsCard() {
   const [overdueRepeat, setOverdueRepeat] = useState(k.audio.overdueRepeatSeconds);
   const [savingToggle, setSavingToggle] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     setGreenMax(k.timerThresholds.greenMax);
@@ -41,12 +43,11 @@ export function AlertsCard() {
     greenMax < amberMax;
 
   async function onEnabled(next: boolean) {
-    setError(null);
     setSavingToggle(true);
     try {
       await patchSettings({ kdsConfigPatch: { audio: { enabled: next } } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update sounds');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update sounds' });
     } finally {
       setSavingToggle(false);
     }
@@ -55,7 +56,6 @@ export function AlertsCard() {
   async function save() {
     if (!valid) return;
     setSaving(true);
-    setError(null);
     try {
       await patchSettings({
         kdsConfigPatch: {
@@ -68,7 +68,7 @@ export function AlertsCard() {
         },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save alerts');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save alerts' });
     } finally {
       setSaving(false);
     }
@@ -88,11 +88,6 @@ export function AlertsCard() {
         onSave: () => void save(),
       }}
     >
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <ThresholdSlider
         amberAfter={greenMax}
         lateAfter={amberMax}
@@ -106,11 +101,14 @@ export function AlertsCard() {
           <FormControlLabel
             sx={{ display: 'flex', ml: 0, mb: 1.5 }}
             control={
-              <Switch
-                checked={k.audio.enabled}
-                disabled={savingToggle}
-                onChange={(_, v) => void onEnabled(v)}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
+                <Switch
+                  checked={k.audio.enabled}
+                  disabled={savingToggle}
+                  onChange={(_, v) => void onEnabled(v)}
+                />
+                {switchLoader(savingToggle)}
+              </Box>
             }
             label="Play sounds on the kitchen display"
           />

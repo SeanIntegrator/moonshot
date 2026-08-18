@@ -1,7 +1,8 @@
 import type { CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
-import { Alert, Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { updateModifierGroup } from '../../../lib/admin-api.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { classifyModifierChip } from './modifier-chips.js';
 import { ModifierListCard } from './ModifierListCard.js';
 
@@ -17,10 +18,9 @@ type Props = {
 };
 
 export function ModifierListsTab({ cafeSlug, token, chip, groups, items, onLibraryChanged }: Props) {
+  const toast = useToast();
   const [drafts, setDrafts] = useState<Record<string, CafeModifierGroup>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const visible = useMemo(
     () =>
@@ -36,7 +36,6 @@ export function ModifierListsTab({ cafeSlug, token, chip, groups, items, onLibra
 
   async function saveGroup(group: CafeModifierGroup) {
     setSavingId(group.id);
-    setError(null);
     try {
       const updated = await updateModifierGroup(token, cafeSlug, group.id, {
         name: group.name,
@@ -47,10 +46,10 @@ export function ModifierListsTab({ cafeSlug, token, chip, groups, items, onLibra
         sortOrder: group.sortOrder,
       });
       setDraft(updated);
-      setNotice(`Saved “${updated.name}”.`);
+      toast({ severity: 'success', message: `Saved “${updated.name}”.` });
       onLibraryChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Save failed' });
     } finally {
       setSavingId(null);
     }
@@ -58,16 +57,6 @@ export function ModifierListsTab({ cafeSlug, token, chip, groups, items, onLibra
 
   return (
     <Box>
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
-      {notice ? (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>
-          {notice}
-        </Alert>
-      ) : null}
       <Stack spacing={2}>
         {visible.length === 0 ? (
           <Typography variant="body2">No lists in this tab yet.</Typography>

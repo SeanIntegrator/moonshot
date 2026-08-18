@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 export type StockAvailability = 'in' | 'out_today' | 'out';
 
@@ -42,6 +42,7 @@ export function StockControl({ value, onChange, disabled, states }: Props) {
             onClick={() => onChange(opt.value)}
             sx={(theme) => ({
               appearance: 'none',
+              position: 'relative',
               border: 0,
               cursor: disabled ? 'default' : 'pointer',
               px: 1.25,
@@ -68,6 +69,19 @@ export function StockControl({ value, onChange, disabled, states }: Props) {
             <Typography component="span" sx={{ font: 'inherit', color: 'inherit' }}>
               {opt.label}
             </Typography>
+            {disabled && selected ? (
+              <CircularProgress
+                size={14}
+                color="inherit"
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  mt: '-7px',
+                  ml: '-7px',
+                }}
+              />
+            ) : null}
           </Box>
         );
       })}

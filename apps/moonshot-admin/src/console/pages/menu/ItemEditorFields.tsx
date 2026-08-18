@@ -1,6 +1,7 @@
 import type { CafeMenuSection, CafeModifierGroup } from '@moonshot/types';
 import type { DrinkArchetypeDef } from '@moonshot/domain';
 import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
+import { switchLoader } from '../../primitives/button-loader.js';
 import { SaveFooter } from '../../primitives/SaveFooter.js';
 import { ItemChoicesCard } from './ItemChoicesCard.js';
 import { ItemDetailsCard } from './ItemDetailsCard.js';
@@ -121,11 +122,14 @@ export function ItemEditorFields({
           <FormControlLabel
             sx={{ mr: 0 }}
             control={
-              <Switch
-                checked={draft.isAvailable}
-                disabled={toggling || !itemId}
-                onChange={(_, v) => onToggleMenu(v)}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
+                <Switch
+                  checked={draft.isAvailable}
+                  disabled={toggling || !itemId}
+                  onChange={(_, v) => onToggleMenu(v)}
+                />
+                {switchLoader(toggling)}
+              </Box>
             }
             label="On the menu"
           />

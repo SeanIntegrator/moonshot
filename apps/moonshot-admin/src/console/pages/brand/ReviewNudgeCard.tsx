@@ -1,7 +1,9 @@
-import { Alert, Box, FormControlLabel, Link, Switch, TextField } from '@mui/material';
+import { Box, FormControlLabel, Link, Switch, TextField } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
+import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
 import { isReviewUrlValid, normaliseReviewUrl, reviewUrlError } from './review-url.js';
 
@@ -15,7 +17,7 @@ export function ReviewNudgeCard() {
   const [showUrlError, setShowUrlError] = useState(false);
   const [savingToggle, setSavingToggle] = useState(false);
   const [savingUrl, setSavingUrl] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     setReviewUrl(savedUrl);
@@ -27,7 +29,6 @@ export function ReviewNudgeCard() {
   const visitHref = urlValid ? normaliseReviewUrl(reviewUrl) : null;
 
   async function onToggle(next: boolean) {
-    setError(null);
     if (next) {
       if (!isReviewUrlValid(reviewUrl)) {
         setShowUrlError(true);
@@ -41,7 +42,10 @@ export function ReviewNudgeCard() {
           },
         });
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Could not update review nudge');
+        toast({
+          severity: 'error',
+          message: e instanceof Error ? e.message : 'Could not update review nudge',
+        });
       } finally {
         setSavingToggle(false);
       }
@@ -59,7 +63,10 @@ export function ReviewNudgeCard() {
         },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update review nudge');
+      toast({
+        severity: 'error',
+        message: e instanceof Error ? e.message : 'Could not update review nudge',
+      });
     } finally {
       setSavingToggle(false);
     }
@@ -71,7 +78,6 @@ export function ReviewNudgeCard() {
       return;
     }
     setSavingUrl(true);
-    setError(null);
     try {
       await patchSettings({
         featuresPatch: {
@@ -83,7 +89,7 @@ export function ReviewNudgeCard() {
       });
       setShowUrlError(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save review link');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save review link' });
     } finally {
       setSavingUrl(false);
     }
@@ -98,17 +104,20 @@ export function ReviewNudgeCard() {
           : "The review prompt is off. Customers aren't asked to rate you until you switch it back on."
       }
       headerAction={
-        <FormControlLabel
-          sx={{ mr: 0 }}
-          control={
-            <Switch
-              checked={savedEnabled}
-              disabled={savingToggle}
-              onChange={(_, v) => void onToggle(v)}
-            />
-          }
-          label={savedEnabled ? 'On' : 'Off'}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {switchLoader(savingToggle)}
+          <FormControlLabel
+            sx={{ mr: 0 }}
+            control={
+              <Switch
+                checked={savedEnabled}
+                disabled={savingToggle}
+                onChange={(_, v) => void onToggle(v)}
+              />
+            }
+            label={savedEnabled ? 'On' : 'Off'}
+          />
+        </Box>
       }
       save={{
         label: 'Save link',
@@ -118,11 +127,6 @@ export function ReviewNudgeCard() {
         onSave: () => void saveUrl(),
       }}
     >
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
         <TextField
           label="Review URL"

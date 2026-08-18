@@ -1,42 +1,45 @@
-import { Alert, Box, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import type { AdminStockResponse } from '@moonshot/types';
 import { useEffect, useState } from 'react';
 import { fetchAdminStock } from '../../../lib/admin-api.js';
 import { DeepLinkFooter } from '../../primitives/DeepLinkFooter.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { CardSkeleton } from '../../primitives/skeletons/CardSkeleton.js';
 import { StateChip } from '../../primitives/StateChip.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 
 type Props = {
   token: string;
 };
 
 export function OutOfStockCard({ token }: Props) {
+  const toast = useToast();
   const [stock, setStock] = useState<AdminStockResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setError(null);
+    setFailed(false);
     fetchAdminStock(token)
       .then(setStock)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load stock'));
-  }, [token]);
+      .catch((e) => {
+        setFailed(true);
+        toast({
+          severity: 'error',
+          message: e instanceof Error ? e.message : 'Failed to load stock',
+        });
+      });
+  }, [token, toast]);
 
   const outOptions = (stock?.options ?? []).filter((row) => row.availability !== 'in');
   const outFood = (stock?.food ?? []).filter((row) => row.availability === 'out');
   const empty = stock != null && outOptions.length === 0 && outFood.length === 0;
 
+  if (stock == null && !failed) {
+    return <CardSkeleton lines={3} />;
+  }
+
   return (
     <SettingsCard title="Out of stock">
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      ) : null}
-      {stock == null && !error ? (
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          Loading…
-        </Typography>
-      ) : null}
       {empty ? (
         <Typography sx={{ mb: 2 }}>Nothing is marked out.</Typography>
       ) : (

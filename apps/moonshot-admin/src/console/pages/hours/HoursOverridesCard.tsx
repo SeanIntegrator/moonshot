@@ -3,7 +3,9 @@ import type { CafeHoursInterval, CafeHoursOverride } from '@moonshot/types';
 import { useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { formatUkShortDate } from '../../../lib/format.js';
+import { buttonLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { DEFAULT_INTERVAL, dayWindowsError } from './hours-draft.js';
 
 function overrideDateLabel(date: string, timeZone: string): string {
@@ -19,6 +21,7 @@ function OverrideEditor({
   onCancel: () => void;
   onSave: (next: CafeHoursOverride) => Promise<void>;
 }) {
+  const toast = useToast();
   const [date, setDate] = useState(initial?.date ?? '');
   const [label, setLabel] = useState(initial?.label ?? '');
   const [closed, setClosed] = useState(initial?.closed ?? true);
@@ -28,7 +31,6 @@ function OverrideEditor({
       : [{ ...DEFAULT_INTERVAL }],
   );
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const intervalError = closed ? null : dayWindowsError(intervals);
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(date) && (closed || intervalError === null);
@@ -36,7 +38,6 @@ function OverrideEditor({
   async function save() {
     if (!valid) return;
     setSaving(true);
-    setError(null);
     try {
       await onSave({
         date,
@@ -45,7 +46,7 @@ function OverrideEditor({
         intervals: closed ? [] : intervals,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Save failed' });
     } finally {
       setSaving(false);
     }
@@ -110,16 +111,17 @@ function OverrideEditor({
           {intervalError}
         </Typography>
       ) : null}
-      {error ? (
-        <Typography variant="caption" color="error">
-          {error}
-        </Typography>
-      ) : null}
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
         <Button size="small" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button size="small" variant="contained" onClick={() => void save()} disabled={!valid || saving}>
+        <Button
+          size="small"
+          variant="contained"
+          onClick={() => void save()}
+          disabled={!valid || saving}
+          startIcon={buttonLoader(saving)}
+        >
           {saving ? 'Saving…' : 'Save date'}
         </Button>
       </Box>
@@ -129,6 +131,7 @@ function OverrideEditor({
 
 export function HoursOverridesCard() {
   const { cafe, saveHoursOverride, removeHoursOverride } = useCafe();
+  const toast = useToast();
   const [editing, setEditing] = useState<CafeHoursOverride | null | 'new'>(null);
   const [busyDate, setBusyDate] = useState<string | null>(null);
 
@@ -184,7 +187,14 @@ export function HoursOverridesCard() {
               variant="body2"
               onClick={() => {
                 setBusyDate(row.date);
-                void removeHoursOverride(row.date).finally(() => setBusyDate(null));
+                void removeHoursOverride(row.date)
+                  .catch((e) => {
+                    toast({
+                      severity: 'error',
+                      message: e instanceof Error ? e.message : 'Could not remove date',
+                    });
+                  })
+                  .finally(() => setBusyDate(null));
               }}
               disabled={busyDate === row.date}
             >
@@ -196,10 +206,16 @@ export function HoursOverridesCard() {
       {editing !== null ? (
         <Box sx={{ mt: 1.5 }}>
           <OverrideEditor
+            key={editing === 'new' ? 'new' : editing.date}
             initial={editing === 'new' ? null : editing}
             onCancel={() => setEditing(null)}
             onSave={async (next) => {
+              const previousDate = editing === 'new' ? null : editing.date;
               await saveHoursOverride(next);
+              // Upsert keys by date; drop the old row so a date change is a move, not a copy.
+              if (previousDate && previousDate !== next.date) {
+                await removeHoursOverride(previousDate);
+              }
               setEditing(null);
             }}
           />

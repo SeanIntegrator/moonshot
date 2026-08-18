@@ -20,6 +20,7 @@ import { RewardRow } from '../components/RewardRow.js';
 import { CheckoutPageSkeleton } from '../components/skeletons/PageSkeletons.js';
 import { SegmentedToggleGroup } from '../components/ui/SegmentedToggleGroup.js';
 import { SurfaceCard } from '../components/ui/SurfaceCard.js';
+import { useCafe } from '../hooks/useCafe.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
@@ -32,6 +33,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { formatMoney, formatTime } from '../lib/format.js';
+import { clampPickupDelayMinutes, pickupDelaysForCafe } from '../lib/pickup-delay-options.js';
 
 const ORDER_TYPE: OrderType = 'takeaway';
 
@@ -67,6 +69,7 @@ function renderRewardRows(params: {
 export function Checkout() {
   const navigate = useNavigate();
   const cafePath = useCafePath();
+  const { cafe } = useCafe();
   const { lines, clear, upsertLine, removeLine, pickupDelayMinutes, setPickupDelayMinutes } =
     useCart();
   const { loyaltyEnabled, pickupTimeEnabled, maxPickupMinutes } = useCafeFeatures();
@@ -146,7 +149,12 @@ export function Checkout() {
         customerName: name,
         orderType: ORDER_TYPE,
         redeemRewardId: selectedRewardId ?? undefined,
-        pickupDelayMinutes: pickupTimeEnabled ? pickupDelayMinutes : undefined,
+        pickupDelayMinutes: pickupTimeEnabled
+          ? clampPickupDelayMinutes(
+              pickupDelayMinutes,
+              pickupDelaysForCafe(maxPickupMinutes, cafe),
+            )
+          : undefined,
         items: lines.map((l) => ({
           menuItemId: l.menuItemId,
           sizeId: l.sizeId ?? undefined,

@@ -1,5 +1,5 @@
 import SyncIcon from '@mui/icons-material/Sync';
-import { Alert, Box, Button, CircularProgress, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Tab, Tabs, Typography } from '@mui/material';
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem, StockChipKey } from '@moonshot/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
@@ -15,6 +15,8 @@ import {
 } from '../../lib/admin-api.js';
 import { formatTime24 } from '../../lib/format.js';
 import { PageHeader } from '../primitives/PageHeader.js';
+import { MenuPageSkeleton } from '../primitives/skeletons/MenuPageSkeleton.js';
+import { useToast } from '../primitives/ToastProvider.js';
 import { optionCountForChip, visibleCatalogListTabs } from './menu/item-sidebar.js';
 import { catalogGroupsForPos, isPosCatalogCafe } from './menu/modifier-list-copy.js';
 import { ItemsTab } from './menu/ItemsTab.js';
@@ -42,6 +44,7 @@ function formatSyncedClock(iso: string | null, timeZone: string): string {
 export function MenuPage() {
   const { session } = useAuth();
   const { cafe } = useCafe();
+  const toast = useToast();
   const token = session?.token ?? '';
   const cafeSlug = session?.cafe.slug ?? '';
   const [tab, setTab] = useState<MenuTab>('items');
@@ -50,18 +53,13 @@ export function MenuPage() {
   const [library, setLibrary] = useState<CafeModifierGroup[]>([]);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [squareStatus, setSquareStatus] = useState<SquareConnectStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
   const load = useCallback(
     (mode: 'initial' | 'soft') => {
       if (!token || !cafeSlug) return;
-      if (mode === 'soft') setRefreshing(true);
-      else setLoading(true);
-      setError(null);
+      if (mode !== 'soft') setLoading(true);
       Promise.all([
         fetchMenuForAdmin(token, cafeSlug),
         fetchModifierGroups(token, cafeSlug),
@@ -75,13 +73,14 @@ export function MenuPage() {
           setSquareStatus(square);
           setReady(true);
         })
-        .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load menu'))
+        .catch((e) =>
+          toast({ severity: 'error', message: e instanceof Error ? e.message : 'Failed to load menu' }),
+        )
         .finally(() => {
           setLoading(false);
-          setRefreshing(false);
         });
     },
-    [cafeSlug, token],
+    [cafeSlug, token, toast],
   );
 
   useEffect(() => {
@@ -110,34 +109,36 @@ export function MenuPage() {
     enabled: ready && squareConnected,
     knownSyncedAt: squareStatus?.catalogLastSyncedAt ?? null,
     onMenuSynced: (ev) => {
-      setSyncNotice(
-        `Menu updated from Square — ${ev.upsertedItems} item(s)` +
+      toast({
+        severity: 'success',
+        message:
+          `Menu updated from Square — ${ev.upsertedItems} item(s)` +
           (ev.softDeletedItems > 0 ? `, ${ev.softDeletedItems} hidden` : ''),
-      );
+      });
       setSquareStatus((prev) =>
         prev ? { ...prev, catalogLastSyncedAt: ev.syncedAt, catalogSyncStatus: 'idle' } : prev,
       );
       softReload();
     },
     onReconcileSyncDetected: () => {
-      setSyncNotice('Menu updated from Square');
+      toast({ severity: 'success', message: 'Menu updated from Square' });
       softReload();
     },
   });
 
   async function handleSyncFromSquare(): Promise<void> {
     setSyncing(true);
-    setSyncNotice(null);
-    setError(null);
     try {
       const result = await syncPosMenuFromSquare(token);
-      setSyncNotice(
-        `Synced from Square — ${result.upsertedItems} item(s) updated` +
+      toast({
+        severity: 'success',
+        message:
+          `Synced from Square — ${result.upsertedItems} item(s) updated` +
           (result.softDeletedItems > 0 ? `, ${result.softDeletedItems} hidden` : ''),
-      );
+      });
       softReload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Square sync failed');
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Square sync failed' });
     } finally {
       setSyncing(false);
     }
@@ -173,23 +174,10 @@ export function MenuPage() {
         }
       />
 
-      {syncNotice ? (
-        <Alert severity="success" onClose={() => setSyncNotice(null)}>
-          {syncNotice}
-        </Alert>
-      ) : null}
-      {error ? (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
-
       {loading && !ready ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-          <CircularProgress />
-        </Box>
+        <MenuPageSkeleton />
       ) : (
-        <Box sx={{ opacity: refreshing ? 0.55 : 1, pointerEvents: refreshing ? 'none' : 'auto' }}>
+        <Box>
           <Tabs
             value={tab}
             onChange={(_, v: MenuTab) => setTab(v)}

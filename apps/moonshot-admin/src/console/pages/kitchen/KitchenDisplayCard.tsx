@@ -1,8 +1,9 @@
 import type { KdsDisplayPreferences, KdsGroupBy } from '@moonshot/types';
-import { Alert, Box } from '@mui/material';
+import { Box } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
+import { useToast } from '../../primitives/ToastProvider.js';
 import { DisplayCard } from './DisplayCard.js';
 import { LayoutCard } from './LayoutCard.js';
 
@@ -14,7 +15,7 @@ export function KitchenDisplayCard() {
   const [groupBy, setGroupBy] = useState<KdsGroupBy>(savedLayout.groupBy);
   const [display, setDisplay] = useState<KdsDisplayPreferences>(savedDisplay);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     setGroupBy(savedLayout.groupBy);
@@ -29,7 +30,6 @@ export function KitchenDisplayCard() {
 
   async function save() {
     setSaving(true);
-    setError(null);
     try {
       await patchSettings({
         kdsConfigPatch: {
@@ -38,7 +38,10 @@ export function KitchenDisplayCard() {
         },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save kitchen display');
+      toast({
+        severity: 'error',
+        message: e instanceof Error ? e.message : 'Could not save kitchen display',
+      });
     } finally {
       setSaving(false);
     }
@@ -55,11 +58,6 @@ export function KitchenDisplayCard() {
         onSave: () => void save(),
       }}
     >
-      {error ? (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
         <LayoutCard groupBy={groupBy} disabled={saving} onGroupBy={setGroupBy} />
         <DisplayCard
