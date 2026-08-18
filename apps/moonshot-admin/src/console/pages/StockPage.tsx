@@ -8,12 +8,12 @@ import { PageHeader } from '../primitives/PageHeader.js';
 import { SettingsCard } from '../primitives/SettingsCard.js';
 import { StockControl, type StockAvailability } from '../primitives/StockControl.js';
 import { STOCK_CHIP_OPTIONS } from './stock/stock-chips.js';
+import { StockChipIcon } from './stock/StockChipIcon.js';
 import { StockOptionRow, StockRowList } from './stock/StockOptionRow.js';
 import {
   foodStockMeta,
   groupStockOptions,
   optionStockMeta,
-  stockInitials,
   usedOnLabel,
 } from './stock/stock-meta.js';
 
@@ -133,7 +133,7 @@ export function StockPage() {
                 name={row.name}
                 meta={foodStockMeta(row.availability)}
                 availability={row.availability}
-                initials={stockInitials(row.name)}
+                badge={<StockChipIcon chip="food" />}
                 control={
                   <StockControl
                     value={row.availability}
@@ -165,7 +165,7 @@ export function StockPage() {
                     name={row.name}
                     meta={optionStockMeta(row.availability, row.usedOnCount)}
                     availability={row.availability}
-                    initials={stockInitials(row.name)}
+                    badge={<StockChipIcon chip={row.chip} />}
                     control={
                       <StockControl
                         value={row.availability}

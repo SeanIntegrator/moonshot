@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
 import {
+  firstSidebarItemId,
   isFeaturedItem,
   isFoodItem,
   itemListPriceMinor,
@@ -8,7 +9,9 @@ import {
   kitchenAbbrev,
   offeredOnCount,
   optionCountForChip,
+  visibleCatalogListTabs,
 } from './item-sidebar.js';
+import { catalogGroupsForPos } from './modifier-list-copy.js';
 
 function item(partial: Partial<NormalisedMenuItem> & Pick<NormalisedMenuItem, 'id' | 'name'>): NormalisedMenuItem {
   return {
@@ -68,6 +71,14 @@ describe('itemsBySection', () => {
     expect(q).toHaveLength(1);
     expect(q[0]!.items[0]!.name).toBe('Latte');
   });
+
+  it('picks the first sidebar row, not the first API item', () => {
+    const items = [
+      item({ id: 'food', name: 'Croissant', category: 'food' }),
+      item({ id: 'coffee', name: 'Cappuccino', category: 'coffee' }),
+    ];
+    expect(firstSidebarItemId(items, [coffee, food])).toBe('coffee');
+  });
 });
 
 describe('item list helpers', () => {
@@ -121,6 +132,44 @@ describe('item list helpers', () => {
     ];
     expect(optionCountForChip(groups, 'milk')).toBe(2);
     expect(optionCountForChip(groups, 'syrup')).toBe(0);
+  });
+
+  it('hides empty POS leftover chips after catalog filter', () => {
+    const groups: CafeModifierGroup[] = [
+      {
+        id: '1',
+        name: 'Milk',
+        posGroupId: 'MODLIST_MILK',
+        selectionType: 'single',
+        required: false,
+        options: [
+          { id: 'a', posOptionId: null, name: 'Whole', priceMinor: 0, isDefault: true },
+          { id: 'b', posOptionId: null, name: 'Oat', priceMinor: 50, isDefault: false },
+        ],
+        sortOrder: 0,
+      },
+      {
+        id: '2',
+        name: 'Toppings',
+        posGroupId: null,
+        selectionType: 'multi',
+        required: false,
+        options: [{ id: 'c', posOptionId: null, name: 'Cream', priceMinor: 0, isDefault: false }],
+        sortOrder: 1,
+      },
+    ];
+    const library = catalogGroupsForPos(groups, true);
+    const tabs = [
+      { value: 'milk' as const, label: 'Milk' },
+      { value: 'toppings' as const, label: 'Toppings' },
+    ];
+    expect(optionCountForChip(library, 'milk')).toBe(2);
+    expect(optionCountForChip(library, 'toppings')).toBe(0);
+    expect(visibleCatalogListTabs(tabs, library, true).map((t) => t.value)).toEqual(['milk']);
+    expect(visibleCatalogListTabs(tabs, groups, false).map((t) => t.value)).toEqual([
+      'milk',
+      'toppings',
+    ]);
   });
 
   it('prefers chipLabel then two letters', () => {

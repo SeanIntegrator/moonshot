@@ -39,6 +39,7 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
   return (
     <Box
       sx={(theme) => ({
+        bgcolor: theme.console.card.bg,
         border: `1px solid ${theme.console.card.border}`,
         borderRadius: `${theme.console.card.radiusPx}px`,
         p: { xs: 2, sm: 2.5 },

@@ -1,8 +1,10 @@
 import type { CafeModifierGroup, ModifierSelectionType } from '@moonshot/types';
 
-export function isPosOwnedGroup(group: Pick<CafeModifierGroup, 'posGroupId'>): boolean {
-  return group.posGroupId != null && group.posGroupId !== '';
-}
+export {
+  catalogGroupsForPos,
+  isPosCatalogCafe,
+  isPosOwnedGroup,
+} from '@moonshot/domain';
 
 export function customersPickLabel(selectionType: ModifierSelectionType): string {
   return selectionType === 'single' ? 'Just one' : 'Any number';

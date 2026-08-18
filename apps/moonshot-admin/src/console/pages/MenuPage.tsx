@@ -1,7 +1,7 @@
 import SyncIcon from '@mui/icons-material/Sync';
 import { Alert, Box, Button, CircularProgress, Tab, Tabs, Typography } from '@mui/material';
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem, StockChipKey } from '@moonshot/types';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useCafe } from '../CafeProvider.js';
 import { useAdminMenuSync } from '../../hooks/useAdminMenuSync.js';
@@ -15,7 +15,8 @@ import {
 } from '../../lib/admin-api.js';
 import { formatTime24 } from '../../lib/format.js';
 import { PageHeader } from '../primitives/PageHeader.js';
-import { optionCountForChip } from './menu/item-sidebar.js';
+import { optionCountForChip, visibleCatalogListTabs } from './menu/item-sidebar.js';
+import { catalogGroupsForPos, isPosCatalogCafe } from './menu/modifier-list-copy.js';
 import { ItemsTab } from './menu/ItemsTab.js';
 import { ModifierListsTab } from './menu/ModifierListsTab.js';
 
@@ -90,6 +91,19 @@ export function MenuPage() {
 
   const softReload = useCallback(() => load('soft'), [load]);
   const squareConnected = squareStatus?.connected === true;
+  const posCafe = isPosCatalogCafe(squareStatus);
+  const catalogLibrary = useMemo(
+    () => catalogGroupsForPos(library, posCafe),
+    [library, posCafe],
+  );
+  const listTabs = useMemo(
+    () => visibleCatalogListTabs(LIST_TABS, catalogLibrary, posCafe),
+    [posCafe, catalogLibrary],
+  );
+
+  useEffect(() => {
+    if (tab !== 'items' && !listTabs.some((t) => t.value === tab)) setTab('items');
+  }, [tab, listTabs]);
 
   useAdminMenuSync({
     token,
@@ -184,11 +198,11 @@ export function MenuPage() {
             sx={{ mb: 1.5 }}
           >
             <Tab value="items" label={`Items ${items.length}`} />
-            {LIST_TABS.map((t) => (
+            {listTabs.map((t) => (
               <Tab
                 key={t.value}
                 value={t.value}
-                label={`${t.label} ${optionCountForChip(library, t.value)}`}
+                label={`${t.label} ${optionCountForChip(catalogLibrary, t.value)}`}
               />
             ))}
           </Tabs>
@@ -204,7 +218,7 @@ export function MenuPage() {
               token={token}
               items={items}
               sections={sections}
-              library={library}
+              library={catalogLibrary}
               onItemsChanged={softReload}
             />
           ) : (
@@ -212,7 +226,7 @@ export function MenuPage() {
               cafeSlug={cafeSlug}
               token={token}
               chip={tab}
-              groups={library}
+              groups={catalogLibrary}
               items={items}
               onLibraryChanged={softReload}
             />

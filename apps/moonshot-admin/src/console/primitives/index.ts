@@ -1,4 +1,4 @@
-export { canSubmitSaveFooter } from './save-footer.js';
+export { canSubmitSaveFooter, canUndoSaveFooter } from './save-footer.js';
 export { clampThresholds } from './threshold-slider.js';
 export { connectionDotColor, type ConnectionTone } from './connection-tone.js';
 export { PAUSE_DURATION_OPTIONS, type PauseDuration } from './pause-durations.js';

@@ -14,6 +14,7 @@ export * from './menu-provisioning.js';
 export * from './menu-template.js';
 export * from './pos.js';
 export * from './pos-catalog.js';
+export * from './pos-catalog-filter.js';
 export * from './preserve-option-ids.js';
 export * from './stock-availability.js';
 export * from './themes/index.js';

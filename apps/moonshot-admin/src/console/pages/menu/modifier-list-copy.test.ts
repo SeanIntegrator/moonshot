@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  catalogGroupsForPos,
   choiceMetaLine,
   customersPickLabel,
   defaultCellLabel,
+  isPosCatalogCafe,
   isPosOwnedGroup,
 } from './modifier-list-copy.js';
 
@@ -14,6 +16,22 @@ describe('isPosOwnedGroup', () => {
   it('is false for Moonshot lists', () => {
     expect(isPosOwnedGroup({ posGroupId: null })).toBe(false);
     expect(isPosOwnedGroup({})).toBe(false);
+  });
+});
+
+describe('catalogGroupsForPos', () => {
+  it('hides seed lists only for POS cafés', () => {
+    const seed = { posGroupId: null };
+    const pos = { posGroupId: 'MODLIST_MILK' };
+    expect(catalogGroupsForPos([seed, pos], false)).toEqual([seed, pos]);
+    expect(catalogGroupsForPos([seed, pos], true)).toEqual([pos]);
+  });
+});
+
+describe('isPosCatalogCafe', () => {
+  it('treats needs_reauth as still POS-owned', () => {
+    expect(isPosCatalogCafe({ connected: false, status: 'needs_reauth' })).toBe(true);
+    expect(isPosCatalogCafe({ connected: false, status: null })).toBe(false);
   });
 });
 

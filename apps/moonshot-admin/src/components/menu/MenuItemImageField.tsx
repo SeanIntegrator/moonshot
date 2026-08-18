@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useRef, useState } from 'react';
+import { SourceLabel } from '../../console/primitives/SourceLabel.js';
 import {
   setMenuItemUseDefaultImage,
   uploadMenuItemImage,
@@ -60,7 +61,7 @@ export function MenuItemImageField({
   const defaultToggleChecked = !hasCustomImage && useDefaultImage;
 
   async function handleFile(file: File | null) {
-    if (!file || !itemId) return;
+    if (!file || !itemId || isPosItem) return;
     setUploading(true);
     setError(null);
     try {
@@ -99,7 +100,7 @@ export function MenuItemImageField({
         sx={{
           width: '100%',
           aspectRatio: square ? '1 / 1' : '4 / 3',
-          maxHeight: square ? 160 : 180,
+          maxHeight: square ? 240 : 180,
           borderRadius: 1,
           border: 1,
           borderColor: 'divider',
@@ -119,10 +120,39 @@ export function MenuItemImageField({
         }
       />
       <Box sx={{ mt: 1 }}>
-        {!itemId ? (
-          <Typography variant="body2" sx={{
-            color: "text.secondary"
-          }}>
+        {isPosItem ? (
+          <Box>
+            <SourceLabel kind="square" />
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.75 }}>
+              Change this in Square, then sync.
+            </Typography>
+            {itemId ? (
+              <Box sx={{ mt: 1.25 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={defaultToggleChecked}
+                      disabled={defaultToggleDisabled}
+                      onChange={(_, checked) => void handleDefaultToggle(checked)}
+                    />
+                  }
+                  label="Use default image"
+                />
+                {hasCustomImage ? (
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    Turned off while a Square photo is in use.
+                  </Typography>
+                ) : !hasTemplateMatch ? (
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    No default photo for this item name.
+                  </Typography>
+                ) : null}
+              </Box>
+            ) : null}
+          </Box>
+        ) : !itemId ? (
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Save the item first, then upload a photo.
           </Typography>
         ) : (
@@ -137,47 +167,10 @@ export function MenuItemImageField({
             </Button>
             <Typography
               variant="caption"
-              sx={{
-                color: "text.secondary",
-                display: "block",
-                mt: 0.75
-              }}>
+              sx={{ color: 'text.secondary', display: 'block', mt: 0.75 }}
+            >
               JPEG, PNG, or WebP · max 5MB · resized to a small thumbnail automatically
             </Typography>
-            {isPosItem ? (
-              <Box sx={{ mt: 1.25 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      size="small"
-                      checked={defaultToggleChecked}
-                      disabled={defaultToggleDisabled}
-                      onChange={(_, checked) => void handleDefaultToggle(checked)}
-                    />
-                  }
-                  label="Use default image"
-                />
-                {hasCustomImage ? (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "text.secondary",
-                      display: "block"
-                    }}>
-                    Turned off while a custom photo is in use.
-                  </Typography>
-                ) : !hasTemplateMatch ? (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "text.secondary",
-                      display: "block"
-                    }}>
-                    No default photo for this item name.
-                  </Typography>
-                ) : null}
-              </Box>
-            ) : null}
           </>
         )}
         {(uploading || togglingDefault) && <LinearProgress sx={{ mt: 1 }} />}
@@ -187,13 +180,15 @@ export function MenuItemImageField({
           </Alert>
         )}
       </Box>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        hidden
-        onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
-      />
+      {isPosItem ? null : (
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+          onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
+        />
+      )}
     </Box>
   );
 }

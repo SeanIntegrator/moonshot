@@ -21,6 +21,7 @@
     "@moonshot/web-runtime": "workspace:*",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
+    "@phosphor-icons/react": "^2.1.10",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^6.30.4",

@@ -40,6 +40,14 @@ export function itemsBySection(
   return groups;
 }
 
+/** First row in sidebar order (section sort), not API array order. */
+export function firstSidebarItemId(
+  items: NormalisedMenuItem[],
+  sections: CafeMenuSection[],
+): string | null {
+  return itemsBySection(items, sections, '')[0]?.items[0]?.id ?? null;
+}
+
 export function isFoodItem(item: NormalisedMenuItem, sections: CafeMenuSection[]): boolean {
   const section = sections.find((s) => s.key === item.category);
   if (section?.kind === 'food') return true;
@@ -62,6 +70,15 @@ export function offeredOnCount(items: NormalisedMenuItem[], groupId: string): nu
 export function offeredOnLabel(count: number): string {
   if (count === 1) return 'Offered on 1 drink';
   return `Offered on ${count} drinks`;
+}
+
+export function visibleCatalogListTabs<T extends { value: Exclude<StockChipKey, 'food'> }>(
+  tabs: readonly T[],
+  library: CafeModifierGroup[],
+  posCafe: boolean,
+): T[] {
+  if (!posCafe) return [...tabs];
+  return tabs.filter((tab) => optionCountForChip(library, tab.value) > 0);
 }
 
 export function optionCountForChip(

@@ -258,12 +258,19 @@ export async function uploadMenuItemImage(
   itemId: string,
   fileBuffer: Buffer,
 ): Promise<NormalisedMenuItem> {
-  const existing = await db.query<{ image_url: string | null }>(
-    `SELECT image_url FROM menu_items WHERE id = $1 AND cafe_id = $2`,
+  const existing = await db.query<{ image_url: string | null; pos_item_id: string | null }>(
+    `SELECT image_url, pos_item_id FROM menu_items WHERE id = $1 AND cafe_id = $2`,
     [itemId, cafeId],
   );
   if (existing.rows.length === 0) {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Menu item not found');
+  }
+  if (existing.rows[0]!.pos_item_id) {
+    throw new ApiHttpError(
+      400,
+      ApiErrorCode.VALIDATION,
+      'Photos for this item come from Square',
+    );
   }
 
   try {

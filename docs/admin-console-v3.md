@@ -117,17 +117,18 @@ trading.
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Option availability (milks, syrups, beans) | Exists | `/stock` — side table `modifier_option_availability`; radios PATCH immediately |
+| Option availability (milks, syrups, beans) | Exists | `/stock` — side table `modifier_option_availability`; radios PATCH immediately. Square cafés only see POS-owned lists (`posGroupId` set); leftover signup templates are hidden. |
 | Timed auto-return ("Out today") | Exists | `nextCafeOpenAt`; lazy expiry at read time |
 | Food availability | Exists | In stock / Out only (`menu_items.is_available`); food leaves the menu |
 | "on N drinks" impact counts | Exists | Join `menu_item_modifier_groups` |
 | "Drinks affected right now" summary | Exists | Count on the Stock card |
+| Option row icons | Exists | Phosphor SVGs per chip (cow, bean, drop, cup, spinner, cookie) |
 
 ### Menu & prices
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Item CRUD, photo upload, on-menu toggle | Exists | `/menu` — Square-linked name/price/sizes in `ReadOnlyPanel` |
+| Item CRUD, photo upload, on-menu toggle | Exists | `/menu` — Square-linked name/price/sizes/photos in `ReadOnlyPanel` / From Square. Save + Undo sit in the item header. |
 | Recipe (drink archetype) selection + apply | Exists | Drink types tab |
 | `waiveMilkSurcharge` checkbox | Exists | Per-item field |
 | Square lock presentation | Exists | `posItemId` / `posGroupId` (now returned on library GET) |
@@ -137,7 +138,9 @@ trading.
 **Important:** POS-linked modifier groups have their `options` array rewritten on
 catalog sync, including selection type, required, and defaults. Square item
 attachments are also reset on sync, so offer switches for those lists are
-disabled. Moonshot-owned lists (`Shots`, `Beans`, prep) stay fully editable.
+disabled. Square-connected cafés hide leftover signup templates on Stock and
+Menu (Choices and list tabs) — only lists with `posGroupId` appear. Moonshot-owned
+lists stay fully editable on cafés with no POS.
 
 ### Hours
 

@@ -75,6 +75,7 @@ export function ItemDetailsCard({
   return (
     <Box
       sx={(theme) => ({
+        bgcolor: theme.console.card.bg,
         border: `1px solid ${theme.console.card.border}`,
         borderRadius: `${theme.console.card.radiusPx}px`,
         p: { xs: 2, sm: 2.5 },
@@ -88,7 +89,7 @@ export function ItemDetailsCard({
           alignItems: 'flex-start',
         }}
       >
-        <Box sx={{ width: { xs: '100%', sm: 160 }, flex: '0 0 auto' }}>
+        <Box sx={{ width: { xs: '100%', sm: 240 }, flex: '0 0 auto' }}>
           <MenuItemImageField
             cafeSlug={cafeSlug}
             token={token}

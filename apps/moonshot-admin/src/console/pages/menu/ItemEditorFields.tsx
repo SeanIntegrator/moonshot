@@ -1,6 +1,7 @@
 import type { CafeMenuSection, CafeModifierGroup } from '@moonshot/types';
 import type { DrinkArchetypeDef } from '@moonshot/domain';
 import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
+import { SaveFooter } from '../../primitives/SaveFooter.js';
 import { ItemChoicesCard } from './ItemChoicesCard.js';
 import { ItemDetailsCard } from './ItemDetailsCard.js';
 import { isFeaturedItem } from './item-sidebar.js';
@@ -19,8 +20,12 @@ type Props = {
   categoryOptions: CategoryOption[];
   saving: boolean;
   toggling: boolean;
+  dirty: boolean;
+  valid: boolean;
   onChange: (next: DraftItem) => void;
   onSaved: (updated: DraftItem) => void;
+  onSave: () => void;
+  onUndo: () => void;
   onToggleMenu: (next: boolean) => void;
 };
 
@@ -35,8 +40,12 @@ export function ItemEditorFields({
   categoryOptions,
   saving,
   toggling,
+  dirty,
+  valid,
   onChange,
   onSaved,
+  onSave,
+  onUndo,
   onToggleMenu,
 }: Props) {
   const sectionLabel = sections.find((s) => s.key === draft.category)?.label ?? draft.category;
@@ -89,17 +98,38 @@ export function ItemEditorFields({
             </Typography>
           ) : null}
         </Box>
-        <FormControlLabel
-          sx={{ mr: 0 }}
-          control={
-            <Switch
-              checked={draft.isAvailable}
-              disabled={toggling || !itemId}
-              onChange={(_, v) => onToggleMenu(v)}
-            />
-          }
-          label="On the menu"
-        />
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <SaveFooter
+            variant="inline"
+            label="Save item"
+            dirty={dirty}
+            valid={valid}
+            saving={saving}
+            onSave={onSave}
+            secondaryLabel="Undo changes"
+            secondaryVariant="outlined"
+            onSecondary={onUndo}
+          />
+          <FormControlLabel
+            sx={{ mr: 0 }}
+            control={
+              <Switch
+                checked={draft.isAvailable}
+                disabled={toggling || !itemId}
+                onChange={(_, v) => onToggleMenu(v)}
+              />
+            }
+            label="On the menu"
+          />
+        </Box>
       </Box>
       <ItemDetailsCard
         draft={draft}

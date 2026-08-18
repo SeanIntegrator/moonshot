@@ -118,20 +118,23 @@ Do not commit large binary drink photos unless the team explicitly wants them in
 
 ## Admin UI
 
-Dashboard → Menu & pricing → expand an item → **Upload photo** / **Replace photo**. New items must be saved before a photo can be uploaded. Replaces only that café’s copy.
+Menu → item editor → **Upload photo** / **Replace photo** on **non-POS** items. New items must be saved before a photo can be uploaded. Replaces only that café’s copy.
 
-### POS default images
+### POS photos
 
-For POS-linked items (`pos_item_id` set), a **Use default image** switch sits under the photo preview:
+POS-linked items (`pos_item_id` set) are read-only in admin: the preview shows the Square CDN URL (or a template fallback) with **From Square**. Moonshot cannot push photos to Square, so **Replace photo** is hidden and `POST /menu/:itemId/image` returns 400.
+
+A **Use default image** switch sits under the preview when Square has no photo:
 
 - When Square (or another POS) has no photo and the item **name exactly matches** a template drink display name (trim + case-insensitive — e.g. `"Flat White"` → Flat white), catalogue sync points `image_url` at the shared `template/drinks/{key}.webp` object and sets `image_source = template`.
 - Admins can turn the switch **off** to clear the photo and set `use_default_image = false` so later syncs do not re-apply the default.
-- The switch is **disabled** while a custom photo is in place (`image_source` is `pos` or `upload`), or when the current name has no template match.
-- Café uploads set `image_source = upload` and are never overwritten by POS sync when the POS sends no image.
+- The switch is **disabled** while a POS photo is in place (`image_source` is `pos`), or when the current name has no template match.
 
 Columns: `menu_items.image_source` (`pos` | `upload` | `template` | null), `menu_items.use_default_image` (default true).
 
 ## Local development
+
+Railway `${{bucket.VAR}}` references only interpolate on Railway. For localhost, copy the **resolved** `MENU_IMAGE_*` values into `apps/moonshot-api/.env`.
 
 Without `MENU_IMAGE_*` configured:
 
@@ -140,7 +143,7 @@ Without `MENU_IMAGE_*` configured:
 - Media GET returns `503`.
 - Order-ahead shows neutral placeholders.
 
-For full local testing, create a dev bucket on Railway and point env vars at it, with:
+For full local testing, copy resolved bucket credentials from Railway. If the local API shares the production database, keep `MENU_IMAGE_PUBLIC_BASE_URL` as the production media prefix so new URLs work everywhere. For a local-only database:
 
 ```
 MENU_IMAGE_PUBLIC_BASE_URL=http://localhost:<api-port>/api/v1/media

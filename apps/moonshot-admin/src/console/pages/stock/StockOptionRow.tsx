@@ -6,12 +6,12 @@ type Props = {
   name: string;
   meta: string;
   availability: StockAvailability;
-  initials: string;
+  badge: ReactNode;
   colorHex?: string | null;
   control: ReactNode;
 };
 
-export function StockOptionRow({ name, meta, availability, initials, colorHex, control }: Props) {
+export function StockOptionRow({ name, meta, availability, badge, colorHex, control }: Props) {
   return (
     <Box
       sx={(theme) => ({
@@ -43,7 +43,7 @@ export function StockOptionRow({ name, meta, availability, initials, colorHex, c
           color: theme.console.ink,
         })}
       >
-        {initials}
+        {badge}
       </Box>
       <Box sx={{ minWidth: 0, flex: '1 1 160px' }}>
         <Typography sx={{ fontWeight: 600 }}>{name}</Typography>

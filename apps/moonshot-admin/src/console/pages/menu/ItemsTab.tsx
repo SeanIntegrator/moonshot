@@ -3,9 +3,9 @@ import type { DrinkArchetypeDef } from '@moonshot/domain';
 import { Alert, Box, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { fetchDrinkArchetypes, patchMenuItem } from '../../../lib/admin-api.js';
-import { SaveFooter } from '../../primitives/SaveFooter.js';
 import { ItemEditorFields } from './ItemEditorFields.js';
 import { ItemsSidebar } from './ItemsSidebar.js';
+import { firstSidebarItemId } from './item-sidebar.js';
 import { itemDraftDirty, itemPatchBody, toDraft, type DraftItem } from './menu-item-draft.js';
 
 type Props = {
@@ -25,7 +25,9 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
   const [error, setError] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Record<string, DrinkArchetypeDef>>({});
   const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    firstSidebarItemId(items, sections),
+  );
 
   useEffect(() => {
     fetchDrinkArchetypes(token, cafeSlug)
@@ -37,8 +39,8 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
 
   useEffect(() => {
     if (selectedId && items.some((i) => i.id === selectedId)) return;
-    setSelectedId(items[0]?.id ?? null);
-  }, [items, selectedId]);
+    setSelectedId(firstSidebarItemId(items, sections));
+  }, [items, sections, selectedId]);
 
   const categoryOptions = sections.map((s) => ({ value: s.key, label: s.label }));
   const selected = items.find((i) => i.id === selectedId) ?? null;
@@ -123,7 +125,6 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
         />
         <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
           {draft && selected ? (
-            <>
               <ItemEditorFields
                 draft={draft}
                 itemId={selected.id}
@@ -135,22 +136,14 @@ export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsCha
                 categoryOptions={categoryOptions}
                 saving={savingId === selected.id}
                 toggling={togglingId === selected.id}
-                onChange={(next) => setDrafts((prev) => ({ ...prev, [selected.id]: next }))}
-                onSaved={(updated) => setDrafts((prev) => ({ ...prev, [selected.id]: updated }))}
-                onToggleMenu={(next) => void toggleMenu(selected, next)}
-              />
-              <SaveFooter
-                label="Save item"
                 dirty={dirty}
                 valid={draft.name.trim().length > 0}
-                saving={savingId === selected.id}
+                onChange={(next) => setDrafts((prev) => ({ ...prev, [selected.id]: next }))}
+                onSaved={(updated) => setDrafts((prev) => ({ ...prev, [selected.id]: updated }))}
                 onSave={() => void saveItem(draft)}
-                secondaryLabel="Undo changes"
-                secondaryVariant="outlined"
-                onSecondary={undo}
-                showUnsaved={false}
+                onUndo={undo}
+                onToggleMenu={(next) => void toggleMenu(selected, next)}
               />
-            </>
           ) : (
             <Typography variant="body2">Select an item to edit.</Typography>
           )}

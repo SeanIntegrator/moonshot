@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Pool } from 'pg';
 import { ApiHttpError } from '../http-errors.js';
-import { setMenuItemUseDefaultImage } from './menu-admin-service.js';
+import { setMenuItemUseDefaultImage, uploadMenuItemImage } from './menu-admin-service.js';
 
 vi.mock('./menu-fetch.js', () => ({
   fetchMenuItemsByIds: vi.fn(async (_db: Pool, _cafeId: string, ids: string[]) => {
@@ -108,5 +108,36 @@ describe('setMenuItemUseDefaultImage', () => {
     await expect(setMenuItemUseDefaultImage(db, 'cafe-1', 'mi-1', true)).rejects.toMatchObject({
       status: 400,
     });
+  });
+});
+
+describe('uploadMenuItemImage', () => {
+  it('rejects POS-owned items', async () => {
+    const db = createDb(() => ({
+      rows: [{ image_url: 'https://square-cdn.example/latte.jpg', pos_item_id: 'ITEM_1' }],
+    }));
+
+    await expect(
+      uploadMenuItemImage(db, 'cafe-1', 'mi-1', Buffer.from('fake')),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'Photos for this item come from Square',
+    });
+  });
+
+  it('allows upload when the item is not POS-owned', async () => {
+    const { uploadMenuItemThumbnail } = await import('./menu-image-storage.js');
+    vi.mocked(uploadMenuItemThumbnail).mockResolvedValueOnce(
+      'https://api.example.com/api/v1/media/cafes/cafe-1/menu-items/mi-1/v.webp',
+    );
+    const db = createDb((sql) => {
+      if (sql.includes('SELECT image_url, pos_item_id')) {
+        return { rows: [{ image_url: null, pos_item_id: null }] };
+      }
+      return { rows: [] };
+    });
+
+    await uploadMenuItemImage(db, 'cafe-1', 'mi-1', Buffer.from('fake'));
+    expect(uploadMenuItemThumbnail).toHaveBeenCalled();
   });
 });
