@@ -1,18 +1,12 @@
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
 import type { DrinkArchetypeDef } from '@moonshot/domain';
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { MenuSectionTree } from '../../../components/menu/MenuSectionTree.js';
-import {
-  createMenuItem,
-  createMenuSection,
-  deleteMenuItem,
-  fetchDrinkArchetypes,
-  patchMenuItem,
-  patchMenuSection,
-} from '../../../lib/admin-api.js';
+import { fetchDrinkArchetypes, patchMenuItem } from '../../../lib/admin-api.js';
+import { SaveFooter } from '../../primitives/SaveFooter.js';
 import { ItemEditorFields } from './ItemEditorFields.js';
-import { emptyDraft, toDraft, type DraftItem } from './menu-item-draft.js';
+import { ItemsSidebar } from './ItemsSidebar.js';
+import { itemDraftDirty, toDraft, type DraftItem } from './menu-item-draft.js';
 
 type Props = {
   cafeSlug: string;
@@ -20,37 +14,19 @@ type Props = {
   items: NormalisedMenuItem[];
   sections: CafeMenuSection[];
   library: CafeModifierGroup[];
-  creating: boolean;
-  onCreatingChange: (creating: boolean) => void;
   onItemsChanged: () => void;
 };
 
-export function ItemsTab({
-  cafeSlug,
-  token,
-  items,
-  sections,
-  library,
-  creating,
-  onCreatingChange,
-  onItemsChanged,
-}: Props) {
-  const defaultCategory =
-    sections.find((s) => s.enabled && !s.parentKey)?.key ??
-    sections.find((s) => s.enabled)?.key ??
-    sections[0]?.key ??
-    'uncategorised';
+export function ItemsTab({ cafeSlug, token, items, sections, library, onItemsChanged }: Props) {
   const [drafts, setDrafts] = useState<Record<string, DraftItem>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [sectionBusyId, setSectionBusyId] = useState<string | null>(null);
-  const [newItem, setNewItem] = useState<DraftItem>(() => emptyDraft(defaultCategory));
-  const [newSectionLabel, setNewSectionLabel] = useState('');
-  const [addingSection, setAddingSection] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Record<string, DrinkArchetypeDef>>({});
   const [priceText, setPriceText] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id ?? null);
 
   useEffect(() => {
     fetchDrinkArchetypes(token, cafeSlug)
@@ -60,42 +36,42 @@ export function ItemsTab({
       });
   }, [token, cafeSlug]);
 
+  useEffect(() => {
+    if (selectedId && items.some((i) => i.id === selectedId)) return;
+    setSelectedId(items[0]?.id ?? null);
+  }, [items, selectedId]);
+
   const categoryOptions = sections.map((s) => ({ value: s.key, label: s.label }));
+  const selected = items.find((i) => i.id === selectedId) ?? null;
+  const draft = selected ? (drafts[selected.id] ?? toDraft(selected, library)) : null;
+  const dirty = selected && draft ? itemDraftDirty(draft, selected, library) : false;
 
-  function draftFor(item: NormalisedMenuItem): DraftItem {
-    return drafts[item.id] ?? toDraft(item, library);
-  }
-
-  async function saveItem(draft: DraftItem) {
-    setSavingId(draft.id || 'new');
+  async function saveItem(next: DraftItem) {
+    if (!next.id) return;
+    setSavingId(next.id);
     setError(null);
     try {
-      const body = {
-        name: draft.name,
-        description: draft.description,
-        priceMinor: draft.priceMinor,
-        category: draft.category,
-        subcategory: draft.subcategory,
-        imageUrl: draft.imageUrl,
-        isAvailable: draft.isAvailable,
-        sizes: draft.sizes,
-        modifierGroupIds: draft.attachedGroupIds,
-        archetype: draft.archetype,
-        waiveMilkSurcharge: draft.waiveMilkSurcharge,
-        allowNoMilk: draft.allowNoMilk,
-      };
-      const updated = draft.id
-        ? await patchMenuItem(token, cafeSlug, draft.id, body)
-        : await createMenuItem(token, cafeSlug, body);
+      const updated = await patchMenuItem(token, cafeSlug, next.id, {
+        name: next.name,
+        description: next.description,
+        priceMinor: next.priceMinor,
+        category: next.category,
+        subcategory: next.subcategory,
+        imageUrl: next.imageUrl,
+        isAvailable: next.isAvailable,
+        sizes: next.sizes,
+        modifierGroupIds: next.attachedGroupIds,
+        archetype: next.archetype,
+        waiveMilkSurcharge: next.waiveMilkSurcharge,
+        allowNoMilk: next.allowNoMilk,
+      });
       setDrafts((prev) => {
         const copy = { ...prev };
-        delete copy[draft.id];
+        delete copy[next.id];
         copy[updated.id] = toDraft(updated, library);
         return copy;
       });
       setNotice(`Saved “${updated.name}”.`);
-      onCreatingChange(false);
-      setNewItem(emptyDraft(defaultCategory));
       onItemsChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -104,21 +80,15 @@ export function ItemsTab({
     }
   }
 
-  async function toggleAvailability(item: NormalisedMenuItem, next: boolean) {
+  async function toggleMenu(item: NormalisedMenuItem, next: boolean) {
     setTogglingId(item.id);
     setError(null);
     try {
-      if (next) {
-        const updated = await patchMenuItem(token, cafeSlug, item.id, { isAvailable: true });
-        setDrafts((prev) => ({ ...prev, [updated.id]: toDraft(updated, library) }));
-      } else {
-        await deleteMenuItem(token, cafeSlug, item.id);
-        setDrafts((prev) => {
-          const copy = { ...prev };
-          delete copy[item.id];
-          return copy;
-        });
-      }
+      const updated = await patchMenuItem(token, cafeSlug, item.id, { isAvailable: next });
+      setDrafts((prev) => ({
+        ...prev,
+        [updated.id]: { ...(prev[updated.id] ?? toDraft(item, library)), isAvailable: updated.isAvailable },
+      }));
       setNotice(next ? `“${item.name}” is on the menu.` : `“${item.name}” is hidden.`);
       onItemsChanged();
     } catch (e) {
@@ -128,63 +98,18 @@ export function ItemsTab({
     }
   }
 
-  async function toggleSectionEnabled(section: CafeMenuSection, enabled: boolean) {
-    setSectionBusyId(section.id);
-    setError(null);
-    try {
-      await patchMenuSection(token, cafeSlug, section.id, { enabled });
-      setNotice(enabled ? `“${section.label}” enabled.` : `“${section.label}” disabled.`);
-      onItemsChanged();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update section');
-    } finally {
-      setSectionBusyId(null);
-    }
-  }
-
-  async function onAddSection() {
-    const label = newSectionLabel.trim();
-    if (!label) return;
-    setAddingSection(true);
-    setError(null);
-    try {
-      await createMenuSection(token, cafeSlug, { label });
-      setNewSectionLabel('');
-      setNotice(`Added section “${label}”.`);
-      onItemsChanged();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add section');
-    } finally {
-      setAddingSection(false);
-    }
-  }
-
-  function renderEditor(draft: DraftItem, itemId: string | null) {
-    const key = itemId ?? 'new';
-    return (
-      <ItemEditorFields
-        draft={draft}
-        itemId={itemId}
-        cafeSlug={cafeSlug}
-        token={token}
-        library={library}
-        recipes={recipes}
-        categoryOptions={categoryOptions}
-        priceText={priceText[key] ?? String(draft.priceMinor / 100)}
-        saving={savingId === key}
-        onPriceText={(raw) => setPriceText((prev) => ({ ...prev, [key]: raw }))}
-        onChange={(next) => {
-          if (itemId) setDrafts((prev) => ({ ...prev, [itemId]: next }));
-          else setNewItem(next);
-        }}
-        onSaved={(updated) => {
-          if (itemId) setDrafts((prev) => ({ ...prev, [itemId]: updated }));
-          else setNewItem(updated);
-          onItemsChanged();
-        }}
-        onSave={() => void saveItem(draft)}
-      />
-    );
+  function undo() {
+    if (!selected) return;
+    setDrafts((prev) => {
+      const copy = { ...prev };
+      delete copy[selected.id];
+      return copy;
+    });
+    setPriceText((prev) => {
+      const copy = { ...prev };
+      delete copy[selected.id];
+      return copy;
+    });
   }
 
   return (
@@ -199,48 +124,59 @@ export function ItemsTab({
           {notice}
         </Alert>
       ) : null}
-
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'center' }, mb: 2 }}>
-        <TextField
-          size="small"
-          label="New section name"
-          placeholder="e.g. Ube, Pandan"
-          value={newSectionLabel}
-          onChange={(e) => setNewSectionLabel(e.target.value)}
-          sx={{ maxWidth: 280 }}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: 'flex-start',
+          gap: 2.5,
+        }}
+      >
+        <ItemsSidebar
+          items={items}
+          sections={sections}
+          query={query}
+          selectedId={selectedId}
+          onQuery={setQuery}
+          onSelect={setSelectedId}
         />
-        <Button
-          variant="outlined"
-          size="small"
-          disabled={!newSectionLabel.trim() || addingSection}
-          onClick={() => void onAddSection()}
-        >
-          {addingSection ? 'Adding…' : 'Add section'}
-        </Button>
-      </Stack>
-
-      {creating ? (
-        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2, mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 700 }}>
-            New item
-          </Typography>
-          {renderEditor(newItem, null)}
-          <Button size="small" sx={{ mt: 1 }} onClick={() => onCreatingChange(false)}>
-            Cancel
-          </Button>
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+          {draft && selected ? (
+            <>
+              <ItemEditorFields
+                draft={draft}
+                itemId={selected.id}
+                cafeSlug={cafeSlug}
+                token={token}
+                library={library}
+                recipes={recipes}
+                sections={sections}
+                categoryOptions={categoryOptions}
+                priceText={priceText[selected.id] ?? String(draft.priceMinor / 100)}
+                saving={savingId === selected.id}
+                toggling={togglingId === selected.id}
+                onPriceText={(raw) => setPriceText((prev) => ({ ...prev, [selected.id]: raw }))}
+                onChange={(next) => setDrafts((prev) => ({ ...prev, [selected.id]: next }))}
+                onSaved={(updated) => setDrafts((prev) => ({ ...prev, [selected.id]: updated }))}
+                onToggleMenu={(next) => void toggleMenu(selected, next)}
+              />
+              <SaveFooter
+                label="Save item"
+                dirty={dirty}
+                valid={draft.name.trim().length > 0}
+                saving={savingId === selected.id}
+                onSave={() => void saveItem(draft)}
+                secondaryLabel="Undo changes"
+                secondaryVariant="outlined"
+                onSecondary={undo}
+                showUnsaved={false}
+              />
+            </>
+          ) : (
+            <Typography variant="body2">Select an item to edit.</Typography>
+          )}
         </Box>
-      ) : null}
-
-      <MenuSectionTree
-        sections={sections}
-        items={items}
-        sectionBusyId={sectionBusyId}
-        togglingId={togglingId}
-        draftFor={draftFor}
-        onToggleSection={(s, enabled) => void toggleSectionEnabled(s, enabled)}
-        onToggleAvailability={(item, next) => void toggleAvailability(item, next)}
-        renderEditor={(draft, itemId) => renderEditor(draft, itemId)}
-      />
+      </Box>
     </Box>
   );
 }

@@ -1,6 +1,6 @@
 import { Alert, Box, Typography } from '@mui/material';
-import type { AdminStockFoodRow, AdminStockOptionRow, AdminStockResponse, StockChipKey } from '@moonshot/types';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { AdminStockResponse, StockChipKey } from '@moonshot/types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { fetchAdminStock, patchMenuItem, putAdminStockOption } from '../../lib/admin-api.js';
 import { FilterChips } from '../primitives/FilterChips.js';
@@ -8,11 +8,14 @@ import { PageHeader } from '../primitives/PageHeader.js';
 import { SettingsCard } from '../primitives/SettingsCard.js';
 import { StockControl, type StockAvailability } from '../primitives/StockControl.js';
 import { STOCK_CHIP_OPTIONS } from './stock/stock-chips.js';
-
-function usedOnLabel(count: number): string {
-  if (count === 1) return 'on 1 drink';
-  return `on ${count} drinks`;
-}
+import { StockOptionRow, StockRowList } from './stock/StockOptionRow.js';
+import {
+  foodStockMeta,
+  groupStockOptions,
+  optionStockMeta,
+  stockInitials,
+  usedOnLabel,
+} from './stock/stock-meta.js';
 
 export function StockPage() {
   const { session } = useAuth();
@@ -54,9 +57,9 @@ export function StockPage() {
     }
   }, [visibleChips, chip]);
 
-  const optionRows: AdminStockOptionRow[] =
-    stock && chip !== 'food' ? stock.options.filter((row) => row.chip === chip) : [];
-  const foodRows: AdminStockFoodRow[] = stock && chip === 'food' ? stock.food : [];
+  const optionRows = stock && chip !== 'food' ? stock.options.filter((row) => row.chip === chip) : [];
+  const foodRows = stock && chip === 'food' ? stock.food : [];
+  const groups = groupStockOptions(optionRows);
 
   async function onOptionChange(optionId: string, availability: StockAvailability) {
     if (!token) return;
@@ -104,90 +107,78 @@ export function StockPage() {
             : 'Out today comes back when you next open.'
         }
       >
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: chip === 'food' && foodRows.length > 0 ? 1 : 0 }}>
           <FilterChips
             value={chip}
             options={visibleChips}
             onChange={(next) => setChip(next as StockChipKey)}
           />
         </Box>
-        {loading && !stock ? (
-          <Typography variant="body2">Loading…</Typography>
-        ) : chip === 'food' ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {foodRows.length === 0 ? (
-              <Typography variant="body2">No food items yet.</Typography>
-            ) : (
-              foodRows.map((row) => (
-                <StockRow
-                  key={row.itemId}
-                  name={row.name}
-                  meta={row.availability === 'out' ? 'Off the menu' : 'On the menu'}
-                  control={
-                    <StockControl
-                      value={row.availability}
-                      states={['in', 'out']}
-                      disabled={busyId === row.itemId}
-                      onChange={(next) => {
-                        if (next === 'in' || next === 'out') void onFoodChange(row.itemId, next);
-                      }}
-                    />
-                  }
-                />
-              ))
-            )}
-          </Box>
-        ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {optionRows.length === 0 ? (
-              <Typography variant="body2">Nothing in this list.</Typography>
-            ) : (
-              optionRows.map((row) => (
-                <StockRow
-                  key={row.optionId}
-                  name={row.name}
-                  meta={usedOnLabel(row.usedOnCount)}
-                  control={
-                    <StockControl
-                      value={row.availability}
-                      disabled={busyId === row.optionId}
-                      onChange={(next) => void onOptionChange(row.optionId, next)}
-                    />
-                  }
-                />
-              ))
-            )}
-          </Box>
-        )}
+        {loading && !stock ? <Typography variant="body2">Loading…</Typography> : null}
+        {!loading && chip === 'food' && foodRows.length === 0 ? (
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            No food items yet.
+          </Typography>
+        ) : null}
+        {!loading && chip !== 'food' && optionRows.length === 0 ? (
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Nothing in this list.
+          </Typography>
+        ) : null}
+        {chip === 'food' && foodRows.length > 0 ? (
+          <StockRowList>
+            {foodRows.map((row) => (
+              <StockOptionRow
+                key={row.itemId}
+                name={row.name}
+                meta={foodStockMeta(row.availability)}
+                availability={row.availability}
+                initials={stockInitials(row.name)}
+                control={
+                  <StockControl
+                    value={row.availability}
+                    states={['in', 'out']}
+                    disabled={busyId === row.itemId}
+                    onChange={(next) => {
+                      if (next === 'in' || next === 'out') void onFoodChange(row.itemId, next);
+                    }}
+                  />
+                }
+              />
+            ))}
+          </StockRowList>
+        ) : null}
       </SettingsCard>
-    </Box>
-  );
-}
-
-function StockRow({
-  name,
-  meta,
-  control,
-}: {
-  name: string;
-  meta: string;
-  control: ReactNode;
-}) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 1.25,
-      }}
-    >
-      <Box sx={{ minWidth: 0, flex: '1 1 140px' }}>
-        <Typography sx={{ fontWeight: 600 }}>{name}</Typography>
-        <Typography variant="body2">{meta}</Typography>
-      </Box>
-      <Box sx={{ flex: '0 0 auto' }}>{control}</Box>
+      {chip !== 'food'
+        ? groups.map((group) => (
+            <SettingsCard
+              key={group.groupId}
+              title={group.groupName}
+              headerAction={
+                <Typography variant="body2">{usedOnLabel(group.usedOnCount)}</Typography>
+              }
+            >
+              <StockRowList>
+                {group.options.map((row) => (
+                  <StockOptionRow
+                    key={row.optionId}
+                    name={row.name}
+                    meta={optionStockMeta(row.availability, row.usedOnCount)}
+                    availability={row.availability}
+                    initials={stockInitials(row.name)}
+                    control={
+                      <StockControl
+                        value={row.availability}
+                        disabled={busyId === row.optionId}
+                        onChange={(next) => void onOptionChange(row.optionId, next)}
+                      />
+                    }
+                  />
+                ))}
+              </StockRowList>
+            </SettingsCard>
+          ))
+        : null}
     </Box>
   );
 }

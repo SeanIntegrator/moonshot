@@ -15,8 +15,9 @@ Tabs:
 `/overview` · `/stock` · `/menu` · `/hours` · `/order-ahead` · `/kitchen` · `/brand` · `/reports`
 
 Overview, Brand, Reports, Hours, Order ahead, Kitchen, Stock, and Menu are real
-pages. Pause, hours date overrides, featured ordering, and KDS mark-out are still
-deferred.
+pages. Pause, hours date overrides, last-order-ahead buffer, featured ordering,
+and KDS mark-out are still deferred. The Hours sidebar shows open/closed from
+weekly hours only.
 
 ## Stack
 

@@ -81,3 +81,27 @@ export function toggleAttachedGroup(draft: DraftItem, groupId: string): DraftIte
       : [...draft.attachedGroupIds, groupId],
   };
 }
+
+function saveShape(draft: DraftItem) {
+  return {
+    name: draft.name,
+    description: draft.description,
+    priceMinor: draft.priceMinor,
+    category: draft.category,
+    subcategory: draft.subcategory,
+    imageUrl: draft.imageUrl,
+    sizes: draft.sizes,
+    attachedGroupIds: draft.attachedGroupIds,
+    archetype: draft.archetype,
+    waiveMilkSurcharge: draft.waiveMilkSurcharge,
+    allowNoMilk: draft.allowNoMilk,
+  };
+}
+
+export function itemDraftDirty(
+  draft: DraftItem,
+  original: NormalisedMenuItem,
+  library: CafeModifierGroup[],
+): boolean {
+  return JSON.stringify(saveShape(draft)) !== JSON.stringify(saveShape(toDraft(original, library)));
+}

@@ -26,6 +26,8 @@ type Props = {
   posItemId: string | null;
   itemName: string;
   disabled?: boolean;
+  square?: boolean;
+  hideLabel?: boolean;
   onUploaded: (item: NormalisedMenuItem) => void;
 };
 
@@ -40,6 +42,8 @@ export function MenuItemImageField({
   posItemId,
   itemName,
   disabled = false,
+  square = false,
+  hideLabel = false,
   onUploaded,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,16 +90,16 @@ export function MenuItemImageField({
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Typography variant="subtitle2" gutterBottom sx={{
-        color: "text.secondary"
-      }}>
-        Item photo
-      </Typography>
+      {hideLabel ? null : (
+        <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
+          Item photo
+        </Typography>
+      )}
       <Box
         sx={{
           width: '100%',
-          aspectRatio: '4 / 3',
-          maxHeight: 180,
+          aspectRatio: square ? '1 / 1' : '4 / 3',
+          maxHeight: square ? 160 : 180,
           borderRadius: 1,
           border: 1,
           borderColor: 'divider',
@@ -106,7 +110,7 @@ export function MenuItemImageField({
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'center',
         }}
-        aria-label={imageUrl ? `${itemName} photo` : 'No photo'}
+        aria-label={imageUrl ? `${itemName} photo` : 'Item photo square, 800x800'}
       />
       <Box sx={{ mt: 1 }}>
         {!itemId ? (

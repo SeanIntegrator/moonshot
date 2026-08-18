@@ -22,7 +22,12 @@ export function StockControl({ value, onChange, disabled, states }: Props) {
     <Box
       role="radiogroup"
       aria-label="Availability"
-      sx={{ display: 'flex', borderRadius: 1, overflow: 'hidden' }}
+      sx={(theme) => ({
+        display: 'flex',
+        borderRadius: 1,
+        overflow: 'hidden',
+        border: `1px solid ${theme.console.card.border}`,
+      })}
     >
       {OPTIONS.filter((opt) => visible.includes(opt.value)).map((opt) => {
         const selected = opt.value === value;

@@ -1,31 +1,10 @@
-import type { CafeModifierGroup } from '@moonshot/types';
-import type { DrinkArchetypeDef, DrinkArchetypeId } from '@moonshot/domain';
-import { isDrinkArchetypeId } from '@moonshot/domain';
-import {
-  Box,
-  Button,
-  Checkbox,
-  FormControl,
-  FormControlLabel,
-  FormGroup,
-  InputLabel,
-  MenuItem,
-  Select,
-  Stack,
-  Switch,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { MenuItemImageField } from '../../../components/menu/MenuItemImageField.js';
-import { SizeEditor } from '../../../components/menu/SizeEditor.js';
-import { formatGbpMinor } from '../../../lib/format.js';
-import { ReadOnlyPanel } from '../../primitives/ReadOnlyPanel.js';
-import {
-  applyArchetypeToDraft,
-  toDraft,
-  toggleAttachedGroup,
-  type DraftItem,
-} from './menu-item-draft.js';
+import type { CafeMenuSection, CafeModifierGroup } from '@moonshot/types';
+import type { DrinkArchetypeDef } from '@moonshot/domain';
+import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
+import { ItemChoicesCard } from './ItemChoicesCard.js';
+import { ItemDetailsCard } from './ItemDetailsCard.js';
+import { isFeaturedItem } from './item-sidebar.js';
+import type { DraftItem } from './menu-item-draft.js';
 
 type CategoryOption = { value: string; label: string };
 
@@ -36,13 +15,15 @@ type Props = {
   token: string;
   library: CafeModifierGroup[];
   recipes: Record<string, DrinkArchetypeDef>;
+  sections: CafeMenuSection[];
   categoryOptions: CategoryOption[];
   priceText: string;
   saving: boolean;
+  toggling: boolean;
   onPriceText: (raw: string) => void;
   onChange: (next: DraftItem) => void;
   onSaved: (updated: DraftItem) => void;
-  onSave: () => void;
+  onToggleMenu: (next: boolean) => void;
 };
 
 export function ItemEditorFields({
@@ -52,213 +33,94 @@ export function ItemEditorFields({
   token,
   library,
   recipes,
+  sections,
   categoryOptions,
   priceText,
   saving,
+  toggling,
   onPriceText,
   onChange,
   onSaved,
-  onSave,
+  onToggleMenu,
 }: Props) {
-  const fromSquare = Boolean(draft.posItemId);
-  const selectOptions = categoryOptions.some((c) => c.value === draft.category)
-    ? categoryOptions
-    : [...categoryOptions, { value: draft.category, label: draft.category }];
-
-  function applyArchetype(value: string) {
-    if (!value) {
-      onChange(applyArchetypeToDraft(draft, null, null, library));
-      return;
-    }
-    if (!isDrinkArchetypeId(value)) return;
-    onChange(applyArchetypeToDraft(draft, value as DrinkArchetypeId, recipes[value] ?? null, library));
-  }
-
-  const milkAttached = draft.attachedGroupIds.some((id) => {
-    const g = library.find((x) => x.id === id);
-    return g?.name === 'Milks' || g?.name === 'Milk';
-  });
+  const sectionLabel = sections.find((s) => s.key === draft.category)?.label ?? draft.category;
+  const recipeLabel = draft.archetype ? (recipes[draft.archetype]?.label ?? draft.archetype) : null;
+  const sizeCount = draft.sizes.length;
+  const featured = isFeaturedItem(draft);
+  const crumb = [
+    sectionLabel,
+    recipeLabel,
+    sizeCount > 0 ? `${sizeCount} size${sizeCount === 1 ? '' : 's'}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <Stack spacing={2}>
-      <FormControl size="small" sx={{ maxWidth: 280 }}>
-        <InputLabel>Category</InputLabel>
-        <Select
-          label="Category"
-          value={draft.category}
-          onChange={(e) => onChange({ ...draft, category: e.target.value })}
-        >
-          {selectOptions.map((c) => (
-            <MenuItem key={c.value} value={c.value}>
-              {c.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <FormControl size="small" sx={{ maxWidth: 320 }}>
-        <InputLabel>Drink type</InputLabel>
-        <Select
-          label="Drink type"
-          value={draft.archetype ?? ''}
-          onChange={(e) => applyArchetype(e.target.value)}
-        >
-          <MenuItem value="">None (food / custom)</MenuItem>
-          {Object.values(recipes).map((r) => (
-            <MenuItem key={r.id} value={r.id}>
-              {r.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 2,
           alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 2,
+          flexWrap: 'wrap',
         }}
       >
-        <Stack spacing={2} sx={{ flex: 2, minWidth: 0, width: '100%' }}>
-          {fromSquare ? (
-            <ReadOnlyPanel source="square">
-              <Typography sx={{ fontWeight: 600 }}>{draft.name}</Typography>
-              {draft.description ? (
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {draft.description}
-                </Typography>
-              ) : null}
-              {draft.sizes.length === 0 ? (
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {formatGbpMinor(draft.priceMinor, draft.currency)}
-                </Typography>
-              ) : (
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {draft.sizes
-                    .map((s) => `${s.name} ${formatGbpMinor(s.priceMinor, draft.currency)}`)
-                    .join(' · ')}
-                </Typography>
-              )}
-            </ReadOnlyPanel>
-          ) : (
-            <>
-              <TextField
-                label="Item name"
-                size="small"
-                required
-                fullWidth
-                value={draft.name}
-                onChange={(e) => onChange({ ...draft, name: e.target.value })}
-              />
-              <TextField
-                label="Description"
-                size="small"
-                multiline
-                minRows={2}
-                fullWidth
-                value={draft.description ?? ''}
-                onChange={(e) => onChange({ ...draft, description: e.target.value || null })}
-              />
-              {draft.sizes.length === 0 ? (
-                <TextField
-                  label={`Base price (${draft.currency})`}
-                  type="number"
-                  size="small"
-                  value={priceText}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    onPriceText(raw);
-                    if (raw.trim() === '') {
-                      onChange({ ...draft, priceMinor: 0 });
-                      return;
-                    }
-                    const v = Number.parseFloat(raw);
-                    if (Number.isFinite(v)) onChange({ ...draft, priceMinor: Math.round(v * 100) });
-                  }}
-                  sx={{ maxWidth: 200 }}
-                  slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
-                />
-              ) : null}
-            </>
-          )}
-        </Stack>
-        <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
-          <MenuItemImageField
-            cafeSlug={cafeSlug}
-            token={token}
-            itemId={itemId}
-            imageUrl={draft.imageUrl}
-            imageSource={draft.imageSource ?? null}
-            useDefaultImage={draft.useDefaultImage !== false}
-            posItemId={draft.posItemId}
-            itemName={draft.name || 'Menu item'}
-            disabled={saving}
-            onUploaded={(updated) => onSaved(toDraft(updated, library))}
-          />
-        </Box>
-      </Box>
-
-      {fromSquare ? null : (
-        <SizeEditor
-          sizes={draft.sizes}
-          currency={draft.currency}
-          onChange={(sizes) => onChange({ ...draft, sizes })}
-        />
-      )}
-
-      {library.length > 0 ? (
-        <Box>
-          <Typography variant="subtitle2" gutterBottom>
-            Modifier sections on this item
-          </Typography>
-          <FormGroup>
-            {library.map((g) => (
-              <FormControlLabel
-                key={g.id}
-                control={
-                  <Checkbox
-                    checked={draft.attachedGroupIds.includes(g.id)}
-                    onChange={() => onChange(toggleAttachedGroup(draft, g.id))}
-                  />
-                }
-                label={`${g.name} (${g.selectionType}${g.required ? ', required' : ''})`}
-              />
-            ))}
-          </FormGroup>
-          {milkAttached ? (
-            <>
-              <FormControlLabel
-                sx={{ mt: 1 }}
-                control={
-                  <Switch
-                    checked={draft.waiveMilkSurcharge}
-                    onChange={(e) => onChange({ ...draft, waiveMilkSurcharge: e.target.checked })}
-                  />
-                }
-                label="Waive alt-milk surcharge on this item"
-              />
-              {(draft.archetype === 'low-milk-hot' ||
-                draft.archetype === 'low-milk-iced' ||
-                draft.archetype === 'tea') && (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={draft.allowNoMilk}
-                      onChange={(e) => onChange({ ...draft, allowNoMilk: e.target.checked })}
-                    />
-                  }
-                  label="Allow no milk (black americano / tea)"
-                />
-              )}
-            </>
+        <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="h2" component="h2">
+              {draft.name || 'Untitled'}
+            </Typography>
+            {featured ? (
+              <Box
+                sx={(theme) => ({
+                  px: 1,
+                  py: 0.15,
+                  borderRadius: 999,
+                  bgcolor: theme.console.stock.inFill,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: theme.console.muted,
+                })}
+              >
+                Featured
+              </Box>
+            ) : null}
+          </Box>
+          {crumb ? (
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              {crumb}
+            </Typography>
           ) : null}
         </Box>
+        <FormControlLabel
+          sx={{ mr: 0 }}
+          control={
+            <Switch
+              checked={draft.isAvailable}
+              disabled={toggling || !itemId}
+              onChange={(_, v) => onToggleMenu(v)}
+            />
+          }
+          label="On the menu"
+        />
+      </Box>
+      <ItemDetailsCard
+        draft={draft}
+        itemId={itemId}
+        cafeSlug={cafeSlug}
+        token={token}
+        library={library}
+        categoryOptions={categoryOptions}
+        priceText={priceText}
+        saving={saving}
+        onPriceText={onPriceText}
+        onChange={onChange}
+        onSaved={onSaved}
+      />
+      {library.length > 0 ? (
+        <ItemChoicesCard draft={draft} library={library} recipes={recipes} onChange={onChange} />
       ) : null}
-
-      <Button variant="contained" size="small" disabled={!draft.name.trim() || saving} onClick={onSave}>
-        {saving ? 'Saving…' : 'Save item'}
-      </Button>
-    </Stack>
+    </Box>
   );
 }
