@@ -7,6 +7,7 @@ export * from './customer-orders.js';
 export * from './feature-flags-contract.js';
 export * from './kds-auth.js';
 export * from './menu.js';
+export * from './modifier-family.js';
 export * from './order-tracking-auth.js';
 export * from './order.js';
 export * from './payment.js';

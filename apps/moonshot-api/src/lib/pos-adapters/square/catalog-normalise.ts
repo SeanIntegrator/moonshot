@@ -6,14 +6,13 @@
 import { randomUUID } from 'node:crypto';
 import type { CatalogObject } from 'square';
 import type { NormalisedItemSize, NormalisedMenuItem, NormalisedModifierGroup, NormalisedModifierOption } from '@moonshot/types';
-import type { PosCatalog, PosCatalogModifierGroup, ModifierRoleHint } from '@moonshot/domain';
+import type { ModifierRoleHint, PosCatalog, PosCatalogModifierGroup } from '@moonshot/domain';
 import { chipMetaForOptionName } from '../../menu/menu-chip-palette.js';
 import type { SquareCatalogSnapshot } from './catalog-fetch.js';
 import {
   buildCatalogSections,
   resolveItemCategoryPlacement,
 } from './catalog-categories.js';
-import { buildRoleHintMap, classifyModifierListRole } from './role-hints.js';
 
 export type CatalogNormaliseResult = PosCatalog;
 
@@ -115,18 +114,10 @@ export function normaliseSquareCatalog(
     if (url) imageUrlById.set(img.id, url);
   }
 
-  const listMeta = snapshot.modifierLists.map((l) => ({
-    posGroupId: l.id,
-    name: l.modifierListData?.name?.trim() ?? '',
-  }));
-  const roleHints = buildRoleHintMap(listMeta);
-
   const groupsByPosId = new Map<string, PosCatalogModifierGroup>();
   for (const list of snapshot.modifierLists) {
     if (list.isDeleted) continue;
-    const role =
-      roleHints.get(list.id) ?? classifyModifierListRole(list.modifierListData?.name ?? '');
-    const group = normaliseModifierList(list, role);
+    const group = normaliseModifierList(list, 'other');
     if (!group) continue;
     groupsByPosId.set(list.id, group);
   }
@@ -292,7 +283,7 @@ export function normaliseSquareCatalog(
       label: 'Uncategorised',
       parentKey: null,
       posCategoryId: null,
-      kind: 'drink',
+      kind: 'unclassified',
       enabled: true,
       sortOrder: enabledSections.length,
     });

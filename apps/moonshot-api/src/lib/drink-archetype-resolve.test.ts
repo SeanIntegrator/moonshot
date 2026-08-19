@@ -48,14 +48,14 @@ describe('inferDrinkArchetypeFromName', () => {
 
 describe('resolveArchetypeGroups', () => {
   const library = libraryByNameFromGroups([
-    { id: 'milks', name: 'Milks', options: [{}] },
-    { id: 'syrups', name: 'Syrups', options: [{}] },
-    { id: 'shots', name: 'Shots', options: [{}] },
-    { id: 'beans', name: 'Beans', options: [{}] },
-    { id: 'temp', name: 'Milk Temperature', options: [{}] },
-    { id: 'texture', name: 'Milk Texture', options: [{}] },
-    { id: 'ice', name: 'Ice Level', options: [{}] },
-    { id: 'toppings', name: 'Toppings', options: [{}] },
+    { id: 'milks', name: 'Milks', slot: 'milk', options: [{}] },
+    { id: 'syrups', name: 'Syrups', slot: 'syrup', options: [{}] },
+    { id: 'shots', name: 'Shots', slot: 'shots', options: [{}] },
+    { id: 'beans', name: 'Beans', slot: 'beans', options: [{}] },
+    { id: 'temp', name: 'Milk Temperature', slot: 'milk_temperature', options: [{}] },
+    { id: 'texture', name: 'Milk Texture', slot: 'milk_texture', options: [{}] },
+    { id: 'ice', name: 'Ice Level', slot: 'ice_level', options: [{}] },
+    { id: 'toppings', name: 'Toppings', slot: 'toppings', options: [{}] },
   ]);
 
   it('resolves espresso-neat without milk', () => {
@@ -72,12 +72,12 @@ describe('resolveArchetypeGroups', () => {
 
   it('skips empty syrups group', () => {
     const lib = libraryByNameFromGroups([
-      { id: 'milks', name: 'Milks', options: [{}] },
-      { id: 'syrups', name: 'Syrups', options: [] },
-      { id: 'shots', name: 'Shots', options: [{}] },
-      { id: 'beans', name: 'Beans', options: [{}] },
-      { id: 'temp', name: 'Milk Temperature', options: [{}] },
-      { id: 'texture', name: 'Milk Texture', options: [{}] },
+      { id: 'milks', name: 'Milks', slot: 'milk', options: [{}] },
+      { id: 'syrups', name: 'Syrups', slot: 'syrup', options: [] },
+      { id: 'shots', name: 'Shots', slot: 'shots', options: [{}] },
+      { id: 'beans', name: 'Beans', slot: 'beans', options: [{}] },
+      { id: 'temp', name: 'Milk Temperature', slot: 'milk_temperature', options: [{}] },
+      { id: 'texture', name: 'Milk Texture', slot: 'milk_texture', options: [{}] },
     ]);
     const result = resolveArchetypeGroups('milk-forward-hot', null, lib);
     expect(result.groupIds).not.toContain('syrups');
@@ -113,6 +113,16 @@ describe('resolveArchetypeGroups', () => {
     expect(result.groupIds).not.toContain('milks');
     expect(result.groupIds).not.toContain('syrups');
     expect(result.waiveMilkSurcharge).toBe(false);
+  });
+
+  it('resolves by slot when Square list name differs from Moonshot seed name', () => {
+    const lib = libraryByNameFromGroups([
+      { id: 'alt-milk', name: 'Dairy Options', slot: 'milk', options: [{}] },
+      { id: 'shots', name: 'Shots', slot: 'shots', options: [{}] },
+      { id: 'beans', name: 'Beans', slot: 'beans', options: [{}] },
+    ]);
+    const result = resolveArchetypeGroups('low-milk-hot', platformDrinkArchetypeConfig(), lib);
+    expect(result.groupIds).toEqual(['alt-milk', 'shots', 'beans']);
   });
 });
 

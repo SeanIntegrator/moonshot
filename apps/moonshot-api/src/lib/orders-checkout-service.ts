@@ -11,6 +11,7 @@ import {
 import { fetchOrderWithItems } from './orders/order-read.js';
 import { resolveOrderLinesWithModifiers } from './order-modifiers.js';
 import { applyRewardDiscountToTotal } from './loyalty/apply-checkout-reward-pricing.js';
+import { loadFoodSectionKeysForCafe } from './menu/food-section-keys.js';
 import { findUnredeemedRewardById } from './loyalty/repository.js';
 import { getStripeConnectAccountId, isStripeConnectReady } from './payments/cafe-payment-config.js';
 import { getStripeOrNull } from './payments/stripe-client.js';
@@ -104,11 +105,14 @@ export async function createStripeCheckoutOrderResponse(params: {
     rewardType = reward.rewardType;
   }
 
+  const foodSectionKeys = await loadFoodSectionKeysForCafe(pool, cafeId);
+
   const { totalMinor, discountMinor } = applyRewardDiscountToTotal({
     subtotalMinor,
     lines: resolvedLines,
     redeemRewardId,
     rewardType,
+    foodSectionKeys,
   });
 
   const order = await insertPendingOrderWithResolvedLines({

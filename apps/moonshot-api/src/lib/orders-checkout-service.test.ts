@@ -16,8 +16,14 @@ const getStripeOrNull = vi.hoisted(() => vi.fn());
 const isStripeConnectReady = vi.hoisted(() => vi.fn());
 const getStripeConnectAccountId = vi.hoisted(() => vi.fn());
 
+const loadFoodSectionKeysForCafe = vi.hoisted(() => vi.fn());
+
+vi.mock('./menu/food-section-keys.js', () => ({
+  loadFoodSectionKeysForCafe,
+}));
+
 vi.mock('./order-modifiers.js', () => ({
-  resolveOrderLinesWithModifiers: resolveOrderLinesWithModifiers,
+  resolveOrderLinesWithModifiers,
 }));
 
 vi.mock('./orders/order-create.js', () => ({
@@ -119,6 +125,7 @@ describe('createStripeCheckoutOrderResponse', () => {
     });
     recordStripeCheckoutSessionForOrder.mockResolvedValue(undefined);
     deleteAbandonedPendingOrder.mockResolvedValue(undefined);
+    loadFoodSectionKeysForCafe.mockResolvedValue(['food']);
   });
 
   it('throws when Stripe client is not configured', async () => {

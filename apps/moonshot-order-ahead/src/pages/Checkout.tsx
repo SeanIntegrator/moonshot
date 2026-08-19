@@ -47,12 +47,14 @@ function renderRewardRows(params: {
   rewards: LoyaltyReward[];
   selectedRewardId: string | null;
   categoryLines: { category: string }[];
+  foodSectionKeys: readonly string[];
   cafeRewardDescription: string | null | undefined;
   onSelect: (rewardId: string | null) => void;
 }) {
-  const { rewards, selectedRewardId, categoryLines, cafeRewardDescription, onSelect } = params;
+  const { rewards, selectedRewardId, categoryLines, foodSectionKeys, cafeRewardDescription, onSelect } =
+    params;
   return rewards.map((reward) => {
-    const applicable = isLoyaltyRewardApplicable(reward.rewardType, categoryLines);
+    const applicable = isLoyaltyRewardApplicable(reward.rewardType, categoryLines, foodSectionKeys);
     const applied = selectedRewardId === reward.id;
     return (
       <RewardRow
@@ -108,17 +110,24 @@ export function Checkout() {
     return out;
   }, [lines, menu?.items]);
 
+  const foodSectionKeys = useMemo(
+    () => menu?.sections?.filter((s) => s.kind === 'food').map((s) => s.key) ?? [],
+    [menu?.sections],
+  );
+
   const { applicableRewards, otherRewards, splitSections } = useMemo(() => {
     const applicable = rewards.filter((r) =>
-      isLoyaltyRewardApplicable(r.rewardType, categoryLines),
+      isLoyaltyRewardApplicable(r.rewardType, categoryLines, foodSectionKeys),
     );
-    const other = rewards.filter((r) => !isLoyaltyRewardApplicable(r.rewardType, categoryLines));
+    const other = rewards.filter(
+      (r) => !isLoyaltyRewardApplicable(r.rewardType, categoryLines, foodSectionKeys),
+    );
     return {
       applicableRewards: applicable,
       otherRewards: other,
       splitSections: rewards.length > 1 && applicable.length === 1,
     };
-  }, [rewards, categoryLines]);
+  }, [rewards, categoryLines, foodSectionKeys]);
 
   useEffect(() => {
     if (!selectedRewardId) return;
@@ -133,6 +142,7 @@ export function Checkout() {
     lines,
     menuItems: menu?.items,
     rewardType: selectedReward?.rewardType ?? null,
+    foodSectionKeys,
   });
 
   async function placeOrder(): Promise<void> {
@@ -216,6 +226,7 @@ export function Checkout() {
   const rewardRowProps = {
     selectedRewardId,
     categoryLines,
+    foodSectionKeys,
     cafeRewardDescription,
     onSelect: setSelectedRewardId,
   };

@@ -27,7 +27,8 @@ type Props = {
   onSaved: (updated: DraftItem) => void;
   onSave: () => void;
   onUndo: () => void;
-  onToggleMenu: (next: boolean) => void;
+  onToggleMenu?: (next: boolean) => void;
+  categoryRequired?: boolean;
 };
 
 export function ItemEditorFields({
@@ -48,6 +49,7 @@ export function ItemEditorFields({
   onSave,
   onUndo,
   onToggleMenu,
+  categoryRequired = false,
 }: Props) {
   const sectionLabel = sections.find((s) => s.key === draft.category)?.label ?? draft.category;
   const recipeLabel = draft.archetype ? (recipes[draft.archetype]?.label ?? draft.archetype) : null;
@@ -125,8 +127,8 @@ export function ItemEditorFields({
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
                 <Switch
                   checked={draft.isAvailable}
-                  disabled={toggling || !itemId}
-                  onChange={(_, v) => onToggleMenu(v)}
+                  disabled={toggling || !itemId || !onToggleMenu}
+                  onChange={(_, v) => onToggleMenu?.(v)}
                 />
                 {switchLoader(toggling)}
               </Box>
@@ -142,6 +144,7 @@ export function ItemEditorFields({
         token={token}
         library={library}
         categoryOptions={categoryOptions}
+        categoryRequired={categoryRequired}
         saving={saving}
         onChange={onChange}
         onSaved={onSaved}

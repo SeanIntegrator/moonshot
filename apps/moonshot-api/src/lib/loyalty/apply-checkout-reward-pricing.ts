@@ -9,8 +9,9 @@ export function applyRewardDiscountToTotal(params: {
   redeemRewardId: string | null | undefined;
   /** Required when redeemRewardId is set — loaded from the unredeemed reward row. */
   rewardType?: string | null;
+  foodSectionKeys?: readonly string[] | null;
 }): { totalMinor: number; discountMinor: number } {
-  const { subtotalMinor, lines, redeemRewardId, rewardType } = params;
+  const { subtotalMinor, lines, redeemRewardId, rewardType, foodSectionKeys } = params;
   if (!redeemRewardId) {
     return { totalMinor: subtotalMinor, discountMinor: 0 };
   }
@@ -19,7 +20,7 @@ export function applyRewardDiscountToTotal(params: {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid loyalty reward');
   }
 
-  const rawDiscount = computeLoyaltyCheckoutDiscountMinor(rewardType, lines);
+  const rawDiscount = computeLoyaltyCheckoutDiscountMinor(rewardType, lines, foodSectionKeys);
   if (rawDiscount <= 0) {
     const message =
       rewardType === 'free_pastry'

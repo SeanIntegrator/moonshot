@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { CatalogObject } from 'square';
 import {
   buildCatalogSections,
+  directKindFromLabel,
   resolveItemCategoryPlacement,
-  inferKindFromName,
 } from './catalog-categories.js';
 
 function category(
@@ -30,19 +30,36 @@ function category(
 describe('catalog-categories', () => {
   it('builds a two-level parent/child tree ordered by ordinal', () => {
     const cats = [
-      category('P_COFFEE', 'Coffee', { isTopLevel: true, ordinal: 1 }),
+      category('P_COFFEE', 'Drinks', { isTopLevel: true, ordinal: 1 }),
       category('C_HOT', 'Hot drinks', { parentId: 'P_COFFEE', ordinal: 0 }),
       category('C_ICED', 'Iced drinks', { parentId: 'P_COFFEE', ordinal: 1 }),
-      category('P_FOOD', 'Pastries', { isTopLevel: true, ordinal: 0 }),
+      category('P_FOOD', 'Food', { isTopLevel: true, ordinal: 0 }),
+      category('C_PAST', 'Pastries', { parentId: 'P_FOOD', ordinal: 0 }),
     ];
     const { sections, keyByPosCategoryId } = buildCatalogSections(cats);
 
-    expect(keyByPosCategoryId.get('P_COFFEE')).toBe('coffee');
+    expect(keyByPosCategoryId.get('P_COFFEE')).toBe('drinks');
     expect(keyByPosCategoryId.get('C_HOT')).toBe('hot_drinks');
-    expect(sections.find((s) => s.posCategoryId === 'C_HOT')?.parentKey).toBe('coffee');
-    expect(sections.find((s) => s.posCategoryId === 'C_ICED')?.parentKey).toBe('coffee');
+    expect(sections.find((s) => s.posCategoryId === 'C_HOT')?.parentKey).toBe('drinks');
+    expect(sections.find((s) => s.posCategoryId === 'C_ICED')?.parentKey).toBe('drinks');
     expect(sections.find((s) => s.posCategoryId === 'P_FOOD')?.kind).toBe('food');
+    expect(sections.find((s) => s.posCategoryId === 'C_PAST')?.kind).toBe('food');
+    expect(sections.find((s) => s.posCategoryId === 'P_COFFEE')?.kind).toBe('drink');
     expect(sections.find((s) => s.posCategoryId === 'P_COFFEE')?.parentKey).toBeNull();
+  });
+
+  it('marks standalone Pastries as unclassified without Food/Drinks parent', () => {
+    const { sections } = buildCatalogSections([
+      category('P_PAST', 'Pastries', { isTopLevel: true }),
+    ]);
+    expect(sections[0]?.kind).toBe('unclassified');
+  });
+
+  it('matches Food and Drinks labels exactly after normalisation', () => {
+    expect(directKindFromLabel(' Food ')).toBe('food');
+    expect(directKindFromLabel('Drinks')).toBe('drink');
+    expect(directKindFromLabel('Bakery')).toBeNull();
+    expect(directKindFromLabel('Sandwiches')).toBeNull();
   });
 
   it('keeps Moonshot keys stable when Square renames a category', () => {
@@ -53,12 +70,7 @@ describe('catalog-categories', () => {
     );
     expect(sections[0]?.key).toBe('legacy_coffee');
     expect(sections[0]?.label).toBe('Espresso Bar');
-  });
-
-  it('infers food kind from name heuristics', () => {
-    expect(inferKindFromName('Bakery')).toBe('food');
-    expect(inferKindFromName('Sandwiches')).toBe('food');
-    expect(inferKindFromName('Coffee')).toBe('drink');
+    expect(sections[0]?.kind).toBe('unclassified');
   });
 
   it('prefers reportingCategory then categories[] then legacy categoryId', () => {

@@ -93,6 +93,7 @@ export function ModifierLibraryEditor({ cafeSlug, token, onLibraryChanged }: Pro
         maxSelect: group.maxSelect,
         options: group.options,
         sortOrder: group.sortOrder,
+        slot: group.slot,
       });
       setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
       setNotice(`Saved “${updated.name}”.`);
@@ -113,6 +114,7 @@ export function ModifierLibraryEditor({ cafeSlug, token, onLibraryChanged }: Pro
         required: false,
         options: [],
         sortOrder: groups.length,
+        slot: 'other',
       });
       setGroups((prev) => [...prev, created]);
       onLibraryChanged?.();

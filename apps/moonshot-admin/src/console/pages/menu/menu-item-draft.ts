@@ -51,14 +51,16 @@ export function applyArchetypeToDraft(
     return { ...draft, archetype: null, waiveMilkSurcharge: false, allowNoMilk: false };
   }
   const byName = new Map(library.map((g) => [g.name, g]));
+  const bySlot = new Map(
+    library.filter((g) => g.slot && g.slot !== 'other').map((g) => [g.slot, g] as const),
+  );
   const posPreserved = draft.attachedGroupIds.filter((id) => {
     const g = library.find((x) => x.id === id);
     return g?.options.some((o) => o.posOptionId != null) === true || g?.posGroupId != null;
   });
   const attachedGroupIds = [...posPreserved];
   for (const slot of recipe.slots) {
-    const groupName = DRINK_ARCHETYPE_SLOT_GROUP_NAMES[slot];
-    const group = byName.get(groupName);
+    const group = bySlot.get(slot) ?? byName.get(DRINK_ARCHETYPE_SLOT_GROUP_NAMES[slot]);
     if (!group) continue;
     if (group.options.length === 0) continue;
     if (!attachedGroupIds.includes(group.id)) attachedGroupIds.push(group.id);

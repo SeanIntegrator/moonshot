@@ -1,11 +1,13 @@
 import {
   isFoodMenuCategory,
+  MODIFIER_FAMILY_LABELS,
   type CafeMenuSection,
   type CafeModifierGroup,
+  type ModifierFamily,
   type NormalisedMenuItem,
+  type StockChipKey,
 } from '@moonshot/types';
-import type { StockChipKey } from '@moonshot/types';
-import { classifyModifierChip } from './modifier-chips.js';
+import { familyForSlot } from '@moonshot/domain';
 
 export type ItemSidebarGroup = {
   key: string;
@@ -51,7 +53,7 @@ export function firstSidebarItemId(
 export function isFoodItem(item: NormalisedMenuItem, sections: CafeMenuSection[]): boolean {
   const section = sections.find((s) => s.key === item.category);
   if (section?.kind === 'food') return true;
-  return isFoodMenuCategory(item.category);
+  return isFoodMenuCategory(item.category, sections.filter((s) => s.kind === 'food').map((s) => s.key));
 }
 
 export function itemListPriceMinor(item: NormalisedMenuItem): number {
@@ -72,21 +74,35 @@ export function offeredOnLabel(count: number): string {
   return `Offered on ${count} drinks`;
 }
 
+export function hasUnclassifiedSections(sections: CafeMenuSection[]): boolean {
+  return sections.some((s) => s.kind === 'unclassified');
+}
+
+export const MODIFIER_FAMILY_TABS: ReadonlyArray<{ value: Exclude<StockChipKey, 'food'>; label: string }> =
+  (Object.entries(MODIFIER_FAMILY_LABELS) as Array<[Exclude<StockChipKey, 'food'>, string]>).map(
+    ([value, label]) => ({ value, label }),
+  );
+
 export function visibleCatalogListTabs<T extends { value: Exclude<StockChipKey, 'food'> }>(
   tabs: readonly T[],
   library: CafeModifierGroup[],
   posCafe: boolean,
 ): T[] {
   if (!posCafe) return [...tabs];
-  return tabs.filter((tab) => optionCountForChip(library, tab.value) > 0);
+  return tabs.filter((tab) => {
+    if (tab.value === 'other') {
+      return library.some((g) => familyForSlot(g.slot) === 'other');
+    }
+    return optionCountForFamily(library, tab.value) > 0;
+  });
 }
 
-export function optionCountForChip(
+export function optionCountForFamily(
   groups: CafeModifierGroup[],
-  chip: Exclude<StockChipKey, 'food'>,
+  family: ModifierFamily,
 ): number {
   return groups
-    .filter((g) => classifyModifierChip(g.name) === chip)
+    .filter((g) => familyForSlot(g.slot) === family)
     .reduce((n, g) => n + g.options.length, 0);
 }
 

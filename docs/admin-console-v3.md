@@ -132,7 +132,7 @@ trading.
 | Recipe (drink archetype) selection + apply | Exists | Drink types tab |
 | `waiveMilkSurcharge` checkbox | Exists | Per-item field |
 | Square lock presentation | Exists | `posItemId` / `posGroupId` (now returned on library GET) |
-| Modifier list tabs (Milk, Syrup, Beans, Shots, Toppings) | Exists | POS-linked groups: names, prices, Just one / Any number, required, and defaults are read-only. Moonshot lists are editable + SaveFooter + Remove |
+| Modifier list tabs (Milk, Coffee, Flavours, Preparation, Other) | Exists | Family derived from stored `slot` on each list. POS-linked groups: options read-only; list type always editable in Moonshot. |
 | `Featured` badge + deep link | Partial | Tag exists; ordering does not — §4.5 |
 
 **Important:** POS-linked modifier groups have their `options` array rewritten on

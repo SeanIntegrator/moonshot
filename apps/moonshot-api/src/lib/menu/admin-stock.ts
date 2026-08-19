@@ -4,6 +4,7 @@ import { ApiErrorCode } from '@moonshot/types';
 import {
   availabilityFromOutUntil,
   catalogGroupsForPos,
+  familyForSlot,
   isPosCatalogCafe,
   nextCafeOpenAt,
 } from '@moonshot/domain';
@@ -12,7 +13,6 @@ import { ApiHttpError } from '../http-errors.js';
 import { getPosConnectionPublicStatus } from '../pos-connections-repository.js';
 import { listModifierGroupsForCafe } from './menu-modifier-library.js';
 import { listOutOptionIds, loadOptionAvailabilityMap } from './option-availability.js';
-import { classifyStockChip } from './stock-chip.js';
 import { notifyStockChanged } from './stock-notify.js';
 
 type Db = Pool;
@@ -65,7 +65,7 @@ export async function getAdminStock(db: Db, cafeId: string): Promise<AdminStockR
   const visibleGroups = catalogGroupsForPos(groups, isPosCatalogCafe(square));
 
   const options = visibleGroups.flatMap((group) => {
-    const chip = classifyStockChip(group.name);
+    const chip = familyForSlot(group.slot);
     const usedOnCount = usedOn.get(group.id) ?? 0;
     return group.options.map((opt) => {
       const row = availMap.has(opt.id) ? availMap.get(opt.id)! : undefined;

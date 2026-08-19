@@ -33,6 +33,7 @@ const library: CafeModifierGroup[] = [
     options: [],
     sortOrder: 0,
     posGroupId: 'MODLIST_MILK',
+    slot: 'milk',
   },
   {
     id: 'shots',
@@ -42,6 +43,7 @@ const library: CafeModifierGroup[] = [
     options: [],
     sortOrder: 1,
     posGroupId: null,
+    slot: 'shots',
   },
 ];
 

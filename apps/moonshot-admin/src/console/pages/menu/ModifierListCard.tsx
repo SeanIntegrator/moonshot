@@ -7,6 +7,7 @@ import { offeredOnCount, offeredOnLabel } from './item-sidebar.js';
 import { isPosOwnedGroup } from './modifier-list-copy.js';
 import { ModifierListHeader } from './ModifierListHeader.js';
 import { ModifierListTable } from './ModifierListTable.js';
+import { ModifierSlotSelect, familyLabelForSlot } from './ModifierSlotSelect.js';
 
 function newOption(): NormalisedModifierOption {
   return {
@@ -33,14 +34,24 @@ export function ModifierListCard({ group, original, items, saving, onChange, onS
   const locked = isPosOwnedGroup(group);
   const dirty = JSON.stringify(group) !== JSON.stringify(original);
   const offered = offeredOnCount(items, group.id);
-  const valid = locked || group.options.every((o) => o.name.trim().length > 0);
+  const valid =
+    (locked || group.options.every((o) => o.name.trim().length > 0)) && group.slot !== undefined;
 
   return (
     <SettingsCard
       title={group.name || 'Untitled'}
-      description={offered > 0 ? offeredOnLabel(offered) : undefined}
+      description={
+        offered > 0
+          ? `${offeredOnLabel(offered)} · ${familyLabelForSlot(group.slot)}`
+          : familyLabelForSlot(group.slot)
+      }
       headerAction={
-        <ModifierListHeader
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+          <ModifierSlotSelect
+            value={group.slot}
+            onChange={(slot) => onChange({ ...group, slot })}
+          />
+          <ModifierListHeader
           selectionType={group.selectionType}
           required={group.required}
           locked={locked}
@@ -60,7 +71,8 @@ export function ModifierListCard({ group, original, items, saving, onChange, onS
             onChange({ ...group, selectionType });
           }}
           onRequired={(required) => onChange({ ...group, required })}
-        />
+          />
+        </Box>
       }
     >
       {locked ? (
@@ -82,26 +94,38 @@ export function ModifierListCard({ group, original, items, saving, onChange, onS
       </Box>
       <Typography variant="body2" sx={{ mt: 2 }}>
         {locked
-          ? 'Change these in Square, then sync.'
+          ? 'Options sync from Square. Set the list type here so Moonshot knows how to group it.'
           : 'Yours to edit. Change a price here and it changes on every drink that offers it.'}
       </Typography>
-      {locked ? null : (
+      {dirty ? (
         <SaveFooter
-          label={saving ? 'Saving…' : 'Save list'}
+          label={saving ? 'Saving…' : locked ? 'Save list type' : 'Save list'}
           dirty={dirty}
           valid={valid}
           saving={saving}
           onSave={onSave}
           start={
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => onChange({ ...group, options: [...group.options, newOption()] })}
-            >
-              + Add an option
-            </Button>
+            locked ? undefined : (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => onChange({ ...group, options: [...group.options, newOption()] })}
+              >
+                + Add an option
+              </Button>
+            )
           }
         />
+      ) : locked ? null : (
+        <Box sx={{ mt: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => onChange({ ...group, options: [...group.options, newOption()] })}
+          >
+            + Add an option
+          </Button>
+        </Box>
       )}
     </SettingsCard>
   );

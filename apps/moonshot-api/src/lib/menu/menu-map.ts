@@ -40,6 +40,7 @@ export type ModifierGroupRow = {
   options: unknown;
   sort_order: number;
   pos_group_id?: string | null;
+  slot?: string;
 };
 
 function parseSizes(raw: unknown): NormalisedItemSize[] {

@@ -297,7 +297,7 @@ function isFoodCategory(
   if (foodSectionKeys && foodSectionKeys.length > 0) {
     return foodSectionKeys.includes(category);
   }
-  return category === 'food' || category.toLowerCase().includes('food');
+  return category === 'food';
 }
 
 /**

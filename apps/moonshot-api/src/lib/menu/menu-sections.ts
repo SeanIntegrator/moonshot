@@ -172,12 +172,14 @@ export async function createMenuSection(
     );
   }
 
-  const kind: MenuSectionKind =
-    body.kind === 'food' || body.kind === 'drink'
-      ? body.kind
-      : label.toLowerCase().includes('food')
-        ? 'food'
-        : 'drink';
+  if (body.kind !== 'food' && body.kind !== 'drink') {
+    throw new ApiHttpError(
+      400,
+      ApiErrorCode.VALIDATION,
+      'kind is required — use drink or food',
+    );
+  }
+  const kind: MenuSectionKind = body.kind;
 
   let parentId: string | null = null;
   if (typeof body.parentKey === 'string' && body.parentKey.trim()) {

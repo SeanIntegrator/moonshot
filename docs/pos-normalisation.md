@@ -53,12 +53,15 @@ Keys are generated from labels (`slugifyMenuSectionKey`) but **matched on `pos_c
 
 **Incremental sync:** item deltas often omit CATEGORY objects. Placement merges existing `pos_category_id → key` from Postgres, and the sync path BatchRetrieves any referenced category ids (plus parents) missing from the snapshot so new leaves are not forced to `uncategorised`.
 
-`menu_sections.kind` (`drink` | `food`) drives KDS food/drink split and loyalty pastry matching via `cafes.kds_config.foodSectionKeys` — not the literal string `"food"`.
+`menu_sections.kind` (`drink` | `food` | `unclassified`) drives KDS food/drink split and loyalty pastry matching via `cafes.kds_config.foodSectionKeys`.
+
+**Square convention (no name inference):** nest categories under parents literally named **Food**, **Drink**, or **Drinks**. Children inherit that kind. Categories outside those trees stay `unclassified` until the Square tree is fixed and re-synced.
 
 ## Modifiers
 
 - Item modifier lists honour Square `modifierListInfo.ordinal` (sort order), `enabled`, per-item min/max, and `modifierOverrides`.
-- List names are **not renamed**. Import appends them into `kds_config.modifierClassification`.
+- Square lists import with `modifier_groups.slot = other`. Cafés assign a **list type** (slot) in Moonshot admin — Moonshot-owned metadata; list names/options stay POS-read-only.
+- Slot drives Menu/Stock family tabs (`Milk`, `Coffee`, `Flavours`, `Preparation`, `Other`) and KDS `modifierClassification` buckets when saved.
 - Signup may seed Milks/Syrups for template cafés. On POS import, a Square list named `Milks` **claims** the seeded row. Unclaimed seeded Milks/Syrups with no attachments are deleted when Square supplied an equivalent role.
 
 ## Realtime menu invalidation

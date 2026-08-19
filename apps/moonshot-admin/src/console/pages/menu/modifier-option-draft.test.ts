@@ -30,6 +30,7 @@ function group(over: Partial<CafeModifierGroup> = {}): CafeModifierGroup {
     ],
     sortOrder: 0,
     posGroupId: null,
+    slot: 'shots',
     ...over,
   };
 }

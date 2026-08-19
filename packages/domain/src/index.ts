@@ -14,6 +14,7 @@ export * from './loyalty.js';
 export * from './menu-images.js';
 export * from './menu-provisioning.js';
 export * from './menu-template.js';
+export * from './modifier-family.js';
 export * from './pos.js';
 export * from './pos-catalog.js';
 export * from './pos-catalog-filter.js';

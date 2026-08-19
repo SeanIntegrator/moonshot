@@ -1,23 +1,21 @@
-import type { CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
+import type { CafeModifierGroup, ModifierFamily, NormalisedMenuItem } from '@moonshot/types';
+import { familyForSlot } from '@moonshot/domain';
 import { Box, Stack, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { updateModifierGroup } from '../../../lib/admin-api.js';
 import { useToast } from '../../primitives/ToastProvider.js';
-import { classifyModifierChip } from './modifier-chips.js';
 import { ModifierListCard } from './ModifierListCard.js';
-
-type Chip = ReturnType<typeof classifyModifierChip>;
 
 type Props = {
   cafeSlug: string;
   token: string;
-  chip: Chip;
+  family: ModifierFamily;
   groups: CafeModifierGroup[];
   items: NormalisedMenuItem[];
   onLibraryChanged: () => void;
 };
 
-export function ModifierListsTab({ cafeSlug, token, chip, groups, items, onLibraryChanged }: Props) {
+export function ModifierListsTab({ cafeSlug, token, family, groups, items, onLibraryChanged }: Props) {
   const toast = useToast();
   const [drafts, setDrafts] = useState<Record<string, CafeModifierGroup>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -26,8 +24,8 @@ export function ModifierListsTab({ cafeSlug, token, chip, groups, items, onLibra
     () =>
       groups
         .map((g) => drafts[g.id] ?? g)
-        .filter((g) => classifyModifierChip(g.name) === chip),
-    [groups, drafts, chip],
+        .filter((g) => familyForSlot(g.slot) === family),
+    [groups, drafts, family],
   );
 
   function setDraft(group: CafeModifierGroup) {
@@ -44,8 +42,9 @@ export function ModifierListsTab({ cafeSlug, token, chip, groups, items, onLibra
         maxSelect: group.maxSelect,
         options: group.options,
         sortOrder: group.sortOrder,
+        slot: group.slot,
       });
-      setDraft(updated);
+      setDrafts((prev) => ({ ...prev, [updated.id]: updated }));
       toast({ severity: 'success', message: `Saved “${updated.name}”.` });
       onLibraryChanged();
     } catch (e) {

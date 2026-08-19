@@ -16,6 +16,7 @@ export function useCheckoutPricing(params: {
   menuItems: NormalisedMenuItem[] | undefined;
   /** Selected reward type, or null when none applied. */
   rewardType: string | null;
+  foodSectionKeys?: readonly string[] | null;
 }): {
   pricedLines: PricedCartLine[];
   subtotalMinor: number;
@@ -23,7 +24,7 @@ export function useCheckoutPricing(params: {
   totalMinor: number;
   itemCount: number;
 } {
-  const { lines, menuItems, rewardType } = params;
+  const { lines, menuItems, rewardType, foodSectionKeys } = params;
 
   const pricedLines = useMemo(() => {
     if (!menuItems) return [];
@@ -52,8 +53,8 @@ export function useCheckoutPricing(params: {
         Boolean(row.item && row.unit != null),
       )
       .map((row) => ({ category: row.item.category, unitPriceMinor: row.unit }));
-    return computeLoyaltyRewardDiscountMinor(rewardType, discountLines);
-  }, [pricedLines, rewardType]);
+    return computeLoyaltyRewardDiscountMinor(rewardType, discountLines, foodSectionKeys);
+  }, [pricedLines, rewardType, foodSectionKeys]);
 
   const totalMinor = Math.max(0, subtotalMinor - discountMinor);
   const itemCount = lines.reduce((s, l) => s + l.quantity, 0);

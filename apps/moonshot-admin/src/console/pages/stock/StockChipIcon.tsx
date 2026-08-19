@@ -1,12 +1,20 @@
 import type { StockChipKey } from '@moonshot/types';
-import { Coffee, CoffeeBean, Cookie, Cow, Drop, Spinner, type Icon } from '@phosphor-icons/react';
+import {
+  Coffee,
+  Cookie,
+  Cow,
+  Drop,
+  Flask,
+  Question,
+  type Icon,
+} from '@phosphor-icons/react';
 
 export const STOCK_CHIP_ICONS: Record<StockChipKey, Icon> = {
   milk: Cow,
-  beans: CoffeeBean,
-  syrup: Drop,
-  shots: Coffee,
-  toppings: Spinner,
+  coffee: Coffee,
+  flavours: Drop,
+  preparation: Flask,
+  other: Question,
   food: Cookie,
 };
 

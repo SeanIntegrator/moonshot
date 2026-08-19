@@ -38,8 +38,8 @@ describe('catalog-normalise', () => {
     const catalog = normaliseSquareCatalog('cafe-1', snapshot);
 
     expect(catalog.items).toHaveLength(3);
-    expect(catalog.groupsByPosId.get('LIST_MILKS')?.role).toBe('milk');
-    expect(catalog.groupsByPosId.get('LIST_SYRUPS')?.role).toBe('syrup');
+    expect(catalog.groupsByPosId.get('LIST_MILKS')?.role).toBe('other');
+    expect(catalog.groupsByPosId.get('LIST_SYRUPS')?.role).toBe('other');
 
     const milks = catalog.groupsByPosId.get('LIST_MILKS');
     expect(milks?.name).toBe('Milk Options');

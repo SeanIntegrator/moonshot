@@ -15,11 +15,15 @@ function toDiscountLines(lines: ResolvedOrderLine[]): LoyaltyDiscountLine[] {
 export function computeLoyaltyCheckoutDiscountMinor(
   rewardType: string,
   lines: ResolvedOrderLine[],
+  foodSectionKeys?: readonly string[] | null,
 ): number {
-  return computeLoyaltyRewardDiscountMinor(rewardType, toDiscountLines(lines));
+  return computeLoyaltyRewardDiscountMinor(rewardType, toDiscountLines(lines), foodSectionKeys);
 }
 
 /** @deprecated Prefer computeLoyaltyCheckoutDiscountMinor with reward type. */
-export function computeFreeDrinkDiscountMinor(lines: ResolvedOrderLine[]): number {
-  return computeLoyaltyCheckoutDiscountMinor('free_coffee', lines);
+export function computeFreeDrinkDiscountMinor(
+  lines: ResolvedOrderLine[],
+  foodSectionKeys?: readonly string[] | null,
+): number {
+  return computeLoyaltyCheckoutDiscountMinor('free_coffee', lines, foodSectionKeys);
 }

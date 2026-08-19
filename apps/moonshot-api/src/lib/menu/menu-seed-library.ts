@@ -2,8 +2,14 @@ import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { MENU_TEMPLATE_EXTRA_SHOT_PRICE_MINOR, MENU_TEMPLATE_NON_DAIRY_MILK_PRICE_MINOR, MENU_TEMPLATE_SYRUP_PRICE_MINOR } from '@moonshot/domain';
 import { chipMetaForOptionName } from './menu-chip-palette.js';
+import { slotForSeedGroupName } from '@moonshot/domain';
+import type { ModifierSlot } from '@moonshot/types';
 
 type Db = Pool | PoolClient;
+
+function slotForName(name: string): ModifierSlot {
+  return slotForSeedGroupName(name) ?? 'other';
+}
 
 /** Option shape stored in modifier_groups.options JSONB. */
 type SeedOption = {
@@ -154,16 +160,16 @@ export async function seedDefaultModifierLibrary(
   ];
 
   await client.query(
-    `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order)
+    `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order, slot)
      VALUES
-       ($1, $2, 'Milks', 'single', TRUE, $3::jsonb, 0),
-       ($4, $2, 'Syrups', 'multi', FALSE, $5::jsonb, 1),
-       ($6, $2, 'Beans', 'single', TRUE, $7::jsonb, 2),
-       ($8, $2, 'Shots', 'single', TRUE, $9::jsonb, 3),
-       ($10, $2, 'Milk Temperature', 'single', TRUE, $11::jsonb, 4),
-       ($12, $2, 'Milk Texture', 'single', TRUE, $13::jsonb, 5),
-       ($14, $2, 'Ice Level', 'single', TRUE, $15::jsonb, 6),
-       ($16, $2, 'Toppings', 'multi', FALSE, $17::jsonb, 7)`,
+       ($1, $2, 'Milks', 'single', TRUE, $3::jsonb, 0, 'milk'),
+       ($4, $2, 'Syrups', 'multi', FALSE, $5::jsonb, 1, 'syrup'),
+       ($6, $2, 'Beans', 'single', TRUE, $7::jsonb, 2, 'beans'),
+       ($8, $2, 'Shots', 'single', TRUE, $9::jsonb, 3, 'shots'),
+       ($10, $2, 'Milk Temperature', 'single', TRUE, $11::jsonb, 4, 'milk_temperature'),
+       ($12, $2, 'Milk Texture', 'single', TRUE, $13::jsonb, 5, 'milk_texture'),
+       ($14, $2, 'Ice Level', 'single', TRUE, $15::jsonb, 6, 'ice_level'),
+       ($16, $2, 'Toppings', 'multi', FALSE, $17::jsonb, 7, 'toppings')`,
     [
       milksId,
       cafeId,
@@ -221,11 +227,11 @@ export async function ensureFlowPrepModifierGroups(
     const id = randomUUID();
     // Unique (cafe_id, name) + ON CONFLICT closes the check-then-insert race.
     const inserted = await client.query<{ id: string }>(
-      `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order)
-       VALUES ($1, $2, $3, 'single', TRUE, $4::jsonb, $5)
+      `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order, slot)
+       VALUES ($1, $2, $3, 'single', TRUE, $4::jsonb, $5, $6)
        ON CONFLICT (cafe_id, name) DO NOTHING
        RETURNING id`,
-      [id, cafeId, name, JSON.stringify(options), sortOrder],
+      [id, cafeId, name, JSON.stringify(options), sortOrder, slotForName(name)],
     );
     if (inserted.rows[0]) return inserted.rows[0].id;
 
@@ -283,11 +289,11 @@ export async function ensureIceAndToppingsModifierGroups(
 
     const id = randomUUID();
     const inserted = await client.query<{ id: string }>(
-      `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
+      `INSERT INTO modifier_groups (id, cafe_id, name, selection_type, required, options, sort_order, slot)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
        ON CONFLICT (cafe_id, name) DO NOTHING
        RETURNING id`,
-      [id, cafeId, name, selectionType, required, JSON.stringify(options), sortOrder],
+      [id, cafeId, name, selectionType, required, JSON.stringify(options), sortOrder, slotForName(name)],
     );
     if (inserted.rows[0]) return inserted.rows[0].id;
 

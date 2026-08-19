@@ -5,6 +5,7 @@ import { ApiHttpError } from '../http-errors.js';
 import type { OrderRowDb } from '../order-map.js';
 import { consumeRewardForOrder } from '../loyalty/consume-reward-for-order.js';
 import { applyRewardDiscountToTotal } from '../loyalty/apply-checkout-reward-pricing.js';
+import { loadFoodSectionKeysForCafe } from '../menu/food-section-keys.js';
 import { findUnredeemedRewardById } from '../loyalty/repository.js';
 import { resolveOrderLinesWithModifiers, type ResolvedOrderLine } from '../order-modifiers.js';
 import {
@@ -72,11 +73,14 @@ export async function createGuestPayInStoreOrder(params: {
     rewardType = reward.rewardType;
   }
 
+  const foodSectionKeys = await loadFoodSectionKeysForCafe(pool, cafeId);
+
   const { totalMinor, discountMinor } = applyRewardDiscountToTotal({
     subtotalMinor,
     lines: resolvedLines,
     redeemRewardId,
     rewardType,
+    foodSectionKeys,
   });
 
   const order = await insertOrderWithResolvedLines({

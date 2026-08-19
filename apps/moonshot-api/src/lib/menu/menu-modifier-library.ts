@@ -1,9 +1,23 @@
 import type { CafeModifierGroup, NormalisedItemSize, NormalisedModifierGroup } from '@moonshot/types';
+import { isModifierSlot, type ModifierSlot } from '@moonshot/types';
+import { slotForSeedGroupName } from '@moonshot/domain';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
+import { ApiErrorCode } from '@moonshot/types';
+import { ApiHttpError } from '../http-errors.js';
 import { mapModifierGroupRow, type ModifierGroupRow } from './menu-map.js';
+import { syncKdsClassificationForGroup } from './modifier-kds-sync.js';
 
 type Db = Pool | PoolClient;
+
+function parseSlot(body: Record<string, unknown>, groupName?: string): ModifierSlot {
+  if (isModifierSlot(body.slot)) return body.slot;
+  if (groupName) {
+    const seed = slotForSeedGroupName(groupName);
+    if (seed) return seed;
+  }
+  throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'slot is required');
+}
 
 function parseOptions(raw: unknown): NormalisedModifierGroup['options'] {
   if (!Array.isArray(raw)) return [];
@@ -38,16 +52,20 @@ function normalizeSizes(raw: unknown): NormalisedItemSize[] {
 }
 
 function toCafeModifierGroup(row: ModifierGroupRow): CafeModifierGroup {
+  const slot: ModifierSlot = isModifierSlot(row.slot) ? row.slot : 'other';
   return {
     ...mapModifierGroupRow(row),
     sortOrder: row.sort_order,
     posGroupId: row.pos_group_id ?? null,
+    slot,
   };
 }
 
+const GROUP_SELECT = `id, name, selection_type, required, max_select, options, sort_order, pos_group_id, slot`;
+
 export async function listModifierGroupsForCafe(db: Db, cafeId: string): Promise<CafeModifierGroup[]> {
   const { rows } = await db.query<ModifierGroupRow>(
-    `SELECT id, name, selection_type, required, max_select, options, sort_order, pos_group_id
+    `SELECT ${GROUP_SELECT}
      FROM modifier_groups
      WHERE cafe_id = $1
      ORDER BY sort_order ASC, name ASC`,
@@ -62,8 +80,9 @@ export async function createModifierGroup(
   body: Record<string, unknown>,
 ): Promise<CafeModifierGroup> {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (!name) throw new Error('name is required');
+  if (!name) throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'name is required');
 
+  const slot = parseSlot(body, name);
   const selectionType = body.selectionType === 'multi' ? 'multi' : 'single';
   const required = body.required === true;
   const maxSelect =
@@ -72,12 +91,13 @@ export async function createModifierGroup(
   const sortOrder = typeof body.sortOrder === 'number' ? body.sortOrder : 0;
 
   const { rows } = await db.query<ModifierGroupRow>(
-    `INSERT INTO modifier_groups (cafe_id, name, selection_type, required, max_select, options, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
-     RETURNING id, name, selection_type, required, max_select, options, sort_order, pos_group_id`,
-    [cafeId, name, selectionType, required, maxSelect, JSON.stringify(options), sortOrder],
+    `INSERT INTO modifier_groups (cafe_id, name, selection_type, required, max_select, options, sort_order, slot)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
+     RETURNING ${GROUP_SELECT}`,
+    [cafeId, name, selectionType, required, maxSelect, JSON.stringify(options), sortOrder, slot],
   );
   const row = rows[0]!;
+  await syncKdsClassificationForGroup(db, cafeId, row.name, slot);
   return toCafeModifierGroup(row);
 }
 
@@ -90,6 +110,7 @@ export async function updateModifierGroup(
   const sets: string[] = ['updated_at = NOW()'];
   const values: unknown[] = [];
   let i = 1;
+  let nextSlot: ModifierSlot | undefined;
 
   if (typeof body.name === 'string') {
     sets.push(`name = $${i++}`);
@@ -117,16 +138,24 @@ export async function updateModifierGroup(
     sets.push(`sort_order = $${i++}`);
     values.push(body.sortOrder);
   }
+  if (isModifierSlot(body.slot)) {
+    sets.push(`slot = $${i++}`);
+    values.push(body.slot);
+    nextSlot = body.slot;
+  }
 
   values.push(groupId, cafeId);
   const { rows } = await db.query<ModifierGroupRow>(
     `UPDATE modifier_groups SET ${sets.join(', ')}
      WHERE id = $${i++} AND cafe_id = $${i++}
-     RETURNING id, name, selection_type, required, max_select, options, sort_order, pos_group_id`,
+     RETURNING ${GROUP_SELECT}`,
     values,
   );
   const row = rows[0];
   if (!row) return null;
+  if (nextSlot != null) {
+    await syncKdsClassificationForGroup(db, cafeId, row.name, nextSlot);
+  }
   return toCafeModifierGroup(row);
 }
 

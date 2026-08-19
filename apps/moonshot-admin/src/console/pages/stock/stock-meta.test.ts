@@ -61,7 +61,7 @@ describe('groupStockOptions', () => {
         groupId: 'g2',
         groupName: 'Syrups',
         name: 'Vanilla',
-        chip: 'syrup',
+        chip: 'flavours',
         availability: 'in',
         usedOnCount: 9,
       },

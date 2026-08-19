@@ -3,6 +3,8 @@
  * apps read the same contract from the API.
  */
 
+import type { ModifierSlot } from './modifier-family.js';
+
 /**
  * Section key on a menu item (`menu_items.category`).
  * Built-ins: `hot_drinks`, `cold_drinks`, `food`, `extras`.
@@ -20,8 +22,8 @@ export const SYSTEM_MENU_SECTION_LABELS: Record<SystemMenuSectionKey, string> = 
   food: 'Food',
 };
 
-/** Section kind — food vs drink for KDS / loyalty. */
-export type MenuSectionKind = 'drink' | 'food';
+/** Section kind — food vs drink for KDS / loyalty; unclassified when Square tree lacks Food/Drink parents. */
+export type MenuSectionKind = 'drink' | 'food' | 'unclassified';
 
 /** Café-scoped menu section (Items tab grouping / order-ahead nav). May nest via parentKey. */
 export interface CafeMenuSection {
@@ -48,10 +50,10 @@ export function isFoodMenuCategory(
   category: string,
   foodSectionKeys?: readonly string[] | null,
 ): boolean {
-  if (foodSectionKeys && foodSectionKeys.length > 0) {
-    return foodSectionKeys.includes(category);
+  if (!foodSectionKeys || foodSectionKeys.length === 0) {
+    return category === 'food';
   }
-  return category === 'food' || category.toLowerCase().includes('food');
+  return foodSectionKeys.includes(category);
 }
 
 /**
@@ -157,6 +159,8 @@ export interface CafeModifierGroup extends NormalisedModifierGroup {
   sortOrder: number;
   /** Set when this list is Square/POS-owned; null for Moonshot prep groups. */
   posGroupId?: string | null;
+  /** Semantic slot — Moonshot-owned; drives Menu/Stock families and KDS buckets. */
+  slot: ModifierSlot;
 }
 
 export interface NormalisedMenu {

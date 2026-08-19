@@ -1,5 +1,5 @@
 import SyncIcon from '@mui/icons-material/Sync';
-import { Box, Button, CircularProgress, Tab, Tabs, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Tab, Tabs, Typography } from '@mui/material';
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem, StockChipKey } from '@moonshot/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
@@ -17,20 +17,17 @@ import { formatTime24 } from '../../lib/format.js';
 import { PageHeader } from '../primitives/PageHeader.js';
 import { MenuPageSkeleton } from '../primitives/skeletons/MenuPageSkeleton.js';
 import { useToast } from '../primitives/ToastProvider.js';
-import { optionCountForChip, visibleCatalogListTabs } from './menu/item-sidebar.js';
+import {
+  hasUnclassifiedSections,
+  MODIFIER_FAMILY_TABS,
+  optionCountForFamily,
+  visibleCatalogListTabs,
+} from './menu/item-sidebar.js';
 import { catalogGroupsForPos, isPosCatalogCafe } from './menu/modifier-list-copy.js';
 import { ItemsTab } from './menu/ItemsTab.js';
 import { ModifierListsTab } from './menu/ModifierListsTab.js';
 
-type MenuTab = 'items' | Exclude<StockChipKey, 'food'>;
-
-const LIST_TABS: ReadonlyArray<{ value: Exclude<StockChipKey, 'food'>; label: string }> = [
-  { value: 'milk', label: 'Milk' },
-  { value: 'syrup', label: 'Syrup' },
-  { value: 'beans', label: 'Beans' },
-  { value: 'shots', label: 'Shots' },
-  { value: 'toppings', label: 'Toppings' },
-];
+type MenuTab = 'products' | Exclude<StockChipKey, 'food'>;
 
 function formatSyncedClock(iso: string | null, timeZone: string): string {
   if (!iso) return 'Never';
@@ -47,7 +44,7 @@ export function MenuPage() {
   const toast = useToast();
   const token = session?.token ?? '';
   const cafeSlug = session?.cafe.slug ?? '';
-  const [tab, setTab] = useState<MenuTab>('items');
+  const [tab, setTab] = useState<MenuTab>('products');
   const [items, setItems] = useState<NormalisedMenuItem[]>([]);
   const [sections, setSections] = useState<CafeMenuSection[]>([]);
   const [library, setLibrary] = useState<CafeModifierGroup[]>([]);
@@ -96,12 +93,13 @@ export function MenuPage() {
     [library, posCafe],
   );
   const listTabs = useMemo(
-    () => visibleCatalogListTabs(LIST_TABS, catalogLibrary, posCafe),
+    () => visibleCatalogListTabs(MODIFIER_FAMILY_TABS, catalogLibrary, posCafe),
     [posCafe, catalogLibrary],
   );
+  const showUnclassifiedBanner = posCafe && hasUnclassifiedSections(sections);
 
   useEffect(() => {
-    if (tab !== 'items' && !listTabs.some((t) => t.value === tab)) setTab('items');
+    if (tab !== 'products' && !listTabs.some((t) => t.value === tab)) setTab('products');
   }, [tab, listTabs]);
 
   useAdminMenuSync({
@@ -174,6 +172,13 @@ export function MenuPage() {
         }
       />
 
+      {showUnclassifiedBanner ? (
+        <Alert severity="info">
+          Some Square categories are not under a <strong>Food</strong> or <strong>Drink(s)</strong>{' '}
+          parent. Add those parent categories in Square, nest your menus under them, then sync again.
+        </Alert>
+      ) : null}
+
       {loading && !ready ? (
         <MenuPageSkeleton />
       ) : (
@@ -185,35 +190,36 @@ export function MenuPage() {
             allowScrollButtonsMobile
             sx={{ mb: 1.5 }}
           >
-            <Tab value="items" label={`Items ${items.length}`} />
+            <Tab value="products" label={`Products ${items.length}`} />
             {listTabs.map((t) => (
               <Tab
                 key={t.value}
                 value={t.value}
-                label={`${t.label} ${optionCountForChip(catalogLibrary, t.value)}`}
+                label={`${t.label} ${optionCountForFamily(catalogLibrary, t.value)}`}
               />
             ))}
           </Tabs>
-          {tab !== 'items' ? (
+          {tab !== 'products' ? (
             <Typography variant="body2" sx={{ mb: 2 }}>
               Reusable lists. Every drink that offers this list uses these options. Stock lives on
               the Stock tab.
             </Typography>
           ) : null}
-          {tab === 'items' ? (
+          {tab === 'products' ? (
             <ItemsTab
               cafeSlug={cafeSlug}
               token={token}
               items={items}
               sections={sections}
               library={catalogLibrary}
+              posCafe={posCafe}
               onItemsChanged={softReload}
             />
           ) : (
             <ModifierListsTab
               cafeSlug={cafeSlug}
               token={token}
-              chip={tab}
+              family={tab}
               groups={catalogLibrary}
               items={items}
               onLibraryChanged={softReload}

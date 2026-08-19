@@ -1,16 +1,15 @@
 /**
  * Square CATEGORY → PosCatalogSection tree.
  * Mirrors parent/child hierarchy and ordinals; keys are stable across renames via posCategoryId.
+ *
+ * Food vs drink: exact parent labels only — `Food`, `Drink`, or `Drinks` (case/whitespace
+ * normalised). No name heuristics. Children inherit from the nearest matching ancestor.
  */
 
 import type { CatalogObject } from 'square';
 import type { MenuSectionKind } from '@moonshot/types';
 import type { PosCatalogSection } from '@moonshot/domain';
 import { slugifyMenuSectionKey } from '../../menu/menu-sections.js';
-
-const FOOD_NAME_RE =
-  /\b(food|pastr\w*|baker\w*|snack\w*|cake\w*|sandwich\w*|bagel\w*|croissant\w*|scone\w*|toast\w*|muffin\w*|cookie\w*)\b/i;
-
 
 export type CategoryPlacement = {
   /** Leaf section key for the item. */
@@ -25,8 +24,22 @@ export type CatalogCategoryBuildResult = {
   keyByPosCategoryId: Map<string, string>;
 };
 
-function inferKindFromName(name: string): MenuSectionKind {
-  return FOOD_NAME_RE.test(name) ? 'food' : 'drink';
+/** Normalise a Square category label for exact kind matching. */
+export function normaliseCategoryLabel(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Direct kind from an exact label match — null when the label is not Food/Drink(s).
+ */
+export function directKindFromLabel(label: string): 'food' | 'drink' | null {
+  const n = normaliseCategoryLabel(label);
+  if (n === 'food') return 'food';
+  if (n === 'drink' || n === 'drinks') return 'drink';
+  return null;
 }
 
 function categoryOrdinal(cat: CatalogObject.Category): number {
@@ -68,6 +81,22 @@ function allocateKey(label: string, claimed: Set<string>): string {
   return fallback;
 }
 
+function resolveKindForPosId(
+  posId: string,
+  metaByPosId: Map<string, { label: string; parentPosId: string | null }>,
+  directKindByPosId: Map<string, 'food' | 'drink' | null>,
+): MenuSectionKind {
+  let walk: string | null = posId;
+  while (walk) {
+    const direct = directKindByPosId.get(walk);
+    if (direct === 'food' || direct === 'drink') return direct;
+    const parentPosId: string | null = metaByPosId.get(walk)?.parentPosId ?? null;
+    if (!parentPosId || !metaByPosId.has(parentPosId)) break;
+    walk = parentPosId;
+  }
+  return 'unclassified';
+}
+
 /**
  * Build a two-level (parent → child) section tree from Square CATEGORY objects.
  * Existing keyByPosCategoryId (from DB) wins so renames keep the same Moonshot key.
@@ -88,7 +117,7 @@ export function buildCatalogSections(
 
   const claimed = new Set<string>([...existingKeyByPosId.values()]);
   const keyByPosCategoryId = new Map<string, string>();
-  const kindByPosId = new Map<string, MenuSectionKind>();
+  const directKindByPosId = new Map<string, 'food' | 'drink' | null>();
   const metaByPosId = new Map<
     string,
     { label: string; parentPosId: string | null; sortOrder: number }
@@ -102,11 +131,7 @@ export function buildCatalogSections(
     const key = existing ?? allocateKey(label, claimed);
     keyByPosCategoryId.set(id, key);
 
-    let kind = inferKindFromName(label);
-    if (kind === 'drink' && parentPosId && kindByPosId.get(parentPosId) === 'food') {
-      kind = 'food';
-    }
-    kindByPosId.set(id, kind);
+    directKindByPosId.set(id, directKindFromLabel(label));
     metaByPosId.set(id, {
       label,
       parentPosId,
@@ -114,10 +139,8 @@ export function buildCatalogSections(
     });
   }
 
-  // Collapse deeper than two levels: walk up until parent is top-level or missing.
   const sections: PosCatalogSection[] = [];
   const posIds = [...keyByPosCategoryId.keys()];
-  // Re-sort by parent-then-ordinal for sortOrder assignment among siblings.
   posIds.sort((a, b) => {
     const ma = metaByPosId.get(a)!;
     const mb = metaByPosId.get(b)!;
@@ -133,8 +156,6 @@ export function buildCatalogSections(
     const key = keyByPosCategoryId.get(posId)!;
     let parentKey: string | null = null;
     if (meta.parentPosId && keyByPosCategoryId.has(meta.parentPosId)) {
-      // If grandparent exists, attach to the top-most ancestor as the nav parent
-      // and keep this node as the leaf under that parent (two-level mirror).
       let walk: string | null = meta.parentPosId;
       let topPos = meta.parentPosId;
       while (walk) {
@@ -146,8 +167,6 @@ export function buildCatalogSections(
         topPos = parentMeta.parentPosId;
         walk = parentMeta.parentPosId;
       }
-      // Child of a top-level → parentKey = top-level key.
-      // Deeper nodes also get the top-level as parent (flattened to two levels).
       if (topPos !== posId) {
         parentKey = keyByPosCategoryId.get(topPos) ?? null;
       }
@@ -158,7 +177,7 @@ export function buildCatalogSections(
       label: meta.label,
       parentKey,
       posCategoryId: posId,
-      kind: kindByPosId.get(posId) ?? 'drink',
+      kind: resolveKindForPosId(posId, metaByPosId, directKindByPosId),
       enabled: true,
       sortOrder: orderCounter++,
     });
@@ -194,5 +213,3 @@ export function resolveItemCategoryPlacement(
 
   return { sectionKey: fallbackKey, posCategoryId: null };
 }
-
-export { inferKindFromName, FOOD_NAME_RE };

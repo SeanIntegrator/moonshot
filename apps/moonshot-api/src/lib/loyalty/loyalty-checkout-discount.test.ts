@@ -32,6 +32,12 @@ describe('computeLoyaltyCheckoutDiscountMinor', () => {
 
   it('returns 0 for free_coffee when no drinks', () => {
     expect(computeLoyaltyCheckoutDiscountMinor('free_coffee', [line('food', 500)])).toBe(0);
+    expect(
+      computeLoyaltyCheckoutDiscountMinor('free_coffee', [line('pastries', 500)], [
+        'food',
+        'pastries',
+      ]),
+    ).toBe(0);
   });
 
   it('returns cheapest food unit for free_pastry', () => {
@@ -42,6 +48,9 @@ describe('computeLoyaltyCheckoutDiscountMinor', () => {
         line('food', 190),
       ]),
     ).toBe(190);
+    expect(
+      computeLoyaltyCheckoutDiscountMinor('free_pastry', [line('pastries', 220)], ['pastries']),
+    ).toBe(220);
   });
 
   it('returns 0 for free_pastry when drinks only', () => {

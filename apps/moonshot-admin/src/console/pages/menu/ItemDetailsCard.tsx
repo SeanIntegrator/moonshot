@@ -17,6 +17,7 @@ type Props = {
   token: string;
   library: CafeModifierGroup[];
   categoryOptions: CategoryOption[];
+  categoryRequired?: boolean;
   saving: boolean;
   onChange: (next: DraftItem) => void;
   onSaved: (updated: DraftItem) => void;
@@ -48,6 +49,7 @@ export function ItemDetailsCard({
   token,
   library,
   categoryOptions,
+  categoryRequired = false,
   saving,
   onChange,
   onSaved,
@@ -126,10 +128,11 @@ export function ItemDetailsCard({
             </ReadOnlyPanel>
           ) : (
             <>
-              <FormControl size="small" sx={{ maxWidth: 280 }}>
-                <InputLabel>Category</InputLabel>
+              <FormControl size="small" sx={{ maxWidth: 280 }} required={categoryRequired}>
+                <InputLabel required={categoryRequired}>Category</InputLabel>
                 <Select
                   label="Category"
+                  required={categoryRequired}
                   value={draft.category}
                   onChange={(e) => onChange({ ...draft, category: e.target.value })}
                 >

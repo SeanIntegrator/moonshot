@@ -8,7 +8,7 @@ import {
   itemsBySection,
   kitchenAbbrev,
   offeredOnCount,
-  optionCountForChip,
+  optionCountForFamily,
   visibleCatalogListTabs,
 } from './item-sidebar.js';
 import { catalogGroupsForPos } from './modifier-list-copy.js';
@@ -108,7 +108,7 @@ describe('item list helpers', () => {
   });
 
   it('counts drinks offering a modifier list', () => {
-    const milk = { id: 'm1' } as CafeModifierGroup;
+    const milk = { id: 'm1', slot: 'milk' as const } as CafeModifierGroup;
     const items = [
       item({ id: '1', name: 'Latte', modifierGroups: [{ ...milk, name: 'Milk', selectionType: 'single', required: false, options: [] }] }),
       item({ id: '2', name: 'Tea', modifierGroups: [] }),
@@ -116,11 +116,12 @@ describe('item list helpers', () => {
     expect(offeredOnCount(items, 'm1')).toBe(1);
   });
 
-  it('sums options per chip', () => {
+  it('sums options per family from stored slot', () => {
     const groups: CafeModifierGroup[] = [
       {
         id: '1',
         name: 'Milk',
+        slot: 'milk',
         selectionType: 'single',
         required: false,
         options: [
@@ -130,8 +131,8 @@ describe('item list helpers', () => {
         sortOrder: 0,
       },
     ];
-    expect(optionCountForChip(groups, 'milk')).toBe(2);
-    expect(optionCountForChip(groups, 'syrup')).toBe(0);
+    expect(optionCountForFamily(groups, 'milk')).toBe(2);
+    expect(optionCountForFamily(groups, 'flavours')).toBe(0);
   });
 
   it('hides empty POS leftover chips after catalog filter', () => {
@@ -139,6 +140,7 @@ describe('item list helpers', () => {
       {
         id: '1',
         name: 'Milk',
+        slot: 'milk',
         posGroupId: 'MODLIST_MILK',
         selectionType: 'single',
         required: false,
@@ -151,6 +153,7 @@ describe('item list helpers', () => {
       {
         id: '2',
         name: 'Toppings',
+        slot: 'toppings',
         posGroupId: null,
         selectionType: 'multi',
         required: false,
@@ -161,14 +164,14 @@ describe('item list helpers', () => {
     const library = catalogGroupsForPos(groups, true);
     const tabs = [
       { value: 'milk' as const, label: 'Milk' },
-      { value: 'toppings' as const, label: 'Toppings' },
+      { value: 'flavours' as const, label: 'Flavours' },
     ];
-    expect(optionCountForChip(library, 'milk')).toBe(2);
-    expect(optionCountForChip(library, 'toppings')).toBe(0);
+    expect(optionCountForFamily(library, 'milk')).toBe(2);
+    expect(optionCountForFamily(library, 'flavours')).toBe(0);
     expect(visibleCatalogListTabs(tabs, library, true).map((t) => t.value)).toEqual(['milk']);
     expect(visibleCatalogListTabs(tabs, groups, false).map((t) => t.value)).toEqual([
       'milk',
-      'toppings',
+      'flavours',
     ]);
   });
 

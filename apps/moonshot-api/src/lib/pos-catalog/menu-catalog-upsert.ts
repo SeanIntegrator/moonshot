@@ -114,7 +114,6 @@ export async function upsertPosCatalog(
     await reconcileOrphanSeededGroups(client, cafeId, catalog.groupsByPosId);
   }
 
-  await syncKdsModifierClassification(client, cafeId, catalog.groupsByPosId);
   await syncFoodSectionKeys(client, cafeId);
   await pruneOrphanOptionAvailability(client, cafeId);
 
@@ -181,13 +180,14 @@ export async function upsertPosSections(
         // Keep existing key (rename-stable); update label/enabled/sort/pos id.
         await client.query(
           `UPDATE menu_sections
-           SET label = $1, enabled = $2, sort_order = $3, pos_category_id = $4, updated_at = NOW()
-           WHERE id = $5 AND cafe_id = $6`,
+           SET label = $1, enabled = $2, sort_order = $3, pos_category_id = $4, kind = $5, updated_at = NOW()
+           WHERE id = $6 AND cafe_id = $7`,
           [
             section.label,
             section.enabled,
             section.sortOrder,
             section.posCategoryId,
+            section.kind,
             rowId,
             cafeId,
           ],
@@ -208,13 +208,15 @@ export async function upsertPosSections(
         `UPDATE menu_sections
          SET label = $1, enabled = $2, sort_order = $3,
              pos_category_id = COALESCE($4, pos_category_id),
+             kind = $5,
              updated_at = NOW()
-         WHERE id = $5 AND cafe_id = $6`,
+         WHERE id = $6 AND cafe_id = $7`,
         [
           section.label,
           section.enabled,
           section.sortOrder,
           section.posCategoryId,
+          section.kind,
           rowId,
           cafeId,
         ],
@@ -325,8 +327,8 @@ export async function upsertModifierGroup(
   const id = randomUUID();
   await client.query(
     `INSERT INTO modifier_groups (
-       id, cafe_id, name, selection_type, required, max_select, options, sort_order, pos_group_id
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)`,
+       id, cafe_id, name, selection_type, required, max_select, options, sort_order, pos_group_id, slot
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, 'other')`,
     [
       id,
       cafeId,

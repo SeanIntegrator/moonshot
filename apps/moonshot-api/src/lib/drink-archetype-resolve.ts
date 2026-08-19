@@ -1,21 +1,26 @@
 import { DRINK_ARCHETYPE_SLOT_GROUP_NAMES, type CafeDrinkArchetypeConfig, type DrinkArchetypeId, type DrinkArchetypeSlot, isDrinkArchetypeId, isDrinkArchetypeSlot, resolveCafeArchetypeRecipe, waiveMilkSurchargeFromCharge } from '@moonshot/domain';
+import type { ModifierSlot } from '@moonshot/types';
 
 export type LibraryGroupRef = {
   id: string;
   name: string;
+  slot?: ModifierSlot;
   /** When false/empty, syrup (and similar) slots are skipped. */
   hasOptions?: boolean;
 };
 
 /**
  * Resolve library group ids + waive flag for an archetype given café recipes
- * and the café's modifier library (by stable group name).
+ * and the café's modifier library (by slot, then stable group name).
  */
 export function resolveArchetypeGroups(
   archetypeId: DrinkArchetypeId,
   cafeConfig: CafeDrinkArchetypeConfig | null | undefined,
   libraryByName: Map<string, LibraryGroupRef>,
-  opts?: { slotFilter?: ReadonlySet<DrinkArchetypeSlot> | readonly DrinkArchetypeSlot[] },
+  opts?: {
+    slotFilter?: ReadonlySet<DrinkArchetypeSlot> | readonly DrinkArchetypeSlot[];
+    libraryBySlot?: Map<DrinkArchetypeSlot, LibraryGroupRef>;
+  },
 ): { groupIds: string[]; waiveMilkSurcharge: boolean; slots: DrinkArchetypeSlot[] } {
   const recipe = resolveCafeArchetypeRecipe(archetypeId, cafeConfig);
   const groupIds: string[] = [];
@@ -24,13 +29,13 @@ export function resolveArchetypeGroups(
       ? opts.slotFilter
       : new Set(opts.slotFilter)
     : null;
+  const bySlot = opts?.libraryBySlot ?? libraryBySlotFromGroups([...libraryByName.values()]);
 
   for (const slot of recipe.slots) {
     if (filter && !filter.has(slot)) continue;
     const groupName = DRINK_ARCHETYPE_SLOT_GROUP_NAMES[slot];
-    const group = libraryByName.get(groupName);
+    const group = bySlot.get(slot) ?? libraryByName.get(groupName);
     if (!group) continue;
-    // Skip empty optional groups (e.g. Syrups disabled / no options yet).
     if (group.hasOptions === false) continue;
     groupIds.push(group.id);
   }
@@ -65,14 +70,40 @@ export function parseCafeDrinkArchetypeConfig(raw: unknown): CafeDrinkArchetypeC
   return out;
 }
 
+function groupHasOptions(g: { options?: unknown; hasOptions?: boolean }): boolean {
+  if (typeof g.hasOptions === 'boolean') return g.hasOptions;
+  return !Array.isArray(g.options) || g.options.length > 0;
+}
+
 /** Build a name→group map from café library rows. */
 export function libraryByNameFromGroups(
-  groups: Array<{ id: string; name: string; options?: unknown }>,
+  groups: Array<{ id: string; name: string; options?: unknown; slot?: ModifierSlot }>,
 ): Map<string, LibraryGroupRef> {
   const map = new Map<string, LibraryGroupRef>();
   for (const g of groups) {
-    const hasOptions = !Array.isArray(g.options) || g.options.length > 0;
-    map.set(g.name, { id: g.id, name: g.name, hasOptions });
+    map.set(g.name, {
+      id: g.id,
+      name: g.name,
+      slot: g.slot,
+      hasOptions: groupHasOptions(g),
+    });
+  }
+  return map;
+}
+
+/** Build a slot→group map from café library rows (preferred for archetype attach). */
+export function libraryBySlotFromGroups(
+  groups: Array<{ id: string; name: string; options?: unknown; slot?: ModifierSlot; hasOptions?: boolean }>,
+): Map<DrinkArchetypeSlot, LibraryGroupRef> {
+  const map = new Map<DrinkArchetypeSlot, LibraryGroupRef>();
+  for (const g of groups) {
+    if (!g.slot || g.slot === 'other') continue;
+    map.set(g.slot as DrinkArchetypeSlot, {
+      id: g.id,
+      name: g.name,
+      slot: g.slot,
+      hasOptions: groupHasOptions(g),
+    });
   }
   return map;
 }
