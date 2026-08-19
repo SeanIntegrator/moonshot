@@ -1,11 +1,17 @@
 import type {
   CafeMenuSection,
   CafeModifierGroup,
+  MenuItemCreateBody,
+  MenuItemPatchBody,
+  MenuSectionCreateBody,
+  MenuSectionPatchBody,
+  ModifierGroupCreateBody,
+  ModifierGroupWriteBody,
   NormalisedMenu,
   NormalisedMenuItem,
 } from '@moonshot/types';
 import type { CafeDrinkArchetypeConfig, DrinkArchetypeDef } from '@moonshot/domain';
-import { apiUrl, parseEnvelope } from './http.js';
+import { adminFetch, apiUrl, parseEnvelope } from './http.js';
 
 export async function fetchMenuForCafe(slug: string): Promise<NormalisedMenu> {
   const res = await fetch(apiUrl('/menu'), { headers: { 'X-Cafe-Slug': slug } });
@@ -18,39 +24,26 @@ export async function fetchMenuForCafe(slug: string): Promise<NormalisedMenu> {
 
 /** Admin menu — includes hidden/unavailable items */
 export async function fetchMenuForAdmin(token: string, cafeSlug: string): Promise<NormalisedMenu> {
-  const res = await fetch(apiUrl('/menu/manage'), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
+  return adminFetch<NormalisedMenu>('/menu/manage', {
+    token,
+    cafeSlug,
+    errorMessage: 'Failed to load menu',
   });
-  const envelope = await parseEnvelope<NormalisedMenu>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Failed to load menu (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function patchMenuItem(
   token: string,
   cafeSlug: string,
   itemId: string,
-  body: Record<string, unknown>,
+  body: MenuItemPatchBody,
 ): Promise<NormalisedMenuItem> {
-  const res = await fetch(apiUrl(`/menu/${encodeURIComponent(itemId)}`), {
+  return adminFetch<NormalisedMenuItem>(`/menu/${encodeURIComponent(itemId)}`, {
+    token,
+    cafeSlug,
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Update failed',
   });
-  const envelope = await parseEnvelope<NormalisedMenuItem>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Update failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function uploadMenuItemImage(
@@ -61,20 +54,13 @@ export async function uploadMenuItemImage(
 ): Promise<NormalisedMenuItem> {
   const form = new FormData();
   form.append('image', file);
-
-  const res = await fetch(apiUrl(`/menu/${encodeURIComponent(itemId)}/image`), {
+  return adminFetch<NormalisedMenuItem>(`/menu/${encodeURIComponent(itemId)}/image`, {
+    token,
+    cafeSlug,
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: form,
+    formData: form,
+    errorMessage: 'Image upload failed',
   });
-  const envelope = await parseEnvelope<NormalisedMenuItem>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Image upload failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function setMenuItemUseDefaultImage(
@@ -83,41 +69,27 @@ export async function setMenuItemUseDefaultImage(
   itemId: string,
   useDefaultImage: boolean,
 ): Promise<NormalisedMenuItem> {
-  const res = await fetch(apiUrl(`/menu/${encodeURIComponent(itemId)}/default-image`), {
+  return adminFetch<NormalisedMenuItem>(`/menu/${encodeURIComponent(itemId)}/default-image`, {
+    token,
+    cafeSlug,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify({ useDefaultImage }),
+    json: { useDefaultImage },
+    errorMessage: 'Default image update failed',
   });
-  const envelope = await parseEnvelope<NormalisedMenuItem>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Default image update failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function createMenuItem(
   token: string,
   cafeSlug: string,
-  body: Record<string, unknown>,
+  body: MenuItemCreateBody,
 ): Promise<NormalisedMenuItem> {
-  const res = await fetch(apiUrl('/menu'), {
+  return adminFetch<NormalisedMenuItem>('/menu', {
+    token,
+    cafeSlug,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Create menu item failed',
   });
-  const envelope = await parseEnvelope<NormalisedMenuItem>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Create menu item failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function deleteMenuItem(
@@ -125,77 +97,52 @@ export async function deleteMenuItem(
   cafeSlug: string,
   itemId: string,
 ): Promise<void> {
-  const res = await fetch(apiUrl(`/menu/${encodeURIComponent(itemId)}`), {
+  await adminFetch<{ removed: boolean }>(`/menu/${encodeURIComponent(itemId)}`, {
+    token,
+    cafeSlug,
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
+    errorMessage: 'Delete failed',
   });
-  const envelope = await parseEnvelope<{ removed: boolean }>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Delete failed (${res.status})`);
-  }
 }
 
 export async function fetchModifierGroups(
   token: string,
   cafeSlug: string,
 ): Promise<CafeModifierGroup[]> {
-  const res = await fetch(apiUrl('/menu/modifier-groups'), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
+  return adminFetch<CafeModifierGroup[]>('/menu/modifier-groups', {
+    token,
+    cafeSlug,
+    errorMessage: 'Failed to load sections',
   });
-  const envelope = await parseEnvelope<CafeModifierGroup[]>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Failed to load sections (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function createModifierGroup(
   token: string,
   cafeSlug: string,
-  body: Record<string, unknown>,
+  body: ModifierGroupCreateBody,
 ): Promise<CafeModifierGroup> {
-  const res = await fetch(apiUrl('/menu/modifier-groups'), {
+  return adminFetch<CafeModifierGroup>('/menu/modifier-groups', {
+    token,
+    cafeSlug,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Create section failed',
   });
-  const envelope = await parseEnvelope<CafeModifierGroup>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Create section failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function updateModifierGroup(
   token: string,
   cafeSlug: string,
   groupId: string,
-  body: Record<string, unknown>,
+  body: ModifierGroupWriteBody,
 ): Promise<CafeModifierGroup> {
-  const res = await fetch(apiUrl(`/menu/modifier-groups/${encodeURIComponent(groupId)}`), {
+  return adminFetch<CafeModifierGroup>(`/menu/modifier-groups/${encodeURIComponent(groupId)}`, {
+    token,
+    cafeSlug,
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Update section failed',
   });
-  const envelope = await parseEnvelope<CafeModifierGroup>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Update section failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function deleteModifierGroup(
@@ -203,77 +150,52 @@ export async function deleteModifierGroup(
   cafeSlug: string,
   groupId: string,
 ): Promise<void> {
-  const res = await fetch(apiUrl(`/menu/modifier-groups/${encodeURIComponent(groupId)}`), {
+  await adminFetch<{ removed: boolean }>(`/menu/modifier-groups/${encodeURIComponent(groupId)}`, {
+    token,
+    cafeSlug,
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
+    errorMessage: 'Delete section failed',
   });
-  const envelope = await parseEnvelope<{ removed: boolean }>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Delete section failed (${res.status})`);
-  }
 }
 
 export async function fetchMenuSections(
   token: string,
   cafeSlug: string,
 ): Promise<CafeMenuSection[]> {
-  const res = await fetch(apiUrl('/menu/sections'), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
+  return adminFetch<CafeMenuSection[]>('/menu/sections', {
+    token,
+    cafeSlug,
+    errorMessage: 'Failed to load menu sections',
   });
-  const envelope = await parseEnvelope<CafeMenuSection[]>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Failed to load menu sections (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function createMenuSection(
   token: string,
   cafeSlug: string,
-  body: { label: string },
+  body: MenuSectionCreateBody,
 ): Promise<CafeMenuSection> {
-  const res = await fetch(apiUrl('/menu/sections'), {
+  return adminFetch<CafeMenuSection>('/menu/sections', {
+    token,
+    cafeSlug,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Create menu section failed',
   });
-  const envelope = await parseEnvelope<CafeMenuSection>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Create menu section failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function patchMenuSection(
   token: string,
   cafeSlug: string,
   sectionId: string,
-  body: Record<string, unknown>,
+  body: MenuSectionPatchBody,
 ): Promise<CafeMenuSection> {
-  const res = await fetch(apiUrl(`/menu/sections/${encodeURIComponent(sectionId)}`), {
+  return adminFetch<CafeMenuSection>(`/menu/sections/${encodeURIComponent(sectionId)}`, {
+    token,
+    cafeSlug,
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Update menu section failed',
   });
-  const envelope = await parseEnvelope<CafeMenuSection>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Update menu section failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function deleteMenuSection(
@@ -281,17 +203,12 @@ export async function deleteMenuSection(
   cafeSlug: string,
   sectionId: string,
 ): Promise<void> {
-  const res = await fetch(apiUrl(`/menu/sections/${encodeURIComponent(sectionId)}`), {
+  await adminFetch<{ removed: boolean }>(`/menu/sections/${encodeURIComponent(sectionId)}`, {
+    token,
+    cafeSlug,
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
+    errorMessage: 'Delete menu section failed',
   });
-  const envelope = await parseEnvelope<{ removed: boolean }>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Delete menu section failed (${res.status})`);
-  }
 }
 
 export type DrinkArchetypeConfigPayload = {
@@ -304,58 +221,9 @@ export async function fetchDrinkArchetypes(
   token: string,
   cafeSlug: string,
 ): Promise<DrinkArchetypeConfigPayload> {
-  const res = await fetch(apiUrl('/menu/drink-archetypes'), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
+  return adminFetch<DrinkArchetypeConfigPayload>('/menu/drink-archetypes', {
+    token,
+    cafeSlug,
+    errorMessage: 'Failed to load drink types',
   });
-  const envelope = await parseEnvelope<DrinkArchetypeConfigPayload>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Failed to load drink types (${res.status})`);
-  }
-  return envelope.data;
-}
-
-export async function patchDrinkArchetypes(
-  token: string,
-  cafeSlug: string,
-  config: CafeDrinkArchetypeConfig,
-): Promise<DrinkArchetypeConfigPayload> {
-  const res = await fetch(apiUrl('/menu/drink-archetypes'), {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Cafe-Slug': cafeSlug,
-    },
-    body: JSON.stringify({ config }),
-  });
-  const envelope = await parseEnvelope<DrinkArchetypeConfigPayload>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Failed to save drink types (${res.status})`);
-  }
-  return envelope.data;
-}
-
-export async function applyDrinkArchetypeToItems(
-  token: string,
-  cafeSlug: string,
-  archetypeId: string,
-): Promise<{ updatedCount: number }> {
-  const res = await fetch(
-    apiUrl(`/menu/drink-archetypes/${encodeURIComponent(archetypeId)}/apply`),
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-Cafe-Slug': cafeSlug,
-      },
-    },
-  );
-  const envelope = await parseEnvelope<{ updatedCount: number }>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Failed to apply drink type (${res.status})`);
-  }
-  return envelope.data;
 }

@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { localWeekdayKey } from '../overview/today-hours.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
-import { useToast } from '../../primitives/ToastProvider.js';
+import { useCafeSave } from '../../primitives/useCafePatch.js';
 import { HoursDayRow } from './HoursDayRow.js';
 import { LAST_ORDER_BUFFER_OPTIONS } from './last-order-buffer.js';
 import {
@@ -28,13 +28,12 @@ function asBuffer(value: number): LastOrderBufferMinutes {
 }
 
 export function WeeklyHoursCard() {
-  const { cafe, patchSettings } = useCafe();
-  const toast = useToast();
+  const { cafe } = useCafe();
   const saved = hoursToDraft(cafe.hours);
   const savedBuffer = asBuffer(cafe.lastOrderBufferMinutes);
   const [draft, setDraft] = useState<HoursDraft>(saved);
   const [buffer, setBuffer] = useState<LastOrderBufferMinutes>(savedBuffer);
-  const [saving, setSaving] = useState(false);
+  const { saving, save: savePatch } = useCafeSave('Save failed');
   const today = localWeekdayKey(cafe.timezone, new Date());
 
   useEffect(() => {
@@ -87,14 +86,7 @@ export function WeeklyHoursCard() {
 
   async function save() {
     if (!valid) return;
-    setSaving(true);
-    try {
-      await patchSettings({ hours: draftToHours(draft), lastOrderBufferMinutes: buffer });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Save failed' });
-    } finally {
-      setSaving(false);
-    }
+    await savePatch({ hours: draftToHours(draft), lastOrderBufferMinutes: buffer });
   }
 
   return (

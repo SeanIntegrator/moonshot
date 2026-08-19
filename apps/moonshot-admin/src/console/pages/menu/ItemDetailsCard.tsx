@@ -1,8 +1,8 @@
 import type { CafeModifierGroup } from '@moonshot/types';
 import { Box, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
-import { MenuItemImageField } from '../../../components/menu/MenuItemImageField.js';
-import { SizeEditor } from '../../../components/menu/SizeEditor.js';
+import { MenuItemImageField } from './MenuItemImageField.js';
+import { SizeEditor } from './SizeEditor.js';
 import { formatGbpMinor } from '../../../lib/format.js';
 import { ReadOnlyPanel } from '../../primitives/ReadOnlyPanel.js';
 import { minorToPoundsInput, poundsToMinor } from './extra-price.js';

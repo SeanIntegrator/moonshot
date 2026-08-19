@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatExtraMinor, minorToPoundsInput, poundsToMinor } from './extra-price.js';
+import { extraPoundsInput, formatExtraMinor, minorToPoundsInput, poundsToMinor } from './extra-price.js';
 
 describe('formatExtraMinor', () => {
   it('shows Free for zero', () => {
@@ -29,5 +29,16 @@ describe('pounds input round-trip', () => {
     expect(minorToPoundsInput(40)).toBe('0.40');
     expect(minorToPoundsInput(380)).toBe('3.80');
     expect(String(380 / 100)).toBe('3.8');
+  });
+});
+
+describe('extraPoundsInput', () => {
+  it('returns empty string for free extras', () => {
+    expect(extraPoundsInput(0)).toBe('');
+  });
+
+  it('formats non-zero extras to two decimals', () => {
+    expect(extraPoundsInput(40)).toBe('0.40');
+    expect(extraPoundsInput(380)).toBe('3.80');
   });
 });

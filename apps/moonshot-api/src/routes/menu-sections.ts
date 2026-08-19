@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ApiErrorCode } from '@moonshot/types';
+import { ApiErrorCode, type MenuSectionCreateBody, type MenuSectionPatchBody } from '@moonshot/types';
 import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 import {
@@ -27,7 +27,7 @@ menuSectionsRouter.get('/', async (req, res) => {
 menuSectionsRouter.post('/', requireMenuMutationAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
   await ensureSystemMenuSections(pool, cafeId);
-  const section = await createMenuSection(pool, cafeId, req.body as Record<string, unknown>);
+  const section = await createMenuSection(pool, cafeId, req.body as MenuSectionCreateBody);
   return res.status(201).json({ ok: true, data: section });
 });
 
@@ -42,7 +42,7 @@ menuSectionsRouter.patch('/:sectionId', requireMenuMutationAuth, async (req, res
     pool,
     req.cafe!.cafeId,
     sectionId,
-    req.body as Record<string, unknown>,
+    req.body as MenuSectionPatchBody,
   );
   if (!updated) {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Menu section not found');

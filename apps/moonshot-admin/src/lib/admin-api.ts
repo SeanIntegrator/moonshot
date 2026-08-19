@@ -17,7 +17,6 @@ export {
   type PublicCafePayload,
 } from './adminApi/settings.js';
 export {
-  applyDrinkArchetypeToItems,
   createMenuItem,
   createMenuSection,
   createModifierGroup,
@@ -29,7 +28,6 @@ export {
   fetchMenuForCafe,
   fetchMenuSections,
   fetchModifierGroups,
-  patchDrinkArchetypes,
   patchMenuItem,
   patchMenuSection,
   updateModifierGroup,

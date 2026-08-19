@@ -1,4 +1,5 @@
 import { POS_PROVIDERS } from '@moonshot/domain';
+import type { PosCatalogSyncResult } from '@moonshot/types';
 import type { Pool } from 'pg';
 import { pool } from '../../../db.js';
 import {
@@ -42,13 +43,7 @@ export function resetCatalogSyncStateForTests(): void {
   inFlight.clear();
 }
 
-export type CatalogSyncRunResult = {
-  cafeId: string;
-  upsertedItems: number;
-  softDeletedItems: number;
-  upsertedGroups: number;
-  lastSyncedAt: string;
-};
+export type CatalogSyncRunResult = PosCatalogSyncResult;
 
 /**
  * Debounce catalog sync per café (Square catalog.version.updated can burst).

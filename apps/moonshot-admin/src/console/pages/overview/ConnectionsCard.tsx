@@ -18,7 +18,7 @@ import { useToast } from '../../primitives/ToastProvider.js';
 import { DisconnectSquareDialog } from './DisconnectSquareDialog.js';
 import { SquareLogo, StripeLogo } from './ServiceLogos.js';
 import { squareRowView } from './square-connection.js';
-import { stripeRowView } from './stripe-connection.js';
+import { isStripeServerUnavailable, STRIPE_UNAVAILABLE_STATUS, stripeRowView } from './stripe-connection.js';
 
 const STRIPE_DASHBOARD = 'https://dashboard.stripe.com';
 
@@ -51,14 +51,8 @@ export function ConnectionsCard({ token, timeZone }: Props) {
       .then(setStripe)
       .catch((e) => {
         const msg = e instanceof Error ? e.message : 'Failed to load Stripe';
-        if (/not configured|STRIPE_/i.test(msg)) {
-          setStripe({
-            configured: false,
-            accountId: null,
-            chargesEnabled: false,
-            detailsSubmitted: false,
-            payoutsEnabled: false,
-          });
+        if (isStripeServerUnavailable(msg)) {
+          setStripe(STRIPE_UNAVAILABLE_STATUS);
           return;
         }
         toast({ severity: 'error', message: msg });

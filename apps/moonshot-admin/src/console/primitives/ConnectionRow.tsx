@@ -2,6 +2,7 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { useState, type MouseEvent, type ReactNode } from 'react';
 import { connectionDotColor, type ConnectionTone } from './connection-tone.js';
+import { ConnectionDot } from './ConnectionDot.js';
 import { buttonLoader } from './button-loader.js';
 
 export type ConnectionOverflowAction = {
@@ -57,19 +58,7 @@ export function ConnectionRow({
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography sx={{ fontWeight: 700, lineHeight: 1.3 }}>{name}</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
-          <Box
-            sx={(theme) => ({
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              bgcolor:
-                dot === 'healthy'
-                  ? theme.console.connection.healthy
-                  : dot === 'stale'
-                    ? theme.console.connection.stale
-                    : theme.console.connection.failed,
-            })}
-          />
+          <ConnectionDot tone={tone} />
           <Typography
             variant="body2"
             sx={(theme) => ({

@@ -7,8 +7,7 @@ The signed-in admin is an eight-tab console. Login / signup / onboarding stay on
 
 Signed-in `/` redirects to `/overview` (search preserved, including
 `?stripeConnect=return`). Login, signup, and onboarding-complete also land on
-`/overview`. The legacy dashboard ([DashboardPage.tsx](../apps/moonshot-admin/src/pages/DashboardPage.tsx))
-stays in the tree as a reference and is not routed.
+`/overview`. The signed-in product is the eight-tab console only.
 
 Tabs:
 

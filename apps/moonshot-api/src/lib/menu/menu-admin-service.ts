@@ -1,4 +1,9 @@
-import type { NormalisedMenuItem, NormalisedModifierGroup } from '@moonshot/types';
+import type {
+  MenuItemCreateBody,
+  MenuItemPatchBody,
+  NormalisedMenuItem,
+  NormalisedModifierGroup,
+} from '@moonshot/types';
 import { ApiErrorCode } from '@moonshot/types';
 import { isDrinkArchetypeId, menuTemplateDrinkImageUrl, resolveMenuTemplateDrinkKeyByExactName } from '@moonshot/domain';
 import type { Pool } from 'pg';
@@ -17,13 +22,13 @@ import {
 } from './menu-sections.js';
 import { UUID_RE } from '../uuid.js';
 
-function parseModifierGroupIds(body: Record<string, unknown>): string[] | undefined {
-  if (!('modifierGroupIds' in body)) return undefined;
+function parseModifierGroupIds(body: MenuItemPatchBody | MenuItemCreateBody): string[] | undefined {
+  if (!('modifierGroupIds' in body) || body.modifierGroupIds === undefined) return undefined;
   if (!Array.isArray(body.modifierGroupIds)) return [];
   return body.modifierGroupIds.filter((id): id is string => typeof id === 'string' && UUID_RE.test(id));
 }
 
-function parseArchetype(body: Record<string, unknown>): string | null | undefined {
+function parseArchetype(body: MenuItemPatchBody | MenuItemCreateBody): string | null | undefined {
   if (!('archetype' in body)) return undefined;
   if (body.archetype === null || body.archetype === '') return null;
   if (typeof body.archetype !== 'string' || !isDrinkArchetypeId(body.archetype)) {
@@ -32,7 +37,7 @@ function parseArchetype(body: Record<string, unknown>): string | null | undefine
   return body.archetype;
 }
 
-function parseWaiveMilk(body: Record<string, unknown>): boolean | undefined {
+function parseWaiveMilk(body: MenuItemPatchBody | MenuItemCreateBody): boolean | undefined {
   if (!('waiveMilkSurcharge' in body)) return undefined;
   if (typeof body.waiveMilkSurcharge !== 'boolean') {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'waiveMilkSurcharge must be a boolean');
@@ -40,7 +45,7 @@ function parseWaiveMilk(body: Record<string, unknown>): boolean | undefined {
   return body.waiveMilkSurcharge;
 }
 
-function parseAllowNoMilk(body: Record<string, unknown>): boolean | undefined {
+function parseAllowNoMilk(body: MenuItemPatchBody | MenuItemCreateBody): boolean | undefined {
   if (!('allowNoMilk' in body)) return undefined;
   if (typeof body.allowNoMilk !== 'boolean') {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'allowNoMilk must be a boolean');
@@ -63,7 +68,7 @@ export function assertMenuItemId(itemId: string | undefined): string {
 export async function createMenuItem(
   db: Pool,
   cafeId: string,
-  body: Record<string, unknown>,
+  body: MenuItemCreateBody,
 ): Promise<NormalisedMenuItem> {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   const category = typeof body.category === 'string' ? body.category.trim() : '';
@@ -86,9 +91,9 @@ export async function createMenuItem(
   const imageUrl = typeof body.imageUrl === 'string' ? body.imageUrl : null;
   const emoji = typeof body.emoji === 'string' ? body.emoji : null;
   const posItemId = typeof body.posItemId === 'string' ? body.posItemId : null;
-  const tags = Array.isArray(body.tags) ? (body.tags as string[]) : [];
-  const modifierGroups = Array.isArray(body.modifierGroups)
-    ? (body.modifierGroups as NormalisedModifierGroup[])
+  const tags = Array.isArray(body.tags) ? body.tags.filter((t): t is string => typeof t === 'string') : [];
+  const modifierGroups: NormalisedModifierGroup[] = Array.isArray(body.modifierGroups)
+    ? body.modifierGroups
     : [];
   const sizes = normalizeSizes(body.sizes);
   const sortOrder = typeof body.sortOrder === 'number' ? body.sortOrder : 0;
@@ -144,7 +149,7 @@ export async function patchMenuItem(
   db: Pool,
   cafeId: string,
   itemId: string,
-  body: Record<string, unknown>,
+  body: MenuItemPatchBody,
 ): Promise<NormalisedMenuItem> {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -154,7 +159,10 @@ export async function patchMenuItem(
   const waiveMilkSurcharge = parseWaiveMilk(body);
   const allowNoMilk = parseAllowNoMilk(body);
 
-  const optionalString = (key: string, col: string) => {
+  const optionalString = (
+    key: 'name' | 'description' | 'subcategory' | 'imageUrl' | 'emoji' | 'currency' | 'posItemId',
+    col: string,
+  ) => {
     if (key in body) {
       const v = body[key];
       sets.push(`${col} = $${i++}`);

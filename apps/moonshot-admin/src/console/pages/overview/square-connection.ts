@@ -1,5 +1,5 @@
 import type { ConnectionTone } from '../../primitives/connection-tone.js';
-import type { SquareConnectStatus } from '../../../lib/adminApi/pos.js';
+import type { SquareConnectStatus } from '@moonshot/types';
 import { formatTime24, formatUkShortDate } from '../../../lib/format.js';
 import { isSameLocalDay } from './today-hours.js';
 

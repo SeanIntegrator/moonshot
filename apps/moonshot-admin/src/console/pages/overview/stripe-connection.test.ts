@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AdminStripeAccountStatusResponse } from '@moonshot/types';
-import { stripeRowView } from './stripe-connection.js';
+import { isStripeServerUnavailable, stripeRowView } from './stripe-connection.js';
 
 const live: AdminStripeAccountStatusResponse = {
   configured: true,
@@ -29,5 +29,10 @@ describe('stripeRowView', () => {
     const row = stripeRowView({ ...live, configured: false, chargesEnabled: true });
     expect(row.needsAttention).toBe(true);
     expect(row.actionKind).toBe('onboard');
+  });
+
+  it('detects unconfigured Stripe from API error text', () => {
+    expect(isStripeServerUnavailable('STRIPE_SECRET_KEY is not configured')).toBe(true);
+    expect(isStripeServerUnavailable('network timeout')).toBe(false);
   });
 });

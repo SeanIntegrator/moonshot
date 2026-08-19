@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ApiErrorCode } from '@moonshot/types';
+import { ApiErrorCode, type ModifierGroupCreateBody, type ModifierGroupWriteBody } from '@moonshot/types';
 import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 import {
@@ -25,7 +25,7 @@ modifierGroupsRouter.get('/', async (req, res) => {
 modifierGroupsRouter.post('/', requireMenuMutationAuth, async (req, res) => {
   const cafeId = req.cafe!.cafeId;
   try {
-    const group = await createModifierGroup(pool, cafeId, req.body as Record<string, unknown>);
+    const group = await createModifierGroup(pool, cafeId, req.body as ModifierGroupCreateBody);
     return res.status(201).json({ ok: true, data: group });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Create failed';
@@ -44,7 +44,7 @@ modifierGroupsRouter.patch('/:groupId', requireMenuMutationAuth, async (req, res
     pool,
     req.cafe!.cafeId,
     groupId,
-    req.body as Record<string, unknown>,
+    req.body as ModifierGroupWriteBody,
   );
   if (!updated) {
     throw new ApiHttpError(404, ApiErrorCode.NOT_FOUND, 'Modifier group not found');

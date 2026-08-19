@@ -13,10 +13,10 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { OrderAheadThemePreview } from '../../../components/branding/OrderAheadThemePreview.js';
+import { OrderAheadThemePreview } from './OrderAheadThemePreview.js';
 import { useCafe } from '../../CafeProvider.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
-import { useToast } from '../../primitives/ToastProvider.js';
+import { useCafeSave } from '../../primitives/useCafePatch.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
 import { BRAND_COLOUR_PRESETS, THEME_PACKS } from './brand-presets.js';
 
@@ -42,14 +42,13 @@ function sameHex(a: string, b: string): boolean {
 }
 
 export function BrandEditorCard() {
-  const { cafe, patchSettings } = useCafe();
+  const { cafe } = useCafe();
   const saved = brandFromCafe(cafe);
   const [themeId, setThemeId] = useState<BaseThemeId>(saved.themeId);
   const [color, setColor] = useState(saved.color);
   const [headingFontId, setHeadingFontId] = useState(saved.headingFontId);
   const [previewFrame, setPreviewFrame] = useState<PreviewFrame>('home');
-  const [saving, setSaving] = useState(false);
-  const toast = useToast();
+  const { saving, save: savePatch } = useCafeSave('Save failed');
 
   useEffect(() => {
     const next = brandFromCafe(cafe);
@@ -78,18 +77,11 @@ export function BrandEditorCard() {
 
   async function save() {
     if (!valid) return;
-    setSaving(true);
-    try {
-      const brand: CafeBrandOverrides = {
-        color: color.trim() ? color.trim() : null,
-        headingFontId: headingFontId.trim() ? headingFontId.trim() : null,
-      };
-      await patchSettings({ themeId, brand });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Save failed' });
-    } finally {
-      setSaving(false);
-    }
+    const brand: CafeBrandOverrides = {
+      color: color.trim() ? color.trim() : null,
+      headingFontId: headingFontId.trim() ? headingFontId.trim() : null,
+    };
+    await savePatch({ themeId, brand });
   }
 
   return (

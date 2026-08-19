@@ -1,6 +1,6 @@
 # Menu management
 
-Cafés on the **manual** POS adapter manage their catalogue via the admin dashboard (`MenuManager`). Customer order-ahead reads the same normalised contract from `GET /api/v1/menu`.
+Cafés on the **manual** POS adapter manage their catalogue via the admin Menu tab. Customer order-ahead reads the same normalised contract from `GET /api/v1/menu`.
 
 ## Concepts
 
@@ -24,7 +24,7 @@ Each drink item can store:
 - `archetype` — id from the platform catalogue (`espresso-neat`, `low-milk-hot`, …)
 - `waive_milk_surcharge` — when true, Milks option prices are treated as £0 on that item (display + checkout)
 
-Café recipes live in `cafes.drink_archetype_config` (JSONB). Empty/`{}` means use platform defaults; admin saves a full snapshot. Editing a recipe does **not** rewrite existing items until the owner clicks **Apply to items** for that type.
+Café recipes live in `cafes.drink_archetype_config` (JSONB). Empty/`{}` means use platform defaults. Admin assigns a drink type per item (which attaches the recipe’s modifier slots); café-level recipe editing is API-only.
 
 | Archetype | Default slots | Milk charge |
 | --- | --- | --- |

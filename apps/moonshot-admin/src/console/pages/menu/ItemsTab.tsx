@@ -6,7 +6,7 @@ import { createMenuItem, fetchDrinkArchetypes, patchMenuItem } from '../../../li
 import { useToast } from '../../primitives/ToastProvider.js';
 import { ItemEditorFields } from './ItemEditorFields.js';
 import { ItemsSidebar } from './ItemsSidebar.js';
-import { firstSidebarItemId } from './item-sidebar.js';
+import { firstSidebarItemId, resolveSidebarSelection } from './item-sidebar.js';
 import { emptyDraft, itemDraftDirty, itemPatchBody, toDraft, type DraftItem } from './menu-item-draft.js';
 
 type Props = {
@@ -43,6 +43,7 @@ export function ItemsTab({
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     firstSidebarItemId(items, sections),
   );
+  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDrinkArchetypes(token, cafeSlug)
@@ -53,10 +54,16 @@ export function ItemsTab({
   }, [token, cafeSlug]);
 
   useEffect(() => {
-    if (creating) return;
-    if (selectedId && items.some((i) => i.id === selectedId)) return;
-    setSelectedId(firstSidebarItemId(items, sections));
-  }, [items, sections, selectedId, creating]);
+    const next = resolveSidebarSelection({
+      creating,
+      selectedId,
+      pendingSelectId,
+      itemIds: items.map((i) => i.id),
+      fallbackId: firstSidebarItemId(items, sections),
+    });
+    if (next.selectedId !== selectedId) setSelectedId(next.selectedId);
+    if (next.pendingSelectId !== pendingSelectId) setPendingSelectId(next.pendingSelectId);
+  }, [items, sections, selectedId, creating, pendingSelectId]);
 
   const categoryOptions = enabledSections.map((s) => ({ value: s.key, label: s.label }));
   const selected = items.find((i) => i.id === selectedId) ?? null;
@@ -80,12 +87,14 @@ export function ItemsTab({
     }
     setCreating(true);
     setCreateDraft(emptyDraft(defaultCategory));
+    setPendingSelectId(null);
     setSelectedId(null);
   }
 
   function cancelCreate() {
     setCreating(false);
     setCreateDraft(null);
+    setPendingSelectId(null);
     setSelectedId(firstSidebarItemId(items, sections));
   }
 
@@ -114,6 +123,7 @@ export function ItemsTab({
         setCreating(false);
         setCreateDraft(null);
         setSelectedId(created.id);
+        setPendingSelectId(created.id);
         onItemsChanged();
       } catch (e) {
         toast({ severity: 'error', message: e instanceof Error ? e.message : 'Create failed' });
@@ -203,6 +213,7 @@ export function ItemsTab({
           onSelect={(id) => {
             setCreating(false);
             setCreateDraft(null);
+            setPendingSelectId(null);
             setSelectedId(id);
           }}
         />

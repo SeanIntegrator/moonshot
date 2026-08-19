@@ -3,19 +3,18 @@ import { Box } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
-import { useToast } from '../../primitives/ToastProvider.js';
+import { useCafeSave } from '../../primitives/useCafePatch.js';
 import { DisplayCard } from './DisplayCard.js';
 import { LayoutCard } from './LayoutCard.js';
 
 export function KitchenDisplayCard() {
-  const { cafe, patchSettings } = useCafe();
+  const { cafe } = useCafe();
   const savedLayout = cafe.kdsConfig.layout;
   const savedDisplay = cafe.kdsConfig.display;
 
   const [groupBy, setGroupBy] = useState<KdsGroupBy>(savedLayout.groupBy);
   const [display, setDisplay] = useState<KdsDisplayPreferences>(savedDisplay);
-  const [saving, setSaving] = useState(false);
-  const toast = useToast();
+  const { saving, save: savePatch } = useCafeSave('Could not save kitchen display');
 
   useEffect(() => {
     setGroupBy(savedLayout.groupBy);
@@ -29,22 +28,12 @@ export function KitchenDisplayCard() {
     display.showOrderSource !== savedDisplay.showOrderSource;
 
   async function save() {
-    setSaving(true);
-    try {
-      await patchSettings({
-        kdsConfigPatch: {
-          layout: { groupBy },
-          display,
-        },
-      });
-    } catch (e) {
-      toast({
-        severity: 'error',
-        message: e instanceof Error ? e.message : 'Could not save kitchen display',
-      });
-    } finally {
-      setSaving(false);
-    }
+    await savePatch({
+      kdsConfigPatch: {
+        layout: { groupBy },
+        display,
+      },
+    });
   }
 
   return (

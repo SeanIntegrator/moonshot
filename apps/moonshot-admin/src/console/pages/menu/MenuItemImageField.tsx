@@ -9,13 +9,13 @@ import {
   Typography,
 } from '@mui/material';
 import { useRef, useState } from 'react';
-import { buttonLoader, switchLoader } from '../../console/primitives/button-loader.js';
-import { SourceLabel } from '../../console/primitives/SourceLabel.js';
-import { useOptionalToast } from '../../console/primitives/ToastProvider.js';
+import { buttonLoader, switchLoader } from '../../primitives/button-loader.js';
+import { SourceLabel } from '../../primitives/SourceLabel.js';
+import { useOptionalToast } from '../../primitives/ToastProvider.js';
 import {
   setMenuItemUseDefaultImage,
   uploadMenuItemImage,
-} from '../../lib/admin-api.js';
+} from '../../../lib/admin-api.js';
 
 type Props = {
   cafeSlug: string;

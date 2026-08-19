@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
-import { useToast } from '../../primitives/ToastProvider.js';
+import { useCafeSave, useImmediatePatch } from '../../primitives/useCafePatch.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
 import { kitchenFieldGridSx } from './KitchenSection.js';
 import { earliestPickupSlot, isPickupTimingValid, pickupTimingError } from './pickup-timing.js';
 
 export function PickupCard() {
-  const { cafe, patchSettings } = useCafe();
+  const { cafe } = useCafe();
   const oa = cafe.features.order_ahead;
   const savedEnabled = oa?.pickupTimeEnabled ?? true;
   const savedEarliest = oa?.defaultPickupMinutes ?? 10;
@@ -17,9 +17,8 @@ export function PickupCard() {
 
   const [earliest, setEarliest] = useState(savedEarliest);
   const [furthest, setFurthest] = useState(savedFurthest);
-  const [savingToggle, setSavingToggle] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const toast = useToast();
+  const { saving: savingToggle, patch: patchToggle } = useImmediatePatch('Could not update pickup');
+  const { saving, save: savePatch } = useCafeSave('Could not save pickup');
 
   useEffect(() => {
     setEarliest(savedEarliest);
@@ -35,33 +34,19 @@ export function PickupCard() {
       : null;
 
   async function onToggle(next: boolean) {
-    setSavingToggle(true);
-    try {
-      await patchSettings({ featuresPatch: { order_ahead: { pickupTimeEnabled: next } } });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update pickup' });
-    } finally {
-      setSavingToggle(false);
-    }
+    await patchToggle({ featuresPatch: { order_ahead: { pickupTimeEnabled: next } } });
   }
 
   async function save() {
     if (!valid) return;
-    setSaving(true);
-    try {
-      await patchSettings({
-        featuresPatch: {
-          order_ahead: {
-            defaultPickupMinutes: earliest,
-            maxPickupMinutes: furthest,
-          },
+    await savePatch({
+      featuresPatch: {
+        order_ahead: {
+          defaultPickupMinutes: earliest,
+          maxPickupMinutes: furthest,
         },
-      });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save pickup' });
-    } finally {
-      setSaving(false);
-    }
+      },
+    });
   }
 
   return (

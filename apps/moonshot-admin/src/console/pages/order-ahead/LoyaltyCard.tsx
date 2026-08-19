@@ -11,7 +11,7 @@ import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
 import { WeekdayPillGroup } from '../../primitives/WeekdayPillGroup.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
-import { useToast } from '../../primitives/ToastProvider.js';
+import { useCafeSave, useImmediatePatch } from '../../primitives/useCafePatch.js';
 import {
   doubleStampSummary,
   isLoyaltyFormValid,
@@ -24,7 +24,7 @@ const DEFAULT_STAMPS = 10;
 const DEFAULT_REWARD = 'Free drink';
 
 export function LoyaltyCard() {
-  const { cafe, patchSettings } = useCafe();
+  const { cafe } = useCafe();
   const saved = cafe.features.loyalty;
   const savedEnabled = Boolean(saved?.enabled);
   const savedStamps = saved?.stampsPerReward ?? DEFAULT_STAMPS;
@@ -34,9 +34,8 @@ export function LoyaltyCard() {
   const [stamps, setStamps] = useState(savedStamps);
   const [reward, setReward] = useState(savedReward);
   const [days, setDays] = useState<string[]>([...savedDays]);
-  const [savingToggle, setSavingToggle] = useState(false);
-  const [savingForm, setSavingForm] = useState(false);
-  const toast = useToast();
+  const { saving: savingToggle, patch: patchToggle } = useImmediatePatch('Could not update loyalty');
+  const { saving: savingForm, save: saveFormPatch } = useCafeSave('Could not save loyalty');
 
   useEffect(() => {
     setStamps(savedStamps);
@@ -54,44 +53,30 @@ export function LoyaltyCard() {
   const valid = isLoyaltyFormValid({ enabled: savedEnabled, stamps, reward });
 
   async function onToggle(next: boolean) {
-    setSavingToggle(true);
-    try {
-      await patchSettings({
-        featuresPatch: {
-          loyalty: {
-            enabled: next,
-            stampsPerReward: loyaltyStampsError(stamps) ? DEFAULT_STAMPS : stamps,
-            rewardDescription: reward.trim() || DEFAULT_REWARD,
-            doubleStampDays: days,
-          },
+    await patchToggle({
+      featuresPatch: {
+        loyalty: {
+          enabled: next,
+          stampsPerReward: loyaltyStampsError(stamps) ? DEFAULT_STAMPS : stamps,
+          rewardDescription: reward.trim() || DEFAULT_REWARD,
+          doubleStampDays: days,
         },
-      });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update loyalty' });
-    } finally {
-      setSavingToggle(false);
-    }
+      },
+    });
   }
 
   async function saveForm() {
     if (!valid) return;
-    setSavingForm(true);
-    try {
-      await patchSettings({
-        featuresPatch: {
-          loyalty: {
-            enabled: savedEnabled,
-            stampsPerReward: stamps,
-            rewardDescription: reward.trim(),
-            doubleStampDays: days,
-          },
+    await saveFormPatch({
+      featuresPatch: {
+        loyalty: {
+          enabled: savedEnabled,
+          stampsPerReward: stamps,
+          rewardDescription: reward.trim(),
+          doubleStampDays: days,
         },
-      });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save loyalty' });
-    } finally {
-      setSavingForm(false);
-    }
+      },
+    });
   }
 
   const dimmed = !savedEnabled;

@@ -1,4 +1,10 @@
-import type { CafeModifierGroup, NormalisedItemSize, NormalisedModifierGroup } from '@moonshot/types';
+import type {
+  CafeModifierGroup,
+  ModifierGroupCreateBody,
+  ModifierGroupWriteBody,
+  NormalisedItemSize,
+  NormalisedModifierGroup,
+} from '@moonshot/types';
 import { isModifierSlot, type ModifierSlot } from '@moonshot/types';
 import { slotForSeedGroupName } from '@moonshot/domain';
 import { randomUUID } from 'node:crypto';
@@ -10,7 +16,7 @@ import { syncKdsClassificationForGroup } from './modifier-kds-sync.js';
 
 type Db = Pool | PoolClient;
 
-function parseSlot(body: Record<string, unknown>, groupName?: string): ModifierSlot {
+function parseSlot(body: ModifierGroupWriteBody, groupName?: string): ModifierSlot {
   if (isModifierSlot(body.slot)) return body.slot;
   if (groupName) {
     const seed = slotForSeedGroupName(groupName);
@@ -77,7 +83,7 @@ export async function listModifierGroupsForCafe(db: Db, cafeId: string): Promise
 export async function createModifierGroup(
   db: Db,
   cafeId: string,
-  body: Record<string, unknown>,
+  body: ModifierGroupCreateBody,
 ): Promise<CafeModifierGroup> {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   if (!name) throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'name is required');
@@ -105,7 +111,7 @@ export async function updateModifierGroup(
   db: Db,
   cafeId: string,
   groupId: string,
-  body: Record<string, unknown>,
+  body: ModifierGroupWriteBody,
 ): Promise<CafeModifierGroup | null> {
   const sets: string[] = ['updated_at = NOW()'];
   const values: unknown[] = [];

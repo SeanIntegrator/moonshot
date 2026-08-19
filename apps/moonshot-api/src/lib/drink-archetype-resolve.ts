@@ -97,8 +97,8 @@ export function libraryBySlotFromGroups(
 ): Map<DrinkArchetypeSlot, LibraryGroupRef> {
   const map = new Map<DrinkArchetypeSlot, LibraryGroupRef>();
   for (const g of groups) {
-    if (!g.slot || g.slot === 'other') continue;
-    map.set(g.slot as DrinkArchetypeSlot, {
+    if (!isDrinkArchetypeSlot(g.slot)) continue;
+    map.set(g.slot, {
       id: g.id,
       name: g.name,
       slot: g.slot,

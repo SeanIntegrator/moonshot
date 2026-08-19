@@ -1,9 +1,9 @@
 import type { CafeModifierGroup, ModifierFamily, NormalisedMenuItem } from '@moonshot/types';
-import { familyForSlot } from '@moonshot/domain';
 import { Box, Stack, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { updateModifierGroup } from '../../../lib/admin-api.js';
 import { useToast } from '../../primitives/ToastProvider.js';
+import { listsForFamilyTab } from './item-sidebar.js';
 import { ModifierListCard } from './ModifierListCard.js';
 
 type Props = {
@@ -21,10 +21,7 @@ export function ModifierListsTab({ cafeSlug, token, family, groups, items, onLib
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const visible = useMemo(
-    () =>
-      groups
-        .map((g) => drafts[g.id] ?? g)
-        .filter((g) => familyForSlot(g.slot) === family),
+    () => listsForFamilyTab(groups, drafts, family),
     [groups, drafts, family],
   );
 

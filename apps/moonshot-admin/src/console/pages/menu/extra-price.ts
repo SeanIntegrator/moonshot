@@ -15,3 +15,9 @@ export function poundsToMinor(raw: string): number {
 export function minorToPoundsInput(minor: number): string {
   return (Math.max(0, minor) / 100).toFixed(2);
 }
+
+/** Modifier extra field — empty when free so the user types a value instead of deleting 0.00. */
+export function extraPoundsInput(minor: number): string {
+  if (minor <= 0) return '';
+  return minorToPoundsInput(minor);
+}

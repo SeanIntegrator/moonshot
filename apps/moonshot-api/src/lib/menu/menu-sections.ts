@@ -1,4 +1,4 @@
-import type { CafeMenuSection, MenuSectionKind } from '@moonshot/types';
+import type { CafeMenuSection, MenuSectionCreateBody, MenuSectionKind, MenuSectionPatchBody } from '@moonshot/types';
 import {
   SYSTEM_MENU_SECTION_KEYS,
   SYSTEM_MENU_SECTION_LABELS,
@@ -152,7 +152,7 @@ export async function enableMenuSectionByKey(db: Db, cafeId: string, key: string
 export async function createMenuSection(
   db: Db,
   cafeId: string,
-  body: Record<string, unknown>,
+  body: MenuSectionCreateBody,
 ): Promise<CafeMenuSection> {
   const label = typeof body.label === 'string' ? body.label.trim() : '';
   if (!label) {
@@ -233,7 +233,7 @@ export async function updateMenuSection(
   db: Db,
   cafeId: string,
   sectionId: string,
-  body: Record<string, unknown>,
+  body: MenuSectionPatchBody,
 ): Promise<CafeMenuSection | null> {
   if (!UUID_RE.test(sectionId)) {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Invalid section id');

@@ -3,8 +3,12 @@ import { Box, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext.js';
 import { adminStripeStatus } from '../../../lib/admin-api.js';
-import { stripeRowView } from '../overview/stripe-connection.js';
-import { connectionDotColor } from '../../primitives/connection-tone.js';
+import {
+  isStripeServerUnavailable,
+  STRIPE_UNAVAILABLE_STATUS,
+  stripeRowView,
+} from '../overview/stripe-connection.js';
+import { ConnectionDot } from '../../primitives/ConnectionDot.js';
 import { DeepLinkFooter } from '../../primitives/DeepLinkFooter.js';
 import { ReadOnlyPanel } from '../../primitives/ReadOnlyPanel.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
@@ -23,14 +27,8 @@ export function PaymentsCard() {
       .then(setStripe)
       .catch((e) => {
         const msg = e instanceof Error ? e.message : 'Failed to load Stripe';
-        if (/not configured|STRIPE_/i.test(msg)) {
-          setStripe({
-            configured: false,
-            accountId: null,
-            chargesEnabled: false,
-            detailsSubmitted: false,
-            payoutsEnabled: false,
-          });
+        if (isStripeServerUnavailable(msg)) {
+          setStripe(STRIPE_UNAVAILABLE_STATUS);
           return;
         }
         toast({ severity: 'error', message: msg });
@@ -39,7 +37,6 @@ export function PaymentsCard() {
   }, [session, toast]);
 
   const view = useMemo(() => stripeRowView(stripe), [stripe]);
-  const dot = connectionDotColor(view.tone);
 
   if (!loaded) {
     return <CardSkeleton lines={3} />;
@@ -49,19 +46,7 @@ export function PaymentsCard() {
     <SettingsCard title="Payments" description="Managed in your Stripe dashboard.">
       <ReadOnlyPanel source="stripe" helper="Change this on Overview.">
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <Box
-            sx={(theme) => ({
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              bgcolor:
-                dot === 'healthy'
-                  ? theme.console.connection.healthy
-                  : dot === 'stale'
-                    ? theme.console.connection.stale
-                    : theme.console.connection.failed,
-            })}
-          />
+          <ConnectionDot tone={view.tone} />
           <Typography sx={{ fontWeight: 700 }}>{view.statusLabel}</Typography>
         </Box>
         <Typography variant="body2" sx={{ mt: 0.75 }}>

@@ -7,8 +7,10 @@ import {
   itemListPriceMinor,
   itemsBySection,
   kitchenAbbrev,
+  listsForFamilyTab,
   offeredOnCount,
   optionCountForFamily,
+  resolveSidebarSelection,
   visibleCatalogListTabs,
 } from './item-sidebar.js';
 import { catalogGroupsForPos } from './modifier-list-copy.js';
@@ -78,6 +80,46 @@ describe('itemsBySection', () => {
       item({ id: 'coffee', name: 'Cappuccino', category: 'coffee' }),
     ];
     expect(firstSidebarItemId(items, [coffee, food])).toBe('coffee');
+  });
+});
+
+describe('resolveSidebarSelection', () => {
+  it('keeps a just-created id until it appears in items', () => {
+    const waiting = resolveSidebarSelection({
+      creating: false,
+      selectedId: 'new',
+      pendingSelectId: 'new',
+      itemIds: ['coffee'],
+      fallbackId: 'coffee',
+    });
+    expect(waiting).toEqual({ selectedId: 'new', pendingSelectId: 'new' });
+
+    const landed = resolveSidebarSelection({
+      creating: false,
+      selectedId: 'new',
+      pendingSelectId: 'new',
+      itemIds: ['coffee', 'new'],
+      fallbackId: 'coffee',
+    });
+    expect(landed).toEqual({ selectedId: 'new', pendingSelectId: null });
+  });
+});
+
+describe('listsForFamilyTab', () => {
+  it('filters by saved slot so an unsaved type change stays on the current tab', () => {
+    const saved: CafeModifierGroup = {
+      id: '1',
+      name: 'Milks',
+      slot: 'other',
+      selectionType: 'single',
+      required: false,
+      options: [],
+      sortOrder: 0,
+    };
+    const draft = { ...saved, slot: 'milk' as const };
+    const visible = listsForFamilyTab([saved], { '1': draft }, 'other');
+    expect(visible).toEqual([draft]);
+    expect(listsForFamilyTab([saved], { '1': draft }, 'milk')).toEqual([]);
   });
 });
 

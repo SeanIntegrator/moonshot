@@ -1,15 +1,8 @@
+import { isModifierSlot, type ModifierSlot } from '@moonshot/types';
 import type { MenuTemplateDrinkKey } from './menu-template.js';
 
-/** Logical modifier slots that archetypes compose into café library groups. */
-export type DrinkArchetypeSlot =
-  | 'milk'
-  | 'syrup'
-  | 'shots'
-  | 'beans'
-  | 'milk_temperature'
-  | 'milk_texture'
-  | 'ice_level'
-  | 'toppings';
+/** Recipe slots — modifier slots minus unclassified `'other'`. */
+export type DrinkArchetypeSlot = Exclude<ModifierSlot, 'other'>;
 
 /** How alt-milk option prices apply when the milk slot is present. */
 export type DrinkArchetypeMilkCharge = 'none' | 'waived' | 'standard';
@@ -190,7 +183,7 @@ export function isDrinkArchetypeId(value: unknown): value is DrinkArchetypeId {
 }
 
 export function isDrinkArchetypeSlot(value: unknown): value is DrinkArchetypeSlot {
-  return typeof value === 'string' && value in DRINK_ARCHETYPE_SLOT_GROUP_NAMES;
+  return isModifierSlot(value) && value !== 'other';
 }
 
 /** Merge café overrides onto platform defaults for one archetype. */

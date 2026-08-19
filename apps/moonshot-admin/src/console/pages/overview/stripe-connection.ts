@@ -12,6 +12,18 @@ export type StripeRowView = {
   needsAttention: boolean;
 };
 
+export const STRIPE_UNAVAILABLE_STATUS: AdminStripeAccountStatusResponse = {
+  configured: false,
+  accountId: null,
+  chargesEnabled: false,
+  detailsSubmitted: false,
+  payoutsEnabled: false,
+};
+
+export function isStripeServerUnavailable(message: string): boolean {
+  return /not configured|STRIPE_/i.test(message);
+}
+
 export function stripeRowView(status: AdminStripeAccountStatusResponse | null): StripeRowView {
   if (!status || !status.configured) {
     return {

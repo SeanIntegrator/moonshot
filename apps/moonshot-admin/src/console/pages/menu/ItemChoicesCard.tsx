@@ -32,7 +32,7 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
     onChange(applyArchetypeToDraft(draft, value as DrinkArchetypeId, recipes[value] ?? null, library));
   }
 
-  const milkGroup = library.find((g) => g.name === 'Milks' || g.name === 'Milk');
+  const milkGroup = library.find((g) => g.slot === 'milk');
   const milkAttached = milkGroup ? draft.attachedGroupIds.includes(milkGroup.id) : false;
   const hasSquareLists = library.some(isPosOwnedGroup);
 

@@ -1,101 +1,61 @@
 import type { MenuProvisionResult } from '@moonshot/domain';
-import { apiUrl, parseEnvelope } from './http.js';
+import type {
+  PosCatalogSyncResult,
+  SquareConnectStatus,
+  SquareOnboardResponse,
+} from '@moonshot/types';
+import { adminFetch } from './http.js';
 
-export type SquareConnectLocation = { id: string; name: string };
-
-export type SquareConnectStatus = {
-  connected: boolean;
-  merchantId: string | null;
-  locationId: string | null;
-  tokenExpiresAt: string | null;
-  status: string | null;
-  catalogLastSyncedAt: string | null;
-  catalogSyncStatus: string | null;
-  catalogSyncError: string | null;
-  locations: SquareConnectLocation[];
-};
-
-export type SquareOnboardResponse = {
-  url: string;
-  scopes: string[];
-};
-
-export type PosCatalogSyncResult = {
-  cafeId: string;
-  upsertedItems: number;
-  softDeletedItems: number;
-  upsertedGroups: number;
-  lastSyncedAt: string;
-};
+export type {
+  PosCatalogSyncResult,
+  SquareConnectLocation,
+  SquareConnectStatus,
+  SquareOnboardResponse,
+} from '@moonshot/types';
 
 export async function startSquareConnect(token: string): Promise<SquareOnboardResponse> {
-  const res = await fetch(apiUrl('/admin/connect/square/onboard'), {
+  return adminFetch<SquareOnboardResponse>('/admin/connect/square/onboard', {
+    token,
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    errorMessage: 'Square connect failed',
   });
-  const envelope = await parseEnvelope<SquareOnboardResponse>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Square connect failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function getSquareConnectStatus(token: string): Promise<SquareConnectStatus> {
-  const res = await fetch(apiUrl('/admin/connect/square/status'), {
-    headers: { Authorization: `Bearer ${token}` },
+  return adminFetch<SquareConnectStatus>('/admin/connect/square/status', {
+    token,
+    errorMessage: 'Square status failed',
   });
-  const envelope = await parseEnvelope<SquareConnectStatus>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Square status failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function disconnectSquare(token: string): Promise<void> {
-  const res = await fetch(apiUrl('/admin/connect/square/disconnect'), {
+  await adminFetch<{ disconnected: boolean }>('/admin/connect/square/disconnect', {
+    token,
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    errorMessage: 'Square disconnect failed',
   });
-  const envelope = await parseEnvelope<{ disconnected: boolean }>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Square disconnect failed (${res.status})`);
-  }
 }
 
 export async function syncPosMenuFromSquare(
   token: string,
   opts?: { forceFull?: boolean },
 ): Promise<PosCatalogSyncResult> {
-  const res = await fetch(apiUrl('/admin/menu/sync-pos'), {
+  return adminFetch<PosCatalogSyncResult>('/admin/menu/sync-pos', {
+    token,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ forceFull: opts?.forceFull === true }),
+    json: { forceFull: opts?.forceFull === true },
+    errorMessage: 'Menu sync failed',
   });
-  const envelope = await parseEnvelope<PosCatalogSyncResult>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Menu sync failed (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function importPosMenu(
   token: string,
   body: { provider: 'square'; locationId?: string | null },
 ): Promise<MenuProvisionResult> {
-  const res = await fetch(apiUrl('/admin/onboarding/menu-pos-import'), {
+  return adminFetch<MenuProvisionResult>('/admin/onboarding/menu-pos-import', {
+    token,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Menu import failed',
   });
-  const envelope = await parseEnvelope<MenuProvisionResult>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Menu import failed (${res.status})`);
-  }
-  return envelope.data;
 }

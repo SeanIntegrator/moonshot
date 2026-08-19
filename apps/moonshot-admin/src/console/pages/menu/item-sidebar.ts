@@ -50,6 +50,33 @@ export function firstSidebarItemId(
   return itemsBySection(items, sections, '')[0]?.items[0]?.id ?? null;
 }
 
+/**
+ * After create, `selectedId` is the new product before `items` includes it.
+ * Hold that id until the reload lands so the fallback does not jump to the first row.
+ */
+export function resolveSidebarSelection(opts: {
+  creating: boolean;
+  selectedId: string | null;
+  pendingSelectId: string | null;
+  itemIds: readonly string[];
+  fallbackId: string | null;
+}): { selectedId: string | null; pendingSelectId: string | null } {
+  if (opts.creating) {
+    return { selectedId: opts.selectedId, pendingSelectId: opts.pendingSelectId };
+  }
+  const ids = new Set(opts.itemIds);
+  if (opts.pendingSelectId) {
+    if (ids.has(opts.pendingSelectId)) {
+      return { selectedId: opts.pendingSelectId, pendingSelectId: null };
+    }
+    return { selectedId: opts.pendingSelectId, pendingSelectId: opts.pendingSelectId };
+  }
+  if (opts.selectedId && ids.has(opts.selectedId)) {
+    return { selectedId: opts.selectedId, pendingSelectId: null };
+  }
+  return { selectedId: opts.fallbackId, pendingSelectId: null };
+}
+
 export function isFoodItem(item: NormalisedMenuItem, sections: CafeMenuSection[]): boolean {
   const section = sections.find((s) => s.key === item.category);
   if (section?.kind === 'food') return true;
@@ -104,6 +131,15 @@ export function optionCountForFamily(
   return groups
     .filter((g) => familyForSlot(g.slot) === family)
     .reduce((n, g) => n + g.options.length, 0);
+}
+
+/** Keep the card on the saved family tab until Save — draft slot must not hide it. */
+export function listsForFamilyTab(
+  groups: CafeModifierGroup[],
+  drafts: Record<string, CafeModifierGroup>,
+  family: ModifierFamily,
+): CafeModifierGroup[] {
+  return groups.filter((g) => familyForSlot(g.slot) === family).map((g) => drafts[g.id] ?? g);
 }
 
 export function kitchenAbbrev(name: string, chipLabel?: string | null): string {

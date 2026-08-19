@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ApiErrorCode } from '@moonshot/types';
+import { ApiErrorCode, type MenuItemCreateBody, type MenuItemDefaultImageBody, type MenuItemPatchBody } from '@moonshot/types';
 import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 import {
@@ -51,20 +51,15 @@ menuRouter.get('/', async (req, res) => {
 });
 
 menuRouter.post('/', requireMenuMutationAuth, async (req, res) => {
-  const item = await createMenuItem(pool, req.cafe!.cafeId, req.body as Record<string, unknown>);
+  const item = await createMenuItem(pool, req.cafe!.cafeId, req.body as MenuItemCreateBody);
   return res.status(201).json({ ok: true, data: item });
 });
 
 menuRouter.patch('/:itemId', requireMenuMutationAuth, async (req, res) => {
   const rawId = req.params.itemId;
   const itemId = assertMenuItemId(Array.isArray(rawId) ? rawId[0] : rawId);
-  const item = await patchMenuItem(
-    pool,
-    req.cafe!.cafeId,
-    itemId,
-    req.body as Record<string, unknown>,
-  );
-  const body = req.body as Record<string, unknown>;
+  const body = req.body as MenuItemPatchBody;
+  const item = await patchMenuItem(pool, req.cafe!.cafeId, itemId, body);
   if ('isAvailable' in body) {
     notifyStockChanged({
       cafeId: req.cafe!.cafeId,
@@ -93,7 +88,7 @@ menuRouter.post(
 menuRouter.post('/:itemId/default-image', requireMenuMutationAuth, async (req, res) => {
   const rawId = req.params.itemId;
   const itemId = assertMenuItemId(Array.isArray(rawId) ? rawId[0] : rawId);
-  const body = req.body as Record<string, unknown>;
+  const body = req.body as MenuItemDefaultImageBody;
   if (typeof body.useDefaultImage !== 'boolean') {
     throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'useDefaultImage must be a boolean');
   }

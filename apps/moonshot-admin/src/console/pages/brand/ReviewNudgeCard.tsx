@@ -3,21 +3,22 @@ import { useEffect, useState } from 'react';
 import { useCafe } from '../../CafeProvider.js';
 import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
-import { useToast } from '../../primitives/ToastProvider.js';
+import { useCafeSave, useImmediatePatch } from '../../primitives/useCafePatch.js';
 import { fieldErrorProps } from '../../primitives/ValidationMessage.js';
 import { isReviewUrlValid, normaliseReviewUrl, reviewUrlError } from './review-url.js';
 
 export function ReviewNudgeCard() {
-  const { cafe, patchSettings } = useCafe();
+  const { cafe } = useCafe();
   const saved = cafe.features.review_nudge;
   const savedEnabled = Boolean(saved?.enabled);
   const savedUrl = saved?.reviewUrl ?? '';
 
   const [reviewUrl, setReviewUrl] = useState(savedUrl);
   const [showUrlError, setShowUrlError] = useState(false);
-  const [savingToggle, setSavingToggle] = useState(false);
-  const [savingUrl, setSavingUrl] = useState(false);
-  const toast = useToast();
+  const { saving: savingToggle, patch: patchToggle } = useImmediatePatch(
+    'Could not update review nudge',
+  );
+  const { saving: savingUrl, save: saveUrlPatch } = useCafeSave('Could not save review link');
 
   useEffect(() => {
     setReviewUrl(savedUrl);
@@ -34,42 +35,22 @@ export function ReviewNudgeCard() {
         setShowUrlError(true);
         return;
       }
-      setSavingToggle(true);
-      try {
-        await patchSettings({
-          featuresPatch: {
-            review_nudge: { enabled: true, reviewUrl: normaliseReviewUrl(reviewUrl) },
-          },
-        });
-      } catch (e) {
-        toast({
-          severity: 'error',
-          message: e instanceof Error ? e.message : 'Could not update review nudge',
-        });
-      } finally {
-        setSavingToggle(false);
-      }
+      await patchToggle({
+        featuresPatch: {
+          review_nudge: { enabled: true, reviewUrl: normaliseReviewUrl(reviewUrl) },
+        },
+      });
       return;
     }
 
-    setSavingToggle(true);
-    try {
-      await patchSettings({
-        featuresPatch: {
-          review_nudge: {
-            enabled: false,
-            reviewUrl: savedUrl.trim() ? savedUrl : null,
-          },
+    await patchToggle({
+      featuresPatch: {
+        review_nudge: {
+          enabled: false,
+          reviewUrl: savedUrl.trim() ? savedUrl : null,
         },
-      });
-    } catch (e) {
-      toast({
-        severity: 'error',
-        message: e instanceof Error ? e.message : 'Could not update review nudge',
-      });
-    } finally {
-      setSavingToggle(false);
-    }
+      },
+    });
   }
 
   async function saveUrl() {
@@ -77,22 +58,15 @@ export function ReviewNudgeCard() {
       setShowUrlError(true);
       return;
     }
-    setSavingUrl(true);
-    try {
-      await patchSettings({
-        featuresPatch: {
-          review_nudge: {
-            enabled: savedEnabled,
-            reviewUrl: normaliseReviewUrl(reviewUrl),
-          },
+    const ok = await saveUrlPatch({
+      featuresPatch: {
+        review_nudge: {
+          enabled: savedEnabled,
+          reviewUrl: normaliseReviewUrl(reviewUrl),
         },
-      });
-      setShowUrlError(false);
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save review link' });
-    } finally {
-      setSavingUrl(false);
-    }
+      },
+    });
+    if (ok) setShowUrlError(false);
   }
 
   return (

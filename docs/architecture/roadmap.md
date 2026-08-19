@@ -73,7 +73,7 @@ After three on-time completed app orders, every eligible user sees the modal onc
 - `packages/types/src/cafe.ts`, `admin-settings.ts`, `sockets.ts`
 - `packages/domain/src/feedback.ts`
 - `apps/moonshot-api/src/lib/admin/admin-settings-merge.ts`
-- `apps/moonshot-admin/src/components/ReviewNudgeSettingsCard.tsx`
+- `apps/moonshot-admin/src/console/pages/brand/ReviewNudgeCard.tsx`
 - `apps/moonshot-order-ahead/src/providers/ReviewNudgeProvider.tsx`
 
 ---

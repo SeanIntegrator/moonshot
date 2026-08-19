@@ -1,4 +1,4 @@
-import type { CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
+import type { CafeModifierGroup, MenuItemPatchBody, NormalisedMenuItem } from '@moonshot/types';
 import type { DrinkArchetypeDef, DrinkArchetypeId } from '@moonshot/domain';
 import { defaultAllowNoMilk, DRINK_ARCHETYPE_SLOT_GROUP_NAMES } from '@moonshot/domain';
 
@@ -96,7 +96,7 @@ export function toggleAttachedGroup(
 }
 
 /** PATCH body: POS-linked items omit catalogue fields Square will overwrite. */
-export function itemPatchBody(draft: DraftItem): Record<string, unknown> {
+export function itemPatchBody(draft: DraftItem): MenuItemPatchBody {
   const display = {
     imageUrl: draft.imageUrl,
     isAvailable: draft.isAvailable,

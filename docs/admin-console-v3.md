@@ -5,9 +5,8 @@ under `apps/moonshot-admin/src/console/` — see
 [admin-console-v3-ui.md](admin-console-v3-ui.md). Signed-in `/` redirects to
 `/overview`. Stock and Menu are real pages.
 
-The legacy scrolling dashboard
-(`apps/moonshot-admin/src/pages/DashboardPage.tsx`) stays in the tree as a
-reference and is not routed. v3 replaces it with an eight-tab console.
+The signed-in product is the eight-tab console. Login, signup, and onboarding
+stay on `signupTheme` + `BrandShell`.
 
 Read this alongside [onboarding.md](onboarding.md),
 [current/http-surface.md](current/http-surface.md) and
@@ -217,9 +216,8 @@ is hidden when Square is not connected.
 
 ## 4. Data model decisions
 
-Migration ceiling is **033** (`033_cafe_hours_service.sql` — `paused_until`,
-`last_order_buffer_minutes`, `cafe_hours_overrides`). Node-pg-migrate wrappers
-exist through 033.
+Migration ceiling is **034** (`034_modifier_slot_and_section_kind.sql` — `modifier_groups.slot`,
+`menu_sections.kind` includes `unclassified`). Node-pg-migrate wrappers exist through 034.
 
 ### 4.1 Stock — use a side table, not the options JSON
 

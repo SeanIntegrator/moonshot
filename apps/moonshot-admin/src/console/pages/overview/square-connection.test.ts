@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SquareConnectStatus } from '../../../lib/adminApi/pos.js';
+import type { SquareConnectStatus } from '@moonshot/types';
 import { squareRowView } from './square-connection.js';
 
 const base: SquareConnectStatus = {

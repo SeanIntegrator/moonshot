@@ -1,15 +1,11 @@
 import type { AdminStockOptionPutBody, AdminStockResponse, StockAvailability } from '@moonshot/types';
-import { apiUrl, parseEnvelope } from './http.js';
+import { adminFetch } from './http.js';
 
 export async function fetchAdminStock(token: string): Promise<AdminStockResponse> {
-  const res = await fetch(apiUrl('/admin/stock'), {
-    headers: { Authorization: `Bearer ${token}` },
+  return adminFetch<AdminStockResponse>('/admin/stock', {
+    token,
+    errorMessage: 'Failed to load stock',
   });
-  const envelope = await parseEnvelope<AdminStockResponse>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Failed to load stock (${res.status})`);
-  }
-  return envelope.data;
 }
 
 export async function putAdminStockOption(
@@ -18,17 +14,10 @@ export async function putAdminStockOption(
   availability: StockAvailability,
 ): Promise<AdminStockResponse> {
   const body: AdminStockOptionPutBody = { availability };
-  const res = await fetch(apiUrl(`/admin/stock/options/${encodeURIComponent(optionId)}`), {
+  return adminFetch<AdminStockResponse>(`/admin/stock/options/${encodeURIComponent(optionId)}`, {
+    token,
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
+    json: body,
+    errorMessage: 'Could not update stock',
   });
-  const envelope = await parseEnvelope<AdminStockResponse>(res);
-  if (!envelope.ok) {
-    throw new Error(envelope.error || `Could not update stock (${res.status})`);
-  }
-  return envelope.data;
 }

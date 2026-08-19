@@ -44,7 +44,8 @@ export interface CafeMenuSection {
 
 /**
  * True when a category key should be treated as food (KDS / loyalty).
- * Prefer `foodSectionKeys` from kds_config when available; this is the legacy fallback.
+ * Pass keys from `menu_sections.kind === 'food'` (same list the customer menu uses).
+ * Empty / omitted falls back to the built-in `food` key.
  */
 export function isFoodMenuCategory(
   category: string,

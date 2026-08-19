@@ -4,6 +4,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import type { AdminStripeAccountStatusResponse } from '@moonshot/types';
 import { useCallback, useEffect, useState } from 'react';
 import { adminStripeOnboardingLink, adminStripeStatus } from '../lib/admin-api.js';
+import { isStripeServerUnavailable } from '../console/pages/overview/stripe-connection.js';
 
 type Props = {
   token: string;
@@ -12,10 +13,6 @@ type Props = {
   /** Called when the connected account can charge (onboarding can leave this step). */
   onChargesEnabled?: () => void;
 };
-
-function isStripeServerUnavailable(message: string): boolean {
-  return /not configured|STRIPE_/i.test(message);
-}
 
 export function StripePaymentsCard({
   token,

@@ -1,25 +1,24 @@
 import type { KdsSoundId } from '@moonshot/types';
 import { Box, FormControlLabel, Switch, TextField } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { KdsSoundSelect } from '../../../components/KdsSoundSelect.js';
+import { KdsSoundSelect } from './KdsSoundSelect.js';
 import { useCafe } from '../../CafeProvider.js';
 import { switchLoader } from '../../primitives/button-loader.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
 import { ThresholdSlider } from '../../primitives/ThresholdSlider.js';
-import { useToast } from '../../primitives/ToastProvider.js';
+import { useCafeSave, useImmediatePatch } from '../../primitives/useCafePatch.js';
 import { KitchenSection, kitchenFieldGridSx } from './KitchenSection.js';
 
 export function AlertsCard() {
-  const { cafe, patchSettings } = useCafe();
+  const { cafe } = useCafe();
   const k = cafe.kdsConfig;
   const [greenMax, setGreenMax] = useState(k.timerThresholds.greenMax);
   const [amberMax, setAmberMax] = useState(k.timerThresholds.amberMax);
   const [newOrderSound, setNewOrderSound] = useState<KdsSoundId | null>(k.audio.newOrderSound);
   const [overdueSound, setOverdueSound] = useState<KdsSoundId | null>(k.audio.overdueSound);
   const [overdueRepeat, setOverdueRepeat] = useState(k.audio.overdueRepeatSeconds);
-  const [savingToggle, setSavingToggle] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const toast = useToast();
+  const { saving: savingToggle, patch: patchImmediate } = useImmediatePatch('Could not update sounds');
+  const { saving, save } = useCafeSave('Could not save alerts');
 
   useEffect(() => {
     setGreenMax(k.timerThresholds.greenMax);
@@ -43,35 +42,21 @@ export function AlertsCard() {
     greenMax < amberMax;
 
   async function onEnabled(next: boolean) {
-    setSavingToggle(true);
-    try {
-      await patchSettings({ kdsConfigPatch: { audio: { enabled: next } } });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not update sounds' });
-    } finally {
-      setSavingToggle(false);
-    }
+    await patchImmediate({ kdsConfigPatch: { audio: { enabled: next } } });
   }
 
-  async function save() {
+  async function onSave() {
     if (!valid) return;
-    setSaving(true);
-    try {
-      await patchSettings({
-        kdsConfigPatch: {
-          timerThresholds: { greenMax, amberMax },
-          audio: {
-            newOrderSound,
-            overdueSound,
-            overdueRepeatSeconds: overdueRepeat,
-          },
+    await save({
+      kdsConfigPatch: {
+        timerThresholds: { greenMax, amberMax },
+        audio: {
+          newOrderSound,
+          overdueSound,
+          overdueRepeatSeconds: overdueRepeat,
         },
-      });
-    } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Could not save alerts' });
-    } finally {
-      setSaving(false);
-    }
+      },
+    });
   }
 
   const soundsOff = !k.audio.enabled;
@@ -85,7 +70,7 @@ export function AlertsCard() {
         dirty,
         valid,
         saving,
-        onSave: () => void save(),
+        onSave: () => void onSave(),
       }}
     >
       <ThresholdSlider
