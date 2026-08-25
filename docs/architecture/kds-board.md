@@ -152,7 +152,14 @@ If Square retrieve fails after three attempts, ingress persists `detailsPending:
 
 ## Open-board window
 
-`GET /kds/orders` and `POST /kds/orders/recall-last` only consider rows from the last **16 hours** (`created_at` / `completed_at`). This is a list filter, not auto-cancel — stale open rows keep their status. Specific-id recall and the Recent orders dialog (`LIMIT 20`) are not clock-bounded.
+`GET /kds/orders` and `POST /kds/orders/recall-last` only consider rows from the last **16 hours** (`created_at` / `completed_at`).
+
+Stale never-completed tickets (`pending` / `confirmed` / `preparing` / `ready`) are **auto-cancelled** with `cancel_reason = auto_expire` by:
+
+1. `POST /internal/orders/expire-stale` (Railway cron, recommended hourly)
+2. On-read when listing KDS open orders or customer `GET /orders/me` for that café
+
+That keeps order-ahead active lists and pickup ETA in sync with the board cut. Specific-id recall and the Recent orders dialog (`LIMIT 20`) are not clock-bounded.
 
 Pending recalls are `isProtected` in `orders-store` so a poll between the optimistic insert and the server response cannot delete the card. The same hook covers dismissing cards (collapse animation).
 

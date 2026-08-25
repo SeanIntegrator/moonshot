@@ -18,6 +18,10 @@ vi.mock('./order-read.js', () => ({
   normalisedOrdersFromRows,
 }));
 
+vi.mock('./order-expire-stale.js', () => ({
+  expireStaleOpenOrders: vi.fn().mockResolvedValue({ expired: 0, byCafe: {}, orders: [] }),
+}));
+
 import { KDS_OPEN_MAX_AGE_HOURS } from './order-constants.js';
 import { listOpenOrdersForKds, recallLastCompletedOrderForKds } from './order-kds.js';
 
@@ -30,9 +34,12 @@ describe('listOpenOrdersForKds', () => {
   it('filters open tickets to the last 16 hours', async () => {
     poolQuery.mockResolvedValue({ rows: [] });
     await listOpenOrdersForKds('cafe-1');
-    const [sql, params] = poolQuery.mock.calls[0] as [string, unknown[]];
-    expect(sql).toContain("$3 * INTERVAL '1 hour'");
-    expect(params[2]).toBe(KDS_OPEN_MAX_AGE_HOURS);
+    const selectCall = poolQuery.mock.calls.find((c) =>
+      String(c[0]).includes('FROM orders'),
+    ) as [string, unknown[]] | undefined;
+    expect(selectCall).toBeDefined();
+    expect(selectCall![0]).toContain("$3 * INTERVAL '1 hour'");
+    expect(selectCall![1][2]).toBe(KDS_OPEN_MAX_AGE_HOURS);
   });
 });
 

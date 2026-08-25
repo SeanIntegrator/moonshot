@@ -49,6 +49,7 @@ flowchart TD
 | `POST` | `/admin/onboarding/menu-pos-import` | Admin JWT | Catalog → normalise → Postgres |
 | `POST` | `/internal/pos/refresh-tokens` | `CRON_SECRET` | Refresh due Square access tokens |
 | `POST` | `/internal/pos/sync-catalogs` | `CRON_SECRET` | Safety-net catalog sync (stale >1 day) |
+| `POST` | `/internal/orders/expire-stale` | `CRON_SECRET` | Auto-cancel open orders older than 16h (`auto_expire`) |
 | `POST` | `/admin/menu/sync-pos` | Admin JWT | Force Square → Moonshot menu sync |
 | `POST` | `/webhooks/square` | Square HMAC | Order ingress + catalog sync enqueue |
 
@@ -87,6 +88,13 @@ curl -X POST "https://moonshotapi-production.up.railway.app/api/v1/internal/pos/
 ```
 
 Recommended schedule: every **6–12 hours** (roadmap requires ≤7 days; frequent runs are cheap).
+
+Also schedule stale-order expiry (hourly is fine; idempotent):
+
+```bash
+curl -X POST "https://moonshotapi-production.up.railway.app/api/v1/internal/orders/expire-stale" \
+  -H "Authorization: Bearer ${CRON_SECRET}"
+```
 
 Set the same `CRON_SECRET` on the API service and the cron caller. Optional header alternative: `X-Cron-Secret`.
 

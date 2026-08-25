@@ -8,6 +8,7 @@ import {
   ORDER_SELECT_COLUMNS,
   UUID_RE,
 } from './order-constants.js';
+import { expireStaleOpenOrders } from './order-expire-stale.js';
 import { fetchOrderWithItems, normalisedOrdersFromRows } from './order-read.js';
 
 export async function listCustomerOrdersForUser(params: {
@@ -15,6 +16,9 @@ export async function listCustomerOrdersForUser(params: {
   userId: string;
 }): Promise<{ active: NormalisedOrder[]; recent: NormalisedOrder[] }> {
   const { cafeId, userId } = params;
+
+  // Align with KDS 16h board window — stale never-completed tickets leave active.
+  await expireStaleOpenOrders({ cafeId });
 
   const activeRes = await pool.query<OrderRowDb>(
     `SELECT ${ORDER_SELECT_COLUMNS}
@@ -68,6 +72,7 @@ export async function cancelOrderAtCafe(orderId: string, cafeId: string): Promis
   const upd = await pool.query<{ id: string }>(
     `UPDATE orders
      SET status = 'cancelled',
+         cancel_reason = 'customer',
          updated_at = NOW()
      WHERE id = $1 AND cafe_id = $2 AND status = ANY($3::text[])
      RETURNING id`,

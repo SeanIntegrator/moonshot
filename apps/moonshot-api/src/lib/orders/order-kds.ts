@@ -9,9 +9,13 @@ import {
   ORDER_SELECT_COLUMNS,
   UUID_RE,
 } from './order-constants.js';
+import { expireStaleOpenOrders } from './order-expire-stale.js';
 import { fetchOrderWithItems, normalisedOrdersFromRows } from './order-read.js';
 
 export async function listOpenOrdersForKds(cafeId: string): Promise<NormalisedOrder[]> {
+  // Persist the same age cut as the list filter so customer apps and ETA stay in sync.
+  await expireStaleOpenOrders({ cafeId });
+
   const ordersRes = await pool.query<OrderRowDb>(
     `SELECT ${ORDER_SELECT_COLUMNS}
      FROM orders
