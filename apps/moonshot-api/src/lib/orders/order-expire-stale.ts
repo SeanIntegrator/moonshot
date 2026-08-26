@@ -29,7 +29,8 @@ type Db = Pool | PoolClient;
 
 /**
  * Cancel active orders whose `board_opened_at` is older than {@link KDS_OPEN_MAX_AGE_HOURS}.
- * Optional `cafeId` scopes the sweep (customer/KDS list paths); omit for cron.
+ * Optional `cafeId` scopes the sweep (KDS list); omit for cron.
+ * Do not call from customer routes — JWTs are not café-bound.
  * Recall resets `board_opened_at` so remakes get a fresh window without rewriting place time.
  */
 export async function expireStaleOpenOrders(params?: {
