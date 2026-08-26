@@ -1,4 +1,8 @@
-import type { AdminLoginResponse, AdminOnboardingStatusResponse, AdminRegisterRequest } from '@moonshot/types';
+import type {
+  AdminLoginResponse,
+  AdminOnboardingStatusResponse,
+  AdminRegisterRequest,
+} from '@moonshot/types';
 import {
   createContext,
   useCallback,
@@ -29,6 +33,7 @@ type AuthContextValue = {
   register: (body: AdminRegisterRequest) => Promise<void>;
   logout: () => void;
   refreshOnboardingStatus: () => Promise<void>;
+  markOnboardingCompleted: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -41,7 +46,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 async function establishSession(
   data: AdminLoginResponse,
   setSession: (s: AdminSession | null) => void,
-  setOnboardingStatus: (s: AdminOnboardingStatusResponse | null) => void,
+  setOnboardingStatus: (s: AdminOnboardingStatusResponse | null) => void
 ): Promise<void> {
   const status = await adminOnboardingStatus(data.token);
   localStorage.setItem(TOKEN_KEY, data.token);
@@ -56,7 +61,7 @@ async function establishSession(
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [onboardingStatus, setOnboardingStatus] = useState<AdminOnboardingStatusResponse | null>(
-    null,
+    null
   );
   const [loading, setLoading] = useState(true);
   const apiConfigured = Boolean(getApiBaseUrl());
@@ -72,8 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOnboardingStatus(status);
     } catch {
       // Keep last known status. Clearing it while a session exists replaces the
-      // whole app with AuthBootSpinner and leaves no retry/logout path.
+      // whole app with AuthBootSpinner and leaves no retry/logout path. Callers
+      // that already know a newer fact (e.g. POST /complete) must patch first.
     }
+  }, []);
+
+  const markOnboardingCompleted = useCallback(() => {
+    // POST /complete is source of truth; keep console routing from bouncing if
+    // the following status GET fails and would otherwise leave completed: false.
+    setOnboardingStatus((prev) => (prev ? { ...prev, completed: true } : prev));
   }, []);
 
   useEffect(() => {
@@ -139,8 +151,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       refreshOnboardingStatus,
+      markOnboardingCompleted,
     }),
-    [session, onboardingStatus, loading, apiConfigured, login, register, logout, refreshOnboardingStatus],
+    [
+      session,
+      onboardingStatus,
+      loading,
+      apiConfigured,
+      login,
+      register,
+      logout,
+      refreshOnboardingStatus,
+      markOnboardingCompleted,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -19,9 +19,9 @@ import { adminCompleteOnboarding, adminSaveMenuTemplate } from '../lib/admin-api
  */
 export function OnboardingWizard() {
   const navigate = useNavigate();
-  const { session, onboardingStatus, refreshOnboardingStatus } = useAuth();
+  const { session, onboardingStatus, refreshOnboardingStatus, markOnboardingCompleted } = useAuth();
   const [stripeReturnNotice] = useState(
-    () => new URLSearchParams(window.location.search).get('stripeConnect') === 'return',
+    () => new URLSearchParams(window.location.search).get('stripeConnect') === 'return'
   );
   const [busy, setBusy] = useState(false);
   const [menuSetupView, setMenuSetupView] = useState<'choice' | 'template'>('choice');
@@ -29,7 +29,7 @@ export function OnboardingWizard() {
 
   const authStep = useMemo(
     () => deriveAuthenticatedOnboardingStep(onboardingStatus),
-    [onboardingStatus],
+    [onboardingStatus]
   );
   const progressIndex = activeProgressIndex(onboardingStatus);
 
@@ -40,11 +40,7 @@ export function OnboardingWizard() {
     if (params.has('stripeConnect')) {
       params.delete('stripeConnect');
       const qs = params.toString();
-      window.history.replaceState(
-        null,
-        '',
-        `${window.location.pathname}${qs ? `?${qs}` : ''}`,
-      );
+      window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
     }
   }, [stripeReturnNotice]);
 
@@ -73,7 +69,7 @@ export function OnboardingWizard() {
         setBusy(false);
       }
     },
-    [session, refreshOnboardingStatus],
+    [session, refreshOnboardingStatus]
   );
 
   const finish = useCallback(async () => {
@@ -82,6 +78,10 @@ export function OnboardingWizard() {
     setBusy(true);
     try {
       await adminCompleteOnboarding(session.token);
+      // POST /complete already succeeded. Stamp completed locally before the
+      // status GET so a failed refresh cannot leave completed: false and bounce
+      // routing back to this wizard (which remounts PaymentsStep and re-posts).
+      markOnboardingCompleted();
       await refreshOnboardingStatus();
       navigate('/overview', { replace: true });
     } catch (e) {
@@ -90,7 +90,7 @@ export function OnboardingWizard() {
     } finally {
       setBusy(false);
     }
-  }, [session, refreshOnboardingStatus, navigate]);
+  }, [session, markOnboardingCompleted, refreshOnboardingStatus, navigate]);
 
   if (!session) return null;
 
