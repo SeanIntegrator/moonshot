@@ -73,7 +73,7 @@ export function CafeUrlPreview({ cafeName, onSlugResolved }: Props) {
             fontFamily: 'monospace'
           }}>
           Your order page:{' '}
-          <Box component="span" sx={{ color: 'primary.main' }}>
+          <Box component="span" sx={(theme) => ({ color: theme.console.ink, fontWeight: 600 })}>
             {orderAheadHostPath(orderBase, slug)}
           </Box>
         </Typography>

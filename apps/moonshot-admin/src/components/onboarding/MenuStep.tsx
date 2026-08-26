@@ -10,10 +10,10 @@ type Props = {
   token: string;
   onSetMenuSetupView: (view: 'choice' | 'template') => void;
   onSaveMenuTemplate: (payload: AdminSaveMenuTemplateRequest) => Promise<void>;
-  onContinueToPayments: () => void;
+  onContinue: () => void;
 };
 
-/** Menu step: Square import, template builder, or "already saved" shortcut. */
+/** Menu step: Square import, guided template, or “already saved” shortcut. */
 export function MenuStep({
   hasMenuItem,
   menuSetupView,
@@ -21,24 +21,18 @@ export function MenuStep({
   token,
   onSetMenuSetupView,
   onSaveMenuTemplate,
-  onContinueToPayments,
+  onContinue,
 }: Props) {
   if (hasMenuItem) {
     return (
       <Box>
-        <Typography variant="h6" gutterBottom>
-          Starter menu saved
+        <Typography variant="h3" component="h2" sx={{ mb: 0.5 }}>
+          Menu ready
         </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            marginBottom: "16px"
-          }}>
-          Your menu is ready for customers. You can add specialty items from the dashboard after
-          setup.
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
+          Your menu is set. You can add specialty items from the console after setup.
         </Typography>
-        <Button variant="contained" fullWidth onClick={onContinueToPayments}>
+        <Button variant="contained" fullWidth size="large" onClick={onContinue}>
           Continue
         </Button>
       </Box>
@@ -55,10 +49,5 @@ export function MenuStep({
     );
   }
 
-  return (
-    <MenuSetupChoice
-      token={token}
-      onEditTemplate={() => onSetMenuSetupView('template')}
-    />
-  );
+  return <MenuSetupChoice token={token} onEditTemplate={() => onSetMenuSetupView('template')} />;
 }

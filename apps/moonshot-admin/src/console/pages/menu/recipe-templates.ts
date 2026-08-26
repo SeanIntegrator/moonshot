@@ -26,7 +26,7 @@ const BY_ID = new Map(OWNER_RECIPE_TEMPLATES.map((t) => [t.id, t]));
 
 /** Map a stored archetype (including low-milk / espresso) to the nearest owner template. */
 export function ownerTemplateFromArchetype(
-  archetype: DrinkArchetypeId | null | undefined,
+  archetype: string | null | undefined,
 ): OwnerRecipeTemplateId {
   switch (archetype) {
     case 'milk-forward-hot':
@@ -44,10 +44,8 @@ export function ownerTemplateFromArchetype(
     case null:
     case undefined:
       return 'empty';
-    default: {
-      const _exhaustive: never = archetype;
-      return _exhaustive;
-    }
+    default:
+      return 'empty';
   }
 }
 
@@ -61,7 +59,7 @@ export function ownerTemplateLabel(id: OwnerRecipeTemplateId): string {
 
 /** Owner-facing label for a stored archetype, or null when none. */
 export function ownerTemplateLabelForArchetype(
-  archetype: DrinkArchetypeId | null | undefined,
+  archetype: string | null | undefined,
 ): string | null {
   if (archetype == null) return null;
   return ownerTemplateLabel(ownerTemplateFromArchetype(archetype));

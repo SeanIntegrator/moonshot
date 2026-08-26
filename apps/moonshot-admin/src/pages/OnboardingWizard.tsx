@@ -1,35 +1,25 @@
-import { Alert, Step, StepLabel, Stepper } from '@mui/material';
-import { useCallback, useEffect, useState } from 'react';
+import { Alert } from '@mui/material';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrandShell } from '../components/BrandShell.js';
+import type { AdminSaveMenuTemplateRequest } from '@moonshot/domain';
+import { CafeSettingsStep } from '../components/onboarding/CafeSettingsStep.js';
 import { MenuStep } from '../components/onboarding/MenuStep.js';
+import { OnboardingShell } from '../components/onboarding/OnboardingShell.js';
+import {
+  activeProgressIndex,
+  deriveAuthenticatedOnboardingStep,
+} from '../components/onboarding/onboarding-steps.js';
 import { PaymentsStep } from '../components/onboarding/PaymentsStep.js';
 import { useAuth } from '../context/AuthContext.js';
 import { adminCompleteOnboarding, adminSaveMenuTemplate } from '../lib/admin-api.js';
-import type { AdminSaveMenuTemplateRequest } from '@moonshot/domain';
 
-const STEPS = ['Menu', 'Payments'] as const;
-
-function stepStorageKey(cafeId: string): string {
-  return `moonshot_onboarding_step_${cafeId}`;
-}
-
-function readStoredStep(cafeId: string): number {
-  try {
-    const raw = sessionStorage.getItem(stepStorageKey(cafeId));
-    const n = raw ? parseInt(raw, 10) : 0;
-    return Number.isFinite(n) && n >= 0 && n < STEPS.length ? n : 0;
-  } catch {
-    return 0;
-  }
-}
-
+/**
+ * Post-signup wizard. Step is derived from server onboarding status
+ * (menu → café settings → payments), not sessionStorage.
+ */
 export function OnboardingWizard() {
   const navigate = useNavigate();
   const { session, onboardingStatus, refreshOnboardingStatus } = useAuth();
-  const [step, setStep] = useState(() =>
-    session?.cafe.id ? readStoredStep(session.cafe.id) : 0,
-  );
   const [stripeReturnNotice] = useState(
     () => new URLSearchParams(window.location.search).get('stripeConnect') === 'return',
   );
@@ -37,23 +27,13 @@ export function OnboardingWizard() {
   const [menuSetupView, setMenuSetupView] = useState<'choice' | 'template'>('choice');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!session) return;
-    sessionStorage.setItem(stepStorageKey(session.cafe.id), String(step));
-  }, [step, session]);
+  const authStep = useMemo(
+    () => deriveAuthenticatedOnboardingStep(onboardingStatus),
+    [onboardingStatus],
+  );
+  const progressIndex = activeProgressIndex(onboardingStatus);
 
-  useEffect(() => {
-    if (step !== 0) setMenuSetupView('choice');
-  }, [step]);
-
-  // Menu already provisioned (e.g. Square return) → land on payments.
-  useEffect(() => {
-    if (onboardingStatus?.hasMenuItem) {
-      setStep((prev) => Math.max(prev, 1));
-    }
-  }, [onboardingStatus?.hasMenuItem]);
-
-  // Full-page Stripe redirect remounts the wizard — land on payments.
+  // Clear Stripe return query after reading (status refresh is handled in PaymentsStep).
   useEffect(() => {
     if (!stripeReturnNotice) return;
     const params = new URLSearchParams(window.location.search);
@@ -66,7 +46,6 @@ export function OnboardingWizard() {
         `${window.location.pathname}${qs ? `?${qs}` : ''}`,
       );
     }
-    setStep(1);
   }, [stripeReturnNotice]);
 
   // Square OAuth may land on /onboarding if redirect URL is origin-only.
@@ -76,6 +55,10 @@ export function OnboardingWizard() {
     navigate(`/onboarding/import-pos?${params.toString()}`, { replace: true });
   }, [navigate]);
 
+  useEffect(() => {
+    if (authStep !== 'menu') setMenuSetupView('choice');
+  }, [authStep]);
+
   const saveMenuTemplate = useCallback(
     async (payload: AdminSaveMenuTemplateRequest) => {
       if (!session) return;
@@ -84,7 +67,6 @@ export function OnboardingWizard() {
       try {
         await adminSaveMenuTemplate(session.token, payload);
         await refreshOnboardingStatus();
-        setStep(1);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to save menu template');
       } finally {
@@ -101,7 +83,6 @@ export function OnboardingWizard() {
     try {
       await adminCompleteOnboarding(session.token);
       await refreshOnboardingStatus();
-      sessionStorage.removeItem(stepStorageKey(session.cafe.id));
       navigate('/overview', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not complete setup');
@@ -113,34 +94,36 @@ export function OnboardingWizard() {
   if (!session) return null;
 
   const cafeName = session.cafe.name;
+  const titles: Record<typeof authStep, { title: string; subtitle: string }> = {
+    menu: {
+      title: `Set up ${cafeName}`,
+      subtitle: 'Build a starter menu, then confirm hours and how you get paid.',
+    },
+    cafe: {
+      title: `Set up ${cafeName}`,
+      subtitle: 'Make your order page feel like yours, and confirm when you’re open.',
+    },
+    payments: {
+      title: `Set up ${cafeName}`,
+      subtitle: 'Almost done — choose card payments or take payment in store for now.',
+    },
+  };
+  const copy = titles[authStep];
 
   return (
-    <BrandShell
-      title={`Set up ${cafeName}`}
-      subtitle="A couple of steps and you're ready for orders."
-      maxWidth={640}
-      stepper={
-        <Stepper activeStep={step} alternativeLabel sx={{ mb: 3 }}>
-          {STEPS.map((label, i) => (
-            <Step key={label} completed={step > i}>
-              <StepLabel
-                onClick={() => i < step && setStep(i)}
-                sx={{ cursor: i < step ? 'pointer' : 'default' }}
-              >
-                {label}
-              </StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-      }
+    <OnboardingShell
+      title={copy.title}
+      subtitle={copy.subtitle}
+      activeStep={progressIndex}
+      maxWidth={authStep === 'cafe' ? 720 : 560}
     >
-      {error && (
+      {error ? (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
-      )}
+      ) : null}
 
-      {step === 0 && (
+      {authStep === 'menu' ? (
         <MenuStep
           hasMenuItem={Boolean(onboardingStatus?.hasMenuItem)}
           menuSetupView={menuSetupView}
@@ -148,18 +131,30 @@ export function OnboardingWizard() {
           token={session.token}
           onSetMenuSetupView={setMenuSetupView}
           onSaveMenuTemplate={saveMenuTemplate}
-          onContinueToPayments={() => setStep(1)}
+          onContinue={() => void refreshOnboardingStatus()}
         />
-      )}
+      ) : null}
 
-      {step === 1 && (
+      {authStep === 'cafe' ? (
+        <CafeSettingsStep
+          token={session.token}
+          cafeSlug={session.cafe.slug}
+          cafeName={cafeName}
+          busy={busy}
+          onBusy={setBusy}
+          onSaved={() => void refreshOnboardingStatus()}
+          onError={setError}
+        />
+      ) : null}
+
+      {authStep === 'payments' ? (
         <PaymentsStep
           token={session.token}
           stripeReturnNotice={stripeReturnNotice}
           busy={busy}
-          onFinish={() => void finish()}
+          onComplete={() => void finish()}
         />
-      )}
-    </BrandShell>
+      ) : null}
+    </OnboardingShell>
   );
 }

@@ -41,6 +41,7 @@ export {
   adminCreateKdsUser,
   adminOnboardingStatus,
   adminRegister,
+  adminSaveCafeSettings,
   adminSaveMenuTemplate,
   checkSlugAvailable,
 } from './adminApi/onboarding.js';

@@ -2,6 +2,9 @@
  * Admin HTTP auth — café-scoped dashboard (distinct from customer Google JWT and KDS JWT).
  */
 
+import type { BaseThemeId, CafeBrandOverrides } from './cafe.js';
+import type { CafeHours, LastOrderBufferMinutes } from './cafe-hours-contract.js';
+
 /** JWT payload for pre-seeded / invite-based admin sessions. */
 export interface AdminJwtClaims {
   /** Subject — same as adminUserId */
@@ -46,6 +49,20 @@ export interface AdminOnboardingStatusResponse {
   completed: boolean;
   hasKdsUser: boolean;
   hasMenuItem: boolean;
+  /** True once brand + hours were explicitly confirmed in onboarding. */
+  hasCafeSettings: boolean;
+}
+
+/** Body for POST /admin/onboarding/cafe-settings */
+export interface AdminOnboardingCafeSettingsRequest {
+  themeId: BaseThemeId;
+  brand: CafeBrandOverrides | null;
+  hours: CafeHours;
+  lastOrderBufferMinutes: LastOrderBufferMinutes;
+}
+
+export interface AdminOnboardingCafeSettingsResponse {
+  confirmed: boolean;
 }
 
 export interface AdminCreateKdsUserRequest {

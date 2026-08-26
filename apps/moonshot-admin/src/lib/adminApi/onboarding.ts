@@ -1,4 +1,13 @@
-import type { AdminCreateKdsUserRequest, AdminCreateKdsUserResponse, AdminOnboardingStatusResponse, AdminRegisterRequest, AdminRegisterResponse, SlugAvailableResponse } from '@moonshot/types';
+import type {
+  AdminCreateKdsUserRequest,
+  AdminCreateKdsUserResponse,
+  AdminOnboardingCafeSettingsRequest,
+  AdminOnboardingCafeSettingsResponse,
+  AdminOnboardingStatusResponse,
+  AdminRegisterRequest,
+  AdminRegisterResponse,
+  SlugAvailableResponse,
+} from '@moonshot/types';
 import type { AdminSaveMenuTemplateRequest, AdminSaveMenuTemplateResponse } from '@moonshot/domain';
 import { apiUrl, parseEnvelope } from './http.js';
 
@@ -46,6 +55,25 @@ export async function adminCompleteOnboarding(token: string): Promise<void> {
   if (!envelope.ok) {
     throw new Error(envelope.error || `Complete failed (${res.status})`);
   }
+}
+
+export async function adminSaveCafeSettings(
+  token: string,
+  body: AdminOnboardingCafeSettingsRequest,
+): Promise<AdminOnboardingCafeSettingsResponse> {
+  const res = await fetch(apiUrl('/admin/onboarding/cafe-settings'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const envelope = await parseEnvelope<AdminOnboardingCafeSettingsResponse>(res);
+  if (!envelope.ok) {
+    throw new Error(envelope.error || `Café settings failed (${res.status})`);
+  }
+  return envelope.data;
 }
 
 export async function adminCreateKdsUser(

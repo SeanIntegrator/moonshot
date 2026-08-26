@@ -9,6 +9,7 @@ describe('defaultNewCafeFeatures', () => {
     expect(features.order_ahead?.enabled).toBe(true);
     expect(features.order_ahead?.paymentProvider).toBe('pay_in_store');
     expect(features.onboarding_completed_at).toBeNull();
+    expect(features.onboarding_cafe_settings_confirmed_at).toBeNull();
   });
 });
 

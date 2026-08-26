@@ -1,5 +1,6 @@
-import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Alert, Box, Button, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
+import { buttonLoader } from '../../console/primitives/button-loader.js';
 import { startSquareConnect } from '../../lib/admin-api.js';
 
 type Props = {
@@ -7,6 +8,10 @@ type Props = {
   onEditTemplate: () => void;
 };
 
+/**
+ * Menu path choice — Square import vs Moonshot starter defaults.
+ * Two clear option cards; no nested accordion chrome.
+ */
 export function MenuSetupChoice({ token, onEditTemplate }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +20,6 @@ export function MenuSetupChoice({ token, onEditTemplate }: Props) {
     setError(null);
     setBusy(true);
     try {
-      // Jump straight to Square OAuth — no interstitial authorise page.
       const { url } = await startSquareConnect(token);
       window.location.href = url;
     } catch (e) {
@@ -26,48 +30,80 @@ export function MenuSetupChoice({ token, onEditTemplate }: Props) {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Set up your menu
+      <Typography variant="h3" component="h2" sx={{ mb: 0.5 }}>
+        Build your menu
       </Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-          marginBottom: "16px"
-        }}>
-        Connect Square to pull your live catalogue, or start from our café template. Square supplies
-        prices, milks, and syrups; we add kitchen prep options (shots, beans, milk temp) on top. You
-        can always edit items later in the dashboard.
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
+        Import your live Square catalogue, or start from Moonshot defaults and refine later.
       </Typography>
 
-      {error && (
+      {error ? (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
-      )}
+      ) : null}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <Button
-          variant="contained"
-          size="large"
-          fullWidth
+        <OptionCard
+          title="Import from Square"
+          description="Pull prices, items, and modifiers from your Square catalogue. Best if Square is already your source of truth."
+          actionLabel={busy ? 'Connecting…' : 'Connect Square'}
+          primary
           disabled={busy}
+          busy={busy}
           onClick={() => void connectSquare()}
-          sx={{ py: 1.5 }}
-        >
-          {busy ? <CircularProgress size={22} color="inherit" /> : 'Connect my menu with Square'}
-        </Button>
-        <Button
-          variant="outlined"
-          size="large"
-          fullWidth
+        />
+        <OptionCard
+          title="Start with a Moonshot menu"
+          description="Pick drink categories and set key prices. Names and kitchen prep are filled in for you — edit anything later in the console."
+          actionLabel="Choose starter menu"
           disabled={busy}
           onClick={onEditTemplate}
-          sx={{ py: 1.5 }}
-        >
-          Continue with template
-        </Button>
+        />
       </Box>
+    </Box>
+  );
+}
+
+function OptionCard({
+  title,
+  description,
+  actionLabel,
+  primary,
+  disabled,
+  busy,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  primary?: boolean;
+  disabled?: boolean;
+  busy?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Box
+      sx={(theme) => ({
+        border: `1px solid ${theme.console.card.border}`,
+        borderRadius: 1.5,
+        p: 2,
+        bgcolor: theme.console.readonly.fill,
+      })}
+    >
+      <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{title}</Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.75 }}>
+        {description}
+      </Typography>
+      <Button
+        variant={primary ? 'contained' : 'outlined'}
+        fullWidth
+        disabled={disabled}
+        startIcon={busy ? buttonLoader(true) : undefined}
+        onClick={onClick}
+      >
+        {actionLabel}
+      </Button>
     </Box>
   );
 }

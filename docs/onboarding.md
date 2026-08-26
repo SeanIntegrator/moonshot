@@ -4,7 +4,9 @@ Self-service signup replaces manual DB seeding and bootstrap scripts for new caf
 
 ## Flow
 
-Four screens before the dashboard — all on the dark/lime brand theme. The light dashboard theme only appears after onboarding completes.
+Four steps before the dashboard — all on the light console design language
+(`dashboardTheme` + `OnboardingShell`). Login may still use `BrandShell` /
+`signupTheme`; signup and onboarding no longer switch themes mid-journey.
 
 ```mermaid
 flowchart TD
@@ -14,30 +16,35 @@ flowchart TD
   Register --> JWT[Admin JWT]
   JWT --> Menu[/onboarding Menu]
   Menu -->|Square OAuth| SquareReturn[import-pos auto-import]
-  SquareReturn --> Payments
-  Menu -->|Template| Payments[/onboarding Payments]
+  SquareReturn --> CafeSetup
+  Menu -->|Guided template| CafeSetup[/onboarding Café setup]
+  CafeSetup -->|POST cafe-settings| Payments[/onboarding Payments]
   Payments -->|Stripe or skip| Complete[POST /complete]
   Complete --> Dash[Dashboard]
 ```
 
 | Screen | What the owner does |
 |--------|---------------------|
-| Login | Email + password |
-| Signup | Café name, email, password, confirm password |
-| Menu | Connect Square (OAuth + auto-import) or build a starter template |
-| Payments | Connect Stripe, or skip for pay-in-store — then enter dashboard |
+| Account (`/signup`) | Café name, email, password, confirm password |
+| Menu | Connect Square (OAuth + auto-import) or guided starter template (categories + key prices) |
+| Café setup | Brand pack / colour / font + weekly opening hours + last-order buffer (explicit confirm) |
+| Payments | Connect with Stripe, or skip now and add later |
 
-Removed from the old journey: separate café / account / confirm signup steps, Welcome, Kitchen login, Square authorise interstitial, Go live.
+Progress is **server-derived** from `GET /admin/onboarding/status`
+(`hasMenuItem` → `hasCafeSettings` → payments). Refresh / OAuth return recover
+the correct step without trusting `sessionStorage`.
 
 ## Brand theme
 
 | Surface | Audience | Visual |
 |---------|----------|--------|
-| Login, signup, onboarding | Café owners | Dark editorial (`signupTheme` — chartreuse accent, Syne headings) via `BrandShell` |
-| Dashboard (post-onboarding) | Café owners | Light MUI (`dashboardTheme`) |
+| Signup + onboarding | Café owners | Light console (`dashboardTheme`, IBM Plex, ink CTAs) via `OnboardingShell` |
+| Login | Café owners | May still use dark `signupTheme` + `BrandShell` |
+| Dashboard (post-onboarding) | Café owners | Light MUI (`dashboardTheme` + `AdminShell`) |
 | `moonshot-order-ahead` themes | End customers | White-label packs (`minimal`, `organic`, `lively`) + brand colour / heading font |
 
-The dark theme spans the whole pre-dashboard journey so owners never see a mid-flow theme flip.
+Auth publishes session only after onboarding status resolves, so the console
+never flashes between register and `/onboarding`.
 
 ## API endpoints
 
@@ -45,14 +52,15 @@ The dark theme spans the whole pre-dashboard journey so owners never see a mid-f
 |--------|-------|------|---------|
 | `GET` | `/admin/onboarding/slug-available?slug=` | Public, rate-limited | Debounced slug check for signup URL preview |
 | `POST` | `/admin/onboarding/register` | Public, rate-limited | Create café + admin + barista KDS user; slug optional (derived from name) |
-| `GET` | `/admin/onboarding/status` | Admin JWT | `completed`, `hasKdsUser`, `hasMenuItem` |
+| `GET` | `/admin/onboarding/status` | Admin JWT | `completed`, `hasKdsUser`, `hasMenuItem`, `hasCafeSettings` |
+| `POST` | `/admin/onboarding/cafe-settings` | Admin JWT | Save brand + hours and stamp `onboarding_cafe_settings_confirmed_at` |
 | `POST` | `/admin/onboarding/kds-users` | Admin JWT | Create/rotate KDS login; omit `password` to generate one (returned once) |
 | `POST` | `/admin/onboarding/menu-template` | Admin JWT | Apply starter drink/milk/syrup template (transactional) |
 | `POST` | `/admin/onboarding/menu-pos-import` | Admin JWT | Import menu from connected Square (Catalog → Postgres) |
 | `POST` | `/admin/connect/square/onboard` | Admin JWT | Start Square OAuth (authorize URL) |
 | `GET` | `/admin/connect/square/return` | Public (signed state) | Square OAuth code exchange |
 | `GET` | `/admin/connect/square/status` | Admin JWT | Square connection + locations |
-| `POST` | `/admin/onboarding/complete` | Admin JWT | Set `features.onboarding_completed_at` |
+| `POST` | `/admin/onboarding/complete` | Admin JWT | Set `features.onboarding_completed_at` (requires menu + café settings) |
 
 ### Register body
 
@@ -64,13 +72,20 @@ The dark theme spans the whole pre-dashboard journey so owners never see a mid-f
 - **Timezone:** defaults to `Europe/London`.
 - **Kitchen login:** a `barista` KDS user is seeded in the same transaction (password not returned — generate from the dashboard).
 
-### KDS users body
+### Café settings body
 
 ```ts
-{ username?: string; password?: string }  // username defaults to barista; omit password to generate
+{
+  themeId: 'minimal' | 'organic' | 'lively';
+  brand: { color?: string | null; headingFontId?: string | null } | null;
+  hours: CafeHours;
+  lastOrderBufferMinutes: 0 | 10 | 15 | 20 | 30 | 45 | 60;
+}
 ```
 
-Response includes `password` only when the server generated one.
+Reuses the same validation as `PATCH /admin/settings`, then sets
+`features.onboarding_cafe_settings_confirmed_at` so seeded hours alone cannot
+skip the café setup step.
 
 ## Default policy for new cafés
 
@@ -84,16 +99,18 @@ Provisioned via [`cafe-provisioning.ts`](../apps/moonshot-api/src/lib/cafe/cafe-
 - `order_ahead.enabled`: `true`
 - `order_ahead.paymentProvider`: `pay_in_store` (switch to Stripe after Connect onboarding)
 - `loyalty.enabled`: `true` (10 stamps → free drink; `doubleStampDays: []`)
+- `onboarding_completed_at` / `onboarding_cafe_settings_confirmed_at`: `null`
 - Other feature blocks (`events`, `promotions`, `review_nudge`, `saved_orders`, `whatsapp_ordering`): `null` (disabled)
 - `kds_config`: seed template from migration `001_initial_schema.sql`, with `cafeId` set to row UUID
 - Modifier library (`Milks`, `Syrups`, Flow prep, Ice Level, Toppings) seeded at signup; system menu sections (`hot_drinks`, `cold_drinks`, `food` disabled) created; platform drink-archetype recipes written to `drink_archetype_config`
+- Weekly hours seeded as Mon–Sat 08:00–16:00 / Sun closed — owners must confirm on the café setup step
 
 ## Menu step
 
-Owners choose **Connect my menu with Square** or **Continue with template**.
+Owners choose **Import from Square** or **Start with a Moonshot menu**.
 
-- **Square:** button starts OAuth immediately (no interstitial). On return, auto-import when there is at most one location; multi-location cafés see a picker. Then advance to Payments.
-- **Template:** toggle categories (Hot drinks and Milks are always on; **Food** is present but off by default), tick drinks/milks/syrups, edit names/prices before save.
+- **Square:** button starts OAuth immediately. On return, auto-import when there is at most one location; multi-location cafés see a picker. Then advance to café setup.
+- **Template (guided):** toggle categories (Hot drinks and Milks always on; Food off by default), tick items, then review key prices. Names/descriptions use catalog defaults — refine later in the console.
 
 Custom specialty sections (e.g. Ube) are added later from the dashboard Items tab.
 
@@ -107,18 +124,20 @@ Custom specialty sections (e.g. Ube) are added later from the dashboard Items ta
 `POST /admin/onboarding/menu-template` delegates to `getMenuProvisioner('template')`.
 `POST /admin/onboarding/menu-pos-import` delegates to `getMenuProvisioner('pos')`.
 
-`POST /admin/onboarding/menu-template` runs in a transaction:
-
-1. Updates `Milks` and `Syrups` modifier groups with enabled options
-2. Ensures Flow prep groups (shots, beans, milk temp/texture) plus Ice Level and Toppings
-3. Creates selected drink `menu_items` at £3.50 by default (non-dairy milks +50p, syrups +30p)
-4. Sets each drink’s **archetype** from the template map and attaches only the modifier groups for that recipe (e.g. espresso → shots + beans; iced latte → milks + syrups + shots + ice + beans). Low-milk / tea types set `waive_milk_surcharge`
-
-Completion still requires `hasMenuItem` (at least one available drink). `hasKdsUser` is always true for new signups because the barista login is seeded at register.
+Completion requires `hasMenuItem` and `hasCafeSettings`. `hasKdsUser` is always true for new signups because the barista login is seeded at register.
 
 ### Default drink images
 
 When Railway Object Storage is configured (`MENU_IMAGE_*` env vars), template drinks get `image_url` pointing at canonical thumbnails under `template/drinks/{key}.webp`. See **[menu-images.md](./menu-images.md)** for bucket setup, upload API, and the `pnpm sync:menu-template-images` bootstrap script.
+
+## Payments step
+
+Exactly two actions:
+
+1. **Connect with Stripe** — full-page Account Link; status auto-refreshes on return; charges enabled completes onboarding.
+2. **Skip now and add later** — completes onboarding with `pay_in_store`.
+
+No refresh icon or separate Finish button.
 
 ## Order-ahead URLs
 

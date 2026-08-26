@@ -33,11 +33,18 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function applySession(
-  setSession: (s: AdminSession | null) => void,
+/**
+ * Persist token + resolve onboarding status before publishing session.
+ * Avoids a race where session alone briefly unlocks ConsoleLayout.
+ */
+async function establishSession(
   data: AdminLoginResponse,
-): void {
+  setSession: (s: AdminSession | null) => void,
+  setOnboardingStatus: (s: AdminOnboardingStatusResponse | null) => void,
+): Promise<void> {
   localStorage.setItem(TOKEN_KEY, data.token);
+  const status = await adminOnboardingStatus(data.token);
+  setOnboardingStatus(status);
   setSession({
     token: data.token,
     adminUser: data.adminUser,
@@ -83,9 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const me = await adminGetMe(token);
         if (cancelled) return;
-        setSession({ token, ...me });
         const status = await adminOnboardingStatus(token);
-        if (!cancelled) setOnboardingStatus(status);
+        if (cancelled) return;
+        // Publish session + status together so routing never sees a half-ready signed-in state.
+        setOnboardingStatus(status);
+        setSession({ token, ...me });
       } catch {
         if (cancelled) return;
         localStorage.removeItem(TOKEN_KEY);
@@ -104,16 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await adminLogin(email, password);
-    applySession(setSession, data);
-    const status = await adminOnboardingStatus(data.token);
-    setOnboardingStatus(status);
+    await establishSession(data, setSession, setOnboardingStatus);
   }, []);
 
   const register = useCallback(async (body: AdminRegisterRequest) => {
     const data = await adminRegister(body);
-    applySession(setSession, data);
-    const status = await adminOnboardingStatus(data.token);
-    setOnboardingStatus(status);
+    await establishSession(data, setSession, setOnboardingStatus);
   }, []);
 
   const logout = useCallback(() => {

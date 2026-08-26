@@ -1,6 +1,7 @@
 # Admin console v3 — UI foundation
 
-The signed-in admin is an eight-tab console. Login / signup / onboarding stay on
+The signed-in admin is an eight-tab console. Signup and onboarding use the same
+light `dashboardTheme` via `OnboardingShell`. Login may still use
 `signupTheme` + `BrandShell`.
 
 ## Cutover

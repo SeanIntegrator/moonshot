@@ -129,6 +129,11 @@ export interface CafeFeatures {
   whatsapp_ordering: WhatsappOrderingFeatureConfig | null;
   /** ISO timestamp set when owner completes post-signup wizard */
   onboarding_completed_at?: string | null;
+  /**
+   * ISO timestamp set when the owner explicitly confirms brand + hours
+   * during onboarding (seeded defaults alone do not count).
+   */
+  onboarding_cafe_settings_confirmed_at?: string | null;
 }
 
 export interface MilkColorConfig {
