@@ -1,6 +1,5 @@
 import type { CafeModifierGroup } from '@moonshot/types';
-import type { DrinkArchetypeDef, DrinkArchetypeId } from '@moonshot/domain';
-import { isDrinkArchetypeId } from '@moonshot/domain';
+import type { DrinkArchetypeDef } from '@moonshot/domain';
 import {
   Box,
   Checkbox,
@@ -14,6 +13,12 @@ import {
 } from '@mui/material';
 import { applyArchetypeToDraft, toggleAttachedGroup, type DraftItem } from './menu-item-draft.js';
 import { choiceMetaLine, isPosOwnedGroup } from './modifier-list-copy.js';
+import {
+  archetypeIdForOwnerTemplate,
+  OWNER_RECIPE_TEMPLATES,
+  ownerTemplateFromArchetype,
+  type OwnerRecipeTemplateId,
+} from './recipe-templates.js';
 
 type Props = {
   draft: DraftItem;
@@ -23,18 +28,15 @@ type Props = {
 };
 
 export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
-  function applyArchetype(value: string) {
-    if (!value) {
-      onChange(applyArchetypeToDraft(draft, null, null, library));
-      return;
-    }
-    if (!isDrinkArchetypeId(value)) return;
-    onChange(applyArchetypeToDraft(draft, value as DrinkArchetypeId, recipes[value] ?? null, library));
+  function applyOwnerTemplate(templateId: OwnerRecipeTemplateId) {
+    const archetypeId = archetypeIdForOwnerTemplate(templateId);
+    onChange(applyArchetypeToDraft(draft, archetypeId, recipes[archetypeId] ?? null, library));
   }
 
   const milkGroup = library.find((g) => g.slot === 'milk');
   const milkAttached = milkGroup ? draft.attachedGroupIds.includes(milkGroup.id) : false;
   const hasSquareLists = library.some(isPosOwnedGroup);
+  const selectedTemplate = ownerTemplateFromArchetype(draft.archetype);
 
   return (
     <Box
@@ -53,45 +55,49 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
           Square lists stay attached as they are in Square. Change those there, then sync.
         </Typography>
       ) : null}
-      {Object.keys(recipes).length > 0 ? (
-        <FormControl size="small" sx={{ maxWidth: 320, mb: 2, display: 'block' }}>
-          <InputLabel>Recipe</InputLabel>
-          <Select
-            label="Recipe"
-            value={draft.archetype ?? ''}
-            onChange={(e) => applyArchetype(e.target.value)}
-          >
-            <MenuItem value="">None (food / custom)</MenuItem>
-            {Object.values(recipes).map((r) => (
-              <MenuItem key={r.id} value={r.id}>
-                {r.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      ) : null}
+      <FormControl size="small" fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Recipe template</InputLabel>
+        <Select
+          label="Recipe template"
+          value={selectedTemplate}
+          onChange={(e) => applyOwnerTemplate(e.target.value as OwnerRecipeTemplateId)}
+        >
+          {OWNER_RECIPE_TEMPLATES.map((t) => (
+            <MenuItem key={t.id} value={t.id}>
+              {t.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
       {library.map((g) => {
         const attached = draft.attachedGroupIds.includes(g.id);
         const isMilk = milkGroup?.id === g.id;
         const fromSquare = isPosOwnedGroup(g);
         return (
-          <Box
-            key={g.id}
-            sx={(theme) => ({
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              py: 1.25,
-              borderTop: `1px solid ${theme.console.hairline}`,
-            })}
-          >
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 600 }}>{g.name}</Typography>
-              <Typography variant="body2">{choiceMetaLine(g)}</Typography>
+          <Box key={g.id}>
+            <Box
+              sx={(theme) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                py: 1.25,
+                borderTop: `1px solid ${theme.console.hairline}`,
+              })}
+            >
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 600 }}>{g.name}</Typography>
+                <Typography variant="body2">{choiceMetaLine(g)}</Typography>
+              </Box>
+              <Switch
+                checked={attached}
+                disabled={fromSquare}
+                onChange={() => onChange(toggleAttachedGroup(draft, g.id, library))}
+                slotProps={{ input: { 'aria-label': `Offer ${g.name}` } }}
+              />
             </Box>
             {isMilk && attached ? (
               <FormControlLabel
-                sx={{ mr: 1 }}
+                sx={{ display: 'flex', ml: 0, mb: 1, alignItems: 'flex-start' }}
                 control={
                   <Checkbox
                     size="small"
@@ -102,12 +108,6 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
                 label="Don't charge customers for alternative milks on this item"
               />
             ) : null}
-            <Switch
-              checked={attached}
-              disabled={fromSquare}
-              onChange={() => onChange(toggleAttachedGroup(draft, g.id, library))}
-              slotProps={{ input: { 'aria-label': `Offer ${g.name}` } }}
-            />
           </Box>
         );
       })}

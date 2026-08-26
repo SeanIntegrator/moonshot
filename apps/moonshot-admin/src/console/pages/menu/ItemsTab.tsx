@@ -1,8 +1,14 @@
 import type { CafeMenuSection, CafeModifierGroup, NormalisedMenuItem } from '@moonshot/types';
 import type { DrinkArchetypeDef } from '@moonshot/domain';
 import { Box, Button, Typography } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
-import { createMenuItem, fetchDrinkArchetypes, patchMenuItem } from '../../../lib/admin-api.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createMenuItem,
+  deleteMenuItem,
+  fetchDrinkArchetypes,
+  patchMenuItem,
+  uploadMenuItemImage,
+} from '../../../lib/admin-api.js';
 import { useToast } from '../../primitives/ToastProvider.js';
 import { ItemEditorFields } from './ItemEditorFields.js';
 import { ItemsSidebar } from './ItemsSidebar.js';
@@ -32,10 +38,13 @@ export function ItemsTab({
   const [drafts, setDrafts] = useState<Record<string, DraftItem>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Record<string, DrinkArchetypeDef>>({});
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<DraftItem | null>(null);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const pendingPreviewUrlRef = useRef<string | null>(null);
   const enabledSections = useMemo(
     () => sections.filter((s) => s.enabled && s.kind !== 'unclassified'),
     [sections],
@@ -65,6 +74,33 @@ export function ItemsTab({
     if (next.pendingSelectId !== pendingSelectId) setPendingSelectId(next.pendingSelectId);
   }, [items, sections, selectedId, creating, pendingSelectId]);
 
+  useEffect(() => {
+    return () => {
+      if (pendingPreviewUrlRef.current) {
+        URL.revokeObjectURL(pendingPreviewUrlRef.current);
+        pendingPreviewUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  function clearPendingImage() {
+    if (pendingPreviewUrlRef.current) {
+      URL.revokeObjectURL(pendingPreviewUrlRef.current);
+      pendingPreviewUrlRef.current = null;
+    }
+    setPendingImageFile(null);
+  }
+
+  function setPendingImage(file: File) {
+    if (pendingPreviewUrlRef.current) {
+      URL.revokeObjectURL(pendingPreviewUrlRef.current);
+    }
+    const url = URL.createObjectURL(file);
+    pendingPreviewUrlRef.current = url;
+    setPendingImageFile(file);
+    setCreateDraft((prev) => (prev ? { ...prev, imageUrl: url, imageSource: 'upload' } : prev));
+  }
+
   const categoryOptions = enabledSections.map((s) => ({ value: s.key, label: s.label }));
   const selected = items.find((i) => i.id === selectedId) ?? null;
   const draft = creating
@@ -74,7 +110,9 @@ export function ItemsTab({
       : null;
   const dirty =
     creating && createDraft
-      ? createDraft.name.trim().length > 0 || createDraft.priceMinor > 0
+      ? createDraft.name.trim().length > 0 ||
+        createDraft.priceMinor > 0 ||
+        pendingImageFile != null
       : selected && draft
         ? itemDraftDirty(draft, selected, library)
         : false;
@@ -85,6 +123,7 @@ export function ItemsTab({
       toast({ severity: 'error', message: 'Add a product category before creating items.' });
       return;
     }
+    clearPendingImage();
     setCreating(true);
     setCreateDraft(emptyDraft(defaultCategory));
     setPendingSelectId(null);
@@ -92,6 +131,7 @@ export function ItemsTab({
   }
 
   function cancelCreate() {
+    clearPendingImage();
     setCreating(false);
     setCreateDraft(null);
     setPendingSelectId(null);
@@ -105,8 +145,9 @@ export function ItemsTab({
         return;
       }
       setSavingId('__create__');
+      const imageToUpload = pendingImageFile;
       try {
-        const created = await createMenuItem(token, cafeSlug, {
+        let created = await createMenuItem(token, cafeSlug, {
           name: next.name.trim(),
           category: next.category,
           priceMinor: next.priceMinor,
@@ -119,7 +160,28 @@ export function ItemsTab({
           sizes: next.sizes,
           tags: next.tags,
         });
+        if (imageToUpload) {
+          try {
+            created = await uploadMenuItemImage(token, cafeSlug, created.id, imageToUpload);
+          } catch (e) {
+            toast({
+              severity: 'warning',
+              message:
+                e instanceof Error
+                  ? `Added “${created.name}”, but the photo failed: ${e.message}`
+                  : `Added “${created.name}”, but the photo failed to upload.`,
+            });
+            clearPendingImage();
+            setCreating(false);
+            setCreateDraft(null);
+            setSelectedId(created.id);
+            setPendingSelectId(created.id);
+            onItemsChanged();
+            return;
+          }
+        }
         toast({ severity: 'success', message: `Added “${created.name}”.` });
+        clearPendingImage();
         setCreating(false);
         setCreateDraft(null);
         setSelectedId(created.id);
@@ -172,6 +234,29 @@ export function ItemsTab({
     }
   }
 
+  async function removeItem(item: NormalisedMenuItem): Promise<boolean> {
+    setDeletingId(item.id);
+    try {
+      await deleteMenuItem(token, cafeSlug, item.id);
+      setDrafts((prev) => {
+        const copy = { ...prev };
+        delete copy[item.id];
+        return copy;
+      });
+      toast({ severity: 'success', message: `Deleted “${item.name}”.` });
+      const remaining = items.filter((i) => i.id !== item.id);
+      setSelectedId(firstSidebarItemId(remaining, sections));
+      setPendingSelectId(null);
+      onItemsChanged();
+      return true;
+    } catch (e) {
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Delete failed' });
+      return false;
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   function undo() {
     if (creating) {
       cancelCreate();
@@ -211,6 +296,7 @@ export function ItemsTab({
           selectedId={creating ? null : selectedId}
           onQuery={setQuery}
           onSelect={(id) => {
+            clearPendingImage();
             setCreating(false);
             setCreateDraft(null);
             setPendingSelectId(null);
@@ -231,6 +317,7 @@ export function ItemsTab({
               categoryRequired={creating}
               saving={savingId === (creating ? '__create__' : selected?.id)}
               toggling={selected ? togglingId === selected.id : false}
+              deleting={selected ? deletingId === selected.id : false}
               dirty={dirty}
               valid={
                 draft.name.trim().length > 0 &&
@@ -244,6 +331,8 @@ export function ItemsTab({
               onSaved={(updated) => setDrafts((prev) => ({ ...prev, [updated.id]: toDraft(updated, library) }))}
               onSave={() => void saveItem(draft)}
               onUndo={undo}
+              onDelete={selected ? () => removeItem(selected) : undefined}
+              onPendingImage={creating ? setPendingImage : undefined}
               onToggleMenu={selected ? (next) => void toggleMenu(selected, next) : undefined}
             />
           ) : (

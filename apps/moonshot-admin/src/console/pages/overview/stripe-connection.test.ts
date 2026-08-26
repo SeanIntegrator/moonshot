@@ -16,6 +16,7 @@ describe('stripeRowView', () => {
     expect(row.tone).toBe('healthy');
     expect(row.actionKind).toBe('dashboard');
     expect(row.needsAttention).toBe(false);
+    expect(row.meta).toBe('Card payments successfully configured');
   });
 
   it('is unfinished when the account cannot charge', () => {

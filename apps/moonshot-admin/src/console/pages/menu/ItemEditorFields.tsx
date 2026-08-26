@@ -1,12 +1,15 @@
 import type { CafeMenuSection, CafeModifierGroup } from '@moonshot/types';
 import type { DrinkArchetypeDef } from '@moonshot/domain';
-import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
+import { Box, Button, FormControlLabel, Switch, Typography } from '@mui/material';
+import { useState } from 'react';
 import { switchLoader } from '../../primitives/button-loader.js';
 import { SaveFooter } from '../../primitives/SaveFooter.js';
+import { DeleteItemDialog } from './DeleteItemDialog.js';
 import { ItemChoicesCard } from './ItemChoicesCard.js';
 import { ItemDetailsCard } from './ItemDetailsCard.js';
-import { isFeaturedItem } from './item-sidebar.js';
+import { isFeaturedItem, isFoodItem } from './item-sidebar.js';
 import type { DraftItem } from './menu-item-draft.js';
+import { ownerTemplateLabelForArchetype } from './recipe-templates.js';
 
 type CategoryOption = { value: string; label: string };
 
@@ -21,12 +24,15 @@ type Props = {
   categoryOptions: CategoryOption[];
   saving: boolean;
   toggling: boolean;
+  deleting?: boolean;
   dirty: boolean;
   valid: boolean;
   onChange: (next: DraftItem) => void;
   onSaved: (updated: DraftItem) => void;
   onSave: () => void;
   onUndo: () => void;
+  onDelete?: () => void | Promise<boolean | void>;
+  onPendingImage?: (file: File) => void;
   onToggleMenu?: (next: boolean) => void;
   categoryRequired?: boolean;
 };
@@ -42,17 +48,21 @@ export function ItemEditorFields({
   categoryOptions,
   saving,
   toggling,
+  deleting = false,
   dirty,
   valid,
   onChange,
   onSaved,
   onSave,
   onUndo,
+  onDelete,
+  onPendingImage,
   onToggleMenu,
   categoryRequired = false,
 }: Props) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const sectionLabel = sections.find((s) => s.key === draft.category)?.label ?? draft.category;
-  const recipeLabel = draft.archetype ? (recipes[draft.archetype]?.label ?? draft.archetype) : null;
+  const recipeLabel = ownerTemplateLabelForArchetype(draft.archetype);
   const sizeCount = draft.sizes.length;
   const featured = isFeaturedItem(draft);
   const crumb = [
@@ -110,17 +120,29 @@ export function ItemEditorFields({
             justifyContent: 'flex-end',
           }}
         >
-          <SaveFooter
-            variant="inline"
-            label="Save item"
-            dirty={dirty}
-            valid={valid}
-            saving={saving}
-            onSave={onSave}
-            secondaryLabel="Undo changes"
-            secondaryVariant="outlined"
-            onSecondary={onUndo}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            <SaveFooter
+              variant="inline"
+              label="Save item"
+              dirty={dirty}
+              valid={valid}
+              saving={saving}
+              onSave={onSave}
+              secondaryLabel="Undo changes"
+              secondaryVariant="outlined"
+              onSecondary={onUndo}
+            />
+            {itemId && onDelete ? (
+              <Button
+                variant="outlined"
+                color="error"
+                disabled={saving || deleting}
+                onClick={() => setDeleteOpen(true)}
+              >
+                Delete item
+              </Button>
+            ) : null}
+          </Box>
           <FormControlLabel
             sx={{ mr: 0 }}
             control={
@@ -148,9 +170,24 @@ export function ItemEditorFields({
         saving={saving}
         onChange={onChange}
         onSaved={onSaved}
+        onPendingImage={onPendingImage}
       />
-      {library.length > 0 ? (
+      {library.length > 0 && !isFoodItem(draft, sections) ? (
         <ItemChoicesCard draft={draft} library={library} recipes={recipes} onChange={onChange} />
+      ) : null}
+      {itemId && onDelete ? (
+        <DeleteItemDialog
+          open={deleteOpen}
+          busy={deleting}
+          itemName={draft.name}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={() => {
+            void (async () => {
+              const result = await onDelete();
+              if (result !== false) setDeleteOpen(false);
+            })();
+          }}
+        />
       ) : null}
     </Box>
   );

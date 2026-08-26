@@ -13,7 +13,7 @@ import {
 import { useAdminMenuSync } from '../../../hooks/useAdminMenuSync.js';
 import { ConnectionRow } from '../../primitives/ConnectionRow.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
-import { CardSkeleton } from '../../primitives/skeletons/CardSkeleton.js';
+import { ConnectionRowSkeleton } from '../../primitives/skeletons/ConnectionRowSkeleton.js';
 import { useToast } from '../../primitives/ToastProvider.js';
 import { DisconnectSquareDialog } from './DisconnectSquareDialog.js';
 import { SquareLogo, StripeLogo } from './ServiceLogos.js';
@@ -36,6 +36,7 @@ export function ConnectionsCard({ token, timeZone }: Props) {
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [squareSettled, setSquareSettled] = useState(false);
+  const [stripeSettled, setStripeSettled] = useState(false);
 
   const loadSquare = useCallback(() => {
     return getSquareConnectStatus(token)
@@ -56,7 +57,8 @@ export function ConnectionsCard({ token, timeZone }: Props) {
           return;
         }
         toast({ severity: 'error', message: msg });
-      });
+      })
+      .finally(() => setStripeSettled(true));
   }, [token, toast]);
 
   useEffect(() => {
@@ -102,10 +104,12 @@ export function ConnectionsCard({ token, timeZone }: Props) {
         : null,
     [square, timeZone, justSynced],
   );
-  const stripeView = useMemo(() => stripeRowView(stripe), [stripe]);
+  const stripeView = useMemo(() => (stripeSettled ? stripeRowView(stripe) : null), [stripe, stripeSettled]);
 
+  // Only count settled rows — avoids flashing "need attention" from a null Stripe status.
   const attention =
-    (squareView?.needsAttention ? 1 : 0) + (stripeView.needsAttention ? 1 : 0);
+    (squareSettled && squareView?.needsAttention ? 1 : 0) +
+    (stripeView?.needsAttention ? 1 : 0);
 
   async function runSquareAction() {
     if (!squareView) return;
@@ -129,6 +133,7 @@ export function ConnectionsCard({ token, timeZone }: Props) {
   }
 
   async function runStripeAction() {
+    if (!stripeView) return;
     if (stripeView.actionKind === 'dashboard') {
       window.open(STRIPE_DASHBOARD, '_blank', 'noopener,noreferrer');
       return;
@@ -156,14 +161,12 @@ export function ConnectionsCard({ token, timeZone }: Props) {
 
   const title = attention > 0 ? `Connections · ${attention} need attention` : 'Connections';
 
-  if (!squareSettled) {
-    return <CardSkeleton lines={3} />;
-  }
-
   return (
     <>
       <SettingsCard title={title} description="Apps Moonshot talks to.">
-        {squareView ? (
+        {!squareSettled ? (
+          <ConnectionRowSkeleton />
+        ) : squareView ? (
           <ConnectionRow
             name="Square"
             logo={<SquareLogo />}
@@ -195,15 +198,19 @@ export function ConnectionsCard({ token, timeZone }: Props) {
           />
         ) : null}
         <Divider />
-        <ConnectionRow
-          name="Stripe"
-          logo={<StripeLogo />}
-          tone={stripeView.tone}
-          statusLabel={stripeView.statusLabel}
-          meta={stripeView.meta}
-          actionLabel={stripeView.actionLabel}
-          onAction={() => void runStripeAction()}
-        />
+        {!stripeSettled || !stripeView ? (
+          <ConnectionRowSkeleton />
+        ) : (
+          <ConnectionRow
+            name="Stripe"
+            logo={<StripeLogo />}
+            tone={stripeView.tone}
+            statusLabel={stripeView.statusLabel}
+            meta={stripeView.meta}
+            actionLabel={stripeView.actionLabel}
+            onAction={() => void runStripeAction()}
+          />
+        )}
       </SettingsCard>
       <DisconnectSquareDialog
         open={disconnectOpen}
@@ -214,4 +221,3 @@ export function ConnectionsCard({ token, timeZone }: Props) {
     </>
   );
 }
-

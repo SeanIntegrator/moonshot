@@ -126,6 +126,8 @@ export const dashboardTheme = createTheme({
     },
     MuiTabs: {
       styleOverrides: {
+        // 1px grey baseline under all tabs; selected indicator (2px ink) sits on the same line
+        root: { borderBottom: `1px solid ${border}` },
         indicator: { height: 2, backgroundColor: ink },
       },
     },

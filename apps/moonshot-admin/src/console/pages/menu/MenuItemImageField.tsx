@@ -31,6 +31,8 @@ type Props = {
   square?: boolean;
   hideLabel?: boolean;
   onUploaded: (item: NormalisedMenuItem) => void;
+  /** Unsaved new items: stash the file locally until create finishes. */
+  onPendingImage?: (file: File) => void;
 };
 
 /** Photo preview + upload controls stacked for the item editor’s right column. */
@@ -47,6 +49,7 @@ export function MenuItemImageField({
   square = false,
   hideLabel = false,
   onUploaded,
+  onPendingImage,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const toast = useOptionalToast();
@@ -60,9 +63,15 @@ export function MenuItemImageField({
     disabled || !itemId || togglingDefault || hasCustomImage || !hasTemplateMatch;
   // Custom photos force the control off visually; opt-in flag drives it otherwise.
   const defaultToggleChecked = !hasCustomImage && useDefaultImage;
+  const canPickPhoto = !isPosItem && (Boolean(itemId) || Boolean(onPendingImage));
 
   async function handleFile(file: File | null) {
-    if (!file || !itemId || isPosItem) return;
+    if (!file || isPosItem) return;
+    if (!itemId) {
+      onPendingImage?.(file);
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     setUploading(true);
     try {
       const updated = await uploadMenuItemImage(token, cafeSlug, itemId, file);
@@ -159,11 +168,7 @@ export function MenuItemImageField({
               </Box>
             ) : null}
           </Box>
-        ) : !itemId ? (
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Save the item first, then upload a photo.
-          </Typography>
-        ) : (
+        ) : canPickPhoto ? (
           <>
             <Button
               variant="outlined"
@@ -178,10 +183,12 @@ export function MenuItemImageField({
               variant="caption"
               sx={{ color: 'text.secondary', display: 'block', mt: 0.75 }}
             >
-              JPEG, PNG, or WebP · max 5MB · resized to a small thumbnail automatically
+              {!itemId
+                ? 'Photo uploads when you save this item · JPEG, PNG, or WebP · max 5MB'
+                : 'JPEG, PNG, or WebP · max 5MB · resized to a small thumbnail automatically'}
             </Typography>
           </>
-        )}
+        ) : null}
         {(uploading || togglingDefault) && <LinearProgress sx={{ mt: 1 }} />}
       </Box>
       {isPosItem ? null : (

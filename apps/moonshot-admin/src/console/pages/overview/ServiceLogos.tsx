@@ -1,43 +1,56 @@
 import { Box } from '@mui/material';
+import squareLogo from './assets/square-logo-2025-black.png';
 
+/** Shared width so Square + Stripe wordmarks align in the connection row. */
+const LOGO_WIDTH = 60;
+
+/** Square 2025 wordmark (mark + “Square”) on transparent. */
 export function SquareLogo() {
   return (
     <Box
+      component="img"
+      src={squareLogo}
+      alt=""
       aria-hidden
       sx={{
-        width: 32,
-        height: 32,
-        borderRadius: 0.75,
-        bgcolor: '#000',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: LOGO_WIDTH,
+        height: 'auto',
+        display: 'block',
+        objectFit: 'contain',
+        flexShrink: 0,
       }}
-    >
-      <Box sx={{ width: 14, height: 14, borderRadius: 0.5, bgcolor: '#fff' }} />
-    </Box>
+    />
   );
 }
 
+/** Stripe wordmark — blurple on transparent (inline SVG, no black plate). */
 export function StripeLogo() {
   return (
     <Box
+      component="svg"
       aria-hidden
+      viewBox="0 0 60 26"
       sx={{
-        width: 32,
-        height: 32,
-        borderRadius: 0.75,
-        bgcolor: '#635BFF',
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 700,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'Georgia, serif',
+        width: LOGO_WIDTH,
+        height: 'auto',
+        display: 'block',
+        flexShrink: 0,
       }}
     >
-      S
+      <text
+        x="0"
+        y="20"
+        fill="#635BFF"
+        style={{
+          fontFamily:
+            'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          fontSize: 22,
+          fontWeight: 700,
+          letterSpacing: '-0.04em',
+        }}
+      >
+        stripe
+      </text>
     </Box>
   );
 }
