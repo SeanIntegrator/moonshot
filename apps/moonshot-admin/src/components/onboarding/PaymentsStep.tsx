@@ -14,8 +14,11 @@ type Props = {
   token: string;
   stripeReturnNotice: boolean;
   busy: boolean;
-  onComplete: () => void;
+  onComplete: () => void | Promise<void>;
 };
+
+/** Transient POST /complete failures should retry; stop before hammering a persistent error. */
+const AUTO_FINISH_MAX_ATTEMPTS = 3;
 
 /**
  * Payments step — exactly two actions: Connect with Stripe, or skip and add later.
@@ -27,6 +30,7 @@ export function PaymentsStep({ token, stripeReturnNotice, busy, onComplete }: Pr
   const [error, setError] = useState<string | null>(null);
   const [connectBusy, setConnectBusy] = useState(false);
   const completedRef = useRef(false);
+  const autoFinishAttemptsRef = useRef(0);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -50,11 +54,16 @@ export function PaymentsStep({ token, stripeReturnNotice, busy, onComplete }: Pr
   }, [stripeReturnNotice, load]);
 
   useEffect(() => {
-    if (status?.chargesEnabled && !completedRef.current) {
-      completedRef.current = true;
-      onComplete();
-    }
-  }, [status?.chargesEnabled, onComplete]);
+    if (!status?.chargesEnabled || completedRef.current || busy) return;
+    if (autoFinishAttemptsRef.current >= AUTO_FINISH_MAX_ATTEMPTS) return;
+
+    autoFinishAttemptsRef.current += 1;
+    completedRef.current = true;
+    void Promise.resolve(onComplete()).catch(() => {
+      // Finish failed — drop the latch so a later idle pass can retry.
+      completedRef.current = false;
+    });
+  }, [status?.chargesEnabled, onComplete, busy]);
 
   async function openOnboarding() {
     setConnectBusy(true);
@@ -160,7 +169,9 @@ export function PaymentsStep({ token, stripeReturnNotice, busy, onComplete }: Pr
           size="large"
           disabled={actionBusy}
           startIcon={buttonLoader(busy && !connectBusy)}
-          onClick={onComplete}
+          onClick={() => {
+            void Promise.resolve(onComplete()).catch(() => {});
+          }}
         >
           {busy ? 'Finishing…' : 'Skip now and add later'}
         </Button>

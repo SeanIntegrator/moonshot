@@ -34,16 +34,17 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Persist token + resolve onboarding status before publishing session.
- * Avoids a race where session alone briefly unlocks ConsoleLayout.
+ * Resolve onboarding status before persisting the token and publishing session.
+ * Avoids a race where session alone briefly unlocks ConsoleLayout, and avoids
+ * leaving an orphaned JWT if status cannot be loaded after login/register.
  */
 async function establishSession(
   data: AdminLoginResponse,
   setSession: (s: AdminSession | null) => void,
   setOnboardingStatus: (s: AdminOnboardingStatusResponse | null) => void,
 ): Promise<void> {
-  localStorage.setItem(TOKEN_KEY, data.token);
   const status = await adminOnboardingStatus(data.token);
+  localStorage.setItem(TOKEN_KEY, data.token);
   setOnboardingStatus(status);
   setSession({
     token: data.token,
@@ -70,7 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const status = await adminOnboardingStatus(token);
       setOnboardingStatus(status);
     } catch {
-      setOnboardingStatus(null);
+      // Keep last known status. Clearing it while a session exists replaces the
+      // whole app with AuthBootSpinner and leaves no retry/logout path.
     }
   }, []);
 

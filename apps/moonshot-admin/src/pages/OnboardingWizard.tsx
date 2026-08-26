@@ -86,6 +86,7 @@ export function OnboardingWizard() {
       navigate('/overview', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not complete setup');
+      throw e;
     } finally {
       setBusy(false);
     }
@@ -152,7 +153,7 @@ export function OnboardingWizard() {
           token={session.token}
           stripeReturnNotice={stripeReturnNotice}
           busy={busy}
-          onComplete={() => void finish()}
+          onComplete={finish}
         />
       ) : null}
     </OnboardingShell>
