@@ -89,6 +89,7 @@ describe('expireStaleOpenOrders', () => {
 
     const [sql, params] = poolQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain("cancel_reason = $3");
+    expect(sql).toContain('board_opened_at <= NOW()');
     expect(sql).toContain("$2 * INTERVAL '1 hour'");
     expect(params[0]).toEqual([...CUSTOMER_ACTIVE_STATUSES]);
     expect(params[1]).toBe(KDS_OPEN_MAX_AGE_HOURS);

@@ -213,6 +213,7 @@ Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store and Stripe 
 | pickup_time          | TIMESTAMPTZ | **live** ETA (auto-updated) |
 | requested_pickup_not_before | TIMESTAMPTZ | optional customer delay floor (`pickupDelayMinutes`) |
 | completed_at         | TIMESTAMPTZ | set when KDS / flow completes |
+| board_opened_at      | TIMESTAMPTZ | when ticket (re)entered the KDS board; defaults to place time, reset on recall |
 | edit_token           | UUID        | secret for `PATCH` merge flow |
 | parent_order_id      | UUID        | FK → orders nullable; **audit trail** for add-on checkouts linked to same basket |
 | stripe_checkout_session_id | TEXT  | latest or initial session id (nullable) |
@@ -224,6 +225,7 @@ Implemented in Phase 2 (`002_orders_schema.sql`). Guest pay-in-store and Stripe 
 **Indexes:**
 
 - `(cafe_id, status, created_at DESC)` for KDS open queue (`idx_orders_cafe_status_created`)
+- `(cafe_id, status, board_opened_at DESC)` for open-board window / auto-expire (`idx_orders_cafe_status_board_opened`)
 - `UNIQUE (cafe_id, pos_order_id)` where `pos_order_id IS NOT NULL` (`orders_cafe_pos_order_unique`)
 - `(user_id, created_at DESC)` for customer history (`idx_orders_user_created`)
 

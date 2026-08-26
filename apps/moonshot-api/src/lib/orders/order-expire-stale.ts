@@ -1,5 +1,6 @@
 /**
  * Auto-expire open orders that have aged past the KDS board window.
+ * Age is measured from `board_opened_at` (place time, or recall time after a remake).
  * Never-completed tickets become `cancelled` with `cancel_reason = auto_expire`
  * so order-ahead and KDS stay in sync (KDS already hid them via list filter).
  */
@@ -27,8 +28,9 @@ export type ExpireStaleOpenOrdersResult = {
 type Db = Pool | PoolClient;
 
 /**
- * Cancel active orders whose `created_at` is older than {@link KDS_OPEN_MAX_AGE_HOURS}.
+ * Cancel active orders whose `board_opened_at` is older than {@link KDS_OPEN_MAX_AGE_HOURS}.
  * Optional `cafeId` scopes the sweep (customer/KDS list paths); omit for cron.
+ * Recall resets `board_opened_at` so remakes get a fresh window without rewriting place time.
  */
 export async function expireStaleOpenOrders(params?: {
   db?: Db;
@@ -46,14 +48,14 @@ export async function expireStaleOpenOrders(params?: {
            updated_at = NOW()
        WHERE cafe_id = $1
          AND status = ANY($2::text[])
-         AND created_at <= NOW() - ($3 * INTERVAL '1 hour')
+         AND board_opened_at <= NOW() - ($3 * INTERVAL '1 hour')
        RETURNING ${ORDER_SELECT_COLUMNS}`
     : `UPDATE orders
        SET status = 'cancelled',
            cancel_reason = $3,
            updated_at = NOW()
        WHERE status = ANY($1::text[])
-         AND created_at <= NOW() - ($2 * INTERVAL '1 hour')
+         AND board_opened_at <= NOW() - ($2 * INTERVAL '1 hour')
        RETURNING ${ORDER_SELECT_COLUMNS}`;
 
   const reason: OrderCancelReason = 'auto_expire';
