@@ -109,7 +109,7 @@ export function ConnectionsCard({ token, timeZone }: Props) {
   // Only count settled rows — avoids flashing "need attention" from a null Stripe status.
   const attention =
     (squareSettled && squareView?.needsAttention ? 1 : 0) +
-    (stripeView?.needsAttention ? 1 : 0);
+    (stripeSettled && stripeView?.needsAttention ? 1 : 0);
 
   async function runSquareAction() {
     if (!squareView) return;
