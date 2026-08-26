@@ -19,10 +19,11 @@ type Props = {
 export function DeleteItemDialog({ open, busy, itemName, onClose, onConfirm }: Props) {
   return (
     <Dialog open={open} onClose={busy ? undefined : onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Delete item?</DialogTitle>
+      <DialogTitle>Hide item?</DialogTitle>
       <DialogContent>
         <Typography>
-          “{itemName || 'Untitled'}” will be removed from your menu. This can&apos;t be undone.
+          “{itemName || 'Untitled'}” will be hidden from customers. You can show it again with the
+          On the menu switch.
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -36,7 +37,7 @@ export function DeleteItemDialog({ open, busy, itemName, onClose, onConfirm }: P
           disabled={busy}
           startIcon={buttonLoader(busy)}
         >
-          {busy ? 'Deleting…' : 'Delete item'}
+          {busy ? 'Hiding…' : 'Hide item'}
         </Button>
       </DialogActions>
     </Dialog>
