@@ -18,6 +18,13 @@ fi
 # Workspace dependencies (pnpm version is pinned via package.json "packageManager").
 pnpm install --frozen-lockfile
 
+# The shared libraries are consumed from their compiled `dist/` (see each
+# package's "exports"), so every app — including the `tsx`/Vite dev servers —
+# needs them built before it can resolve `@moonshot/*` at runtime. Turbo's
+# build task carries `dependsOn: ["^build"]`, so this respects the
+# types -> domain -> web-runtime order. Idempotent: turbo caches unchanged builds.
+pnpm exec turbo run build --filter="./packages/*"
+
 # Local dev env files are gitignored; generate them only when missing so a
 # developer's own overrides are never clobbered.
 api_env="apps/moonshot-api/.env"
