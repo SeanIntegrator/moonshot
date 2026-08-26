@@ -139,7 +139,7 @@ export function ItemEditorFields({
                 disabled={saving || deleting}
                 onClick={() => setDeleteOpen(true)}
               >
-                Delete item
+                Hide item
               </Button>
             ) : null}
           </Box>

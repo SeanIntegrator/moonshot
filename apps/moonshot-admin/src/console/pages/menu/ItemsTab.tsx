@@ -238,19 +238,15 @@ export function ItemsTab({
     setDeletingId(item.id);
     try {
       await deleteMenuItem(token, cafeSlug, item.id);
-      setDrafts((prev) => {
-        const copy = { ...prev };
-        delete copy[item.id];
-        return copy;
-      });
-      toast({ severity: 'success', message: `Deleted “${item.name}”.` });
-      const remaining = items.filter((i) => i.id !== item.id);
-      setSelectedId(firstSidebarItemId(remaining, sections));
-      setPendingSelectId(null);
+      setDrafts((prev) => ({
+        ...prev,
+        [item.id]: { ...(prev[item.id] ?? toDraft(item, library)), isAvailable: false },
+      }));
+      toast({ severity: 'success', message: `“${item.name}” is hidden.` });
       onItemsChanged();
       return true;
     } catch (e) {
-      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Delete failed' });
+      toast({ severity: 'error', message: e instanceof Error ? e.message : 'Hide failed' });
       return false;
     } finally {
       setDeletingId(null);

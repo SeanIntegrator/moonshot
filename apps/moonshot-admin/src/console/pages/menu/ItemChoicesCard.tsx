@@ -30,13 +30,17 @@ type Props = {
 export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
   function applyOwnerTemplate(templateId: OwnerRecipeTemplateId) {
     const archetypeId = archetypeIdForOwnerTemplate(templateId);
-    onChange(applyArchetypeToDraft(draft, archetypeId, recipes[archetypeId] ?? null, library));
+    const recipe = recipes[archetypeId];
+    // Recipes load async; a missing lookup must not be treated as "none" or save would wipe the archetype.
+    if (!recipe) return;
+    onChange(applyArchetypeToDraft(draft, archetypeId, recipe, library));
   }
 
   const milkGroup = library.find((g) => g.slot === 'milk');
   const milkAttached = milkGroup ? draft.attachedGroupIds.includes(milkGroup.id) : false;
   const hasSquareLists = library.some(isPosOwnedGroup);
   const selectedTemplate = ownerTemplateFromArchetype(draft.archetype);
+  const recipesReady = Object.keys(recipes).length > 0;
 
   return (
     <Box
@@ -60,6 +64,7 @@ export function ItemChoicesCard({ draft, library, recipes, onChange }: Props) {
         <Select
           label="Recipe template"
           value={selectedTemplate}
+          disabled={!recipesReady}
           onChange={(e) => applyOwnerTemplate(e.target.value as OwnerRecipeTemplateId)}
         >
           {OWNER_RECIPE_TEMPLATES.map((t) => (
