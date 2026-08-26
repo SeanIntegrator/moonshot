@@ -16,8 +16,11 @@ type OpenOrderQtyRow = {
 /**
  * Recompute live pickup ETAs for all open KDS orders in a café.
  *
- * FIFO queue: open orders ordered by created_at ASC. For each order j,
- * base FIFO minutes = basePrep + perItem × (sum of quantities in orders ahead).
+ * FIFO queue: open orders ordered by board_opened_at ASC so queue depth
+ * matches KDS board position. Recall resets board_opened_at, which puts
+ * remakes at the back instead of inflating ETAs via the original created_at.
+ * For each order j, base FIFO minutes = basePrep + perItem × (sum of
+ * quantities in orders ahead).
  * Live ETA = max(FIFO ms, requested_pickup_not_before) so a customer delay
  * ("not before 30 min") is never overwritten by a shorter queue estimate.
  * Orders with `eta_mode = manual_override` keep their barista-stretched
@@ -41,8 +44,8 @@ export async function recomputePickupEtasForCafe(params: {
      FROM orders o
      LEFT JOIN order_items oi ON oi.order_id = o.id
      WHERE o.cafe_id = $1 AND o.status = ANY($2::text[])
-     GROUP BY o.id, o.created_at, o.requested_pickup_not_before, o.eta_mode
-     ORDER BY o.created_at ASC`,
+     GROUP BY o.id, o.board_opened_at, o.requested_pickup_not_before, o.eta_mode
+     ORDER BY o.board_opened_at ASC`,
     [cafeId, [...KDS_OPEN_ORDER_STATUSES]],
   );
 
