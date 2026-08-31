@@ -17,6 +17,22 @@ import { OnboardingPosImportPage } from './pages/OnboardingPosImportPage.js';
 import { OnboardingWizard } from './pages/OnboardingWizard.js';
 import { SignupPage } from './pages/SignupPage.js';
 
+function AuthBootSpinner() {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+      }}
+    >
+      <CircularProgress color="primary" />
+    </Box>
+  );
+}
+
 /** Keep query string (e.g. `?stripeConnect=return`) across onboarding redirects. */
 function OnboardingRedirect() {
   const { search } = useLocation();
@@ -29,10 +45,15 @@ function SignedInHome() {
   return <Navigate to={{ pathname: '/overview', search }} replace />;
 }
 
+/**
+ * Console routes require a session whose onboarding status is known and complete.
+ * Unresolved status must never render ConsoleLayout (avoids the post-signup flash).
+ */
 function RequireSignedIn() {
   const { session, onboardingStatus } = useAuth();
   if (!session) return <Navigate to="/login" replace />;
-  if (onboardingStatus && !onboardingStatus.completed) return <OnboardingRedirect />;
+  if (!onboardingStatus) return <AuthBootSpinner />;
+  if (!onboardingStatus.completed) return <OnboardingRedirect />;
   return <Outlet />;
 }
 
@@ -46,26 +67,28 @@ function ConsoleLayout() {
   );
 }
 
+function OnboardingLayout() {
+  return (
+    <ToastProvider>
+      <Outlet />
+    </ToastProvider>
+  );
+}
+
 function AppRoutes() {
   const { session, onboardingStatus, loading } = useAuth();
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-        }}
-      >
-        <CircularProgress color="primary" />
-      </Box>
-    );
+    return <AuthBootSpinner />;
   }
 
-  const needsOnboarding = session && onboardingStatus && !onboardingStatus.completed;
+  // Session without status — treat as still loading so ConsoleLayout never flashes.
+  const sessionPendingStatus = Boolean(session && !onboardingStatus);
+  if (sessionPendingStatus) {
+    return <AuthBootSpinner />;
+  }
+
+  const needsOnboarding = Boolean(session && onboardingStatus && !onboardingStatus.completed);
 
   return (
     <Routes>
@@ -77,30 +100,32 @@ function AppRoutes() {
         path="/signup"
         element={session ? (needsOnboarding ? <OnboardingRedirect /> : <SignedInHome />) : <SignupPage />}
       />
-      <Route
-        path="/onboarding/import-pos"
-        element={
-          !session ? (
-            <Navigate to="/login" replace />
-          ) : needsOnboarding ? (
-            <OnboardingPosImportPage />
-          ) : (
-            <SignedInHome />
-          )
-        }
-      />
-      <Route
-        path="/onboarding"
-        element={
-          !session ? (
-            <Navigate to="/login" replace />
-          ) : needsOnboarding ? (
-            <OnboardingWizard />
-          ) : (
-            <SignedInHome />
-          )
-        }
-      />
+      <Route element={<OnboardingLayout />}>
+        <Route
+          path="/onboarding/import-pos"
+          element={
+            !session ? (
+              <Navigate to="/login" replace />
+            ) : needsOnboarding ? (
+              <OnboardingPosImportPage />
+            ) : (
+              <SignedInHome />
+            )
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            !session ? (
+              <Navigate to="/login" replace />
+            ) : needsOnboarding ? (
+              <OnboardingWizard />
+            ) : (
+              <SignedInHome />
+            )
+          }
+        />
+      </Route>
       <Route element={<RequireSignedIn />}>
         <Route path="/" element={<SignedInHome />} />
         <Route element={<ConsoleLayout />}>

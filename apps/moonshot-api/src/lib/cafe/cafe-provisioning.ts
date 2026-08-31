@@ -33,6 +33,7 @@ export function defaultNewCafeFeatures(): CafeFeatures {
     saved_orders: null,
     whatsapp_ordering: null,
     onboarding_completed_at: null,
+    onboarding_cafe_settings_confirmed_at: null,
   };
 }
 

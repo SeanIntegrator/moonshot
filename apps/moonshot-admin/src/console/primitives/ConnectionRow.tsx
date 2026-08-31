@@ -52,7 +52,15 @@ export function ConnectionRow({
         py: 1.5,
       }}
     >
-      <Box sx={{ width: 36, height: 36, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+      <Box
+        sx={{
+          width: 60,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+        }}
+      >
         {logo}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>

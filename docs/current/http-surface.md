@@ -59,10 +59,11 @@ All versioned routes use prefix **`/api/v1`** (`API_VERSION_PREFIX` from `@moons
   - **Onboarding (self-service signup)** — see [onboarding.md](../onboarding.md)
     - `GET /api/v1/admin/onboarding/slug-available?slug=` — public, rate-limited
     - `POST /api/v1/admin/onboarding/register` — public; create café + admin → JWT
-    - `GET /api/v1/admin/onboarding/status` — admin JWT
+    - `GET /api/v1/admin/onboarding/status` — admin JWT (`completed`, `hasKdsUser`, `hasMenuItem`, `hasCafeSettings`)
     - `POST /api/v1/admin/onboarding/kds-users` — provision KDS device login
     - `POST /api/v1/admin/onboarding/menu-template` — apply starter menu template
     - `POST /api/v1/admin/onboarding/menu-pos-import` — import menu from connected Square (Catalog → Postgres)
+    - `POST /api/v1/admin/onboarding/cafe-settings` — confirm brand + hours (`onboarding_cafe_settings_confirmed_at`)
     - `POST /api/v1/admin/onboarding/complete` — set `features.onboarding_completed_at`
   - **Square Connect** — see [square-oauth.md](../square-oauth.md)
     - `POST /api/v1/admin/connect/square/onboard` — admin JWT; returns Square OAuth authorize URL

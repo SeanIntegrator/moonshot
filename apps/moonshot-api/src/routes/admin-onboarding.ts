@@ -1,8 +1,16 @@
 import { Router } from 'express';
-import { ApiErrorCode, type AdminCreateKdsUserResponse, type AdminOnboardingStatusResponse, type AdminRegisterResponse, type SlugAvailableResponse } from '@moonshot/types';
+import {
+  ApiErrorCode,
+  type AdminCreateKdsUserResponse,
+  type AdminOnboardingCafeSettingsResponse,
+  type AdminOnboardingStatusResponse,
+  type AdminRegisterResponse,
+  type SlugAvailableResponse,
+} from '@moonshot/types';
 import { MENU_PROVISION_SOURCES, type AdminSaveMenuTemplateRequest } from '@moonshot/domain';
 import { buildAdminLoginResponse } from '../lib/admin/admin-auth-tokens.js';
 import { fetchAdminOnboardingChecklist } from '../lib/admin/onboarding-repository.js';
+import { patchAdminCafeSettings } from '../lib/admin/admin-settings-service.js';
 import { normalizeCafeSlugInput, validateCafeSlug } from '../lib/cafe-slug.js';
 import { ProvisionCafeError, isCafeSlugAvailable, provisionCafe } from '../lib/cafe/cafe-provisioning.js';
 import { upsertKitchenLogin } from '../lib/cafe/cafe-kitchen-login.js';
@@ -11,6 +19,7 @@ import { MenuTemplateError } from '../lib/menu/menu-template-onboarding.js';
 import { getMenuProvisioner, MenuProvisionError } from '../lib/menu/menu-provisioners/index.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { requireAdminAuth } from '../middleware/admin-auth.js';
+import { ApiHttpError } from '../lib/http-errors.js';
 import { pool } from '../db.js';
 
 export const adminOnboardingRouter: Router = Router();
@@ -72,7 +81,9 @@ adminOnboardingRouter.get('/status', requireAdminAuth, async (req, res) => {
     });
   }
 
-  const features = cafe.features as { onboarding_completed_at?: string | null };
+  const features = cafe.features as {
+    onboarding_completed_at?: string | null;
+  };
   const completed = Boolean(features.onboarding_completed_at);
   const checklist = await fetchAdminOnboardingChecklist(pool, cafeId);
 
@@ -80,6 +91,7 @@ adminOnboardingRouter.get('/status', requireAdminAuth, async (req, res) => {
     completed,
     hasKdsUser: checklist.hasKdsUser,
     hasMenuItem: checklist.hasMenuItem,
+    hasCafeSettings: checklist.hasCafeSettings,
   };
   return res.json({ ok: true, data });
 });
@@ -151,22 +163,63 @@ adminOnboardingRouter.post('/menu-pos-import', requireAdminAuth, async (req, res
   }
 });
 
+/**
+ * Confirm brand + hours during onboarding.
+ * Reuses settings validation, then stamps an explicit confirmation flag
+ * so seeded defaults alone cannot advance past café setup.
+ */
+adminOnboardingRouter.post('/cafe-settings', requireAdminAuth, async (req, res) => {
+  const cafeId = req.adminUser!.cafeId;
+  const body = req.body as Record<string, unknown>;
+
+  try {
+    await patchAdminCafeSettings(cafeId, {
+      themeId: body.themeId,
+      brand: body.brand ?? null,
+      hours: body.hours,
+      lastOrderBufferMinutes: body.lastOrderBufferMinutes,
+    });
+
+    await pool.query(
+      `UPDATE cafes SET features = jsonb_set(
+         COALESCE(features, '{}'::jsonb),
+         '{onboarding_cafe_settings_confirmed_at}',
+         to_jsonb(NOW()::text),
+         TRUE
+       ) WHERE id = $1`,
+      [cafeId],
+    );
+
+    const data: AdminOnboardingCafeSettingsResponse = { confirmed: true };
+    return res.json({ ok: true, data });
+  } catch (err) {
+    if (err instanceof ApiHttpError) {
+      return res.status(err.status).json({
+        ok: false,
+        error: err.message,
+        code: err.code,
+      });
+    }
+    throw err;
+  }
+});
+
 adminOnboardingRouter.post('/complete', requireAdminAuth, async (req, res) => {
   const cafeId = req.adminUser!.cafeId;
+  const checklist = await fetchAdminOnboardingChecklist(pool, cafeId);
 
-  const kdsRes = await pool.query<{ id: string }>(
-    `SELECT id FROM kds_users WHERE cafe_id = $1 AND is_active = TRUE LIMIT 1`,
-    [cafeId],
-  );
-  const menuRes = await pool.query<{ id: string }>(
-    `SELECT id FROM menu_items WHERE cafe_id = $1 AND is_available = TRUE LIMIT 1`,
-    [cafeId],
-  );
-
-  if (kdsRes.rows.length === 0 || menuRes.rows.length === 0) {
+  if (!checklist.hasKdsUser || !checklist.hasMenuItem) {
     return res.status(400).json({
       ok: false,
-      error: 'Complete kitchen login and add at least one menu item before going live',
+      error: 'Add at least one menu item before finishing setup',
+      code: ApiErrorCode.VALIDATION,
+    });
+  }
+
+  if (!checklist.hasCafeSettings) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Confirm your brand and opening hours before finishing setup',
       code: ApiErrorCode.VALIDATION,
     });
   }

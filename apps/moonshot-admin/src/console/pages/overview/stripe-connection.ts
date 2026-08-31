@@ -40,7 +40,7 @@ export function stripeRowView(status: AdminStripeAccountStatusResponse | null): 
     return {
       tone: 'healthy',
       statusLabel: 'Connected',
-      meta: 'Card payments land in your account the next working day.',
+      meta: 'Card payments successfully configured',
       actionKind: 'dashboard',
       actionLabel: 'Go to Stripe dashboard ↗',
       needsAttention: false,

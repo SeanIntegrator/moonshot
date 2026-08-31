@@ -7,7 +7,6 @@ export { ConnectionRow, type ConnectionOverflowAction } from './ConnectionRow.js
 export { ConnectionDot } from './ConnectionDot.js';
 export { CopyText } from './CopyText.js';
 export { DeepLinkFooter } from './DeepLinkFooter.js';
-export { FilterChips, type FilterChipOption } from './FilterChips.js';
 export { ItemPicker, type PickerItem } from './ItemPicker.js';
 export { PageHeader } from './PageHeader.js';
 export { PauseControl } from './PauseControl.js';
@@ -25,6 +24,7 @@ export { ToastProvider, useOptionalToast, useToast } from './ToastProvider.js';
 export { useCafeSave, useImmediatePatch } from './useCafePatch.js';
 export { TOAST_HIDE_MS, appendToast, dismissToast, scheduleToastDismiss, type ToastItem, type ToastSeverity } from './toast.js';
 export { CardSkeleton } from './skeletons/CardSkeleton.js';
+export { ConnectionRowSkeleton } from './skeletons/ConnectionRowSkeleton.js';
 export { ConsoleChromeSkeleton } from './skeletons/ConsoleChromeSkeleton.js';
 export { MenuPageSkeleton } from './skeletons/MenuPageSkeleton.js';
 export { PageCardsSkeleton } from './skeletons/PageCardsSkeleton.js';

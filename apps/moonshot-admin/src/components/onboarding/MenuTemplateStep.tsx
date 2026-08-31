@@ -1,11 +1,7 @@
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Box,
   Button,
   Checkbox,
-  CircularProgress,
   FormControlLabel,
   Stack,
   Switch,
@@ -13,6 +9,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useCallback, useState } from 'react';
+import { buttonLoader } from '../../console/primitives/button-loader.js';
 import { formatGbpMinor } from '../../lib/format.js';
 import {
   buildMenuTemplateSavePayload,
@@ -30,7 +27,14 @@ type Props = {
   onSave: (payload: ReturnType<typeof buildMenuTemplateSavePayload>) => Promise<void>;
 };
 
+type Phase = 'categories' | 'prices';
+
+/**
+ * Guided starter menu — categories + commercially important prices only.
+ * Names/descriptions/modifier structure use catalog defaults.
+ */
 export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
+  const [phase, setPhase] = useState<Phase>('categories');
   const [categories, setCategories] = useState<MenuTemplateCategoryState[]>(() =>
     createInitialMenuTemplateState(),
   );
@@ -45,7 +49,11 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
   );
 
   const updateDrink = useCallback(
-    (categoryKey: MenuTemplateCategoryState['key'], templateKey: string, patch: Partial<MenuTemplateDrinkState>) => {
+    (
+      categoryKey: MenuTemplateCategoryState['key'],
+      templateKey: string,
+      patch: Partial<MenuTemplateDrinkState>,
+    ) => {
       setCategories((prev) =>
         prev.map((cat) =>
           cat.key !== categoryKey
@@ -87,263 +95,307 @@ export function MenuTemplateStep({ busy, onBack, onSave }: Props) {
 
   const enabledDrinks = countEnabledDrinks(categories);
   const enabledMilks = countEnabledMilks(categories);
-  const canSave = enabledDrinks > 0 && enabledMilks > 0 && !busy;
+  const canContinue = enabledDrinks > 0 && enabledMilks > 0 && !busy;
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Build your starter menu
+      <Typography variant="h3" component="h2" sx={{ mb: 0.5 }}>
+        {phase === 'categories' ? 'What do you sell?' : 'Set key prices'}
       </Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-          marginBottom: "16px"
-        }}>
-        Tick the drinks, milks, and syrups you offer. You can edit names, descriptions, and prices
-        before saving — add your specialty items from the dashboard later.
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
+        {phase === 'categories'
+          ? 'Turn categories on and tick the drinks and milks you offer. We’ll fill in names and kitchen prep.'
+          : 'Adjust prices that matter commercially. You can fine-tune everything later in the console.'}
       </Typography>
 
-      <Stack spacing={1.5}>
-        {categories.map((cat) => (
-          <Accordion
-            key={cat.key}
-            expanded={cat.expanded}
-            onChange={(_, expanded) => updateCategory(cat.key, { expanded })}
-            disableGutters
-            sx={{
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1,
-              bgcolor: 'background.default',
-              '&:before': { display: 'none' },
-              opacity: cat.enabled ? 1 : 0.72,
-            }}
-          >
-            <AccordionSummary>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  pr: 1,
-                  gap: 2,
-                }}
-              >
-                <Typography sx={{
-                  fontWeight: 600
-                }}>{cat.label}</Typography>
-                <FormControlLabel
-                  onClick={(e) => e.stopPropagation()}
-                  onFocus={(e) => e.stopPropagation()}
-                  control={
-                    <Switch
-                      size="small"
-                      checked={cat.enabled}
-                      disabled={cat.disableToggle || busy}
-                      onChange={(_, enabled) => updateCategory(cat.key, { enabled, expanded: enabled })}
-                    />
-                  }
-                  label={cat.enabled ? 'On' : 'Off'}
-                  sx={{ mr: 0 }}
-                />
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              {cat.kind === 'drinks' && (
-                <Stack spacing={2}>
-                  {cat.key === 'food' && cat.drinks.length === 0 && (
-                    <Typography variant="body2" sx={{
-                      color: "text.secondary"
-                    }}>
-                      No current food items
-                    </Typography>
-                  )}
-                  {cat.drinks.map((drink) => (
-                    <Box
-                      key={drink.templateKey}
-                      sx={{
-                        border: 1,
-                        borderColor: drink.enabled && cat.enabled ? 'divider' : 'action.disabled',
-                        borderRadius: 1,
-                        p: 1.5,
-                      }}
-                    >
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={drink.enabled && cat.enabled}
-                            disabled={!cat.enabled || busy}
-                            onChange={(_, enabled) => updateDrink(cat.key, drink.templateKey, { enabled })}
-                          />
-                        }
-                        label={
-                          <Typography color={cat.enabled ? 'text.primary' : 'text.disabled'} sx={{
-                            fontWeight: 600
-                          }}>
-                            {drink.name}
-                          </Typography>
-                        }
-                      />
-                      {drink.enabled && cat.enabled && (
-                        <Stack spacing={1.5} sx={{ mt: 1, pl: 4 }}>
-                          <TextField
-                            label="Item name"
-                            size="small"
-                            fullWidth
-                            value={drink.name}
-                            disabled={busy}
-                            onChange={(e) => updateDrink(cat.key, drink.templateKey, { name: e.target.value })}
-                          />
-                          <TextField
-                            label="Description"
-                            size="small"
-                            fullWidth
-                            multiline
-                            minRows={2}
-                            value={drink.description}
-                            disabled={busy}
-                            onChange={(e) =>
-                              updateDrink(cat.key, drink.templateKey, { description: e.target.value })
-                            }
-                          />
-                          <TextField
-                            label="Price (£)"
-                            type="number"
-                            size="small"
-                            value={(drink.priceMinor / 100).toFixed(2)}
-                            disabled={busy}
-                            onChange={(e) => {
-                              const v = Number.parseFloat(e.target.value);
-                              if (Number.isFinite(v) && v >= 0) {
-                                updateDrink(cat.key, drink.templateKey, { priceMinor: Math.round(v * 100) });
-                              }
-                            }}
-                            sx={{ maxWidth: 160 }}
-                            slotProps={{
-                              htmlInput: { min: 0, step: 0.01 }
-                            }}
-                          />
-                        </Stack>
-                      )}
-                    </Box>
-                  ))}
-                </Stack>
-              )}
+      {phase === 'categories' ? (
+        <Stack spacing={2}>
+          {categories.map((cat) => (
+            <CategoryPicker
+              key={cat.key}
+              cat={cat}
+              busy={busy}
+              onToggleCategory={(enabled) => updateCategory(cat.key, { enabled })}
+              onToggleDrink={(key, enabled) => updateDrink(cat.key, key, { enabled })}
+              onToggleModifier={(key, enabled) => updateModifier(cat.key, key, { enabled })}
+              onDefaultMilk={(key) => updateModifier(cat.key, key, { isDefault: true })}
+            />
+          ))}
+        </Stack>
+      ) : (
+        <PriceReview
+          categories={categories}
+          busy={busy}
+          onDrinkPrice={(catKey, key, priceMinor) =>
+            updateDrink(catKey, key, { priceMinor })
+          }
+          onModifierPrice={(catKey, key, priceMinor) =>
+            updateModifier(catKey, key, { priceMinor })
+          }
+        />
+      )}
 
-              {cat.kind === 'modifiers' && (
-                <Stack spacing={1}>
-                  {cat.modifiers.map((mod) => (
-                    <Box
-                      key={mod.templateKey}
-                      sx={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        gap: 1,
-                        py: 0.5,
-                      }}
-                    >
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={mod.enabled && cat.enabled}
-                            disabled={!cat.enabled || busy}
-                            onChange={(_, enabled) =>
-                              updateModifier(cat.key, mod.templateKey, { enabled })
-                            }
-                          />
-                        }
-                        label={mod.name}
-                        sx={{ minWidth: 140 }}
-                      />
-                      {mod.enabled && cat.enabled && (
-                        <>
-                          <TextField
-                            label="Name"
-                            size="small"
-                            value={mod.name}
-                            disabled={busy}
-                            onChange={(e) =>
-                              updateModifier(cat.key, mod.templateKey, { name: e.target.value })
-                            }
-                            sx={{ flex: 1, minWidth: 120 }}
-                          />
-                          <TextField
-                            label="Extra (£)"
-                            type="number"
-                            size="small"
-                            value={(mod.priceMinor / 100).toFixed(2)}
-                            disabled={busy}
-                            onChange={(e) => {
-                              const v = Number.parseFloat(e.target.value);
-                              if (Number.isFinite(v) && v >= 0) {
-                                updateModifier(cat.key, mod.templateKey, {
-                                  priceMinor: Math.round(v * 100),
-                                });
-                              }
-                            }}
-                            sx={{ width: 110 }}
-                            slotProps={{
-                              htmlInput: { min: 0, step: 0.01 }
-                            }}
-                          />
-                          {cat.key === 'milks' && (
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  size="small"
-                                  checked={mod.isDefault}
-                                  disabled={busy}
-                                  onChange={(_, isDefault) =>
-                                    updateModifier(cat.key, mod.templateKey, { isDefault })
-                                  }
-                                />
-                              }
-                              label="Default"
-                            />
-                          )}
-                          <Typography variant="caption" sx={{
-                            color: "text.secondary"
-                          }}>
-                            {formatGbpMinor(mod.priceMinor)}
-                          </Typography>
-                        </>
-                      )}
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </AccordionDetails>
-          </Accordion>
-        ))}
-      </Stack>
-
-      <Typography
-        variant="caption"
-        sx={{
-          color: "text.secondary",
-          display: "block",
-          mt: 2
-        }}>
-        {enabledDrinks} drink{enabledDrinks === 1 ? '' : 's'} selected · {enabledMilks} milk
-        {enabledMilks === 1 ? '' : 's'} selected
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2 }}>
+        {enabledDrinks} drink{enabledDrinks === 1 ? '' : 's'} · {enabledMilks} milk
+        {enabledMilks === 1 ? '' : 's'}
       </Typography>
 
-      <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-        <Button variant="outlined" onClick={onBack} disabled={busy}>
+      <Box sx={{ display: 'flex', gap: 1.5, mt: 2.5 }}>
+        <Button
+          variant="outlined"
+          onClick={() => (phase === 'prices' ? setPhase('categories') : onBack())}
+          disabled={busy}
+        >
           Back
         </Button>
-        <Button
-          variant="contained"
-          fullWidth
-          disabled={!canSave}
-          onClick={() => void onSave(buildMenuTemplateSavePayload(categories))}
-        >
-          {busy ? <CircularProgress size={22} /> : 'Save menu & continue'}
-        </Button>
+        {phase === 'categories' ? (
+          <Button
+            variant="contained"
+            fullWidth
+            disabled={!canContinue}
+            onClick={() => setPhase('prices')}
+          >
+            Review prices
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            fullWidth
+            disabled={!canContinue}
+            startIcon={buttonLoader(busy)}
+            onClick={() => void onSave(buildMenuTemplateSavePayload(categories))}
+          >
+            {busy ? 'Saving…' : 'Save menu & continue'}
+          </Button>
+        )}
       </Box>
+    </Box>
+  );
+}
+
+function CategoryPicker({
+  cat,
+  busy,
+  onToggleCategory,
+  onToggleDrink,
+  onToggleModifier,
+  onDefaultMilk,
+}: {
+  cat: MenuTemplateCategoryState;
+  busy: boolean;
+  onToggleCategory: (enabled: boolean) => void;
+  onToggleDrink: (key: string, enabled: boolean) => void;
+  onToggleModifier: (key: string, enabled: boolean) => void;
+  onDefaultMilk: (key: string) => void;
+}) {
+  return (
+    <Box
+      sx={(theme) => ({
+        border: `1px solid ${theme.console.card.border}`,
+        borderRadius: 1.5,
+        p: 1.75,
+        opacity: cat.enabled ? 1 : 0.72,
+      })}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        <Typography sx={{ fontWeight: 700 }}>{cat.label}</Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={cat.enabled}
+              disabled={cat.disableToggle || busy}
+              onChange={(_, enabled) => onToggleCategory(enabled)}
+            />
+          }
+          label={cat.enabled ? 'On' : 'Off'}
+          sx={{ mr: 0 }}
+        />
+      </Box>
+
+      {cat.enabled && cat.kind === 'drinks' ? (
+        <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column' }}>
+          {cat.key === 'food' && cat.drinks.length === 0 ? (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              No food items in the starter set — add them later from the console.
+            </Typography>
+          ) : null}
+          {cat.drinks.map((drink) => (
+            <FormControlLabel
+              key={drink.templateKey}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={drink.enabled}
+                  disabled={busy}
+                  onChange={(_, enabled) => onToggleDrink(drink.templateKey, enabled)}
+                />
+              }
+              label={drink.name}
+            />
+          ))}
+        </Box>
+      ) : null}
+
+      {cat.enabled && cat.kind === 'modifiers' ? (
+        <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+          {cat.modifiers.map((mod) => (
+            <Box
+              key={mod.templateKey}
+              sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}
+            >
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={mod.enabled}
+                    disabled={busy}
+                    onChange={(_, enabled) => onToggleModifier(mod.templateKey, enabled)}
+                  />
+                }
+                label={mod.name}
+              />
+              {cat.key === 'milks' && mod.enabled ? (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={mod.isDefault}
+                      disabled={busy}
+                      onChange={(_, checked) => {
+                        if (checked) onDefaultMilk(mod.templateKey);
+                      }}
+                    />
+                  }
+                  label={<Typography variant="caption">Default</Typography>}
+                />
+              ) : null}
+            </Box>
+          ))}
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+function PriceReview({
+  categories,
+  busy,
+  onDrinkPrice,
+  onModifierPrice,
+}: {
+  categories: MenuTemplateCategoryState[];
+  busy: boolean;
+  onDrinkPrice: (
+    catKey: MenuTemplateCategoryState['key'],
+    key: string,
+    priceMinor: number,
+  ) => void;
+  onModifierPrice: (
+    catKey: MenuTemplateCategoryState['key'],
+    key: string,
+    priceMinor: number,
+  ) => void;
+}) {
+  const rows = categories.filter((c) => c.enabled);
+
+  return (
+    <Stack spacing={2}>
+      {rows.map((cat) => {
+        const items =
+          cat.kind === 'drinks'
+            ? cat.drinks.filter((d) => d.enabled)
+            : cat.modifiers.filter((m) => m.enabled);
+        if (items.length === 0) return null;
+        return (
+          <Box key={cat.key}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              {cat.label}
+            </Typography>
+            <Stack spacing={1}>
+              {cat.kind === 'drinks'
+                ? cat.drinks
+                    .filter((d) => d.enabled)
+                    .map((drink) => (
+                      <PriceRow
+                        key={drink.templateKey}
+                        name={drink.name}
+                        priceMinor={drink.priceMinor}
+                        busy={busy}
+                        onChange={(priceMinor) =>
+                          onDrinkPrice(cat.key, drink.templateKey, priceMinor)
+                        }
+                      />
+                    ))
+                : cat.modifiers
+                    .filter((m) => m.enabled)
+                    .map((mod) => (
+                      <PriceRow
+                        key={mod.templateKey}
+                        name={mod.name}
+                        priceMinor={mod.priceMinor}
+                        busy={busy}
+                        label="Extra (£)"
+                        onChange={(priceMinor) =>
+                          onModifierPrice(cat.key, mod.templateKey, priceMinor)
+                        }
+                      />
+                    ))}
+            </Stack>
+          </Box>
+        );
+      })}
+    </Stack>
+  );
+}
+
+function PriceRow({
+  name,
+  priceMinor,
+  busy,
+  label = 'Price (£)',
+  onChange,
+}: {
+  name: string;
+  priceMinor: number;
+  busy: boolean;
+  label?: string;
+  onChange: (priceMinor: number) => void;
+}) {
+  return (
+    <Box
+      sx={(theme) => ({
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 1.5,
+        py: 1,
+        borderBottom: `1px solid ${theme.console.card.border}`,
+      })}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 600 }} noWrap>
+          {name}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {formatGbpMinor(priceMinor)}
+        </Typography>
+      </Box>
+      <TextField
+        label={label}
+        type="number"
+        size="small"
+        value={(priceMinor / 100).toFixed(2)}
+        disabled={busy}
+        onChange={(e) => {
+          const v = Number.parseFloat(e.target.value);
+          if (Number.isFinite(v) && v >= 0) {
+            onChange(Math.round(v * 100));
+          }
+        }}
+        sx={{ width: 120, flexShrink: 0 }}
+        slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+      />
     </Box>
   );
 }

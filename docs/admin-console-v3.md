@@ -5,8 +5,9 @@ under `apps/moonshot-admin/src/console/` — see
 [admin-console-v3-ui.md](admin-console-v3-ui.md). Signed-in `/` redirects to
 `/overview`. Stock and Menu are real pages.
 
-The signed-in product is the eight-tab console. Login, signup, and onboarding
-stay on `signupTheme` + `BrandShell`.
+The signed-in product is the eight-tab console. Signup and onboarding use the
+light `dashboardTheme` via `OnboardingShell`. Login may still use
+`signupTheme` + `BrandShell`.
 
 Read this alongside [onboarding.md](onboarding.md),
 [current/http-surface.md](current/http-surface.md) and

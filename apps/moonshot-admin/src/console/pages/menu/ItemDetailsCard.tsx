@@ -21,6 +21,7 @@ type Props = {
   saving: boolean;
   onChange: (next: DraftItem) => void;
   onSaved: (updated: DraftItem) => void;
+  onPendingImage?: (file: File) => void;
 };
 
 /** Local string so typing does not rewrite the item editor on every keystroke. */
@@ -53,6 +54,7 @@ export function ItemDetailsCard({
   saving,
   onChange,
   onSaved,
+  onPendingImage,
 }: Props) {
   const fromSquare = isPosOwnedItem(draft);
   const draftRef = useRef(draft);
@@ -106,6 +108,7 @@ export function ItemDetailsCard({
             square
             hideLabel
             onUploaded={(updated) => onSaved(toDraft(updated, library))}
+            onPendingImage={onPendingImage}
           />
         </Box>
         <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0, width: '100%' }}>

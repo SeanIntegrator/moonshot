@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrandShell } from '../components/BrandShell.js';
+import { OnboardingShell } from '../components/onboarding/OnboardingShell.js';
 import { useAuth } from '../context/AuthContext.js';
 import {
   getSquareConnectStatus,
@@ -22,15 +22,15 @@ import {
 type Phase = 'loading' | 'importing' | 'picker' | 'error';
 
 /**
- * Square OAuth return handler — auto-imports when there is at most one location.
- * Multi-location cafés see a picker; there is no separate "authorise" interstitial.
+ * Square OAuth return — auto-imports when ≤1 location; multi-location shows a picker.
+ * Stays on step 2 (Menu) of the four-step progress.
  */
 export function OnboardingPosImportPage() {
   const navigate = useNavigate();
   const { session, refreshOnboardingStatus } = useAuth();
   const [phase, setPhase] = useState<Phase>('loading');
   const [status, setStatus] = useState<SquareConnectStatus | null>(null);
-  const [locationId, setLocationId] = useState<string>('');
+  const [locationId, setLocationId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const autoImportStarted = useRef(false);
 
@@ -72,7 +72,6 @@ export function OnboardingPosImportPage() {
       const preferred = data.locationId || locations[0]?.id || '';
       setLocationId(preferred);
 
-      // Zero or one location → import immediately; several → show picker.
       if (locations.length <= 1) {
         if (!autoImportStarted.current) {
           autoImportStarted.current = true;
@@ -109,39 +108,33 @@ export function OnboardingPosImportPage() {
   if (!session) return null;
 
   return (
-    <BrandShell
-      title="Connect Square"
-      subtitle={`Import the live catalogue for ${session.cafe.name}`}
-      maxWidth={640}
+    <OnboardingShell
+      title="Import from Square"
+      subtitle={`Pulling the catalogue for ${session.cafe.name}`}
+      activeStep={1}
+      maxWidth={560}
     >
-      {error && (
+      {error ? (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
-      )}
+      ) : null}
 
       {(phase === 'loading' || phase === 'importing') && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress size={28} sx={{ mb: 2 }} />
-          <Typography variant="body2" sx={{
-            color: "text.secondary"
-          }}>
-            {phase === 'importing' ? 'Pulling your Square catalogue…' : 'Checking Square…'}
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {phase === 'importing' ? 'Importing your Square menu…' : 'Checking Square…'}
           </Typography>
         </Box>
       )}
 
-      {phase === 'picker' && status && (
+      {phase === 'picker' && status ? (
         <>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h3" component="h2" sx={{ mb: 0.5 }}>
             Choose a location
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-              marginBottom: "16px"
-            }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
             You have more than one Square location. Pick which catalogue to import.
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -166,12 +159,15 @@ export function OnboardingPosImportPage() {
             disabled={!locationId}
             onClick={() => void runImport(locationId)}
           >
-            Import menu from Square
+            Import menu
+          </Button>
+          <Button variant="text" sx={{ mt: 1.5 }} fullWidth onClick={() => navigate('/onboarding')}>
+            Back to menu setup
           </Button>
         </>
-      )}
+      ) : null}
 
-      {phase === 'error' && (
+      {phase === 'error' ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <Button variant="contained" fullWidth onClick={() => void loadStatus()}>
             Retry
@@ -180,13 +176,7 @@ export function OnboardingPosImportPage() {
             Back to menu setup
           </Button>
         </Box>
-      )}
-
-      {phase === 'picker' && (
-        <Button variant="text" sx={{ mt: 2 }} fullWidth onClick={() => navigate('/onboarding')}>
-          Back to menu setup
-        </Button>
-      )}
-    </BrandShell>
+      ) : null}
+    </OnboardingShell>
   );
 }
