@@ -1,0 +1,40 @@
+{
+  "name": "Moonshot",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "pnpm --filter @moonshot/api dev",
+      "description": "@moonshot/api — Express + Socket.io on http://localhost:3000 (tsx watch)"
+    },
+    {
+      "name": "order-ahead",
+      "command": "pnpm --filter @moonshot/order-ahead dev",
+      "description": "@moonshot/order-ahead — customer ordering SPA on http://localhost:5176"
+    },
+    {
+      "name": "kds",
+      "command": "pnpm --filter @moonshot/kds dev",
+      "description": "@moonshot/kds — kitchen display system on http://localhost:5173"
+    },
+    {
+      "name": "admin",
+      "command": "pnpm --filter @moonshot/admin dev",
+      "description": "@moonshot/admin — café admin console on http://localhost:5174"
+    },
+    {
+      "name": "marketing",
+      "command": "pnpm --filter @moonshot/marketing dev",
+      "description": "@moonshot/marketing — marketing site on http://localhost:5175"
+    }
+  ],
+  "ports": [
+    { "name": "api", "port": 3000 },
+    { "name": "kds", "port": 5173 },
+    { "name": "admin", "port": 5174 },
+    { "name": "marketing", "port": 5175 },
+    { "name": "order-ahead", "port": 5176 }
+  ]
+}
