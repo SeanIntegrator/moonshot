@@ -97,7 +97,7 @@ Two WebAudio-synthesised cues, configured on `kdsConfig.audio` (not `display`):
 
 Recall uses the same `kds:order:new` event. The KDS inserts the ticket **optimistically before** the server echo, so the id is already on the board and the chime is skipped. Connection-state-recovery replays are skipped the same way. The initial HTTP snapshot is not a socket event and never chimes. A recall on a **second** device is genuinely new to this board and does chime.
 
-iOS Safari will not play audio without a prior user gesture. Login submit calls `AudioContext.resume()` **before** `await kdsLogin`. A reload restores the session from `sessionStorage` and skips login — the header control is the recovery gesture (`Tap to enable sound`). Device mute lives in `localStorage` (survives reload). Effective audibility is `audio.enabled && !deviceMuted && context ready`. A silent board always shows **Sound off** (or **Tap to enable sound**) in the header.
+iOS Safari will not play audio without a prior user gesture. Login submit calls `AudioContext.resume()` **before** `await kdsLogin`. A reload restores the session from `sessionStorage` and skips login — the header control is the recovery gesture (**Enable sound**). Device mute lives in `localStorage` (survives reload). Effective audibility is `audio.enabled && !deviceMuted && context ready`. A silent board colours the header mute button with warning tokens so sound-off is visible without a separate badge.
 
 The overdue alarm is board-level (one tick, not per card) so five red tickets produce one chime. Tickets with `status === 'ready'` or in the dismiss animation are excluded. Timer thresholds in config are not wired into `computeOrderTimer` yet — red still means past the hardcoded 4-minute SLA / pickup time.
 
@@ -152,7 +152,14 @@ If Square retrieve fails after three attempts, ingress persists `detailsPending:
 
 ## Open-board window
 
-`GET /kds/orders` and `POST /kds/orders/recall-last` only consider rows from the last **16 hours** (`created_at` / `completed_at`). This is a list filter, not auto-cancel — stale open rows keep their status. Specific-id recall and the Recent orders dialog (`LIMIT 20`) are not clock-bounded.
+`GET /kds/orders` and `POST /kds/orders/recall-last` only consider rows from the last **16 hours** (`board_opened_at` / `completed_at`).
+
+Stale never-completed tickets (`pending` / `confirmed` / `preparing` / `ready`) are **auto-cancelled** with `cancel_reason = auto_expire` by:
+
+1. `POST /internal/orders/expire-stale` (Railway cron, recommended hourly)
+2. On-read when listing KDS open orders (café-bound KDS JWT)
+
+Customer `GET /orders/me` only lists the caller's rows — it must not run the café-wide sweep (customer JWTs are not café-bound; `X-Cafe-Slug` is chosen by the client). Age is measured from `board_opened_at` (defaults to place time; **recall sets it to now**) so a remade ticket whose original `created_at` is older than 16h is not immediately auto-cancelled. Specific-id recall and the Recent orders dialog (`LIMIT 20`) are not clock-bounded.
 
 Pending recalls are `isProtected` in `orders-store` so a poll between the optimistic insert and the server response cannot delete the card. The same hook covers dismissing cards (collapse animation).
 

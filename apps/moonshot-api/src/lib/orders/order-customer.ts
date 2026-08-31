@@ -68,6 +68,7 @@ export async function cancelOrderAtCafe(orderId: string, cafeId: string): Promis
   const upd = await pool.query<{ id: string }>(
     `UPDATE orders
      SET status = 'cancelled',
+         cancel_reason = 'customer',
          updated_at = NOW()
      WHERE id = $1 AND cafe_id = $2 AND status = ANY($3::text[])
      RETURNING id`,

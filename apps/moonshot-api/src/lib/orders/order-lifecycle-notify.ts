@@ -133,6 +133,15 @@ export function notifyOrderStatusAdvanced(params: {
   emitOrderStatusToCustomer(params.cafeId, params.order.id, params.order.status);
 }
 
+/** Cancelled ticket: drop from KDS board and push status to the customer app. */
+export function notifyOrderCancelled(params: {
+  cafeId: string;
+  order: NormalisedOrder;
+}): void {
+  emitOrderRemovedFromKds(params.cafeId, params.order.id);
+  emitOrderStatusToCustomer(params.cafeId, params.order.id, 'cancelled');
+}
+
 /** Cap loyalty apply so a slow/locked ledger never delays the customer completion push. */
 const LOYALTY_APPLY_BUDGET_MS = 2000;
 

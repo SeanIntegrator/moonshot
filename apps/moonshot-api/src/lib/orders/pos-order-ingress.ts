@@ -81,7 +81,9 @@ export async function persistPosOrderEvent(
 
     await db.query(
       `UPDATE orders
-       SET status = 'cancelled', updated_at = NOW()
+       SET status = 'cancelled',
+           cancel_reason = 'pos',
+           updated_at = NOW()
        WHERE id = $1 AND cafe_id = $2
          AND status NOT IN ('completed', 'cancelled')`,
       [existing.id, event.cafeId],

@@ -15,6 +15,9 @@ export type OrderStatus =
   | 'completed'
   | 'cancelled';
 
+/** Why an order became `cancelled` — null when never cancelled. */
+export type OrderCancelReason = 'customer' | 'pos' | 'auto_expire';
+
 export type OrderType = 'takeaway' | 'eat_in';
 
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded' | 'partially_refunded';
@@ -81,6 +84,8 @@ export interface NormalisedOrder {
   notes: string | null;
   orderType: OrderType;
   status: OrderStatus;
+  /** Set when status is `cancelled`; null otherwise. */
+  cancelReason?: OrderCancelReason | null;
   paymentStatus: PaymentStatus;
   totalMinor: number;
   currency: string;

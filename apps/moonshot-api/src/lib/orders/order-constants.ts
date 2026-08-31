@@ -10,7 +10,7 @@ export const ORDER_TYPES: OrderType[] = ['takeaway', 'eat_in'];
 /** Orders visible on KDS board before completion */
 export const KDS_OPEN_ORDER_STATUSES = ['confirmed', 'preparing', 'ready'] as const;
 
-/** Open tickets older than this are omitted from the live board and recall-last. */
+/** Open tickets older than this (by `board_opened_at`) leave the live board / recall-last and are auto-cancelled. */
 export const KDS_OPEN_MAX_AGE_HOURS = 16;
 
 /** Alias — same open statuses that can be marked Done on the KDS. */
@@ -27,7 +27,8 @@ export const ORDER_SELECT_COLUMNS = `
   id, cafe_id, user_id, pos_order_id, customer_name, notes, total_minor, currency,
   order_type, source, status, payment_status, quoted_pickup_time, pickup_time,
   requested_pickup_not_before, completed_at, edit_token, parent_order_id,
-  stripe_checkout_session_id, eta_mode, details_pending, created_at, updated_at
+  stripe_checkout_session_id, eta_mode, details_pending, cancel_reason,
+  board_opened_at, created_at, updated_at
 `;
 
 export const ORDER_ITEM_SELECT_COLUMNS = `

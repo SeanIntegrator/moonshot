@@ -15,6 +15,7 @@ import {
 } from '../../lib/orders/order-customer.js';
 import { UUID_RE } from '../../lib/uuid.js';
 import { recomputePickupEtasForCafe } from '../../lib/pickup-eta.js';
+import { emitCustomerServerToClient } from '../../realtime/customer-events.js';
 import { emitKdsServerToClient } from '../../realtime/kds-events.js';
 import { optionalCustomerAuth } from '../../middleware/optional-customer-auth.js';
 import { requireAuth } from '../../middleware/auth.js';
@@ -95,6 +96,12 @@ customerOrdersRouter.post('/:orderId/cancel', optionalCustomerAuth, async (req, 
   const order = result.order;
 
   emitKdsServerToClient(cafeId, { type: 'kds:order:removed', orderId: trimmed });
+  emitCustomerServerToClient(trimmed, {
+    type: 'customerOrderStatusUpdated',
+    orderId: trimmed,
+    cafeId,
+    status: 'cancelled',
+  });
   await recomputePickupEtasForCafe({
     db: pool,
     cafeId,

@@ -56,9 +56,12 @@ export function AppHeader({
   onLogout,
 }: AppHeaderProps) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-lg font-semibold tracking-wide">Moonshot KDS</h1>
-      <div className="flex items-center gap-2 sm:gap-3">
+    <header className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold tracking-wide">Moonshot KDS</h1>
+        <p className="truncate text-sm text-muted-foreground">Logged in as {cafeName}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <ConnectionBadge status={connection} />
         <SoundToggle
           status={soundStatus}
@@ -66,9 +69,6 @@ export function AppHeader({
           cafeEnabled={cafeSoundEnabled}
           onClick={onSoundClick}
         />
-        <span className="hidden text-sm text-muted-foreground sm:inline">
-          Logged in as {cafeName}
-        </span>
         <Button
           type="button"
           variant="outline"

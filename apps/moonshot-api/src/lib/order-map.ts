@@ -3,12 +3,15 @@ import type {
   NormalisedOrder,
   NormalisedOrderItem,
   NormalisedOrderLineModifier,
+  OrderCancelReason,
   OrderSource,
   OrderStatus,
   OrderType,
   PaymentStatus,
   PickupWindow,
 } from '@moonshot/types';
+
+const CANCEL_REASONS = new Set<OrderCancelReason>(['customer', 'pos', 'auto_expire']);
 
 export type OrderRowDb = {
   id: string;
@@ -32,6 +35,8 @@ export type OrderRowDb = {
   stripe_checkout_session_id: string | null;
   eta_mode?: string | null;
   details_pending?: boolean;
+  cancel_reason?: string | null;
+  board_opened_at?: Date | string;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -120,6 +125,11 @@ export function mapOrderItemRow(row: OrderItemRowDb): NormalisedOrderItem {
   };
 }
 
+function mapCancelReason(raw: string | null | undefined): OrderCancelReason | null {
+  if (typeof raw !== 'string') return null;
+  return CANCEL_REASONS.has(raw as OrderCancelReason) ? (raw as OrderCancelReason) : null;
+}
+
 export function mapOrderRow(row: OrderRowDb, items: NormalisedOrderItem[]): NormalisedOrder {
   return {
     id: row.id,
@@ -131,6 +141,7 @@ export function mapOrderRow(row: OrderRowDb, items: NormalisedOrderItem[]): Norm
     notes: row.notes,
     orderType: row.order_type as OrderType,
     status: row.status as OrderStatus,
+    cancelReason: mapCancelReason(row.cancel_reason),
     paymentStatus: row.payment_status as PaymentStatus,
     totalMinor: row.total_minor,
     currency: row.currency,

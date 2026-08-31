@@ -9,15 +9,19 @@ import {
   ORDER_SELECT_COLUMNS,
   UUID_RE,
 } from './order-constants.js';
+import { expireStaleOpenOrders } from './order-expire-stale.js';
 import { fetchOrderWithItems, normalisedOrdersFromRows } from './order-read.js';
 
 export async function listOpenOrdersForKds(cafeId: string): Promise<NormalisedOrder[]> {
+  // Persist the same age cut as the list filter so customer apps and ETA stay in sync.
+  await expireStaleOpenOrders({ cafeId });
+
   const ordersRes = await pool.query<OrderRowDb>(
     `SELECT ${ORDER_SELECT_COLUMNS}
      FROM orders
      WHERE cafe_id = $1 AND status = ANY($2::text[])
-       AND created_at > NOW() - ($3 * INTERVAL '1 hour')
-     ORDER BY created_at ASC`,
+       AND board_opened_at > NOW() - ($3 * INTERVAL '1 hour')
+     ORDER BY board_opened_at ASC`,
     [cafeId, [...KDS_OPEN_ORDER_STATUSES], KDS_OPEN_MAX_AGE_HOURS],
   );
 
@@ -77,6 +81,7 @@ export async function listRecentCompletedOrdersForKds(
 
 /**
  * Reopen a specific completed order as `confirmed` (just-placed on KDS).
+ * Resets `board_opened_at` so the 16h auto-expire window starts from the remake.
  * Returns null when the order is missing, wrong café, or not completed.
  */
 export async function recallCompletedOrderForKds(
@@ -95,6 +100,7 @@ export async function recallCompletedOrderForKds(
            completed_at = NULL,
            pickup_time = $3::timestamptz,
            eta_mode = 'manual_override',
+           board_opened_at = NOW(),
            updated_at = NOW()
        WHERE id = $1 AND cafe_id = $2 AND status = 'completed'
        RETURNING ${ORDER_SELECT_COLUMNS}`,
@@ -130,6 +136,7 @@ export async function recallLastCompletedOrderForKds(
            completed_at = NULL,
            pickup_time = $3::timestamptz,
            eta_mode = 'manual_override',
+           board_opened_at = NOW(),
            updated_at = NOW()
        WHERE id = (
          SELECT id
