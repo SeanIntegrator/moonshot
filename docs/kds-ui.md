@@ -47,7 +47,9 @@ Domain ticket layout (shot columns, milk wraps, allergen hazard stripes) stays a
 
 **Line grouping** (`groupKdsLines` in `@moonshot/domain`): identical lines (same item, modifiers, notes, allergens) merge into one row with summed quantity; drinks then sort by menu section (`drinkSectionKeys`) → beans → milk → other modifiers. Food merges the same way and sorts by `foodSectionKeys`. Crossing a merged row toggles every source line id together. After a **partial recall**, identical lines are partitioned by made state so a pre-crossed duplicate stays its own crossed row and does not share toggles with the remake. Recent-orders recall picker stays unmerged (1:1 with line ids).
 
-**Fulfillment icons** sit above the quantity in the shot column (walking = takeaway / pickup, table SVG = eat in). Preview only — all lines on a ticket currently share `order.orderType`; a future per-line cup flag slots into the same cell. Compact density hides the icon.
+**Fulfillment icons** use **Lucide** (`Utensils` = eat in, `ShoppingBag` = takeaway) from `FulfillmentIcon.tsx`. **POS tickets** show the icon(s) beside the header kind label (SIT IN / TAKEAWAY); **order-ahead PICKUP** tickets show text only. Homogeneous tickets show the quantity alone in the shot column; **mixed** eat-in + takeaway (future per-line cups) will show icons beside each line’s qty and both icons in the header. Recall modal kind badges mirror the board header. Square POS dining options are not exposed on `OrderLineItem` via RetrieveOrder — mixed cups will need a custom field later.
+
+**Item names** are title-cased at display time (`formatItemName`) without mutating stored snapshots.
 
 **Food strip** is a muted slate-blue accent between drinks and food. When every food line is crossed it turns the same forest green as the READY header. Collapse keeps rows mounted and animates `max-height` over **300ms ease-in-out** (same cadence as ticket dismiss) so tickets below slide instead of jumping.
 

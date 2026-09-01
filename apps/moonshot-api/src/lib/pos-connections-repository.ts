@@ -191,7 +191,7 @@ export async function getPosConnectionPublicStatus(
     `SELECT merchant_id, location_id, access_token_expires_at, status,
             catalog_last_synced_at, catalog_sync_status, catalog_sync_error
      FROM pos_connections
-     WHERE cafe_id = $1 AND provider = $2 AND status <> 'revoked'
+     WHERE cafe_id = $1 AND provider = $2
      LIMIT 1`,
     [cafeId, provider],
   );
@@ -244,6 +244,19 @@ export async function markNeedsReauth(
   );
 }
 
+/** Square oauth.authorization.revoked webhook — seller removed app access. */
+export async function markRevoked(
+  db: Db,
+  cafeId: string,
+  provider: PosProvider,
+): Promise<void> {
+  await db.query(
+    `UPDATE pos_connections SET status = 'revoked', updated_at = NOW()
+     WHERE cafe_id = $1 AND provider = $2`,
+    [cafeId, provider],
+  );
+}
+
 export async function deletePosConnection(
   db: Db,
   cafeId: string,
@@ -264,6 +277,21 @@ export async function findCafeIdByMerchantId(
   const { rows } = await db.query<{ cafe_id: string }>(
     `SELECT cafe_id FROM pos_connections
      WHERE provider = $1 AND merchant_id = $2 AND status = 'active'
+     LIMIT 1`,
+    [provider, merchantId],
+  );
+  return rows[0]?.cafe_id ?? null;
+}
+
+/** Resolve café for revoke webhooks even when the connection is no longer active. */
+export async function findCafeIdByMerchantIdAnyStatus(
+  db: Db,
+  provider: PosProvider,
+  merchantId: string,
+): Promise<string | null> {
+  const { rows } = await db.query<{ cafe_id: string }>(
+    `SELECT cafe_id FROM pos_connections
+     WHERE provider = $1 AND merchant_id = $2
      LIMIT 1`,
     [provider, merchantId],
   );

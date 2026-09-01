@@ -23,6 +23,35 @@ export function squareRowView(
 ): SquareRowView {
   const now = opts.now ?? new Date();
 
+  const needsReconnect =
+    status.status === 'needs_reauth' ||
+    status.status === 'revoked' ||
+    (status.connected &&
+      status.tokenExpiresAt != null &&
+      new Date(status.tokenExpiresAt).getTime() <= now.getTime());
+
+  if (needsReconnect) {
+    const when =
+      status.tokenExpiresAt != null
+        ? formatUkShortDate(new Date(status.tokenExpiresAt), opts.timeZone)
+        : null;
+    const meta =
+      status.status === 'revoked'
+        ? 'Square access was revoked. Reconnect to restore menu sync.'
+        : when
+          ? `Your Square login expired on ${when}`
+          : 'Your Square login has expired.';
+    return {
+      tone: 'expired',
+      statusLabel: 'Reconnect needed',
+      meta,
+      actionKind: 'reconnect',
+      actionLabel: 'Reconnect',
+      needsAttention: true,
+      showOverflow: true,
+    };
+  }
+
   if (!status.connected) {
     return {
       tone: 'disconnected',
@@ -32,25 +61,6 @@ export function squareRowView(
       actionLabel: 'Connect',
       needsAttention: true,
       showOverflow: false,
-    };
-  }
-
-  const expired =
-    status.status === 'needs_reauth' ||
-    (status.tokenExpiresAt != null && new Date(status.tokenExpiresAt).getTime() <= now.getTime());
-
-  if (expired) {
-    const when = status.tokenExpiresAt
-      ? formatUkShortDate(new Date(status.tokenExpiresAt), opts.timeZone)
-      : null;
-    return {
-      tone: 'expired',
-      statusLabel: 'Reconnect needed',
-      meta: when ? `Your Square login expired on ${when}` : 'Your Square login has expired.',
-      actionKind: 'reconnect',
-      actionLabel: 'Reconnect',
-      needsAttention: true,
-      showOverflow: true,
     };
   }
 

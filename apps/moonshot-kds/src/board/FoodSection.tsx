@@ -52,6 +52,7 @@ type FoodSectionProps = {
   madeIds: ReadonlySet<string>;
   onToggleMade: (sourceIds: readonly string[]) => void;
   orderType: OrderType;
+  showFulfillmentIcon?: boolean;
 };
 
 /**
@@ -66,6 +67,7 @@ export function FoodSection({
   madeIds,
   onToggleMade,
   orderType,
+  showFulfillmentIcon = false,
 }: FoodSectionProps) {
   if (foods.length === 0) return null;
 
@@ -94,6 +96,7 @@ export function FoodSection({
             made={sourceIds.every((id) => madeIds.has(id))}
             onToggleMade={() => onToggleMade(sourceIds)}
             orderType={orderType}
+            showFulfillmentIcon={showFulfillmentIcon}
           />
         ))}
       </div>

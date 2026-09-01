@@ -80,6 +80,9 @@ export const SQUARE_ORDER_WEBHOOK_TYPES = new Set([
 
 export const SQUARE_CATALOG_WEBHOOK_TYPE = 'catalog.version.updated';
 
+/** Seller revoked app access — mark connection revoked; do not call Orders/Catalog APIs. */
+export const SQUARE_OAUTH_REVOKED_WEBHOOK_TYPE = 'oauth.authorization.revoked';
+
 export type SquareWebhookEnvelope = {
   eventId: string;
   merchantId: string;

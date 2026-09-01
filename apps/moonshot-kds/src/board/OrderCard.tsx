@@ -14,6 +14,12 @@ import {
 import { cn } from '@/lib/utils';
 import { DrinkRow } from './DrinkRow.js';
 import { FoodSection } from './FoodSection.js';
+import { FulfillmentIconGroup } from './FulfillmentIcon.js';
+import {
+  orderFulfillmentTypes,
+  showHeaderFulfillmentIcons,
+  ticketIsMixedFulfillment,
+} from './fulfillment.js';
 import { useEqualizeShotColumnWidth } from './useEqualizeShotColumnWidth.js';
 import {
   deriveTicketKind,
@@ -65,6 +71,9 @@ export function OrderCard({
 }: OrderCardProps) {
   const kind = deriveTicketKind(order);
   const timer = useOrderTimer(order, kdsConfig);
+  const fulfillmentTypes = orderFulfillmentTypes(order);
+  const lineShowFulfillmentIcon = ticketIsMixedFulfillment(fulfillmentTypes);
+  const headerShowIcons = showHeaderFulfillmentIcons(order);
   const lineIdsKey = order.items.map((i) => i.id).join('|');
   const initialMadeKey =
     initialMadeIds && initialMadeIds.size > 0 ? [...initialMadeIds].join('|') : '';
@@ -179,7 +188,13 @@ export function OrderCard({
             title="Mark order done"
           >
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-[1.35rem] font-bold tracking-wider uppercase">
+              <span className="flex items-center gap-2 text-[1.35rem] font-bold tracking-wider uppercase">
+                {headerShowIcons ? (
+                  <FulfillmentIconGroup
+                    types={fulfillmentTypes}
+                    iconClassName="size-6 opacity-95"
+                  />
+                ) : null}
                 {ticketKindLabel(kind)}
               </span>
               {showCustomer ? (
@@ -235,6 +250,7 @@ export function OrderCard({
               onToggleMade={() => toggleMade(sourceIds)}
               hideBottomBorder={foods.length > 0 && i === drinks.length - 1}
               orderType={order.orderType}
+              showFulfillmentIcon={lineShowFulfillmentIcon}
               outOptionIds={outOptionIds}
             />
           ))}
@@ -247,6 +263,7 @@ export function OrderCard({
             madeIds={madeIds}
             onToggleMade={toggleMade}
             orderType={order.orderType}
+            showFulfillmentIcon={lineShowFulfillmentIcon}
           />
 
           {order.notes?.trim() ? (

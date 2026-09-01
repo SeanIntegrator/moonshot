@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { FlowRowDensity } from './DrinkRow.js';
 import { FulfillmentQtyCell } from './FulfillmentQtyCell.js';
 import { formatAllergenLabel } from './formatAllergen.js';
+import { formatItemName } from './formatItemName.js';
 
 type FoodRowProps = {
   itemName: string;
@@ -18,6 +19,8 @@ type FoodRowProps = {
   showSelectControl?: boolean;
   /** Order-level fulfillment preview until per-line cups exist. */
   orderType?: OrderType;
+  /** Cup icon beside qty on mixed tickets only. */
+  showFulfillmentIcon?: boolean;
 };
 
 export function FoodRow({
@@ -29,8 +32,10 @@ export function FoodRow({
   density = 'board',
   showSelectControl = false,
   orderType = 'takeaway',
+  showFulfillmentIcon = false,
 }: FoodRowProps) {
   const compact = density === 'compact';
+  const displayName = formatItemName(itemName);
   const qtyMulti = quantity > 1;
   const py = compact ? 'py-1.5' : 'py-[calc(0.55rem+8px)]';
 
@@ -67,6 +72,7 @@ export function FoodRow({
         <FulfillmentQtyCell
           orderType={orderType}
           quantity={quantity}
+          showIcon={showFulfillmentIcon}
           compact={compact}
           qtyMulti={qtyMulti}
           className={py}
@@ -82,7 +88,7 @@ export function FoodRow({
             py,
           )}
         >
-          {itemName}
+          {displayName}
         </span>
       </div>
       <div

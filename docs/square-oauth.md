@@ -23,7 +23,7 @@ flowchart TD
   Refresh --> Obtain["ObtainToken refresh_token"]
   Obtain --> Store
 
-  SquareWH["Square order.* + catalog.version.updated"] --> WH["POST /webhooks/square"]
+  SquareWH["Square order.* + catalog.version.updated + oauth.authorization.revoked"] --> WH["POST /webhooks/square"]
   WH --> Verify["HMAC + webhook_events claim"]
   Verify --> Route["merchant_id → cafe"]
   Route --> Ingress["persistPosOrderEvent + KDS emit"]
@@ -76,7 +76,8 @@ Access tokens expire after ~30 days. The refresh job:
 2. Calls Square `ObtainToken(grant_type=refresh_token)`.
 3. Upserts ciphertext + `access_token_expires_at` + `last_refreshed_at`.
 4. On permanent auth failure (revoked / invalid refresh): sets `status = needs_reauth` (no infinite retry).
-5. **Stale-token alert:** loading an active connection whose last refresh is older than ~8 days (or already expired) emits a structured `console.error` with café id + merchant id (never token values).
+5. **`oauth.authorization.revoked` webhook:** sets `status = revoked` immediately (seller removed app access in Square Dashboard).
+6. **Stale-token alert:** loading an active connection whose last refresh is older than ~8 days (or already expired) emits a structured `console.error` with café id + merchant id (never token values).
 
 ### Railway cron
 
@@ -110,6 +111,7 @@ Set the same `CRON_SECRET` on the API service and the cron caller. Optional head
    - `order.updated`
    - `order.fulfillment.updated`
    - `catalog.version.updated`
+   - `oauth.authorization.revoked`
 
 ### Catalog sync (Square → Moonshot)
 
@@ -156,6 +158,102 @@ Canceled Square orders → Moonshot `cancelled` + KDS remove. Mapping of modifie
 4. Set the env vars, run migrations (`pnpm --filter @moonshot/api migrate`), start the API + admin.
 5. Sign up a café → onboarding Menu step → **Connect my menu with Square**.
 6. (Optional) Point a Sandbox webhook at a tunnel URL and set `SQUARE_WEBHOOK_NOTIFICATION_URL` to that same URL.
+
+## Production cutover
+
+Sandbox OAuth tokens **cannot** be refreshed or reused after switching to production credentials. Every café that connected in sandbox must **Reconnect Square** with a live seller account.
+
+### Square Developer Console (Production mode)
+
+1. Open your app → toggle **Production** (not Sandbox).
+2. Copy the **Production Application ID** (`sq0idp-…`) and **Application Secret** — not the sandbox `sandbox-sq0idb-…` values.
+3. **OAuth** → add redirect URL (HTTPS only):
+   - `https://moonshotapi-production.up.railway.app/api/v1/admin/connect/square/return`
+4. **Webhooks** → create an app-level subscription:
+   - Notification URL: `https://moonshotapi-production.up.railway.app/api/v1/webhooks/square` (no trailing slash)
+   - Events: `order.created`, `order.updated`, `order.fulfillment.updated`, `catalog.version.updated`, `oauth.authorization.revoked`
+   - Copy the **Production** signature key (sandbox key will fail HMAC verification)
+
+### Railway (`moonshot-api` service only)
+
+Set or update these variables on the **production** environment:
+
+| Variable | Production value |
+|----------|------------------|
+| `SQUARE_ENVIRONMENT` | `production` |
+| `SQUARE_APPLICATION_ID` | Production Application ID from Dashboard |
+| `SQUARE_APPLICATION_SECRET` | Production Application Secret |
+| `SQUARE_OAUTH_REDIRECT_URL` | `https://moonshotapi-production.up.railway.app/api/v1/admin/connect/square/return` |
+| `SQUARE_CONNECT_ADMIN_REDIRECT_URL` | `https://moonshot-admin-production.up.railway.app/onboarding/import-pos` |
+| `SQUARE_WEBHOOK_NOTIFICATION_URL` | `https://moonshotapi-production.up.railway.app/api/v1/webhooks/square` |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Production webhook signature key |
+
+**Leave unchanged:** `POS_TOKEN_ENCRYPTION_KEY`, `JWT_SECRET`, `CRON_SECRET`, `DATABASE_URL`, `CORS_ORIGINS`.
+
+Production authorize URLs use `https://connect.squareup.com` with `session=false` (forced seller sign-in). The SDK uses `SquareEnvironment.Production` automatically when `SQUARE_ENVIRONMENT=production`.
+
+### Railway cron
+
+Confirm a cron job calls these endpoints with `Authorization: Bearer ${CRON_SECRET}`:
+
+- `POST /api/v1/internal/pos/refresh-tokens` — every **6–12 hours**
+- `POST /api/v1/internal/pos/sync-catalogs` — daily
+- `POST /api/v1/internal/orders/expire-stale` — hourly
+
+### After deploy
+
+1. Redeploy `moonshot-api` so env changes take effect.
+2. Mark any existing sandbox connections for reconnect.
+
+Railway **Postgres → Console** is a **bash** shell, not `psql`. Paste one line at a time (do not paste multi-line SQL directly into bash).
+
+**Check current Square connections:**
+
+```bash
+psql "$DATABASE_URL" -c "SELECT cafe_id, merchant_id, status FROM pos_connections WHERE provider = 'square';"
+```
+
+**Mark active sandbox rows for reconnect** (one-shot):
+
+```bash
+psql "$DATABASE_URL" -c "UPDATE pos_connections SET status = 'needs_reauth', updated_at = NOW() WHERE provider = 'square' AND status = 'active';"
+```
+
+If `DATABASE_URL` is unset in the Postgres console, Railway usually still exposes Postgres vars — try:
+
+```bash
+psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "UPDATE pos_connections SET status = 'needs_reauth', updated_at = NOW() WHERE provider = 'square' AND status = 'active';"
+```
+
+(`PGPASSWORD` is set automatically in the Postgres service shell.)
+
+Alternatively, open an interactive `psql` session first, then run SQL inside it:
+
+```bash
+psql "$DATABASE_URL"
+```
+
+At the `postgres=#` prompt:
+
+```sql
+UPDATE pos_connections
+SET status = 'needs_reauth', updated_at = NOW()
+WHERE provider = 'square' AND status = 'active';
+```
+
+Type `\q` to exit.
+
+3. Sign up a new café (or use an existing one) → onboarding Menu step → **Connect my menu with Square** using a **live** Square seller account.
+4. Verify: OAuth completes, menu imports, and `GET /admin/connect/square/status` shows `connected: true`.
+
+### Verify token refresh cron
+
+```bash
+curl -X POST "https://moonshotapi-production.up.railway.app/api/v1/internal/pos/refresh-tokens" \
+  -H "Authorization: Bearer ${CRON_SECRET}"
+```
+
+Expect `{ "ok": true, "data": { "refreshed": N, ... } }`.
 
 ## Scopes requested
 

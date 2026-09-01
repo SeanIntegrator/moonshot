@@ -8,6 +8,7 @@ import {
   markCatalogSyncError,
   markCatalogSyncSuccess,
   markCatalogSyncing,
+  markNeedsReauth,
 } from '../../pos-connections-repository.js';
 import { ensureFreshSquareAccessToken } from './token-refresh.js';
 import {
@@ -20,6 +21,7 @@ import { syncNormalisedMenuCatalog } from '../../menu/menu-sync-catalog.js';
 import { loadExistingPosCategoryKeys } from '../../pos-catalog/menu-catalog-upsert.js';
 import { resolveSquareEnvironment } from '../../square/oauth-urls.js';
 import { notifyMenuCatalogSynced } from '../../menu/menu-sync-notify.js';
+import { isPermanentSquareAuthFailure, SQUARE_RECONNECT_MESSAGE } from './auth-errors.js';
 
 const DEBOUNCE_MS = 45_000;
 
@@ -171,6 +173,12 @@ export async function runCatalogSyncForCafe(
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (isPermanentSquareAuthFailure(err)) {
+      await markNeedsReauth(db, cafeId, POS_PROVIDERS.square);
+      await markCatalogSyncError(db, cafeId, SQUARE_RECONNECT_MESSAGE, POS_PROVIDERS.square);
+      console.error('[pos] catalog_sync_auth_failed', { cafeId, message });
+      throw new Error(SQUARE_RECONNECT_MESSAGE);
+    }
     await markCatalogSyncError(db, cafeId, message, POS_PROVIDERS.square);
     console.error('[pos] catalog_sync_failed', { cafeId, message });
     throw err;

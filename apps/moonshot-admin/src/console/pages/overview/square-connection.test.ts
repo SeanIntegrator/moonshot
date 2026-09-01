@@ -26,10 +26,20 @@ describe('squareRowView', () => {
   });
 
   it('expires when reauth is needed', () => {
-    const row = squareRowView({ ...base, status: 'needs_reauth' }, { timeZone: 'UTC', now });
+    const row = squareRowView({ ...base, status: 'needs_reauth', connected: false }, { timeZone: 'UTC', now });
     expect(row.tone).toBe('expired');
     expect(row.actionKind).toBe('reconnect');
     expect(row.needsAttention).toBe(true);
+  });
+
+  it('expires when access was revoked', () => {
+    const row = squareRowView(
+      { ...base, connected: false, status: 'revoked' },
+      { timeZone: 'UTC', now },
+    );
+    expect(row.tone).toBe('expired');
+    expect(row.actionKind).toBe('reconnect');
+    expect(row.meta).toContain('revoked');
   });
 
   it('expires when the token timestamp is in the past', () => {

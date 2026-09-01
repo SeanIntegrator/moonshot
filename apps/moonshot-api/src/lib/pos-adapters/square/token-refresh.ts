@@ -1,6 +1,5 @@
 import type { Pool, PoolClient } from 'pg';
 import { POS_PROVIDERS } from '@moonshot/domain';
-import { SquareError } from 'square';
 import {
   getPosConnection,
   listConnectionsNeedingRefresh,
@@ -17,6 +16,7 @@ import {
   resolveSquareApplicationId,
   resolveSquareApplicationSecret,
 } from '../../square/oauth-urls.js';
+import { isPermanentSquareAuthFailure } from './auth-errors.js';
 
 type Db = Pool | PoolClient;
 
@@ -33,22 +33,6 @@ export type RefreshDueResult = {
   skipped: number;
   details: RefreshOneResult[];
 };
-
-function isPermanentAuthFailure(err: unknown): boolean {
-  if (!(err instanceof SquareError)) {
-    const status = (err as { statusCode?: number })?.statusCode;
-    if (status === 401 || status === 403) return true;
-    return false;
-  }
-  if (err.statusCode === 401 || err.statusCode === 403) return true;
-  const body = String(err.message ?? '').toLowerCase();
-  return (
-    body.includes('invalid_grant') ||
-    body.includes('not_authorized') ||
-    body.includes('access_token_revoked') ||
-    (body.includes('refresh_token') && body.includes('invalid'))
-  );
-}
 
 function expiresAtFromTokenResponse(expiresAt: string | undefined): Date {
   if (expiresAt) {
@@ -92,7 +76,7 @@ export async function refreshSquareConnection(
 
     return { kind: 'refreshed', cafeId };
   } catch (err) {
-    if (isPermanentAuthFailure(err)) {
+    if (isPermanentSquareAuthFailure(err)) {
       await markNeedsReauth(db, cafeId, POS_PROVIDERS.square);
       console.error('[pos] square_refresh_needs_reauth', {
         cafeId,

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { FulfillmentQtyCell } from './FulfillmentQtyCell.js';
 import { formatAllergenLabel } from './formatAllergen.js';
+import { formatItemName } from './formatItemName.js';
 
 export type FlowRowDensity = 'board' | 'compact';
 
@@ -26,6 +27,8 @@ type DrinkRowProps = {
    * Required on the live board; optional in compact recall rows.
    */
   orderType?: OrderType;
+  /** Cup icon beside qty on mixed tickets only. */
+  showFulfillmentIcon?: boolean;
   /** Live 86'd modifier option ids — greys matching chips. */
   outOptionIds?: ReadonlySet<string>;
 };
@@ -71,8 +74,10 @@ export function DrinkRow({
   density = 'board',
   showSelectControl = false,
   orderType = 'takeaway',
+  showFulfillmentIcon = false,
   outOptionIds,
 }: DrinkRowProps) {
+  const displayName = formatItemName(itemName);
   const compact = density === 'compact';
   const hasMods = view.milk != null || view.syrups.length > 0;
   const qtyMulti = quantity > 1;
@@ -115,6 +120,7 @@ export function DrinkRow({
         <FulfillmentQtyCell
           orderType={orderType}
           quantity={quantity}
+          showIcon={showFulfillmentIcon}
           compact={compact}
           qtyMulti={qtyMulti}
           className={py}
@@ -126,7 +132,7 @@ export function DrinkRow({
         <div className={cn('flex min-w-0 flex-col justify-center', compact ? 'gap-0' : 'gap-0.5', py)}>
           <div className={cn('flex items-baseline whitespace-nowrap', compact ? 'gap-1' : 'gap-1.5')}>
             <span className={cn('flow-strike font-bold', compact ? 'text-sm' : 'text-2xl')}>
-              {itemName}
+              {displayName}
             </span>
             {view.shotLabel ? (
               <ShotBracketLabel label={view.shotLabel} color={view.beanAccent} compact={compact} />

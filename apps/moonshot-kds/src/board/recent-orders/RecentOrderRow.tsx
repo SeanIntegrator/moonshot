@@ -8,6 +8,11 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { FulfillmentIconGroup } from '../FulfillmentIcon.js';
+import {
+  orderFulfillmentTypes,
+  showHeaderFulfillmentIcons,
+} from '../fulfillment.js';
 import {
   deriveTicketKind,
   ticketKindLabel,
@@ -37,6 +42,8 @@ export function RecentOrderRow({
   onRecall,
 }: RecentOrderRowProps) {
   const kind = deriveTicketKind(order);
+  const headerShowIcons = showHeaderFulfillmentIcons(order);
+  const fulfillmentTypes = orderFulfillmentTypes(order);
   const showCustomer =
     kind === 'pickup' &&
     kdsConfig.display.showCustomerNameInHeader &&
@@ -65,7 +72,15 @@ export function RecentOrderRow({
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge variant="info" className="font-semibold tracking-wide uppercase">
-                  {ticketKindLabel(kind)}
+                  <span className="inline-flex items-center gap-1.5">
+                    {headerShowIcons ? (
+                      <FulfillmentIconGroup
+                        types={fulfillmentTypes}
+                        iconClassName="size-3.5"
+                      />
+                    ) : null}
+                    {ticketKindLabel(kind)}
+                  </span>
                 </Badge>
                 <Badge variant="success">Completed</Badge>
                 <span className="text-xs text-muted-foreground tabular-nums">

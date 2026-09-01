@@ -62,9 +62,11 @@ Bean bracket accents (`beanBadges.*.accent`): house `#e8a33d`, decaf `#7aa2d6`, 
 | TAKEAWAY | `orderType === 'takeaway'` + `source === 'pos'` | No |
 | PICKUP | `orderType === 'takeaway'` + app/web/whatsapp | Yes (when `display.showCustomerNameInHeader`) |
 
-### Fulfillment icons (preview)
+### Fulfillment icons
 
-Each board row shows an icon above the quantity: **walking** for `takeaway` (includes pickup), **table** (custom SVG) for `eat_in`. All lines on a ticket currently share `order.orderType`; per-line cup type is not stored yet.
+Lucide glyphs in the ticket header for **POS** tickets only: `Utensils` (eat in), `ShoppingBag` (takeaway). Order-ahead **PICKUP** shows the label without a cup icon. When a ticket is mixed (future per-line `orderType`), both icons appear in the header and each line shows its cup beside the quantity; homogeneous tickets today show qty only in the shot column.
+
+Fulfillment is still **order-level** in the DB (`orders.order_type`). Square’s RetrieveOrder does not surface per-line dining options; `fulfillments[].entries` links lines to fulfillment types for Square Online split orders, not walk-up For Here / To Go taps. Per-line cups will need a custom `order_items` field and Square mapping when implemented.
 
 ### Hybrid timer
 

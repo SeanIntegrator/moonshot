@@ -18,6 +18,7 @@ import {
   importPosMenu,
   type SquareConnectStatus,
 } from '../lib/admin-api.js';
+import { squareConnectErrorMessage } from '../lib/square-connect-errors.js';
 
 type Phase = 'loading' | 'importing' | 'picker' | 'error';
 
@@ -63,7 +64,15 @@ export function OnboardingPosImportPage() {
       setStatus(data);
 
       if (!data.connected) {
-        setError('Square is not connected yet. Go back and try again.');
+        if (data.status === 'needs_reauth' || data.status === 'revoked') {
+          setError(
+            data.status === 'revoked'
+              ? 'Square access was revoked. Go back and reconnect Square.'
+              : 'Your Square login has expired. Go back and reconnect Square.',
+          );
+        } else {
+          setError('Square is not connected yet. Go back and try again.');
+        }
         setPhase('error');
         return;
       }
@@ -91,7 +100,7 @@ export function OnboardingPosImportPage() {
     const outcome = params.get('squareConnect');
     if (outcome === 'error') {
       const reason = params.get('reason') ?? 'unknown';
-      setError(`Square connection failed (${reason}). Try again.`);
+      setError(squareConnectErrorMessage(reason));
       setPhase('error');
     }
     if (params.has('squareConnect')) {

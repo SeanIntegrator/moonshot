@@ -100,6 +100,30 @@ describe('parseSquareWebhookEnvelope', () => {
     });
   });
 
+  it('extracts oauth.authorization.revoked without an order id', () => {
+    const env = parseSquareWebhookEnvelope({
+      merchant_id: 'MERCHANT1',
+      type: 'oauth.authorization.revoked',
+      event_id: 'ev-revoke-1',
+      data: {
+        type: 'revocation',
+        id: '415641cf-eba2-4dfa-88cc-c4be1301fdc6',
+        object: {
+          revocation: {
+            revoked_at: '2020-08-14T15:51:00.246373287Z',
+            revoker_type: 'MERCHANT',
+          },
+        },
+      },
+    });
+    expect(env).toEqual({
+      eventId: 'ev-revoke-1',
+      merchantId: 'MERCHANT1',
+      type: 'oauth.authorization.revoked',
+      orderId: null,
+    });
+  });
+
   it('returns null when required fields missing', () => {
     expect(parseSquareWebhookEnvelope({ type: 'order.created' })).toBeNull();
   });

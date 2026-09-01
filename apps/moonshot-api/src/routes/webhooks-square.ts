@@ -11,15 +11,22 @@ import {
   parseSquareWebhookEnvelope,
   rawBodyToString,
   SQUARE_CATALOG_WEBHOOK_TYPE,
+  SQUARE_OAUTH_REVOKED_WEBHOOK_TYPE,
   verifySquareWebhookRequest,
 } from '../lib/pos-adapters/square/webhook.js';
-import { findCafeIdByMerchantId } from '../lib/pos-connections-repository.js';
+import {
+  findCafeIdByMerchantId,
+  findCafeIdByMerchantIdAnyStatus,
+  markNeedsReauth,
+  markRevoked,
+} from '../lib/pos-connections-repository.js';
 import { persistPosOrderEvent } from '../lib/orders/pos-order-ingress.js';
 import {
   claimWebhookForProcessing,
   completeWebhookProcessing,
   failWebhookProcessing,
 } from '../lib/webhooks/claim.js';
+import { isPermanentSquareAuthFailure } from '../lib/pos-adapters/square/auth-errors.js';
 
 const PROVIDER = 'square';
 
@@ -62,11 +69,10 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
     return;
   }
 
-  const cafeId = await findCafeIdByMerchantId(
-    pool,
-    POS_PROVIDERS.square,
-    envelope.merchantId,
-  );
+  const isRevokeEvent = envelope.type === SQUARE_OAUTH_REVOKED_WEBHOOK_TYPE;
+  const cafeId = isRevokeEvent
+    ? await findCafeIdByMerchantIdAnyStatus(pool, POS_PROVIDERS.square, envelope.merchantId)
+    : await findCafeIdByMerchantId(pool, POS_PROVIDERS.square, envelope.merchantId);
 
   const claim = await claimWebhookForProcessing({
     client: pool,
@@ -97,6 +103,22 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
         eventId: envelope.eventId,
       });
       void res.json({ received: true, ignored: true, reason: 'unknown_merchant' });
+      return;
+    }
+
+    if (envelope.type === SQUARE_OAUTH_REVOKED_WEBHOOK_TYPE) {
+      await markRevoked(pool, cafeId, POS_PROVIDERS.square);
+      console.info('[square-webhook] oauth_revoked', {
+        cafeId,
+        merchantId: envelope.merchantId,
+        eventId: envelope.eventId,
+      });
+      await completeWebhookProcessing({
+        client: pool,
+        provider: PROVIDER,
+        eventId: envelope.eventId,
+      });
+      void res.json({ received: true, kind: 'oauth_revoked' });
       return;
     }
 
@@ -139,6 +161,9 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
           orderId: envelope.orderId,
           message: err instanceof Error ? err.message : String(err),
         });
+        if (isPermanentSquareAuthFailure(err)) {
+          await markNeedsReauth(pool, cafeId, POS_PROVIDERS.square);
+        }
       }
     }
 
