@@ -26,6 +26,17 @@ describe('mapStripeOnboardingError', () => {
     expect(mapped.message).not.toMatch(/dashboard\.stripe\.com/i);
   });
 
+  it('maps the live-account questionnaire as the same platform-profile block', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const err = new Error(
+      'You must complete your platform profile to use Connect and create live connected accounts. Visit your dashboard at https://dashboard.stripe.com/connect/accounts/overview to answer the questionnaire.',
+    );
+    const mapped = mapStripeOnboardingError(err);
+    spy.mockRestore();
+    expect(mapped.status).toBe(503);
+    expect(mapped.message).toBe(STRIPE_CONNECT_UNAVAILABLE_MESSAGE);
+  });
+
   it('maps other Stripe failures without leaking internals', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mapped = mapStripeOnboardingError(new Error('No such account: acct_123'));

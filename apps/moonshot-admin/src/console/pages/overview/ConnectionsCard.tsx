@@ -1,6 +1,6 @@
 import type { AdminStripeAccountStatusResponse } from '@moonshot/types';
 import { Divider } from '@mui/material';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   adminStripeOnboardingLink,
   adminStripeStatus,
@@ -10,6 +10,10 @@ import {
   syncPosMenuFromSquare,
   type SquareConnectStatus,
 } from '../../../lib/admin-api.js';
+import {
+  squareConnectNoticeFromSearch,
+  stripSquareConnectSearchParams,
+} from '../../../lib/square-connect-errors.js';
 import { useAdminMenuSync } from '../../../hooks/useAdminMenuSync.js';
 import { ConnectionRow } from '../../primitives/ConnectionRow.js';
 import { SettingsCard } from '../../primitives/SettingsCard.js';
@@ -37,6 +41,7 @@ export function ConnectionsCard({ token, timeZone }: Props) {
   const [disconnecting, setDisconnecting] = useState(false);
   const [squareSettled, setSquareSettled] = useState(false);
   const [stripeSettled, setStripeSettled] = useState(false);
+  const squareReturnHandled = useRef(false);
 
   const loadSquare = useCallback(() => {
     return getSquareConnectStatus(token)
@@ -75,6 +80,17 @@ export function ConnectionsCard({ token, timeZone }: Props) {
     const qs = params.toString();
     window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
   }, [loadStripe]);
+
+  useEffect(() => {
+    if (squareReturnHandled.current) return;
+    const notice = squareConnectNoticeFromSearch(window.location.search);
+    if (!notice) return;
+    squareReturnHandled.current = true;
+    toast(notice);
+    if (notice.severity === 'success') void loadSquare();
+    const qs = stripSquareConnectSearchParams(window.location.search);
+    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+  }, [toast, loadSquare]);
 
   useAdminMenuSync({
     token,

@@ -113,6 +113,4 @@ See also [current/http-surface.md](current/http-surface.md), [architecture/realt
 
 Express connected accounts are **created per café**, not reused. A 500 on this route is not “this Stripe login is already linked.”
 
-Live platforms must complete Stripe’s Connect **platform profile** (loss liability) before `accounts.create` succeeds. Until then the API returns **503** with café-safe copy and logs `[stripe-connect] onboarding_failed` (`kind: platform_profile`) including Stripe’s dashboard URL.
-
-Ops: [Connect platform profile](https://dashboard.stripe.com/settings/connect/platform-profile).
+Live platforms must complete Stripe’s Connect **platform profile** before `accounts.create` succeeds — both the loss-liability acknowledgements and the **questionnaire** on [Connect accounts overview](https://dashboard.stripe.com/connect/accounts/overview). Until then the API returns **503** with café-safe copy and logs `[stripe-connect] onboarding_failed` (`kind: platform_profile`).

@@ -18,7 +18,10 @@ import {
   importPosMenu,
   type SquareConnectStatus,
 } from '../lib/admin-api.js';
-import { squareConnectErrorMessage } from '../lib/square-connect-errors.js';
+import {
+  squareConnectNoticeFromSearch,
+  stripSquareConnectSearchParams,
+} from '../lib/square-connect-errors.js';
 
 type Phase = 'loading' | 'importing' | 'picker' | 'error';
 
@@ -98,17 +101,13 @@ export function OnboardingPosImportPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const outcome = params.get('squareConnect');
-    if (outcome === 'error') {
-      const reason = params.get('reason') ?? 'unknown';
-      const otherCafe = params.get('otherCafe');
-      setError(squareConnectErrorMessage(reason, { otherCafe }));
+    const notice = squareConnectNoticeFromSearch(window.location.search);
+    if (notice?.severity === 'error') {
+      setError(notice.message);
       setPhase('error');
     }
-    if (params.has('squareConnect')) {
-      params.delete('squareConnect');
-      params.delete('reason');
-      params.delete('otherCafe');
-      const qs = params.toString();
+    if (outcome) {
+      const qs = stripSquareConnectSearchParams(window.location.search);
       window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
     }
     if (outcome !== 'error') {

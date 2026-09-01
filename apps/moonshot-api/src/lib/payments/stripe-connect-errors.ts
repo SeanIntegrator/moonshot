@@ -10,7 +10,9 @@ export const STRIPE_CONNECT_SETUP_FAILED_MESSAGE =
 
 function isStripePlatformProfileError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err);
-  return /platform-profile|responsibilities of managing losses/i.test(message);
+  return /platform[- ]profile|responsibilities of managing losses|create live connected accounts/i.test(
+    message,
+  );
 }
 
 /** Map Stripe SDK failures to seller-safe HTTP errors. Logs the raw Stripe message. */

@@ -24,3 +24,34 @@ export function squareConnectErrorMessage(
       return 'Square connection failed. Go back and try again.';
   }
 }
+
+/** Square OAuth return query on Overview (toast) or import-pos (alert). */
+export function squareConnectNoticeFromSearch(
+  search: string,
+): { severity: 'error' | 'success'; message: string } | null {
+  const raw = search.startsWith('?') ? search.slice(1) : search;
+  const params = new URLSearchParams(raw);
+  const outcome = params.get('squareConnect');
+  if (!outcome) return null;
+  if (outcome === 'error') {
+    return {
+      severity: 'error',
+      message: squareConnectErrorMessage(params.get('reason') ?? 'unknown', {
+        otherCafe: params.get('otherCafe'),
+      }),
+    };
+  }
+  if (outcome === 'connected') {
+    return { severity: 'success', message: 'Square connected.' };
+  }
+  return null;
+}
+
+export function stripSquareConnectSearchParams(search: string): string {
+  const raw = search.startsWith('?') ? search.slice(1) : search;
+  const params = new URLSearchParams(raw);
+  params.delete('squareConnect');
+  params.delete('reason');
+  params.delete('otherCafe');
+  return params.toString();
+}
