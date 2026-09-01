@@ -6,6 +6,10 @@ describe('squareConnectErrorMessage', () => {
     expect(squareConnectErrorMessage('access_denied')).toContain('cancelled');
     expect(squareConnectErrorMessage('invalid_state')).toContain('expired');
     expect(squareConnectErrorMessage('exchange_failed')).toContain('Could not complete');
+    expect(squareConnectErrorMessage('merchant_in_use')).toContain('already connected');
+    expect(squareConnectErrorMessage('merchant_in_use', { otherCafe: 'quirky' })).toContain(
+      'connected to quirky',
+    );
   });
 
   it('falls back for unknown reasons', () => {

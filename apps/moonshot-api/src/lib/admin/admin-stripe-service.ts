@@ -14,6 +14,7 @@ import {
 } from '../payments/cafe-payment-config.js';
 import { updateCafePaymentConfig } from '../payments/repository.js';
 import { getStripeOrNull } from '../payments/stripe-client.js';
+import { mapStripeOnboardingError } from '../payments/stripe-connect-errors.js';
 import {
   adminRedirectWithStripeQuery,
   buildStripeConnectCallbackUrl,
@@ -54,19 +55,23 @@ export async function createAdminStripeOnboardingLink(cafeId: string): Promise<A
   const { refreshUrl, returnUrl } = requireStripeConnectUrls();
 
   const cafe = await loadCafeOrThrow(cafeId);
-  let accountId = getStripeConnectAccountId(cafe.paymentConfig);
-  if (!accountId) {
-    const created = await createStripeExpressConnectedAccount();
-    accountId = created.accountId;
-    const next = mergeStripeIntoPaymentConfig(cafe.paymentConfig, { accountId });
-    await updateCafePaymentConfig({ client: pool, cafeId, paymentConfig: next });
+  try {
+    let accountId = getStripeConnectAccountId(cafe.paymentConfig);
+    if (!accountId) {
+      const created = await createStripeExpressConnectedAccount();
+      accountId = created.accountId;
+      const next = mergeStripeIntoPaymentConfig(cafe.paymentConfig, { accountId });
+      await updateCafePaymentConfig({ client: pool, cafeId, paymentConfig: next });
+    }
+    const link = await createStripeAccountOnboardingLink({
+      accountId,
+      refreshUrl: buildStripeConnectCallbackUrl(refreshUrl, cafeId),
+      returnUrl: buildStripeConnectCallbackUrl(returnUrl, cafeId),
+    });
+    return { url: link.url, accountId };
+  } catch (err) {
+    throw mapStripeOnboardingError(err);
   }
-  const link = await createStripeAccountOnboardingLink({
-    accountId,
-    refreshUrl: buildStripeConnectCallbackUrl(refreshUrl, cafeId),
-    returnUrl: buildStripeConnectCallbackUrl(returnUrl, cafeId),
-  });
-  return { url: link.url, accountId };
 }
 
 /** Stripe return_url: sync account flags, then redirect to admin dashboard. */

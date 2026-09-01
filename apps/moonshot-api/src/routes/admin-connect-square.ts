@@ -5,11 +5,17 @@ import { pool } from '../db.js';
 import { ApiHttpError } from '../lib/http-errors.js';
 import {
   deletePosConnection,
+  findOtherCafeOwningMerchant,
   getPosConnection,
   getPosConnectionPublicStatus,
   upsertPosConnection,
 } from '../lib/pos-connections-repository.js';
 import { createSquareAppClient, createSquareClient } from '../lib/pos-adapters/square/client.js';
+import {
+  merchantInUseRedirectExtras,
+  squareConnectReturnFailureReason,
+  squareConnectReturnLogFields,
+} from '../lib/square/oauth-return-errors.js';
 import {
   adminRedirectWithSquareQuery,
   buildSquareAuthorizeUrl,
@@ -123,6 +129,7 @@ adminConnectSquareRouter.get('/return', async (req, res) => {
     return res.redirect(302, adminRedirectWithSquareQuery('error', { reason: 'invalid_state' }));
   }
 
+  let exchangedMerchantId: string | null = null;
   try {
     const appClient = createSquareAppClient();
     const tokenRes = await appClient.oAuth.obtainToken({
@@ -138,6 +145,25 @@ adminConnectSquareRouter.get('/return', async (req, res) => {
     const merchantId = tokenRes.merchantId;
     if (!accessToken || !refreshToken || !merchantId) {
       return res.redirect(302, adminRedirectWithSquareQuery('error', { reason: 'token_incomplete' }));
+    }
+    exchangedMerchantId = merchantId;
+
+    const otherCafe = await findOtherCafeOwningMerchant(
+      pool,
+      POS_PROVIDERS.square,
+      merchantId,
+      claims.cafeId,
+    );
+    if (otherCafe) {
+      console.error('[square-oauth] merchant_in_use', {
+        cafeId: claims.cafeId,
+        otherCafeId: otherCafe.cafeId,
+        otherCafe: otherCafe.name || otherCafe.slug,
+      });
+      return res.redirect(
+        302,
+        adminRedirectWithSquareQuery('error', merchantInUseRedirectExtras(otherCafe)),
+      );
     }
 
     const expiresAt = tokenRes.expiresAt
@@ -181,7 +207,25 @@ adminConnectSquareRouter.get('/return', async (req, res) => {
     }
 
     return res.redirect(302, adminRedirectWithSquareQuery('connected'));
-  } catch {
-    return res.redirect(302, adminRedirectWithSquareQuery('error', { reason: 'exchange_failed' }));
+  } catch (err) {
+    const reason = squareConnectReturnFailureReason(err);
+    let extra: Record<string, string> = { reason };
+    if (reason === 'merchant_in_use') {
+      const other = exchangedMerchantId
+        ? await findOtherCafeOwningMerchant(
+            pool,
+            POS_PROVIDERS.square,
+            exchangedMerchantId,
+            claims.cafeId,
+          )
+        : null;
+      extra = merchantInUseRedirectExtras(other);
+    }
+    console.error('[square-oauth] return_failed', {
+      cafeId: claims.cafeId,
+      reason,
+      ...squareConnectReturnLogFields(err),
+    });
+    return res.redirect(302, adminRedirectWithSquareQuery('error', extra));
   }
 });

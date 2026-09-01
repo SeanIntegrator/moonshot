@@ -108,3 +108,11 @@ Requires order **`status = completed`** and signed-in **`orders.user_id`**.
 | `apps/moonshot-api/src/lib/requested-pickup.ts` | Clamp delay → `requested_pickup_not_before` |
 
 See also [current/http-surface.md](current/http-surface.md), [architecture/realtime.md](architecture/realtime.md), [current/flows.md](current/flows.md).
+
+## Connect onboarding (`POST /admin/payments/stripe/onboarding-link`)
+
+Express connected accounts are **created per café**, not reused. A 500 on this route is not “this Stripe login is already linked.”
+
+Live platforms must complete Stripe’s Connect **platform profile** (loss liability) before `accounts.create` succeeds. Until then the API returns **503** with café-safe copy and logs `[stripe-connect] onboarding_failed` (`kind: platform_profile`) including Stripe’s dashboard URL.
+
+Ops: [Connect platform profile](https://dashboard.stripe.com/settings/connect/platform-profile).

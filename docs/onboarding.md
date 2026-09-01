@@ -163,11 +163,11 @@ Local `.env` examples: admin `VITE_ORDER_AHEAD_BASE_URL=http://localhost:5176`, 
 
 | App | Variable | Example |
 |-----|----------|---------|
-| Marketing | `VITE_ADMIN_SIGNUP_URL` | `https://admin.moonshot.app/signup` |
-| Marketing | `VITE_ADMIN_LOGIN_URL` | `https://admin.moonshot.app/login` |
+| Marketing | `VITE_ADMIN_SIGNUP_URL` | `https://moonshotadmin-production.up.railway.app/signup` |
+| Marketing | `VITE_ADMIN_LOGIN_URL` | `https://moonshotadmin-production.up.railway.app/login` |
 | Admin | `VITE_ORDER_AHEAD_BASE_URL` | `https://order.moonshot.app` |
 | Admin | `VITE_KDS_BASE_URL` | `https://kds.moonshot.app` |
-| Admin | `VITE_MARKETING_URL` | `https://moonshot.app` |
+| Admin | `VITE_MARKETING_URL` | `https://moonshotmarketing-production.up.railway.app` |
 | API | `CORS_ORIGINS` | Include marketing, admin, and order-ahead origins |
 
 ## Legacy bootstrap

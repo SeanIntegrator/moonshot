@@ -108,6 +108,7 @@ Railway often exposes **two** public hostnames per service (hyphenated vs compac
 | Order-ahead | `https://moonshotorder-ahead-production.up.railway.app` |
 | KDS | `https://moonshot-kds-production.up.railway.app` **and** `https://moonshotkds-production.up.railway.app` |
 | Admin | `https://moonshot-admin-production.up.railway.app` **and** `https://moonshotadmin-production.up.railway.app` |
+| Marketing | `https://moonshotmarketing-production.up.railway.app` |
 
 API: use **`https://moonshotapi-production.up.railway.app`** only. `moonshot-api-production` (extra hyphen) is a separate broken deploy (login returns 500). A near-miss hostname, trailing slash, or `http` vs `https` is treated as denied.
 
@@ -124,6 +125,8 @@ See [apps/moonshot-api/.env.example](../../apps/moonshot-api/.env.example).
 ## Front-end env
 
 **Order-ahead / KDS / Admin:** `VITE_API_URL` = API origin **only** (no `/api/v1` suffix), plus `VITE_CAFE_SLUG`, `VITE_GOOGLE_CLIENT_ID` where applicable.
+
+**Marketing:** `VITE_ADMIN_SIGNUP_URL` and `VITE_ADMIN_LOGIN_URL` (baked at build). No API client or `/runtime-config.js`. Live origin: `https://moonshotmarketing-production.up.railway.app`.
 
 Vite frontends load **`/runtime-config.js`** at startup. It is written from `VITE_API_URL` by `scripts/write-runtime-config.mjs`:
 

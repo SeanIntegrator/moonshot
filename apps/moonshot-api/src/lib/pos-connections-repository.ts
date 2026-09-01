@@ -303,6 +303,26 @@ export async function findCafeIdByMerchantIdAnyStatus(
   return rows[0]?.cafe_id ?? null;
 }
 
+/** Unique (provider, merchant_id) — used to name the other café in OAuth errors. */
+export async function findOtherCafeOwningMerchant(
+  db: Db,
+  provider: PosProvider,
+  merchantId: string,
+  exceptCafeId: string,
+): Promise<{ cafeId: string; name: string; slug: string } | null> {
+  const { rows } = await db.query<{ cafe_id: string; name: string; slug: string }>(
+    `SELECT pc.cafe_id, c.name, c.slug
+     FROM pos_connections pc
+     JOIN cafes c ON c.id = pc.cafe_id
+     WHERE pc.provider = $1 AND pc.merchant_id = $2 AND pc.cafe_id <> $3
+     LIMIT 1`,
+    [provider, merchantId, exceptCafeId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return { cafeId: row.cafe_id, name: row.name, slug: row.slug };
+}
+
 /**
  * Active Square connections whose access token expires within 7 days,
  * or whose last refresh is older than 7 days (belt-and-braces).

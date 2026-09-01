@@ -205,6 +205,27 @@ Confirm a cron job calls these endpoints with `Authorization: Bearer ${CRON_SECR
 1. Redeploy `moonshot-api` so env changes take effect.
 2. Mark any existing sandbox connections for reconnect.
 
+### Debugging OAuth return failures
+
+The admin page `?squareConnect=error&reason=…` is seller-safe — it does **not** include Square’s error body.
+
+| `reason` | Meaning |
+|----------|---------|
+| `access_denied` | Seller cancelled Square’s consent screen |
+| `invalid_state` | Signed `state` JWT missing/expired (15m) or `JWT_SECRET` mismatch |
+| `missing_code` | Square redirected without `code` |
+| `token_incomplete` | ObtainToken succeeded but omitted access/refresh/merchant id |
+| `merchant_in_use` | This Square `merchant_id` is already on another café. Query includes `otherCafe` (name) when known. |
+| `exchange_failed` | ObtainToken or token persist threw — see API logs |
+
+Railway (`@moonshot/api` runtime logs), look for:
+
+```
+[square-oauth] return_failed { cafeId, reason, statusCode, squareErrors, pgCode, constraint, message }
+```
+
+HTTP logs for `/admin/connect/square/return` are a 302 either way (success and failure). The structured `return_failed` line is the source of truth. OAuth `code` / `state` are redacted from `[http]` lines.
+
 Railway **Postgres → Console** is a **bash** shell, not `psql`. Paste one line at a time (do not paste multi-line SQL directly into bash).
 
 **Check current Square connections:**

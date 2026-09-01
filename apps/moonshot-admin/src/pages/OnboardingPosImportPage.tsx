@@ -100,12 +100,14 @@ export function OnboardingPosImportPage() {
     const outcome = params.get('squareConnect');
     if (outcome === 'error') {
       const reason = params.get('reason') ?? 'unknown';
-      setError(squareConnectErrorMessage(reason));
+      const otherCafe = params.get('otherCafe');
+      setError(squareConnectErrorMessage(reason, { otherCafe }));
       setPhase('error');
     }
     if (params.has('squareConnect')) {
       params.delete('squareConnect');
       params.delete('reason');
+      params.delete('otherCafe');
       const qs = params.toString();
       window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
     }
