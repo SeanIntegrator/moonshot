@@ -7,6 +7,12 @@ export const PAGE_CONTENT_MAX_WIDTH_PX = 600;
 /** Viewport width at which max-width + expanded Container gutters apply. */
 export const PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX = 1024;
 
+/**
+ * How far to darken `background.default` for the desktop letterbox outside the
+ * phone column. Tablet/phone stay full-bleed and are not letterboxed.
+ */
+export const PAGE_LETTERBOX_DARKEN = 0.08;
+
 /** Fixed bottom thumb / top nav chrome height. */
 export const BOTTOM_NAV_HEIGHT_PX = 56;
 
@@ -32,5 +38,19 @@ export const pageContentWidthSx = {
   mx: 'auto',
   [constraintMq]: {
     maxWidth: PAGE_CONTENT_MAX_WIDTH_PX,
+  },
+} as const;
+
+/**
+ * Viewport-tall app column. On desktop it paints the café canvas so the
+ * page letterbox (CssBaseline) can sit outside without changing in-app colour.
+ */
+export const pageColumnShellSx = {
+  minHeight: '100%',
+  width: '100%',
+  [constraintMq]: {
+    maxWidth: PAGE_CONTENT_MAX_WIDTH_PX,
+    mx: 'auto',
+    bgcolor: 'background.default',
   },
 } as const;

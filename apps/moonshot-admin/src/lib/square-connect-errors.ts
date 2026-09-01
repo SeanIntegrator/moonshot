@@ -26,6 +26,11 @@ export function squareConnectErrorMessage(
 }
 
 /** Square OAuth return query on Overview (toast) or import-pos (alert). */
+export function hasSquareConnectQuery(search: string): boolean {
+  const raw = search.startsWith('?') ? search.slice(1) : search;
+  return new URLSearchParams(raw).has('squareConnect');
+}
+
 export function squareConnectNoticeFromSearch(
   search: string,
 ): { severity: 'error' | 'success'; message: string } | null {

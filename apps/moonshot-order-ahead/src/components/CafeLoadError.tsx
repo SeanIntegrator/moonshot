@@ -1,6 +1,7 @@
 import WifiOffOutlinedIcon from '@mui/icons-material/WifiOffOutlined';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { Box, Button, Container, Typography } from '@mui/material';
+import { pageColumnShellSx } from '../theme/pageLayout.js';
 
 type Props = {
   message: string;
@@ -13,12 +14,12 @@ export function CafeLoadError({ message, isConnectivity, onRetry }: Props) {
   return (
     <Box
       sx={{
+        ...pageColumnShellSx,
         minHeight: '100dvh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         px: 2,
-        bgcolor: 'background.default',
       }}
     >
       <Container maxWidth="xs" sx={{ textAlign: 'center' }}>

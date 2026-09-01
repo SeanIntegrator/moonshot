@@ -11,6 +11,7 @@ import {
   type SquareConnectStatus,
 } from '../../../lib/admin-api.js';
 import {
+  hasSquareConnectQuery,
   squareConnectNoticeFromSearch,
   stripSquareConnectSearchParams,
 } from '../../../lib/square-connect-errors.js';
@@ -83,11 +84,13 @@ export function ConnectionsCard({ token, timeZone }: Props) {
 
   useEffect(() => {
     if (squareReturnHandled.current) return;
-    const notice = squareConnectNoticeFromSearch(window.location.search);
-    if (!notice) return;
+    if (!hasSquareConnectQuery(window.location.search)) return;
     squareReturnHandled.current = true;
-    toast(notice);
-    if (notice.severity === 'success') void loadSquare();
+    const notice = squareConnectNoticeFromSearch(window.location.search);
+    if (notice) {
+      toast(notice);
+      if (notice.severity === 'success') void loadSquare();
+    }
     const qs = stripSquareConnectSearchParams(window.location.search);
     window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
   }, [toast, loadSquare]);

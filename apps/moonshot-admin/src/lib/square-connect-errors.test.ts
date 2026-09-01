@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  hasSquareConnectQuery,
   squareConnectErrorMessage,
   squareConnectNoticeFromSearch,
   stripSquareConnectSearchParams,
@@ -39,6 +40,14 @@ describe('squareConnectNoticeFromSearch', () => {
 
   it('returns null when Square did not redirect', () => {
     expect(squareConnectNoticeFromSearch('')).toBeNull();
+    expect(squareConnectNoticeFromSearch('?squareConnect=')).toBeNull();
+  });
+});
+
+describe('hasSquareConnectQuery', () => {
+  it('is true for an empty squareConnect value', () => {
+    expect(hasSquareConnectQuery('?squareConnect=')).toBe(true);
+    expect(hasSquareConnectQuery('?keep=1')).toBe(false);
   });
 });
 
@@ -49,5 +58,9 @@ describe('stripSquareConnectSearchParams', () => {
         '?squareConnect=error&reason=merchant_in_use&otherCafe=quirky&keep=1',
       ),
     ).toBe('keep=1');
+  });
+
+  it('strips an empty squareConnect value', () => {
+    expect(stripSquareConnectSearchParams('?squareConnect=&keep=1')).toBe('keep=1');
   });
 });

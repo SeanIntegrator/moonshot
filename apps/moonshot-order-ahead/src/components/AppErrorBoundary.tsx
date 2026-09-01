@@ -1,9 +1,10 @@
 import WifiOffOutlinedIcon from '@mui/icons-material/WifiOffOutlined';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
-import { Box, Button, Container, ThemeProvider, Typography } from '@mui/material';
+import { Box, Button, Container, CssBaseline, ThemeProvider, Typography } from '@mui/material';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { ConnectivityError, isNetworkError, toUserFacingError } from '../lib/network-error.js';
 import { createCafeMuiTheme } from '../theme/createCafeMuiTheme.js';
+import { pageColumnShellSx } from '../theme/pageLayout.js';
 
 const fallbackTheme = createCafeMuiTheme(null);
 
@@ -16,14 +17,15 @@ function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }
 
   return (
     <ThemeProvider theme={fallbackTheme}>
+      <CssBaseline />
       <Box
         sx={{
+          ...pageColumnShellSx,
           minHeight: '100dvh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           px: 2,
-          bgcolor: 'background.default',
         }}
       >
         <Container maxWidth="xs" sx={{ textAlign: 'center' }}>

@@ -1,7 +1,8 @@
-import { createTheme, type ThemeOptions } from '@mui/material/styles';
+import { createTheme, darken, type ThemeOptions } from '@mui/material/styles';
 import {
   PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX,
   PAGE_CONTENT_MAX_WIDTH_PX,
+  PAGE_LETTERBOX_DARKEN,
 } from './pageLayout.js';
 import { radiiFromCardStyle } from './radii.js';
 import { surfaceCardChrome } from './surfaceCardChrome.js';
@@ -39,9 +40,19 @@ export const structuralThemeOptions: ThemeOptions = {
   },
   components: {
     MuiCssBaseline: {
-      styleOverrides: {
-        body: { lineHeight: 1.5 },
-      },
+      styleOverrides: (theme) => ({
+        html: {
+          [`@media (min-width:${PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX}px)`]: {
+            backgroundColor: darken(theme.palette.background.default, PAGE_LETTERBOX_DARKEN),
+          },
+        },
+        body: {
+          lineHeight: 1.5,
+          [`@media (min-width:${PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX}px)`]: {
+            backgroundColor: darken(theme.palette.background.default, PAGE_LETTERBOX_DARKEN),
+          },
+        },
+      }),
     },
     // Default sm Container caps at 600px from the 600px breakpoint — leave tablets full-bleed.
     MuiContainer: {

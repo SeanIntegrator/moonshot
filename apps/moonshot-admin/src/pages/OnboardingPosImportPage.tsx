@@ -19,6 +19,7 @@ import {
   type SquareConnectStatus,
 } from '../lib/admin-api.js';
 import {
+  hasSquareConnectQuery,
   squareConnectNoticeFromSearch,
   stripSquareConnectSearchParams,
 } from '../lib/square-connect-errors.js';
@@ -106,7 +107,7 @@ export function OnboardingPosImportPage() {
       setError(notice.message);
       setPhase('error');
     }
-    if (outcome) {
+    if (hasSquareConnectQuery(window.location.search)) {
       const qs = stripSquareConnectSearchParams(window.location.search);
       window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
     }

@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { CurrentOrderCard, OrderNowButton } from '../components/CurrentOrderCard.js';
 import { LoyaltyStampCard } from '../components/LoyaltyStampCard.js';
+import { OrderingUnavailablePanel } from '../components/OrderingUnavailablePanel.js';
 import { QrModal } from '../components/QrModal.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { UsualSuggestCard } from '../components/UsualSuggestCard.js';
@@ -32,6 +33,7 @@ import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
+import { BOTTOM_NAV_HEIGHT_PX } from '../theme/pageLayout.js';
 
 export function Home() {
   const theme = useTheme();
@@ -39,7 +41,7 @@ export function Home() {
   const { orderAheadEnabled, loyaltyEnabled } = useCafeFeatures();
   const { user, membership, isSignedIn } = useAuth();
   const { summary, refresh: refreshLoyalty } = useLoyalty();
-  const { caption: openCaption, orderingAvailable } = useCafeOpenStatus();
+  const { caption: openCaption, orderingAvailable, reason: openReason } = useCafeOpenStatus();
   const { canStartNewOrder } = useOrderingGate();
   const { active, recent } = useActiveOrders();
   const { menu } = useMenu();
@@ -99,8 +101,20 @@ export function Home() {
     );
   }
 
+  const showOrderingUnavailable = !activeOrder && !orderingAvailable;
+
   return (
-    <Container maxWidth="sm" sx={{ py: 0, pb: 10, px: 0 }}>
+    <Container
+      maxWidth="sm"
+      sx={{
+        py: 0,
+        pb: 10,
+        px: 0,
+        minHeight: `calc(100dvh - ${BOTTOM_NAV_HEIGHT_PX}px)`,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <Box
         component="header"
         sx={
@@ -182,23 +196,17 @@ export function Home() {
           <CurrentOrderCard order={activeOrder} />
         ) : orderingAvailable ? (
           <OrderNowButton onClick={() => goToOrderOrSignIn('/order')} />
-        ) : (
-          <Typography
-            variant="body2"
-            sx={{
-              mt: 2,
-              opacity: showHeroChrome ? 0.85 : 1,
-              color: showHeroChrome ? 'inherit' : 'text.secondary',
-            }}
-          >
-            {!orderAheadEnabled
-              ? 'Online ordering is not available for this café right now.'
-              : `${openCaption}. Online ordering will be back when the café is open.`}
-          </Typography>
-        )}
+        ) : null}
       </Box>
 
-      <Box sx={{ px: 2, pt: 2 }}>
+      {showOrderingUnavailable ? (
+        <OrderingUnavailablePanel
+          orderAheadEnabled={orderAheadEnabled}
+          reason={openReason}
+          caption={openCaption}
+        />
+      ) : (
+        <Box sx={{ px: 2, pt: 2 }}>
         {orderingAvailable && usualOrder && (
           <UsualSuggestCard
             variant="usual"
@@ -291,7 +299,8 @@ export function Home() {
             </Box>
           </Box>
         )}
-      </Box>
+        </Box>
+      )}
 
       {isSignedIn && membership && (
         <QrModal

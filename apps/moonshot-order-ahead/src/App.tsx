@@ -25,7 +25,7 @@ import { OrderDetail } from './pages/OrderDetail.js';
 import { Profile } from './pages/Profile.js';
 import { Rewards } from './pages/Rewards.js';
 import { useCart } from './providers/CartProvider.js';
-import { pageContentWidthSx } from './theme/pageLayout.js';
+import { pageColumnShellSx, pageContentWidthSx } from './theme/pageLayout.js';
 
 function pathToNavValue(pathname: string): number {
   const segments = pathname.split('/').filter(Boolean);
@@ -126,7 +126,7 @@ export function App() {
   );
 
   return (
-    <>
+    <Box sx={pageColumnShellSx}>
       <GoogleOneTap />
       {topBar && nav}
       {/* Tab bar stays outside so only page content cross-fades */}
@@ -188,6 +188,6 @@ export function App() {
         </PageTransition>
       </Box>
       {!topBar && nav}
-    </>
+    </Box>
   );
 }
