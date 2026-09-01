@@ -232,6 +232,11 @@ export async function updatePosConnectionLocation(
   );
 }
 
+/**
+ * Mark the connection as needing OAuth reconnect after a permanent auth failure.
+ * Does not downgrade `revoked` — seller-initiated revocation keeps its own status
+ * and admin copy ("access was revoked" vs "login expired").
+ */
 export async function markNeedsReauth(
   db: Db,
   cafeId: string,
@@ -239,7 +244,7 @@ export async function markNeedsReauth(
 ): Promise<void> {
   await db.query(
     `UPDATE pos_connections SET status = 'needs_reauth', updated_at = NOW()
-     WHERE cafe_id = $1 AND provider = $2`,
+     WHERE cafe_id = $1 AND provider = $2 AND status <> 'revoked'`,
     [cafeId, provider],
   );
 }
