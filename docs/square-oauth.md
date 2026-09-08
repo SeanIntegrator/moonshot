@@ -45,7 +45,7 @@ flowchart TD
 | `POST` | `/admin/connect/square/onboard` | Admin JWT | Returns Square authorize URL |
 | `GET` | `/admin/connect/square/return` | Public (signed `state`) | Code exchange + token store + redirect |
 | `GET` | `/admin/connect/square/status` | Admin JWT | Connection + locations |
-| `POST` | `/admin/connect/square/disconnect` | Admin JWT | Revoke + delete |
+| `POST` | `/admin/connect/square/disconnect` | Admin JWT | Revoke + delete connection, then clear `pos_item_id` / `pos_group_id` so the snapshot is locally editable |
 | `POST` | `/admin/onboarding/menu-pos-import` | Admin JWT | Catalog → normalise → Postgres |
 | `POST` | `/internal/pos/refresh-tokens` | `CRON_SECRET` | Refresh due Square access tokens |
 | `POST` | `/internal/pos/sync-catalogs` | `CRON_SECRET` | Safety-net catalog sync (stale >1 day) |

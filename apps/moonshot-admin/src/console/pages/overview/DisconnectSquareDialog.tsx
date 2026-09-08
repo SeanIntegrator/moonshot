@@ -21,8 +21,8 @@ export function DisconnectSquareDialog({ open, busy, onClose, onConfirm }: Props
       <DialogTitle>Disconnect Square?</DialogTitle>
       <DialogContent>
         <Typography>
-          Your menu will stop updating from Square. Your items and prices stay exactly as they are
-          now, and you&apos;ll be able to edit them here instead.
+          Your menu will stop updating from Square. Items stay as they are, and you can
+          edit names, prices, and options here instead.
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>

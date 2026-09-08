@@ -324,6 +324,11 @@ export async function upsertModifierGroup(
     return byName.rows[0].id;
   }
 
+  // Unique (cafe_id, name) — two Square lists with the same name merge onto one row.
+  if (byName.rows[0]) {
+    return byName.rows[0].id;
+  }
+
   const id = randomUUID();
   await client.query(
     `INSERT INTO modifier_groups (

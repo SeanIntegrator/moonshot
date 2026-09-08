@@ -10,6 +10,7 @@ import {
   getPosConnectionPublicStatus,
   upsertPosConnection,
 } from '../lib/pos-connections-repository.js';
+import { detachPosCatalogOwnership } from '../lib/pos-catalog/detach-pos-ownership.js';
 import { createSquareAppClient, createSquareClient } from '../lib/pos-adapters/square/client.js';
 import {
   merchantInUseRedirectExtras,
@@ -98,13 +99,24 @@ adminConnectSquareRouter.post('/disconnect', requireAdminAuth, async (req, res) 
     } catch {
       // Best-effort revoke — still drop local credentials.
     }
-    await deletePosConnection(pool, cafeId, POS_PROVIDERS.square);
   }
 
-  await pool.query(
-    `UPDATE cafes SET pos_provider = $1 WHERE id = $2 AND pos_provider = $3`,
-    [POS_PROVIDERS.manual, cafeId, POS_PROVIDERS.square],
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await deletePosConnection(client, cafeId, POS_PROVIDERS.square);
+    await detachPosCatalogOwnership(client, cafeId);
+    await client.query(
+      `UPDATE cafes SET pos_provider = $1 WHERE id = $2 AND pos_provider = $3`,
+      [POS_PROVIDERS.manual, cafeId, POS_PROVIDERS.square],
+    );
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 
   return res.json({ ok: true, data: { disconnected: true } });
 });
