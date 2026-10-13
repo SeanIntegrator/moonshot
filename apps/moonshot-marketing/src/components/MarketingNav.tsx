@@ -16,6 +16,7 @@ export function MarketingNav() {
         </a>
         <nav className="marketing-nav__links">
           <a href="#how-it-works">How it works</a>
+          <a href="#pricing">Pricing</a>
           <a href={getAdminLoginUrl()}>Sign in</a>
           <a href={getAdminSignupUrl()} className="btn btn-primary marketing-nav__cta">
             Start free
