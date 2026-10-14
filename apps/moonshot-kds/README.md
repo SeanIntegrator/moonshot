@@ -13,6 +13,8 @@ Kitchen display: **React + Vite + TypeScript** with **plain CSS** (no MUI).
 
 See `docs/architecture/kds-board.md` for the Flow row model, ticket kinds, and hybrid timer rules.
 
+Installable: `public/manifest.json` uses `display: fullscreen` (fallback `standalone`) plus Apple meta tags. `public/sw.js` registers a fetch handler so Chromium can fire the install prompt, and it does not cache — a stale shell must not keep a kitchen board alive after deploy. On iPad, Share → Add to Home Screen, then launch the icon.
+
 ## Local env
 
 - `VITE_API_URL` — API origin only (e.g. `http://localhost:3000`). Do **not** include `/api/v1`.

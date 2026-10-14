@@ -59,7 +59,7 @@ Domain ticket layout (shot columns, milk wraps, allergen hazard stripes) stays a
 
 ## iPad Add to Home Screen
 
-The KDS ships a Web App Manifest + Apple meta (`apple-mobile-web-app-capable`) so **Share → Add to Home Screen** launches fullscreen without a Safari URL bar. There is no service worker on KDS (iPad does not need one for A2HS). Pair with **Guided Access** for shift lockdown. See [architecture/kds-board.md](architecture/kds-board.md#ipad-install-clay--bean).
+The KDS ships a Web App Manifest (`display: fullscreen`, fallback `standalone`) + Apple meta (`apple-mobile-web-app-capable`) so **Share → Add to Home Screen** launches fullscreen without a Safari URL bar. `public/sw.js` exists only so Chromium fires the install prompt; it does not cache. Pair with **Guided Access** for shift lockdown. See [architecture/kds-board.md](architecture/kds-board.md#ipad-install-clay--bean).
 
 ## Adding components
 

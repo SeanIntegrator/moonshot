@@ -21,7 +21,7 @@ import { partitionModifierGroups } from '../lib/modifier-slider-groups.js';
 import { defaultSizeId, unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
-import { PAGE_CONTENT_MAX_WIDTH_PX } from '../theme/pageLayout.js';
+import { PAGE_CONTENT_MAX_WIDTH_PX, itemDetailDockClearance } from '../theme/pageLayout.js';
 
 function defaultModifiers(item: NormalisedMenuItem): OrderLineModifierSelectionInput[] {
   const out: OrderLineModifierSelectionInput[] = [];
@@ -171,7 +171,7 @@ export function ItemDetail() {
   }
 
   return (
-    <Box sx={{ pb: '84px' }}>
+    <Box sx={{ pb: itemDetailDockClearance() }}>
       <Box
         sx={{
           position: 'relative',

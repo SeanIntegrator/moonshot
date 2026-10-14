@@ -182,7 +182,7 @@ Sets `orders.pickup_time` and `orders.eta_mode = 'manual_override'`. FIFO recomp
 
 ## iPad install (Clay & Bean)
 
-Installable SPA: `public/manifest.json` (`display: standalone`) + Apple meta tags + icons. No service worker.
+Installable SPA: `public/manifest.json` (`display: fullscreen`, fallback `standalone`) + Apple meta tags + icons. `public/sw.js` is a no-cache fetch handler so Chromium can show the install prompt. It does not precache the board.
 
 1. Open the KDS HTTPS URL in **Safari** on the iPad.
 2. Share → **Add to Home Screen**.

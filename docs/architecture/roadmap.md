@@ -103,9 +103,10 @@ An owner can pick Minimal / Organic / Lively, set brand colour + heading font, p
 
 **Status: done (August 2026).**
 
-- Full `manifest.json` with 192/512 icons (incl. maskable) + `apple-touch-icon`.
-- Apple / theme-color meta in `index.html` (`apple-mobile-web-app-capable`, etc.).
-- `vite-plugin-pwa` with `registerType: 'autoUpdate'`; `/runtime-config.js` is NetworkOnly and excluded from precache.
+- Full `manifest.json` with 192/512 icons (incl. maskable) + `apple-touch-icon`. `display` is `fullscreen`, with `display_override` falling back to `standalone`.
+- Apple / theme-color meta in `index.html` (`apple-mobile-web-app-capable`, `viewport-fit=cover`).
+- `vite-plugin-pwa` with `registerType: 'autoUpdate'` and `devOptions.enabled` so local `pnpm dev` can fire `beforeinstallprompt`. `/runtime-config.js` is NetworkOnly and excluded from precache.
+- In-app Install bar (`InstallPrompt`) calls the browser prompt. iOS still uses Share → Add to Home Screen.
 
 ### Done when (met)
 
@@ -131,8 +132,8 @@ A customer can Add to Home Screen on iOS and Android and launch fullscreen witho
 
 ### Install — done (August 2026)
 
-- Web App Manifest (`display: standalone`) + icons + Apple meta tags on the KDS SPA.
-- **No service worker** on KDS — iPad Add-to-Home-Screen does not need one; avoids SW cache risk on the kitchen device.
+- Web App Manifest (`display: fullscreen`, fallback `standalone`) + icons + Apple meta tags on the KDS SPA.
+- `public/sw.js` registers an empty fetch handler so Chromium fires `beforeinstallprompt`. It does not cache, so a deploy cannot leave a stale kitchen shell in control.
 - Ops: after Add to Home Screen, use **Guided Access** for shift lockdown. Capacitor stays parked.
 - Safari tabs still show the URL bar by design — only the home-screen icon launches fullscreen.
 

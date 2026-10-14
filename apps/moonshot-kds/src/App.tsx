@@ -5,6 +5,7 @@ import { useGracedStatus } from '@moonshot/web-runtime/react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppHeader } from '@/components/AppHeader';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { LoginScreen } from '@/components/LoginScreen';
 import { FlowBoard } from './board/FlowBoard.js';
 import { RecentOrdersDialog } from './board/recent-orders/RecentOrdersDialog.js';
@@ -123,19 +124,22 @@ export function App() {
 
   if (!session) {
     return (
-      <LoginScreen
-        form={loginForm}
-        error={loginError}
-        onChange={setLoginForm}
-        onSubmit={handleLogin}
-      />
+      <>
+        <InstallPrompt />
+        <LoginScreen
+          form={loginForm}
+          error={loginError}
+          onChange={setLoginForm}
+          onSubmit={handleLogin}
+        />
+      </>
     );
   }
 
   return (
     <TooltipProvider>
       <div className="min-h-full">
-        <div className="sticky top-0 z-50 border-b border-border bg-surface/95 px-5 pt-4 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/85">
+        <div className="kds-board-header z-50 border-b border-border bg-surface/95 px-5 pt-4 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/85">
           <AppHeader
             cafeName={session.cafeName}
             cafeSlug={session.cafeSlug}
@@ -182,6 +186,7 @@ export function App() {
           />
         ) : null}
       </div>
+      <InstallPrompt />
     </TooltipProvider>
   );
 }

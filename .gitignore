@@ -16,6 +16,9 @@ npm-debug.log*
 coverage
 .nyc_output
 
+# vite-plugin-pwa dev service worker output
+dev-dist
+
 # Keys & downloaded service accounts (never commit)
 *.pem
 *.p12

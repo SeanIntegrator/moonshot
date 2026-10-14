@@ -164,6 +164,34 @@
     height: 100%;
     margin: 0;
   }
+  /* Fullscreen home-screen launch draws under the status bar and home indicator. */
+  body {
+    padding:
+      env(safe-area-inset-top, 0px)
+      env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px)
+      env(safe-area-inset-left, 0px);
+  }
+}
+
+/* Sticky header pins to the viewport, which ignores body safe-area padding.
+   Keep controls below the status bar and paint the strip above so tickets
+   don't show through it while the board scrolls. */
+.kds-board-header {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+}
+
+.kds-board-header::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: inherit;
+  backdrop-filter: inherit;
+  -webkit-backdrop-filter: inherit;
 }
 
 /* Hazard stripe for allergen chips — kept as CSS (repeating gradient border). */

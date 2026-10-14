@@ -14,6 +14,10 @@
       "types": "./dist/realtime/react.d.ts",
       "import": "./dist/realtime/react.js"
     },
+    "./pwa": {
+      "types": "./dist/pwa/use-install-prompt.d.ts",
+      "import": "./dist/pwa/use-install-prompt.js"
+    },
     "./write-runtime-config": "./scripts/write-runtime-config.mjs"
   },
   "scripts": {
