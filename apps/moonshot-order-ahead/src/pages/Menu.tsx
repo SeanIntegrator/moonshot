@@ -15,7 +15,7 @@ import { unitPriceForItem } from '../lib/menu-price-utils.js';
 import { useCafeFeatures } from '../hooks/useCafeFeatures.js';
 import { useCafeOpenStatus } from '../hooks/useCafeOpenStatus.js';
 import { usePickupEstimate } from '../hooks/usePickupEstimate.js';
-import { pageContentWidthSx, toastBottomPx } from '../theme/pageLayout.js';
+import { menuBottomClearance, pageContentWidthSx, toastBottomPx } from '../theme/pageLayout.js';
 
 function menuGridTemplateColumns(menuGrid: MenuGridLayout): string {
   switch (menuGrid) {
@@ -98,7 +98,7 @@ export function Menu() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
+    <Container maxWidth="sm" sx={{ py: 2, pb: menuBottomClearance() }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, gap: 1 }}>
         <Typography
           variant="h5"

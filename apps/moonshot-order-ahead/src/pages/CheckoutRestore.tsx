@@ -6,6 +6,7 @@ import { useCafePath } from '../hooks/useCafePath.js';
 import { restoreOrderFromCheckoutSession } from '../api/orders-api.js';
 import { rememberOrderTracking } from '../lib/order-tracking-storage.js';
 import { useCart } from '../providers/CartProvider.js';
+import { chromelessPageSx } from '../theme/pageLayout.js';
 
 /**
  * StrictMode remounts share one in-flight promise per sessionId.
@@ -59,7 +60,7 @@ export function CheckoutRestore() {
     return (
       <Box
         sx={{
-          minHeight: '100dvh',
+          ...chromelessPageSx,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -78,7 +79,7 @@ export function CheckoutRestore() {
   return (
     <Box
       sx={{
-        minHeight: '100dvh',
+        ...chromelessPageSx,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

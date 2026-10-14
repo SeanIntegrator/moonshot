@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useCafePath } from '../hooks/useCafePath.js';
 import { readOrderTracking } from '../lib/order-tracking-storage.js';
 import { firstName, formatTime } from '../lib/format.js';
+import { chromelessPageSx } from '../theme/pageLayout.js';
 
 type ConfirmedLocationState = {
   order?: NormalisedOrder;
@@ -60,7 +61,7 @@ export function OrderConfirmed() {
   return (
     <Box
       sx={{
-        minHeight: '100dvh',
+        ...chromelessPageSx,
         display: 'flex',
         flexDirection: 'column',
       }}

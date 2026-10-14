@@ -22,18 +22,57 @@ export const FLOATING_CART_BAR_HEIGHT_PX = 48;
 const TOAST_GAP_PX = 16;
 const TOAST_CART_EXTRA_GAP_PX = 20;
 
-/** Snackbar `bottom` so toasts clear the nav (+ optional cart bar). */
-/** Clears the fixed nav, and the home indicator when launched fullscreen. */
-export function navClearance(): string {
-  return `calc(${BOTTOM_NAV_HEIGHT_PX}px + env(safe-area-inset-bottom, 0px))`;
+/** Fixed chrome height plus the home indicator in a fullscreen install. */
+function withSafeAreaBottom(px: number): string {
+  return `calc(${px}px + env(safe-area-inset-bottom, 0px))`;
 }
 
+/** Clears the fixed nav, and the home indicator when launched fullscreen. */
+export function navClearance(): string {
+  return withSafeAreaBottom(BOTTOM_NAV_HEIGHT_PX);
+}
+
+/** Snackbar `bottom` so toasts clear the nav (+ optional cart bar). */
 export function toastBottomPx(cartBarVisible: boolean): string {
   const px = cartBarVisible
     ? BOTTOM_NAV_HEIGHT_PX + FLOATING_CART_BAR_HEIGHT_PX + TOAST_CART_EXTRA_GAP_PX
     : BOTTOM_NAV_HEIGHT_PX + TOAST_GAP_PX;
-  return `calc(${px}px + env(safe-area-inset-bottom, 0px))`;
+  return withSafeAreaBottom(px);
 }
+
+/**
+ * Item-detail add-to-cart dock before the home-indicator inset.
+ * Matches FixedBottomBar with its controls; the bar adds the inset itself.
+ */
+const ITEM_DETAIL_DOCK_PX = 84;
+
+/** Scroll inset so the last modifiers clear the add-to-cart dock. */
+export function itemDetailDockClearance(): string {
+  return withSafeAreaBottom(ITEM_DETAIL_DOCK_PX);
+}
+
+/**
+ * Menu list inset before the home indicator. MUI `pb: 14` (112px) cleared the
+ * 56px nav plus the floating cart strip; the strip now sits above a taller nav.
+ */
+const MENU_LIST_BOTTOM_PX = 112;
+
+/** Scroll inset so the last menu cards clear the nav and cart strip. */
+export function menuBottomClearance(): string {
+  return withSafeAreaBottom(MENU_LIST_BOTTOM_PX);
+}
+
+/**
+ * Routes that hide the bottom nav (checkout, restore, order confirmed).
+ * Body padding already consumes the top safe area inside a border-box `height: 100%`,
+ * so a raw `100dvh` column overflows the screen. Bottom padding keeps the last
+ * action above the home indicator — there is no docked bar to do it.
+ */
+export const chromelessPageSx = {
+  minHeight: 'calc(100dvh - env(safe-area-inset-top, 0px))',
+  pb: 'env(safe-area-inset-bottom, 0px)',
+  boxSizing: 'border-box',
+} as const;
 
 const constraintMq = `@media (min-width:${PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX}px)`;
 

@@ -139,7 +139,7 @@ export function App() {
   return (
     <TooltipProvider>
       <div className="min-h-full">
-        <div className="sticky top-0 z-50 border-b border-border bg-surface/95 px-5 pt-4 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/85">
+        <div className="kds-board-header z-50 border-b border-border bg-surface/95 px-5 pt-4 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/85">
           <AppHeader
             cafeName={session.cafeName}
             cafeSlug={session.cafeSlug}

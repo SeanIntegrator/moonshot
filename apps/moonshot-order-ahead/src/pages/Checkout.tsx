@@ -33,6 +33,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useLoyalty } from '../hooks/useLoyalty.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { formatMoney, formatTime } from '../lib/format.js';
+import { chromelessPageSx } from '../theme/pageLayout.js';
 import { clampPickupDelayMinutes, pickupDelaysForCafe } from '../lib/pickup-delay-options.js';
 
 const ORDER_TYPE: OrderType = 'takeaway';
@@ -200,7 +201,7 @@ export function Checkout() {
     return (
       <Box
         sx={{
-          minHeight: '100dvh',
+          ...chromelessPageSx,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -232,7 +233,7 @@ export function Checkout() {
   };
 
   return (
-    <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ ...chromelessPageSx, display: 'flex', flexDirection: 'column' }}>
       <Container
         maxWidth="sm"
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', py: 2 }}

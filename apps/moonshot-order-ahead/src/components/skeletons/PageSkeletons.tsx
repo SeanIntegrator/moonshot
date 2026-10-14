@@ -1,5 +1,10 @@
 import { Box, Container, Skeleton } from '@mui/material';
-import { pageContentWidthSx } from '../../theme/pageLayout.js';
+import {
+  chromelessPageSx,
+  itemDetailDockClearance,
+  menuBottomClearance,
+  pageContentWidthSx,
+} from '../../theme/pageLayout.js';
 import { sxRadius } from '../../theme/radii.js';
 import { SurfaceCard } from '../ui/SurfaceCard.js';
 
@@ -17,7 +22,7 @@ function MenuCardSkeleton() {
 
 export function MenuPageSkeleton() {
   return (
-    <Container maxWidth="sm" sx={{ py: 2, pb: 14 }}>
+    <Container maxWidth="sm" sx={{ py: 2, pb: menuBottomClearance() }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, gap: 1 }}>
         <Skeleton variant="text" width={80} height={36} />
         <Skeleton variant="rounded" width={120} height={32} sx={{ borderRadius: sxRadius('pill') }} />
@@ -73,7 +78,7 @@ export function HomePageSkeleton() {
 
 export function ItemDetailSkeleton() {
   return (
-    <Box sx={{ pb: 14, minHeight: '100dvh' }}>
+    <Box sx={{ pb: itemDetailDockClearance(), minHeight: '100dvh' }}>
       <Skeleton variant="rectangular" sx={{ height: { xs: 220, sm: '25vh' } }} />
       <Container maxWidth="sm" sx={{ py: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
@@ -109,7 +114,8 @@ export function ItemDetailSkeleton() {
           left: 0,
           right: 0,
           px: 2,
-          py: 1.5,
+          pt: 1.5,
+          pb: (theme) => `calc(${theme.spacing(1.5)} + env(safe-area-inset-bottom, 0px))`,
           borderTop: 1,
           borderColor: 'divider',
           display: 'flex',
@@ -141,7 +147,7 @@ function CheckoutLineSkeleton() {
 
 export function CheckoutPageSkeleton() {
   return (
-    <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ ...chromelessPageSx, display: 'flex', flexDirection: 'column' }}>
       <Container maxWidth="sm" sx={{ flex: 1, py: 2, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ flex: 1 }}>
           <Skeleton variant="text" width={120} height={32} sx={{ mb: 2 }} />

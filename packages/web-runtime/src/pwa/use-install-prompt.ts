@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 
 const DISMISS_KEY = 'moonshot-pwa-install-dismissed';
 
@@ -35,41 +35,77 @@ export function registerInstallServiceWorker(scriptUrl = '/sw.js'): void {
   else window.addEventListener('load', register, { once: true });
 }
 
+/**
+ * Chromium fires `beforeinstallprompt` once per page load. KDS unmounts the
+ * login tree and mounts the board without a navigation, so the deferred event
+ * has to outlive the component that first received it.
+ */
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
+const promptListeners = new Set<() => void>();
+let promptListenerAttached = false;
+
+function emitPrompt(): void {
+  for (const listener of promptListeners) listener();
+}
+
+function subscribePrompt(listener: () => void): () => void {
+  promptListeners.add(listener);
+  return () => {
+    promptListeners.delete(listener);
+  };
+}
+
+function getDeferredPrompt(): BeforeInstallPromptEvent | null {
+  return deferredPrompt;
+}
+
+function getServerDeferredPrompt(): null {
+  return null;
+}
+
+function attachInstallPromptListener(): void {
+  if (promptListenerAttached || typeof window === 'undefined') return;
+  promptListenerAttached = true;
+  if (isInstalledLaunch()) return;
+  window.addEventListener('beforeinstallprompt', (event) => {
+    // Keep the event so a click can open the browser install dialog.
+    // Without preventDefault, Chrome consumes it and often shows nothing.
+    event.preventDefault();
+    deferredPrompt = event as BeforeInstallPromptEvent;
+    emitPrompt();
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    emitPrompt();
+  });
+}
+
+attachInstallPromptListener();
+
 export function useInstallPrompt(): {
   canInstall: boolean;
   install: () => Promise<InstallOutcome>;
   dismiss: () => void;
 } {
-  const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  const promptEvent = useSyncExternalStore(
+    subscribePrompt,
+    getDeferredPrompt,
+    getServerDeferredPrompt
+  );
   const [dismissed, setDismissed] = useState(() => {
     if (typeof sessionStorage === 'undefined') return false;
     return sessionStorage.getItem(DISMISS_KEY) === '1';
   });
 
-  useEffect(() => {
-    if (isInstalledLaunch()) return;
-    const onPrompt = (event: Event): void => {
-      // Keep the event so a click can open the browser install dialog.
-      // Without preventDefault, Chrome consumes it and often shows nothing.
-      event.preventDefault();
-      setPromptEvent(event as BeforeInstallPromptEvent);
-    };
-    const onInstalled = (): void => setPromptEvent(null);
-    window.addEventListener('beforeinstallprompt', onPrompt);
-    window.addEventListener('appinstalled', onInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt);
-      window.removeEventListener('appinstalled', onInstalled);
-    };
-  }, []);
-
   const install = useCallback(async (): Promise<InstallOutcome> => {
-    if (!promptEvent) return 'unavailable';
-    await promptEvent.prompt();
-    const choice = await promptEvent.userChoice;
-    setPromptEvent(null);
+    const event = deferredPrompt;
+    if (!event) return 'unavailable';
+    await event.prompt();
+    const choice = await event.userChoice;
+    deferredPrompt = null;
+    emitPrompt();
     return choice.outcome;
-  }, [promptEvent]);
+  }, []);
 
   const dismiss = useCallback((): void => {
     sessionStorage.setItem(DISMISS_KEY, '1');
