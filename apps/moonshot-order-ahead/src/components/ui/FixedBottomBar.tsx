@@ -18,7 +18,7 @@ export const FixedBottomBar = styled(Box)(({ theme }) => ({
   paddingLeft: theme.spacing(2),
   paddingRight: theme.spacing(2),
   paddingTop: theme.spacing(1.5),
-  paddingBottom: theme.spacing(1.5),
+  paddingBottom: `calc(${theme.spacing(1.5)} + env(safe-area-inset-bottom, 0px))`,
   backgroundColor: theme.palette.background.paper,
   borderTop: `1px solid ${theme.palette.divider}`,
   display: 'flex',

@@ -6,6 +6,7 @@ import { Badge, BottomNavigation, BottomNavigationAction, Box, Paper } from '@mu
 import { useTheme } from '@mui/material/styles';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleOneTap } from './components/auth/GoogleOneTap.js';
+import { InstallPrompt } from './components/InstallPrompt.js';
 import { RequireAuth } from './components/RequireAuth.js';
 import { RequireFeature } from './components/RequireFeature.js';
 import { RequireNoActiveOrder } from './components/RequireNoActiveOrder.js';
@@ -75,6 +76,8 @@ export function App() {
         borderBottom: topBar ? 1 : 0,
         borderColor: 'divider',
         borderRadius: 0,
+        pt: topBar ? 'env(safe-area-inset-top, 0px)' : 0,
+        pb: topBar ? 0 : 'env(safe-area-inset-bottom, 0px)',
         ...pageContentWidthSx,
       }}
     >
@@ -128,6 +131,7 @@ export function App() {
   return (
     <Box sx={pageColumnShellSx}>
       <GoogleOneTap />
+      <InstallPrompt />
       {topBar && nav}
       {/* Tab bar stays outside so only page content cross-fades */}
       <Box sx={{ pt: topBar && !hideNav ? 7 : 0 }}>

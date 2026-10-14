@@ -31,7 +31,7 @@ Concise changelog of what is **shipped now**. For launch workstreams see [archit
 
 ### KDS Flow board
 
-- **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — installable SPA (`display: standalone` + Apple meta; no SW).
+- **Tailwind v4 + shadcn** Flow UI (drinks/food rows, chips, timers, allergens) — installable SPA (`display: fullscreen` + Apple meta; no-cache SW for the Chromium install prompt).
 - Status advance (`preparing` / `ready`), ETA stretch, **`GET /kds/config`**.
 - **Recent orders** (`GET /kds/orders/recent`) + **recall** (`POST …/recall`, `…/recall-last`).
 - Line-level free-text notes render on drink/food rows (plain off-white, right-aligned with allergens); **order-level** notes also show on the live `OrderCard`.

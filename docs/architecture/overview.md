@@ -7,7 +7,7 @@ Stable rules that should survive refactors.
 Monorepo layout:
 
 - **`@moonshot/api`** — Express 5 HTTP API + Postgres + Socket.io on the **same HTTP server** (namespaces `/kds`, `/customer`, `/admin`)
-- **`@moonshot/order-ahead`** — Customer order-ahead web app (Vite/React/MUI); café-themed, multi-tenant via `/:cafeSlug/*` (not an installable PWA today)
+- **`@moonshot/order-ahead`** — Customer order-ahead web app (Vite/React/MUI); café-themed, multi-tenant via `/:cafeSlug/*`; installable (`display: fullscreen`)
 - **`@moonshot/kds`** — Kitchen display: Flow board UI (Vite/React, **Tailwind v4 + shadcn**), login, open/recent orders, status/ETA/complete/recall
 - **`@moonshot/admin`** — Self-service café-owner console (signup/onboarding, settings, menu, Stripe Connect, Square OAuth)
 - **`@moonshot/marketing`** — Public marketing site and signup entry (separate app; not on the order/KDS path)

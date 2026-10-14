@@ -164,6 +164,14 @@
     height: 100%;
     margin: 0;
   }
+  /* Fullscreen home-screen launch draws under the status bar and home indicator. */
+  body {
+    padding:
+      env(safe-area-inset-top, 0px)
+      env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px)
+      env(safe-area-inset-left, 0px);
+  }
 }
 
 /* Hazard stripe for allergen chips — kept as CSS (repeating gradient border). */

@@ -33,7 +33,7 @@ import { MenuItemImage } from '../components/MenuItemImage.js';
 import { useCart } from '../providers/CartProvider.js';
 import { useMenu } from '../providers/MenuProvider.js';
 import { menuItemListPriceMinor } from '../lib/menu-price-utils.js';
-import { BOTTOM_NAV_HEIGHT_PX } from '../theme/pageLayout.js';
+import { navClearance } from '../theme/pageLayout.js';
 
 export function Home() {
   const theme = useTheme();
@@ -110,7 +110,7 @@ export function Home() {
         py: 0,
         pb: 10,
         px: 0,
-        minHeight: `calc(100dvh - ${BOTTOM_NAV_HEIGHT_PX}px)`,
+        minHeight: `calc(100dvh - ${navClearance()})`,
         display: 'flex',
         flexDirection: 'column',
       }}

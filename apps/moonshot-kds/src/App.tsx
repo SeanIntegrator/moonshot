@@ -5,6 +5,7 @@ import { useGracedStatus } from '@moonshot/web-runtime/react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppHeader } from '@/components/AppHeader';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { LoginScreen } from '@/components/LoginScreen';
 import { FlowBoard } from './board/FlowBoard.js';
 import { RecentOrdersDialog } from './board/recent-orders/RecentOrdersDialog.js';
@@ -123,12 +124,15 @@ export function App() {
 
   if (!session) {
     return (
-      <LoginScreen
-        form={loginForm}
-        error={loginError}
-        onChange={setLoginForm}
-        onSubmit={handleLogin}
-      />
+      <>
+        <InstallPrompt />
+        <LoginScreen
+          form={loginForm}
+          error={loginError}
+          onChange={setLoginForm}
+          onSubmit={handleLogin}
+        />
+      </>
     );
   }
 
@@ -182,6 +186,7 @@ export function App() {
           />
         ) : null}
       </div>
+      <InstallPrompt />
     </TooltipProvider>
   );
 }

@@ -23,10 +23,16 @@ const TOAST_GAP_PX = 16;
 const TOAST_CART_EXTRA_GAP_PX = 20;
 
 /** Snackbar `bottom` so toasts clear the nav (+ optional cart bar). */
-export function toastBottomPx(cartBarVisible: boolean): number {
-  if (!cartBarVisible) return BOTTOM_NAV_HEIGHT_PX + TOAST_GAP_PX;
-  // Extra gap so the toast clears the floating go-to-basket strip.
-  return BOTTOM_NAV_HEIGHT_PX + FLOATING_CART_BAR_HEIGHT_PX + TOAST_CART_EXTRA_GAP_PX;
+/** Clears the fixed nav, and the home indicator when launched fullscreen. */
+export function navClearance(): string {
+  return `calc(${BOTTOM_NAV_HEIGHT_PX}px + env(safe-area-inset-bottom, 0px))`;
+}
+
+export function toastBottomPx(cartBarVisible: boolean): string {
+  const px = cartBarVisible
+    ? BOTTOM_NAV_HEIGHT_PX + FLOATING_CART_BAR_HEIGHT_PX + TOAST_CART_EXTRA_GAP_PX
+    : BOTTOM_NAV_HEIGHT_PX + TOAST_GAP_PX;
+  return `calc(${px}px + env(safe-area-inset-bottom, 0px))`;
 }
 
 const constraintMq = `@media (min-width:${PAGE_CONTENT_CONSTRAINT_BREAKPOINT_PX}px)`;

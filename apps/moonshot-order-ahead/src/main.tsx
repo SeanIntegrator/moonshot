@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { registerInstallServiceWorker } from '@moonshot/web-runtime/pwa';
 import { getCafeSlug } from './lib/api.js';
 import { CafeProvider } from './config/CafeProvider.js';
 import { AuthProvider } from './hooks/useAuth.js';
@@ -14,6 +15,10 @@ import { App } from './App.js';
 import { AppErrorBoundary } from './components/AppErrorBoundary.js';
 import { useCafeSlugFromRoute } from './hooks/useCafePath.js';
 import './index.css';
+
+// vite-plugin-pwa's dev server does not inject its register <script> under Vite 8,
+// so Chromium never sees a fetch handler and withholds beforeinstallprompt.
+registerInstallServiceWorker(import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js');
 
 function CafeAppTree() {
   const cafeSlug = useCafeSlugFromRoute();

@@ -16,6 +16,11 @@ export default defineConfig({
       // Manifest lives in public/manifest.json so Apple + Android share one source.
       manifest: false,
       includeAssets: ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
+      // Dev (`pnpm dev`) does not emit a worker unless this is on, so Chromium
+      // never fires `beforeinstallprompt` against the local server.
+      devOptions: {
+        enabled: true,
+      },
       workbox: {
         navigateFallback: '/index.html',
         // runtime-config.js is rewritten at container start — never pin a stale API URL.
