@@ -9,7 +9,10 @@ import { MenuReportCharts } from './MenuReportCharts.js';
 interface MenuReportViewProps {
   analysis: MenuEngineeringAnalysisResponse;
   cafeName: string | null;
+  /** Region the current `analysis` was computed for. Labels and charts follow this. */
   regionTier: MenuEngineeringRegionTier;
+  /** In-flight region switch. The select shows it; labels stay on `regionTier` until data arrives. */
+  pendingRegionTier?: MenuEngineeringRegionTier | null;
   onRegionTierChange: (tier: MenuEngineeringRegionTier) => void;
   onBackToConfirm: () => void;
   onStartOver: () => void;
@@ -25,6 +28,7 @@ export function MenuReportView({
   analysis,
   cafeName,
   regionTier,
+  pendingRegionTier = null,
   onRegionTierChange,
   onBackToConfirm,
   onStartOver,
@@ -64,7 +68,7 @@ export function MenuReportView({
           <select
             className="me-select"
             aria-label="Change UK benchmark region tier"
-            value={regionTier}
+            value={pendingRegionTier ?? regionTier}
             onChange={(e) =>
               onRegionTierChange(e.target.value as MenuEngineeringRegionTier)
             }

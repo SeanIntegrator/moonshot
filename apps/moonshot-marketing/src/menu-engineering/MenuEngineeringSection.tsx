@@ -16,6 +16,7 @@ import {
   type PreparedMenuPageImage,
   prepareSelectedMenuFiles,
 } from './prepare-menu-files.js';
+import { TurnstileWidget } from './TurnstileWidget.js';
 
 type Step = 'upload' | 'confirm' | 'report';
 
@@ -29,7 +30,13 @@ export function MenuEngineeringSection() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState<boolean>(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileEpoch, setTurnstileEpoch] = useState(0);
+  const [pendingReportRegion, setPendingReportRegion] =
+    useState<MenuEngineeringRegionTier | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const analysisRequestSeq = useRef(0);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() ?? '';
 
   const handleFilesSelected = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
@@ -55,6 +62,10 @@ export function MenuEngineeringSection() {
 
   const handleExtractUploadedPages = async () => {
     if (preparedPages.length === 0) return;
+    if (turnstileSiteKey && !turnstileToken) {
+      setErrorMessage('Complete the bot check before uploading your menu.');
+      return;
+    }
     setErrorMessage(null);
     setIsBusy(true);
     setStatusMessage('Extracting items, prices & modifiers via vision adapter…');
@@ -62,7 +73,7 @@ export function MenuEngineeringSection() {
     try {
       const result = await uploadMenuImagesForExtraction(
         preparedPages.map((p) => p.file),
-        { allowSampleFallback: true },
+        turnstileToken ? { turnstileToken } : undefined,
       );
       const menuWithCafe = cafeName.trim()
         ? { ...result.menu, cafeNameGuess: cafeName.trim() }
@@ -77,6 +88,11 @@ export function MenuEngineeringSection() {
       setStatusMessage(null);
     } finally {
       setIsBusy(false);
+      // Turnstile tokens are single-use; force a fresh widget for the next upload.
+      if (turnstileSiteKey) {
+        setTurnstileToken(null);
+        setTurnstileEpoch((n) => n + 1);
+      }
     }
   };
 
@@ -105,6 +121,7 @@ export function MenuEngineeringSection() {
     menuToAnalyse: ExtractedMenuPayload,
     tierToUse: MenuEngineeringRegionTier,
   ) => {
+    const requestId = ++analysisRequestSeq.current;
     setErrorMessage(null);
     setIsBusy(true);
     setStatusMessage('Running deterministic UK benchmark rules & generating report…');
@@ -114,27 +131,56 @@ export function MenuEngineeringSection() {
         regionTier: tierToUse,
         menu: menuToAnalyse,
       });
+      if (requestId !== analysisRequestSeq.current) return;
+      // Apply the region and its findings together so labels never lead the numbers.
+      setRegionTier(tierToUse);
+      setPendingReportRegion(null);
       setAnalysis(result);
       setStatusMessage(null);
       setStep('report');
     } catch (err) {
+      if (requestId !== analysisRequestSeq.current) return;
+      setPendingReportRegion(null);
       setErrorMessage(
         err instanceof Error ? err.message : 'Failed to run menu benchmark analysis.',
       );
       setStatusMessage(null);
     } finally {
-      setIsBusy(false);
+      if (requestId === analysisRequestSeq.current) {
+        setIsBusy(false);
+      }
     }
   };
 
   const handleRegionChangeInReport = (nextTier: MenuEngineeringRegionTier) => {
-    setRegionTier(nextTier);
-    if (extractedMenu) {
-      void runAnalysisForMenu(extractedMenu, nextTier);
+    if (!extractedMenu) return;
+    const committedRegion = analysis?.findings.regionTier ?? regionTier;
+    // Switching back to the region already on screen drops the in-flight request.
+    if (nextTier === committedRegion) {
+      analysisRequestSeq.current += 1;
+      setPendingReportRegion(null);
+      setRegionTier(committedRegion);
+      setIsBusy(false);
+      setStatusMessage(null);
+      setErrorMessage(null);
+      return;
     }
+    if (nextTier === pendingReportRegion) return;
+    setPendingReportRegion(nextTier);
+    void runAnalysisForMenu(extractedMenu, nextTier);
+  };
+
+  const handleBackToConfirm = () => {
+    analysisRequestSeq.current += 1;
+    setPendingReportRegion(null);
+    setIsBusy(false);
+    setStatusMessage(null);
+    setStep('confirm');
   };
 
   const handleReset = () => {
+    analysisRequestSeq.current += 1;
+    setPendingReportRegion(null);
     setPreparedPages((prev) => {
       for (const p of prev) URL.revokeObjectURL(p.previewUrl);
       return [];
@@ -143,6 +189,7 @@ export function MenuEngineeringSection() {
     setAnalysis(null);
     setErrorMessage(null);
     setStatusMessage(null);
+    setIsBusy(false);
     setStep('upload');
   };
 
@@ -277,6 +324,13 @@ export function MenuEngineeringSection() {
 
             {preparedPages.length > 0 ? (
               <div className="me-previews">
+                {turnstileSiteKey ? (
+                  <TurnstileWidget
+                    siteKey={turnstileSiteKey}
+                    resetKey={turnstileEpoch}
+                    onToken={setTurnstileToken}
+                  />
+                ) : null}
                 <div className="me-previews__head">
                   <strong>
                     Prepared {preparedPages.length} menu page
@@ -285,7 +339,7 @@ export function MenuEngineeringSection() {
                   <button
                     type="button"
                     className="btn btn-primary"
-                    disabled={isBusy}
+                    disabled={isBusy || (turnstileSiteKey.length > 0 && !turnstileToken)}
                     onClick={() => void handleExtractUploadedPages()}
                   >
                     {isBusy ? 'Extracting…' : 'Extract items & continue to Step 2 →'}
@@ -326,9 +380,10 @@ export function MenuEngineeringSection() {
           <MenuReportView
             analysis={analysis}
             cafeName={extractedMenu?.cafeNameGuess ?? (cafeName.trim() || null)}
-            regionTier={regionTier}
+            regionTier={analysis.findings.regionTier}
+            pendingRegionTier={pendingReportRegion}
             onRegionTierChange={handleRegionChangeInReport}
-            onBackToConfirm={() => setStep('confirm')}
+            onBackToConfirm={handleBackToConfirm}
             onStartOver={handleReset}
           />
         ) : null}
