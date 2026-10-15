@@ -28,6 +28,7 @@ import { internalPosRouter } from './routes/internal-pos.js';
 import { internalOrdersRouter } from './routes/internal-orders.js';
 import { stripeWebhookRouter } from './routes/webhooks-stripe.js';
 import { squareWebhookRouter } from './routes/webhooks-square.js';
+import { menuEngineeringRouter } from './routes/menu-engineering.js';
 
 export type MoonshotHttpPack = {
   app: express.Application;
@@ -66,7 +67,13 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
     cors({
       origin: corsOrigin,
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Cafe-Slug', 'X-Cron-Secret'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Cafe-Slug',
+        'X-Cron-Secret',
+        'X-Turnstile-Token',
+      ],
     }),
   );
   app.use(requestLogger);
@@ -111,6 +118,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   app.use(`${API_VERSION_PREFIX}/loyalty`, loyaltyRouter);
   app.use(`${API_VERSION_PREFIX}/feedback`, feedbackRouter);
   app.use(`${API_VERSION_PREFIX}/kds`, kdsRouter);
+  app.use(`${API_VERSION_PREFIX}/menu-engineering`, menuEngineeringRouter);
   app.use(`${API_VERSION_PREFIX}/internal/pos`, internalPosRouter);
   app.use(`${API_VERSION_PREFIX}/internal/orders`, internalOrdersRouter);
 
