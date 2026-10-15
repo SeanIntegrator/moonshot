@@ -37,6 +37,8 @@ export type AppConfig = {
   orderAheadSuccessUrl: string | undefined;
   orderAheadCancelUrl: string | undefined;
   posTokenEncryptionKey: string | undefined;
+  /** Menu engineering (isolated opt-in prototype). Server-side only — never exposed to clients. */
+  anthropicApiKey: string | undefined;
 };
 
 function trimOrUndefined(value: string | undefined): string | undefined {
@@ -96,6 +98,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     orderAheadSuccessUrl: trimOrUndefined(env.ORDER_AHEAD_SUCCESS_URL),
     orderAheadCancelUrl: trimOrUndefined(env.ORDER_AHEAD_CANCEL_URL),
     posTokenEncryptionKey: trimOrUndefined(env.POS_TOKEN_ENCRYPTION_KEY),
+    anthropicApiKey: trimOrUndefined(env.ANTHROPIC_API_KEY),
   };
 }
 

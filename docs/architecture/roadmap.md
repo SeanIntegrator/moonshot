@@ -190,7 +190,12 @@ C&B is on v2 only with OAuth Square, no duplicate POS events, and one clean live
 | Admin invites, audit trail, orders/analytics views | Beyond branding shell |
 | Profile prefs; pickup reschedule | Order-ahead niceties |
 | Capacitor / native KDS wrapper | Only if standalone PWA + Guided Access prove insufficient |
-| Menu engineering report tool | Separate opt-in product |
+
+### In progress — isolated prototype
+
+| Item | Notes |
+|------|--------|
+| Menu engineering report tool | Separate opt-in product. Free lead-magnet prototype in flight (`apps/moonshot-api/src/lib/menu-engineering/`, `apps/moonshot-marketing` surface). Isolated module — no writes to existing Moonshot tables; stateless for the free tier. Not on the Clay & Bean launch path. |
 
 ---
 

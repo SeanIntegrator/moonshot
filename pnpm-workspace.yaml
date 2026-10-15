@@ -7,10 +7,12 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - sharp
+  - "@napi-rs/canvas"
 
 allowBuilds:
   esbuild: true
   sharp: true
+  "@napi-rs/canvas": true
 
 # Default minimumReleaseAge (24h) blocks same-day caret bumps during upgrades.
 # Keep at 0 until the programme settles; raise to 1440 once lockfile is stable.
