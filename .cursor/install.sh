@@ -47,9 +47,9 @@ VITE_CAFE_SLUG=clay-and-bean
 ENV
 fi
 
-# The KDS and admin SPAs read VITE_API_URL to reach the API in dev (in prod a
-# runtime-config.js is written at container start instead).
-for app in moonshot-kds moonshot-admin; do
+# The KDS, admin, and marketing SPAs read VITE_API_URL to reach the API in dev
+# (in prod a runtime-config.js is written at container start instead).
+for app in moonshot-kds moonshot-admin moonshot-marketing; do
   app_env="apps/$app/.env"
   if [ ! -f "$app_env" ]; then
     echo "VITE_API_URL=http://localhost:3000" > "$app_env"
