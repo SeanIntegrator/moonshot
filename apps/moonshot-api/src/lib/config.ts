@@ -37,6 +37,9 @@ export type AppConfig = {
   orderAheadSuccessUrl: string | undefined;
   orderAheadCancelUrl: string | undefined;
   posTokenEncryptionKey: string | undefined;
+  geminiApiKey: string | undefined;
+  geminiModel: string;
+  turnstileSecretKey: string | undefined;
 };
 
 function trimOrUndefined(value: string | undefined): string | undefined {
@@ -96,6 +99,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     orderAheadSuccessUrl: trimOrUndefined(env.ORDER_AHEAD_SUCCESS_URL),
     orderAheadCancelUrl: trimOrUndefined(env.ORDER_AHEAD_CANCEL_URL),
     posTokenEncryptionKey: trimOrUndefined(env.POS_TOKEN_ENCRYPTION_KEY),
+    geminiApiKey: trimOrUndefined(env.GEMINI_API_KEY),
+    geminiModel: trimOrUndefined(env.GEMINI_MODEL) ?? 'gemini-2.5-flash',
+    turnstileSecretKey: trimOrUndefined(env.TURNSTILE_SECRET_KEY),
   };
 }
 

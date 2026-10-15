@@ -16,3 +16,4 @@ export * from './pos-contract.js';
 export * from './square-connect.js';
 export * from './sockets.js';
 export * from './stock.js';
+export * from './menu-engineering.js';

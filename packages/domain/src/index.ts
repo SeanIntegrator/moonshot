@@ -21,3 +21,4 @@ export * from './pos-catalog-filter.js';
 export * from './preserve-option-ids.js';
 export * from './stock-availability.js';
 export * from './themes/index.js';
+export * from './menu-engineering/index.js';
