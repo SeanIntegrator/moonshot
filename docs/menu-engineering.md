@@ -56,3 +56,9 @@ flowchart LR
 - `narrateFindings(findings: MenuEngineeringFindings): Promise<MenuEngineeringNarrative>`
 
 `GeminiMenuEngineeringAdapter` (`gemini-adapter.ts`) implements this contract using `@google/genai` (`GEMINI_API_KEY`, `GEMINI_MODEL` defaulting to `gemini-2.5-flash`). To swap to Anthropic Claude, OpenAI, or a self-hosted vision model in the future, implement `MenuEngineeringLlmAdapter` and update `resolveMenuEngineeringLlmAdapter()`.
+
+## 5. Production API origin
+
+The marketing SPA calls the API from the visitor's browser. `GEMINI_API_KEY` lives only on `moonshot-api`. The browser needs `VITE_API_URL` on `moonshot-marketing`, written to `/runtime-config.js` by `scripts/write-runtime-config.mjs` during `postbuild` and again on `pnpm start` / `pnpm preview`.
+
+Use the API origin only (`https://moonshotapi-production.up.railway.app`). Do not fall back to `http://localhost:3000` in the bundle — a phone then requests its own loopback and the UI shows "Failed to fetch". `CORS_ORIGINS` on the API must include the marketing origin (`https://moonshotmarketing-production.up.railway.app`).
