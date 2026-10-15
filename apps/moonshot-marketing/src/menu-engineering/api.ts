@@ -8,9 +8,27 @@ import type {
 } from '@moonshot/types';
 import { parseEnvelope, requireApiBaseUrl } from '@moonshot/web-runtime';
 
-/** Runtime `/runtime-config.js` wins; otherwise the Vite build-time API origin. */
+/**
+ * API origin only (no `/api/v1`). `/runtime-config.js` wins over the Vite
+ * build-time value. There is no localhost fallback: a phone visiting the
+ * marketing site would call itself and the UI would show "Failed to fetch".
+ */
 export function getMarketingApiBaseUrl(): string {
   return requireApiBaseUrl(import.meta.env.VITE_API_URL);
+}
+
+async function fetchMenuApi(path: string, init?: RequestInit): Promise<Response> {
+  const base = getMarketingApiBaseUrl();
+  try {
+    return await fetch(`${base}${path}`, init);
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new Error(
+        `Could not reach the menu API at ${base}. Set VITE_API_URL on the marketing service to the API origin (no /api/v1 suffix) and redeploy.`,
+      );
+    }
+    throw err;
+  }
 }
 
 async function unwrapEnvelope<T>(res: Response): Promise<T> {
@@ -25,19 +43,17 @@ export async function fetchSampleMenuExtraction(): Promise<{
   menu: ExtractedMenuPayload;
   entitlements: MenuEngineeringEntitlements;
 }> {
-  const base = getMarketingApiBaseUrl();
-  const res = await fetch(`${base}${API_VERSION_PREFIX}/menu-engineering/sample`);
+  const res = await fetchMenuApi(`${API_VERSION_PREFIX}/menu-engineering/sample`);
   return unwrapEnvelope(res);
 }
 
 export async function uploadMenuImagesForExtraction(
   files: readonly File[],
-  options?: { turnstileToken?: string; allowSampleFallback?: boolean }
+  options?: { turnstileToken?: string; allowSampleFallback?: boolean },
 ): Promise<{
   menu: ExtractedMenuPayload;
   entitlements: MenuEngineeringEntitlements;
 }> {
-  const base = getMarketingApiBaseUrl();
   const form = new FormData();
   for (const file of files) {
     form.append('images', file, file.name);
@@ -50,7 +66,7 @@ export async function uploadMenuImagesForExtraction(
   }
 
   const query = options?.allowSampleFallback ? '?fallback=sample' : '';
-  const res = await fetch(`${base}${API_VERSION_PREFIX}/menu-engineering/extract${query}`, {
+  const res = await fetchMenuApi(`${API_VERSION_PREFIX}/menu-engineering/extract${query}`, {
     method: 'POST',
     body: form,
     headers,
@@ -63,8 +79,7 @@ export async function runMenuEngineeringAnalysis(params: {
   regionTier: MenuEngineeringRegionTier;
   tier?: MenuEngineeringTier;
 }): Promise<MenuEngineeringAnalysisResponse> {
-  const base = getMarketingApiBaseUrl();
-  const res = await fetch(`${base}${API_VERSION_PREFIX}/menu-engineering/analyse`, {
+  const res = await fetchMenuApi(`${API_VERSION_PREFIX}/menu-engineering/analyse`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
