@@ -45,6 +45,9 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   const corsOrigin = createCorsOriginValidator(allowedOrigins, isProduction);
 
   const app = express();
+  // One trusted hop (Railway's proxy). Otherwise req.ip is the load balancer and
+  // every visitor shares the public menu-extract rate-limit bucket.
+  app.set('trust proxy', 1);
 
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
