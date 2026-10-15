@@ -17,7 +17,21 @@
  *    cafe menu). The route adds its own file-size cap before this is called.
  */
 
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+const require = createRequire(import.meta.url);
+const pdfjsRoot = path.dirname(require.resolve('pdfjs-dist/package.json'));
+
+/**
+ * pdfjs does not ship the base-14 substitutes inside the document. In Node it
+ * loads them (and non-Latin encodings) from these directories via fs.readFile.
+ * The path must end in a slash. Without the standard fonts, Helvetica, Times,
+ * and Courier — the faces most exported café menus use — paint as blank glyphs.
+ */
+const STANDARD_FONT_DATA_URL = `${path.join(pdfjsRoot, 'standard_fonts')}/`;
+const CMAP_URL = `${path.join(pdfjsRoot, 'cmaps')}/`;
 
 /**
  * The pdfjs type declarations expose `canvasFactory` as a plain `object` so
@@ -25,10 +39,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
  * `BaseCanvasFactory` class.
  */
 interface CanvasFactoryLike {
-  create: (
-    width: number,
-    height: number,
-  ) => { canvas: unknown; context: unknown };
+  create: (width: number, height: number) => { canvas: unknown; context: unknown };
   destroy: (ctx: { canvas: unknown; context: unknown }) => void;
 }
 
@@ -51,12 +62,18 @@ export interface RenderedPage {
 
 export async function renderPdfToImages(
   pdfBytes: Uint8Array,
-  options: { scale?: number; pageLimit?: number } = {},
+  options: { scale?: number; pageLimit?: number } = {}
 ): Promise<RenderedPage[]> {
   const scale = options.scale ?? DEFAULT_SCALE;
   const pageLimit = options.pageLimit ?? PDF_RENDER_PAGE_LIMIT;
 
-  const loadingTask = getDocument({ data: pdfBytes, disableFontFace: true });
+  const loadingTask = getDocument({
+    data: pdfBytes,
+    disableFontFace: true,
+    standardFontDataUrl: STANDARD_FONT_DATA_URL,
+    cMapUrl: CMAP_URL,
+    cMapPacked: true,
+  });
   let pdfDocument;
   try {
     pdfDocument = await loadingTask.promise;

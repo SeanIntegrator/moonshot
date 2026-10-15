@@ -25,6 +25,30 @@ interface SectionWithRows extends MenuSection {
 }
 
 const UNSECTIONED = '__unsectioned__';
+const UNCATEGORISED_LABEL = 'Uncategorised';
+
+/**
+ * Blank sections render as "Uncategorised". Store that label on the rows and
+ * as a real section, otherwise renaming the heading or changing its type
+ * never matches `row.section` and confirm() still submits unsectioned items.
+ */
+function withUncategorisedBucket(menu: ExtractedMenu): { rows: Row[]; sections: MenuSection[] } {
+  let hadBlank = false;
+  const rows: Row[] = menu.items.map((item, i) => {
+    const hasSection = Boolean(item.section?.trim());
+    if (!hasSection) hadBlank = true;
+    return {
+      ...item,
+      id: `item-${i}`,
+      section: hasSection ? item.section : UNCATEGORISED_LABEL,
+    };
+  });
+  const sections = menu.sections.map((section) => ({ ...section }));
+  if (hadBlank && !sections.some((section) => section.name === UNCATEGORISED_LABEL)) {
+    sections.push({ name: UNCATEGORISED_LABEL, kind: 'other' });
+  }
+  return { rows, sections };
+}
 
 /**
  * Keep the brief's intent in mind: this step exists SO THE OWNER CAN FIX
@@ -35,10 +59,10 @@ const UNSECTIONED = '__unsectioned__';
  * parent passes `initialMenu` once and reads back on `onConfirm`.
  */
 export function ConfirmTable({ initialMenu, pageCount, onBack, onConfirm }: Props) {
-  const [rows, setRows] = useState<Row[]>(() =>
-    initialMenu.items.map((item, i) => ({ ...item, id: `item-${i}` })),
+  const [rows, setRows] = useState<Row[]>(() => withUncategorisedBucket(initialMenu).rows);
+  const [sections, setSections] = useState<MenuSection[]>(
+    () => withUncategorisedBucket(initialMenu).sections
   );
-  const [sections, setSections] = useState<MenuSection[]>(() => [...initialMenu.sections]);
 
   const groups = useMemo<SectionWithRows[]>(() => {
     const bySection = new Map<string, Row[]>();
@@ -56,7 +80,7 @@ export function ConfirmTable({ initialMenu, pageCount, onBack, onConfirm }: Prop
     const seen = new Set(sections.map((s) => s.name));
     for (const [key, bucket] of bySection) {
       if (key === UNSECTIONED) {
-        result.push({ name: 'Uncategorised', kind: 'other', rows: bucket });
+        result.push({ name: UNCATEGORISED_LABEL, kind: 'other', rows: bucket });
         continue;
       }
       if (!seen.has(key)) {
@@ -75,14 +99,13 @@ export function ConfirmTable({ initialMenu, pageCount, onBack, onConfirm }: Prop
   }
 
   function addRow(sectionName: string) {
-    const trimmed = sectionName === 'Uncategorised' ? undefined : sectionName;
     setRows((prev) => [
       ...prev,
       {
         id: `item-new-${Date.now()}-${Math.random()}`,
         name: '',
         price: '',
-        section: trimmed,
+        section: sectionName,
       },
     ]);
   }
@@ -90,9 +113,7 @@ export function ConfirmTable({ initialMenu, pageCount, onBack, onConfirm }: Prop
   function renameSection(oldName: string, newName: string) {
     if (!newName.trim() || newName === oldName) return;
     setSections((prev) => prev.map((s) => (s.name === oldName ? { ...s, name: newName } : s)));
-    setRows((prev) =>
-      prev.map((r) => (r.section === oldName ? { ...r, section: newName } : r)),
-    );
+    setRows((prev) => prev.map((r) => (r.section === oldName ? { ...r, section: newName } : r)));
   }
 
   function changeSectionKind(sectionName: string, kind: MenuSectionKind) {
@@ -231,9 +252,10 @@ interface ItemRowProps {
 
 function ItemRow({ row, onUpdate, onRemove }: ItemRowProps) {
   const lowConfidence = typeof row.confidence === 'number' && row.confidence < 0.6;
-  const priceLabel = row.variants && row.variants.length > 0
-    ? row.variants.map((v) => `${v.label}: ${v.price}`).join(' · ')
-    : row.price ?? '';
+  const priceLabel =
+    row.variants && row.variants.length > 0
+      ? row.variants.map((v) => `${v.label}: ${v.price}`).join(' · ')
+      : (row.price ?? '');
 
   return (
     <div className="confirm__item">

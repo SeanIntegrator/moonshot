@@ -46,7 +46,7 @@ describe('extractMenu', () => {
   it('strips ```json fences before parsing', async () => {
     const jpeg = await tinyJpeg();
     const client = clientReturning(
-      '```json\n{"sections":[],"items":[{"name":"Latte","price":"3.80"}]}\n```',
+      '```json\n{"sections":[],"items":[{"name":"Latte","price":"3.80"}]}\n```'
     );
 
     const result = await extractMenu({ files: [{ buffer: jpeg }], client });
@@ -58,7 +58,7 @@ describe('extractMenu', () => {
     const client = clientReturning('Sorry, I cannot read this menu.');
 
     await expect(extractMenu({ files: [{ buffer: jpeg }], client })).rejects.toBeInstanceOf(
-      ExtractionError,
+      ExtractionError
     );
   });
 
@@ -67,7 +67,7 @@ describe('extractMenu', () => {
     const client = clientReturning(JSON.stringify({ sections: 'not-an-array', items: [] }));
 
     await expect(extractMenu({ files: [{ buffer: jpeg }], client })).rejects.toBeInstanceOf(
-      ExtractionError,
+      ExtractionError
     );
   });
 
@@ -80,7 +80,24 @@ describe('extractMenu', () => {
     const createMock = client.messages.create as unknown as ReturnType<typeof vi.fn>;
     expect(createMock).toHaveBeenCalledTimes(1);
     const [args] = createMock.mock.calls[0] as [
-      { messages: Array<{ role: string; content: Array<{ type: string; source?: { media_type: string } }> }> },
+      {
+        messages: Array<{
+          role: string;
+          content: Array<{ type: string; source?: { media_type: string } }>;
+        }>;
+        output_config?: {
+          format?: {
+            type?: string;
+            schema?: {
+              properties?: {
+                sections?: {
+                  items?: { required?: string[]; properties?: { kind?: { enum?: string[] } } };
+                };
+              };
+            };
+          };
+        };
+      },
     ];
     const content = args.messages[0]!.content;
     const imageBlocks = content.filter((b) => b.type === 'image');
@@ -88,5 +105,16 @@ describe('extractMenu', () => {
     expect(imageBlocks[0]?.source?.media_type).toBe('image/jpeg');
     // Images come before the trailing text instruction block.
     expect(content[content.length - 1]?.type).toBe('text');
+    const sectionSchema = args.output_config?.format?.schema?.properties?.sections?.items;
+    expect(args.output_config?.format?.type).toBe('json_schema');
+    expect(sectionSchema?.required).toContain('kind');
+    expect(sectionSchema?.properties?.kind?.enum).toEqual([
+      'food',
+      'drinks',
+      'specials',
+      'kids',
+      'evening',
+      'other',
+    ]);
   });
 });

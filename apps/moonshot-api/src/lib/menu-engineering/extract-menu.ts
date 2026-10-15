@@ -14,6 +14,7 @@
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
 import { ExtractedMenuSchema, type ExtractedMenu } from './extraction/schema.js';
 import { EXTRACTION_SYSTEM_PROMPT } from './extraction/prompt.js';
 import { getAnthropicClient, type AnthropicLike } from './extraction/anthropic-client.js';
@@ -28,10 +29,27 @@ import { prepareImagesForExtraction, type IncomingFile } from './prepare-input.j
 const EXTRACTION_MODEL = 'claude-opus-5-5';
 const MAX_TOKENS = 16_000;
 
+/**
+ * Keywords Anthropic's structured-output grammar rejects. Enums, `required`,
+ * and `additionalProperties: false` stay so a menu cannot omit `sections[].kind`
+ * or add keys the strict Zod schema would 502 on.
+ */
+const UNSUPPORTED_OUTPUT_SCHEMA_KEYWORDS = [
+  'minLength',
+  'maxLength',
+  'minimum',
+  'maximum',
+  'exclusiveMinimum',
+  'exclusiveMaximum',
+  'multipleOf',
+] as const;
+
+const EXTRACTION_OUTPUT_SCHEMA = extractionOutputSchema();
+
 export class ExtractionError extends Error {
   constructor(
     message: string,
-    readonly cause?: unknown,
+    readonly cause?: unknown
   ) {
     super(message);
     this.name = 'ExtractionError';
@@ -60,7 +78,7 @@ export async function extractMenu(options: ExtractMenuOptions): Promise<ExtractM
   const client = options.client ?? getAnthropicClient();
 
   const content: Array<
-    { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg'; data: string } }
+    | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg'; data: string } }
     | { type: 'text'; text: string }
   > = prepared.map((p) => ({
     type: 'image' as const,
@@ -86,14 +104,20 @@ export async function extractMenu(options: ExtractMenuOptions): Promise<ExtractM
       max_tokens: MAX_TOKENS,
       system: EXTRACTION_SYSTEM_PROMPT,
       messages: [{ role: 'user', content }],
+      // The system prompt covers behaviour only. This is what forces `kind`
+      // and forbids extra keys — see EXTRACTION_SYSTEM_PROMPT.
+      output_config: {
+        format: {
+          type: 'json_schema',
+          schema: EXTRACTION_OUTPUT_SCHEMA,
+        },
+      },
     });
   } catch (e) {
     throw new ExtractionError('Vision model call failed', e);
   }
 
-  const textBlock = response.content.find(
-    (b): b is Anthropic.TextBlock => b.type === 'text',
-  );
+  const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
   if (!textBlock) {
     throw new ExtractionError('Vision model returned no text block');
   }
@@ -109,7 +133,7 @@ export async function extractMenu(options: ExtractMenuOptions): Promise<ExtractM
       `Vision model response did not match the expected shape: ${parsed.error.issues
         .slice(0, 3)
         .map((i) => `${i.path.join('.')}: ${i.message}`)
-        .join('; ')}`,
+        .join('; ')}`
     );
   }
 
@@ -122,6 +146,24 @@ export async function extractMenu(options: ExtractMenuOptions): Promise<ExtractM
       stopReason: response.stop_reason,
     },
   };
+}
+
+function extractionOutputSchema(): Record<string, unknown> {
+  const schema = z.toJSONSchema(ExtractedMenuSchema) as Record<string, unknown>;
+  delete schema.$schema;
+  stripUnsupportedOutputSchemaKeywords(schema);
+  return schema;
+}
+
+function stripUnsupportedOutputSchemaKeywords(node: unknown): void {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const item of node) stripUnsupportedOutputSchemaKeywords(item);
+    return;
+  }
+  const record = node as Record<string, unknown>;
+  for (const key of UNSUPPORTED_OUTPUT_SCHEMA_KEYWORDS) delete record[key];
+  for (const value of Object.values(record)) stripUnsupportedOutputSchemaKeywords(value);
 }
 
 /**
