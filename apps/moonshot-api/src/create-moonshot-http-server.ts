@@ -26,6 +26,7 @@ import { loyaltyRouter } from './routes/loyalty.js';
 import { feedbackRouter } from './routes/feedback.js';
 import { internalPosRouter } from './routes/internal-pos.js';
 import { internalOrdersRouter } from './routes/internal-orders.js';
+import { menuEngineeringRouter } from './routes/menu-engineering.js';
 import { stripeWebhookRouter } from './routes/webhooks-stripe.js';
 import { squareWebhookRouter } from './routes/webhooks-square.js';
 
@@ -113,6 +114,7 @@ export function createMoonshotHttpServer(): MoonshotHttpPack {
   app.use(`${API_VERSION_PREFIX}/kds`, kdsRouter);
   app.use(`${API_VERSION_PREFIX}/internal/pos`, internalPosRouter);
   app.use(`${API_VERSION_PREFIX}/internal/orders`, internalOrdersRouter);
+  app.use(`${API_VERSION_PREFIX}/menu-engineering`, menuEngineeringRouter);
 
   app.use(errorHandler);
 
