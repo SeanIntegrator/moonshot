@@ -6,19 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "postbuild": "node scripts/write-runtime-config.mjs",
-    "preview": "node scripts/write-runtime-config.mjs && vite preview",
-    "start": "node scripts/write-runtime-config.mjs && vite preview --host 0.0.0.0",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src"
   },
   "dependencies": {
-    "@moonshot/domain": "workspace:*",
-    "@moonshot/types": "workspace:*",
-    "@moonshot/web-runtime": "workspace:*",
     "framer-motion": "^12.43.0",
-    "heic2any": "^0.0.4",
-    "pdfjs-dist": "^6.4.299",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

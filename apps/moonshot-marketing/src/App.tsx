@@ -5,7 +5,6 @@ import { ProductShowcase } from './components/ProductShowcase.js';
 import { FeatureGrid } from './components/FeatureGrid.js';
 import { PricingCta } from './components/PricingCta.js';
 import { SiteFooter } from './components/SiteFooter.js';
-import { MenuEngineeringSection } from './menu-engineering/MenuEngineeringSection.js';
 import './components/SocialProof.css';
 
 export function App() {
@@ -27,7 +26,6 @@ export function App() {
         <ProductShowcase />
         <FeatureGrid />
         <PricingCta />
-        <MenuEngineeringSection />
       </main>
       <SiteFooter />
     </>
