@@ -12,6 +12,7 @@ import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createMoonshotHttpServer } from '../create-moonshot-http-server.js';
 import { setMenuEngineeringLlmAdapterForTests } from '../lib/menu-engineering/gemini-adapter.js';
+import { explainMenuEngineeringFailure } from '../lib/menu-engineering/gemini-errors.js';
 import type { MenuEngineeringLlmAdapter } from '../lib/menu-engineering/llm-adapter.js';
 
 describe('menu-engineering domain rules & HTTP endpoints', () => {
@@ -204,7 +205,8 @@ describe('menu-engineering domain rules & HTTP endpoints', () => {
           'INVALID_ARGUMENT schema too complex key=AIzaSySUPERSECRETKEYVALUE',
         );
         (err as Error & { status: number }).status = 400;
-        throw err;
+        // The Gemini adapter explains provider failures before they leave extract.
+        throw explainMenuEngineeringFailure(err, 'Gemini extract (model gemini-2.5-flash)');
       },
       async narrateFindings(findings) {
         return buildDeterministicNarrative(findings);
@@ -234,6 +236,61 @@ describe('menu-engineering domain rules & HTTP endpoints', () => {
     expect(res.body.error).toContain('schema too complex');
     expect(res.body.error).not.toContain('AIza');
     expect(res.body.error).not.toBe('Internal error');
+  });
+
+  it('hides unexpected extract and analyse failures as a generic Internal error', async () => {
+    const internalDetail = 'sharp: VipsForeignLoad failed at offset 12';
+    const stubAdapter: MenuEngineeringLlmAdapter = {
+      providerName: 'stub-gemini',
+      async extractMenuFromImages() {
+        throw new Error(internalDetail);
+      },
+      async narrateFindings() {
+        throw new TypeError(internalDetail);
+      },
+    };
+    setMenuEngineeringLlmAdapterForTests(stubAdapter);
+
+    const pngBuffer = await sharp({
+      create: {
+        width: 32,
+        height: 32,
+        channels: 3,
+        background: { r: 24, g: 24, b: 28 },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const { app } = createMoonshotHttpServer();
+    const extractRes = await request(app)
+      .post('/api/v1/menu-engineering/extract')
+      .attach('images', pngBuffer, 'chalkboard.png');
+
+    expect(extractRes.status).toBe(500);
+    expect(extractRes.body).toEqual({
+      ok: false,
+      error: 'Internal error',
+      code: 'INTERNAL',
+    });
+    expect(JSON.stringify(extractRes.body)).not.toContain(internalDetail);
+
+    const sampleRes = await request(app).get('/api/v1/menu-engineering/sample');
+    const analyseRes = await request(app)
+      .post('/api/v1/menu-engineering/analyse')
+      .send({
+        menu: sampleRes.body.data.menu,
+        regionTier: 'city',
+        tier: 'free',
+      });
+
+    expect(analyseRes.status).toBe(500);
+    expect(analyseRes.body).toEqual({
+      ok: false,
+      error: 'Internal error',
+      code: 'INTERNAL',
+    });
+    expect(JSON.stringify(analyseRes.body)).not.toContain(internalDetail);
   });
 
   it('rejects non-image payloads on POST /extract', async () => {
