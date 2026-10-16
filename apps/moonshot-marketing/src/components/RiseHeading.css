@@ -7,7 +7,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .rise-word {
-    animation: rise-in 0.5s ease-out calc(var(--i) * 0.08s) both;
+    animation: rise-in 0.4s ease-out calc(var(--i) * 0.08s) both;
   }
 }
 
