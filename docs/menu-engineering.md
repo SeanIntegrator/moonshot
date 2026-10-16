@@ -1,12 +1,14 @@
 # Menu Engineering & UK Price Benchmark Tool
 
-This document records the architecture, boundaries, and design decisions for the **Menu Engineering & Price Benchmark Audit** prototype mounted at the bottom of `@moonshot/marketing` (`#menu-audit`) and served by `@moonshot/api` (`/api/v1/menu-engineering/*`).
+This document records the architecture for the **Menu Engineering & Price Benchmark Audit** API (`/api/v1/menu-engineering/*`). The marketing UI was removed so the landing-page redesign can merge cleanly. The API, benchmark rules, and Gemini model cascade stay.
 
 ## 1. Architecture & Data Flow
 
+The browser steps are the client to rebuild later. They are not mounted in `@moonshot/marketing` today.
+
 ```mermaid
 flowchart LR
-  subgraph Client["@moonshot/marketing (Browser)"]
+  subgraph Client["Browser client (to rebuild)"]
     Upload["Step 1: Photo / PDF / Sample"]
     Canvas["Client Normaliser\n(pdfjs-dist <canvas>, heic2any,\nmax 1800px JPEG @ 0.86)"]
     Confirm["Step 2: Editable Confirmation Table\n(Never skipped)"]
@@ -15,7 +17,7 @@ flowchart LR
 
   subgraph API["@moonshot/api (Stateless Express Routes)"]
     Guard["Rate Limiter + Optional Turnstile\n+ Magic-Byte & Sharp Check"]
-    Adapter["MenuEngineeringLlmAdapter\n(Gemini 2.5 Flash or Swap)"]
+    Adapter["MenuEngineeringLlmAdapter\n(Gemini model cascade)"]
     Engine["Deterministic Rules Engine\n(@moonshot/domain)"]
   end
 
@@ -59,6 +61,4 @@ flowchart LR
 
 ## 5. Production API origin
 
-The marketing SPA calls the API from the visitor's browser. `GEMINI_API_KEY` lives only on `moonshot-api`. The browser needs `VITE_API_URL` on `moonshot-marketing`, written to `/runtime-config.js` by `scripts/write-runtime-config.mjs` during `postbuild` and again on `pnpm start` / `pnpm preview`.
-
-Use the API origin only (`https://moonshotapi-production.up.railway.app`). Do not fall back to `http://localhost:3000` in the bundle — a phone then requests its own loopback and the UI shows "Failed to fetch". `CORS_ORIGINS` on the API must include the marketing origin (`https://moonshotmarketing-production.up.railway.app`).
+`GEMINI_API_KEY` and `GEMINI_MODEL` live on `moonshot-api`. There is no marketing client for this tool right now. When a page calls the API again, it needs `VITE_API_URL` set to the API origin only (`https://moonshotapi-production.up.railway.app`) and `CORS_ORIGINS` must include that page's origin.

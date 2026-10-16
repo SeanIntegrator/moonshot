@@ -165,7 +165,6 @@ Local `.env` examples: admin `VITE_ORDER_AHEAD_BASE_URL=http://localhost:5176`, 
 |-----|----------|---------|
 | Marketing | `VITE_ADMIN_SIGNUP_URL` | `https://moonshotadmin-production.up.railway.app/signup` |
 | Marketing | `VITE_ADMIN_LOGIN_URL` | `https://moonshotadmin-production.up.railway.app/login` |
-| Marketing | `VITE_API_URL` | `https://moonshotapi-production.up.railway.app` (origin only; written to `/runtime-config.js` at start) |
 | Admin | `VITE_ORDER_AHEAD_BASE_URL` | `https://order.moonshot.app` |
 | Admin | `VITE_KDS_BASE_URL` | `https://kds.moonshot.app` |
 | Admin | `VITE_MARKETING_URL` | `https://moonshotmarketing-production.up.railway.app` |
