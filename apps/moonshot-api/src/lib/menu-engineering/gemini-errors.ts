@@ -37,16 +37,40 @@ function statusToHttp(providerStatus: number | undefined): {
   status: number;
   code: ApiErrorCode;
 } {
-  if (providerStatus === 401 || providerStatus === 403 || providerStatus === 404) {
+  if (providerStatus === 401 || providerStatus === 403) {
     return { status: 503, code: ApiErrorCode.CONFIG };
   }
   if (providerStatus === 429) {
     return { status: 429, code: ApiErrorCode.RATE_LIMITED };
   }
-  if (providerStatus !== undefined && providerStatus >= 400 && providerStatus < 500) {
+  if (providerStatus === 404 || (providerStatus !== undefined && providerStatus >= 400 && providerStatus < 500)) {
     return { status: 502, code: ApiErrorCode.VALIDATION };
   }
   return { status: 502, code: ApiErrorCode.INTERNAL };
+}
+
+/**
+ * A provider failure the model cascade can choose to retry.
+ * Auth failures (401/403) are not retryable: every Gemini model shares one key.
+ * Overload (503), rate limits, a missing model (404), and a menu the model
+ * could not read are retryable on the next model.
+ */
+export class MenuEngineeringAttemptError extends ApiHttpError {
+  readonly retryable: boolean;
+
+  constructor(status: number, code: ApiErrorCode, message: string, retryable: boolean) {
+    super(status, code, message);
+    this.name = 'MenuEngineeringAttemptError';
+    this.retryable = retryable;
+  }
+}
+
+export function isRetryableMenuEngineeringError(err: unknown): boolean {
+  if (err instanceof MenuEngineeringAttemptError) return err.retryable;
+  if (err instanceof ApiHttpError) {
+    return err.code !== ApiErrorCode.CONFIG && err.status !== 401 && err.status !== 403;
+  }
+  return true;
 }
 
 /**
@@ -55,7 +79,10 @@ function statusToHttp(providerStatus: number | undefined): {
  * The global error handler still hides unexpected failures elsewhere as
  * "Internal error".
  */
-export function explainMenuEngineeringFailure(err: unknown, context: string): ApiHttpError {
+export function explainMenuEngineeringFailure(
+  err: unknown,
+  context: string,
+): MenuEngineeringAttemptError | ApiHttpError {
   if (err instanceof ApiHttpError) {
     return err;
   }
@@ -65,9 +92,11 @@ export function explainMenuEngineeringFailure(err: unknown, context: string): Ap
   const mapped = statusToHttp(providerStatus);
   const providerLabel =
     providerStatus !== undefined ? ` (provider HTTP ${providerStatus})` : '';
-  return new ApiHttpError(
+  const retryable = providerStatus !== 401 && providerStatus !== 403;
+  return new MenuEngineeringAttemptError(
     mapped.status,
     mapped.code,
     `${context} failed${providerLabel}: ${detail}`,
+    retryable,
   );
 }

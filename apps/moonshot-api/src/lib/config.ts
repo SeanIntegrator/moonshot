@@ -4,6 +4,8 @@
  * here over time (payments, Square OAuth, menu image storage, etc.).
  */
 
+import { parseGeminiModelCascade } from './menu-engineering/gemini-models.js';
+
 export type AppConfig = {
   databaseUrl: string | undefined;
   jwtSecret: string | undefined;
@@ -38,7 +40,8 @@ export type AppConfig = {
   orderAheadCancelUrl: string | undefined;
   posTokenEncryptionKey: string | undefined;
   geminiApiKey: string | undefined;
-  geminiModel: string;
+  /** Up to three vision models, preferred first. See `parseGeminiModelCascade`. */
+  geminiModels: readonly string[];
   turnstileSecretKey: string | undefined;
 };
 
@@ -100,7 +103,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     orderAheadCancelUrl: trimOrUndefined(env.ORDER_AHEAD_CANCEL_URL),
     posTokenEncryptionKey: trimOrUndefined(env.POS_TOKEN_ENCRYPTION_KEY),
     geminiApiKey: trimOrUndefined(env.GEMINI_API_KEY),
-    geminiModel: trimOrUndefined(env.GEMINI_MODEL) ?? 'gemini-2.5-flash',
+    geminiModels: parseGeminiModelCascade(env),
     turnstileSecretKey: trimOrUndefined(env.TURNSTILE_SECRET_KEY),
   };
 }
