@@ -5,6 +5,7 @@ const QUESTIONS = [
   { q: 'Does it work with my till?', a: '[Confirm] Square today. Other tills — tell us what you use.' },
   { q: 'What happens if the Wi-Fi drops?', a: '[Confirm] The board catches up automatically when it reconnects.' },
   { q: 'What does it cost?', a: '[Pricing]' },
+  { q: 'What if I don't have a tablet?', a: 'It's on the house!' },
 ];
 
 export function Faq() {
