@@ -55,7 +55,7 @@ flowchart LR
 - `extractMenuFromImages(images: MenuImageInput[]): Promise<ExtractedMenuPayload>`
 - `narrateFindings(findings: MenuEngineeringFindings): Promise<MenuEngineeringNarrative>`
 
-`GeminiMenuEngineeringAdapter` (`gemini-adapter.ts`) implements this contract using `@google/genai` (`GEMINI_API_KEY`, `GEMINI_MODEL` defaulting to `gemini-2.5-flash`). To swap to Anthropic Claude, OpenAI, or a self-hosted vision model in the future, implement `MenuEngineeringLlmAdapter` and update `resolveMenuEngineeringLlmAdapter()`.
+`GeminiMenuEngineeringAdapter` (`gemini-adapter.ts`) implements this contract using `@google/genai`. `resolveMenuEngineeringLlmAdapter()` builds a cascade of up to three models that share `GEMINI_API_KEY`: `GEMINI_MODEL` first (default `gemini-3.8-flash`), then `GEMINI_MODEL_FALLBACKS` (default `gemini-3.6-flash`, `gemini-3.5-flash-lite`). A retryable failure — overload, unknown model, empty read — tries the next model. An auth failure stops the chain. Another provider is another `MenuEngineeringLlmAdapter` appended in that resolver once its API key is set.
 
 ## 5. Production API origin
 
