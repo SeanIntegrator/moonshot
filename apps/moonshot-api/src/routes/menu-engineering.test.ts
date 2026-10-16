@@ -1,9 +1,12 @@
 import {
   analyseMenuAgainstBenchmarks,
+  buildConcreteSuggestions,
   buildDeterministicNarrative,
+  inferCanonicalItemIdFromName,
   resolveMenuEngineeringEntitlements,
   SAMPLE_UK_CAFE_MENU,
 } from '@moonshot/domain';
+import type { ItemPriceFinding, LadderAndStructureFlag } from '@moonshot/types';
 import sharp from 'sharp';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -120,6 +123,119 @@ describe('menu-engineering domain rules & HTTP endpoints', () => {
     expect(res.body.data.menu.items.length).toBe(SAMPLE_UK_CAFE_MENU.items.length);
   });
 
+  it('prefers the more specific canonical keyword over an earlier generic one', () => {
+    expect(inferCanonicalItemIdFromName('Double Espresso')).toBe('double_espresso');
+    expect(inferCanonicalItemIdFromName('Iced Latte')).toBe('iced_latte');
+    expect(inferCanonicalItemIdFromName('Matcha Latte')).toBe('matcha_latte');
+    expect(inferCanonicalItemIdFromName('Dirty Chai')).toBe('dirty_chai');
+    expect(inferCanonicalItemIdFromName('Almond Croissant')).toBe('almond_croissant');
+    expect(inferCanonicalItemIdFromName('Iced Matcha Latte')).toBe('iced_matcha');
+    expect(inferCanonicalItemIdFromName('Ceremonial Matcha Latte')).toBe('matcha_latte');
+    expect(inferCanonicalItemIdFromName('Twice-Baked Almond Croissant')).toBe('almond_croissant');
+    expect(inferCanonicalItemIdFromName('Vanilla Latte')).toBe('latte');
+    expect(inferCanonicalItemIdFromName('Espresso')).toBe('espresso');
+    expect(inferCanonicalItemIdFromName('Oat Milk')).toBe('modifier_plant_milk');
+    expect(inferCanonicalItemIdFromName('House Special')).toBe('other');
+  });
+
+  it('ranks concrete suggestions by monthly uplift', () => {
+    const latte: ItemPriceFinding = {
+      itemId: 'latte-1',
+      itemName: 'Latte',
+      section: 'Coffee',
+      canonicalId: 'latte',
+      canonicalLabel: 'Caffè Latte',
+      category: 'espresso_based',
+      pricePounds: 3.4,
+      benchmarkLowPounds: 3.5,
+      benchmarkTypicalPounds: 3.6,
+      benchmarkHighPounds: 4.1,
+      typicalCostPercent: 17,
+      estimatedGrossMarginPercent: 83,
+      deltaVsTypicalPounds: -0.2,
+      status: 'in_range_low',
+      findingSummary: 'below typical',
+      confidence: 'high',
+      benchmarkSource: 'test',
+    };
+    const flags: LadderAndStructureFlag[] = [
+      {
+        id: 'flag-syrup-missing',
+        kind: 'syrup_pricing',
+        severity: 'opportunity',
+        title: 'Syrups missing',
+        detail: 'No syrups',
+        evidence: 'none',
+      },
+      {
+        id: 'flag-missing-brunch-addons',
+        kind: 'missing_addons',
+        severity: 'opportunity',
+        title: 'Add-ons missing',
+        detail: 'No add-ons',
+        evidence: 'none',
+      },
+      {
+        id: 'flag-brunch-clustering',
+        kind: 'brunch_clustering',
+        severity: 'opportunity',
+        title: 'Clustered',
+        detail: 'Tight band',
+        evidence: 'narrow',
+      },
+    ];
+
+    const suggestions = buildConcreteSuggestions([latte], flags);
+    const uplifts = suggestions.map((s) => s.estimatedMonthlyUpliftPoundsAtBaseline);
+    expect(uplifts).toEqual([...uplifts].sort((a, b) => b - a));
+    expect(suggestions.map((s) => s.id)).toEqual([
+      'sug-brunch-addons-box',
+      'sug-brunch-ladder',
+      'sug-core-coffee-realign',
+      'sug-syrup-tier',
+    ]);
+  });
+
+  it('returns the provider reason instead of a generic Internal error', async () => {
+    const stubAdapter: MenuEngineeringLlmAdapter = {
+      providerName: 'stub-gemini',
+      async extractMenuFromImages() {
+        const err = new Error(
+          'INVALID_ARGUMENT schema too complex key=AIzaSySUPERSECRETKEYVALUE',
+        );
+        (err as Error & { status: number }).status = 400;
+        throw err;
+      },
+      async narrateFindings(findings) {
+        return buildDeterministicNarrative(findings);
+      },
+    };
+    setMenuEngineeringLlmAdapterForTests(stubAdapter);
+
+    const pngBuffer = await sharp({
+      create: {
+        width: 32,
+        height: 32,
+        channels: 3,
+        background: { r: 24, g: 24, b: 28 },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const { app } = createMoonshotHttpServer();
+    const res = await request(app)
+      .post('/api/v1/menu-engineering/extract')
+      .attach('images', pngBuffer, 'chalkboard.png');
+
+    expect(res.status).toBe(502);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toContain('provider HTTP 400');
+    expect(res.body.error).toContain('schema too complex');
+    expect(res.body.error).not.toContain('AIza');
+    expect(res.body.error).not.toBe('Internal error');
+  });
+
   it('rejects non-image payloads on POST /extract', async () => {
     const { app } = createMoonshotHttpServer();
     const fakeBuffer = Buffer.from('not-an-image-payload', 'utf8');
@@ -131,5 +247,27 @@ describe('menu-engineering domain rules & HTTP endpoints', () => {
     expect(res.status).toBe(400);
     expect(res.body.ok).toBe(false);
     expect(res.body.code).toBe('VALIDATION');
+  });
+
+  it('rate-limits public extract per forwarded client IP', async () => {
+    const { app } = createMoonshotHttpServer();
+    const blockedIp = '203.0.113.10';
+
+    for (let i = 0; i < 15; i += 1) {
+      const res = await request(app)
+        .post('/api/v1/menu-engineering/extract')
+        .set('X-Forwarded-For', blockedIp);
+      expect(res.status).not.toBe(429);
+    }
+
+    const blocked = await request(app)
+      .post('/api/v1/menu-engineering/extract')
+      .set('X-Forwarded-For', blockedIp);
+    expect(blocked.status).toBe(429);
+
+    const otherVisitor = await request(app)
+      .post('/api/v1/menu-engineering/extract')
+      .set('X-Forwarded-For', '203.0.113.11');
+    expect(otherVisitor.status).not.toBe(429);
   });
 });

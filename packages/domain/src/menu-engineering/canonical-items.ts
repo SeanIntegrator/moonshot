@@ -78,6 +78,33 @@ export function getCanonicalItemMeta(id: CanonicalItemId): CanonicalItemMeta {
   return CANONICAL_BY_ID.get(id) ?? CANONICAL_BY_ID.get('other')!;
 }
 
+interface CanonicalNameMatch {
+  id: CanonicalItemId;
+  keyword: string;
+  category: CanonicalMenuCategory;
+  index: number;
+}
+
+function keywordTokenCount(keyword: string): number {
+  return keyword.split(/[^a-z0-9]+/).filter(Boolean).length;
+}
+
+/**
+ * Longer catalogue phrases beat an earlier generic keyword that is only a
+ * substring ("almond croissant" vs "croissant"). When two phrases are equally
+ * specific, the one that starts earlier keeps the leading qualifier
+ * ("iced matcha latte" vs "matcha latte"). Add-on keywords do not override a
+ * drink or dish match ("vanilla latte" stays a latte).
+ */
+function compareCanonicalNameMatches(a: CanonicalNameMatch, b: CanonicalNameMatch): number {
+  const tokensA = keywordTokenCount(a.keyword);
+  const tokensB = keywordTokenCount(b.keyword);
+  if (tokensA !== tokensB) return tokensB - tokensA;
+  if (tokensA > 1 && a.index !== b.index) return a.index - b.index;
+  if (a.keyword.length !== b.keyword.length) return b.keyword.length - a.keyword.length;
+  return a.index - b.index;
+}
+
 /**
  * Deterministic fallback mapper when an owner adds or edits an item in the
  * confirmation table without manually selecting a canonical item ID.
@@ -86,13 +113,28 @@ export function inferCanonicalItemIdFromName(rawName: string): CanonicalItemId {
   const normalized = rawName.toLowerCase().trim();
   if (!normalized) return 'other';
 
+  const matches: CanonicalNameMatch[] = [];
   for (const item of CANONICAL_ITEMS) {
     if (item.id === 'other') continue;
-    for (const kw of item.keywords) {
-      if (normalized.includes(kw)) {
-        return item.id;
-      }
+    for (const keyword of item.keywords) {
+      const index = normalized.indexOf(keyword);
+      if (index === -1) continue;
+      matches.push({ id: item.id, keyword, category: item.category, index });
     }
   }
-  return 'other';
+  if (matches.length === 0) return 'other';
+
+  // Drop "latte" once "iced latte" / "matcha latte" also matched, and so on.
+  const specific = matches.filter(
+    (match) =>
+      !matches.some(
+        (other) =>
+          other.keyword.length > match.keyword.length && other.keyword.includes(match.keyword),
+      ),
+  );
+
+  const dishOrDrink = specific.filter((match) => match.category !== 'sides_addons');
+  const pool = dishOrDrink.length > 0 ? dishOrDrink : specific;
+  pool.sort(compareCanonicalNameMatches);
+  return pool[0]?.id ?? 'other';
 }

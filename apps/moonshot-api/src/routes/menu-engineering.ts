@@ -17,6 +17,7 @@ import {
 import multer from 'multer';
 import { ApiHttpError } from '../lib/http-errors.js';
 import { resolveMenuEngineeringLlmAdapter } from '../lib/menu-engineering/gemini-adapter.js';
+import { explainMenuEngineeringFailure } from '../lib/menu-engineering/gemini-errors.js';
 import {
   MENU_ENGINEERING_MAX_FILE_BYTES,
   MENU_ENGINEERING_MAX_FILES,
@@ -105,6 +106,7 @@ menuEngineeringRouter.post(
   extractRateLimit,
   extractUploadMiddleware,
   async (req, res) => {
+    try {
     const turnstileToken =
       (typeof req.headers['x-turnstile-token'] === 'string'
         ? req.headers['x-turnstile-token']
@@ -162,10 +164,14 @@ menuEngineeringRouter.post(
         entitlements: resolveMenuEngineeringEntitlements('free'),
       },
     });
+    } catch (err) {
+      throw explainMenuEngineeringFailure(err, 'POST /menu-engineering/extract');
+    }
   },
 );
 
 menuEngineeringRouter.post('/analyse', analyseRateLimit, async (req, res) => {
+  try {
   const parsed = menuEngineeringAnalysisRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     const firstIssue = parsed.error.issues[0];
@@ -195,4 +201,7 @@ menuEngineeringRouter.post('/analyse', analyseRateLimit, async (req, res) => {
       entitlements,
     },
   });
+  } catch (err) {
+    throw explainMenuEngineeringFailure(err, 'POST /menu-engineering/analyse');
+  }
 });

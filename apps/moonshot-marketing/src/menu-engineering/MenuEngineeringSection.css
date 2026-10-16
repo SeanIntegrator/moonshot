@@ -1,8 +1,8 @@
 .me-section {
   padding: 5.5rem 0 6.5rem;
   border-top: 1px solid var(--border);
-  background: radial-gradient(circle at 85% 10%, rgba(232, 255, 71, 0.06), transparent 45%),
-    var(--bg);
+  background:
+    radial-gradient(circle at 85% 10%, rgba(232, 255, 71, 0.06), transparent 45%), var(--bg);
 }
 
 .me-section__intro {
@@ -186,6 +186,12 @@
   margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
+}
+
+.me-turnstile {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
 }
 
 .me-previews__head {

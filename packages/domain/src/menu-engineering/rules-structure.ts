@@ -343,5 +343,9 @@ export function buildConcreteSuggestions(
     });
   }
 
+  suggestions.sort(
+    (a, b) =>
+      b.estimatedMonthlyUpliftPoundsAtBaseline - a.estimatedMonthlyUpliftPoundsAtBaseline,
+  );
   return suggestions.slice(0, 5);
 }
