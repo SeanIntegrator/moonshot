@@ -5,7 +5,6 @@ import {
 } from '@moonshot/domain';
 import {
   ApiErrorCode,
-  CANONICAL_ITEM_IDS,
   MENU_GROUP_KINDS,
   type ExtractedMenuPayload,
   type MenuEngineeringFindings,
@@ -13,6 +12,7 @@ import {
 } from '@moonshot/types';
 import { config } from '../config.js';
 import { ApiHttpError } from '../http-errors.js';
+import { explainMenuEngineeringFailure } from './gemini-errors.js';
 import type { MenuEngineeringLlmAdapter, MenuImageInput } from './llm-adapter.js';
 import { normaliseRawModelExtraction } from './schemas.js';
 
@@ -45,10 +45,10 @@ const EXTRACTION_RESPONSE_SCHEMA: Schema = {
           name: { type: Type.STRING },
           pricePounds: { type: Type.NUMBER },
           targetSection: { type: Type.STRING, nullable: true },
-          canonicalId: {
-            type: Type.STRING,
-            enum: [...CANONICAL_ITEM_IDS],
-          },
+          // Free string on purpose. Repeating the ~47-value canonical enum on
+          // every item and modifier makes Gemini reject the schema (HTTP 400),
+          // which previously surfaced as a generic "Internal error".
+          canonicalId: { type: Type.STRING },
         },
       },
     },
@@ -81,10 +81,7 @@ const EXTRACTION_RESPONSE_SCHEMA: Schema = {
             type: Type.ARRAY,
             items: { type: Type.STRING },
           },
-          canonicalId: {
-            type: Type.STRING,
-            enum: [...CANONICAL_ITEM_IDS],
-          },
+          canonicalId: { type: Type.STRING },
           modifiers: {
             type: Type.ARRAY,
             items: {
@@ -93,10 +90,7 @@ const EXTRACTION_RESPONSE_SCHEMA: Schema = {
               properties: {
                 name: { type: Type.STRING },
                 pricePounds: { type: Type.NUMBER },
-                canonicalId: {
-                  type: Type.STRING,
-                  enum: [...CANONICAL_ITEM_IDS],
-                },
+                canonicalId: { type: Type.STRING },
               },
             },
           },
@@ -152,34 +146,47 @@ export class GeminiMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
       },
     }));
 
-    const response = await this.client.models.generateContent({
-      model: this.model,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            ...inlineParts,
-            { text: EXTRACTION_SYSTEM_PROMPT },
-          ],
+    let text: string | undefined;
+    try {
+      const response = await this.client.models.generateContent({
+        model: this.model,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              ...inlineParts,
+              { text: EXTRACTION_SYSTEM_PROMPT },
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: EXTRACTION_RESPONSE_SCHEMA,
+          temperature: 0.1,
         },
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: EXTRACTION_RESPONSE_SCHEMA,
-        temperature: 0.1,
-      },
-    });
+      });
+      text = response.text;
+    } catch (err) {
+      throw explainMenuEngineeringFailure(err, `Gemini extract (model ${this.model})`);
+    }
 
-    const text = response.text;
     if (!text) {
       throw new ApiHttpError(
         502,
         ApiErrorCode.INTERNAL,
-        'Vision model returned an empty response while reading the menu image.',
+        `Gemini extract (model ${this.model}) failed: the model returned an empty response while reading the menu image.`,
       );
     }
 
-    const parsed = JSON.parse(text) as unknown;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch (err) {
+      throw explainMenuEngineeringFailure(
+        err,
+        `Gemini extract (model ${this.model}) returned non-JSON`,
+      );
+    }
     const normalised = normaliseRawModelExtraction(parsed);
     if (normalised.items.length === 0) {
       throw new ApiHttpError(

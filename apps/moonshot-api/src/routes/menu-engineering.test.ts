@@ -196,6 +196,46 @@ describe('menu-engineering domain rules & HTTP endpoints', () => {
     ]);
   });
 
+  it('returns the provider reason instead of a generic Internal error', async () => {
+    const stubAdapter: MenuEngineeringLlmAdapter = {
+      providerName: 'stub-gemini',
+      async extractMenuFromImages() {
+        const err = new Error(
+          'INVALID_ARGUMENT schema too complex key=AIzaSySUPERSECRETKEYVALUE',
+        );
+        (err as Error & { status: number }).status = 400;
+        throw err;
+      },
+      async narrateFindings(findings) {
+        return buildDeterministicNarrative(findings);
+      },
+    };
+    setMenuEngineeringLlmAdapterForTests(stubAdapter);
+
+    const pngBuffer = await sharp({
+      create: {
+        width: 32,
+        height: 32,
+        channels: 3,
+        background: { r: 24, g: 24, b: 28 },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const { app } = createMoonshotHttpServer();
+    const res = await request(app)
+      .post('/api/v1/menu-engineering/extract')
+      .attach('images', pngBuffer, 'chalkboard.png');
+
+    expect(res.status).toBe(502);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toContain('provider HTTP 400');
+    expect(res.body.error).toContain('schema too complex');
+    expect(res.body.error).not.toContain('AIza');
+    expect(res.body.error).not.toBe('Internal error');
+  });
+
   it('rejects non-image payloads on POST /extract', async () => {
     const { app } = createMoonshotHttpServer();
     const fakeBuffer = Buffer.from('not-an-image-payload', 'utf8');

@@ -34,7 +34,10 @@ async function fetchMenuApi(path: string, init?: RequestInit): Promise<Response>
 async function unwrapEnvelope<T>(res: Response): Promise<T> {
   const payload = await parseEnvelope<T>(res);
   if (!payload.ok) {
-    throw new Error(payload.error || `Request failed (${res.status})`);
+    const code = payload.code ? ` [${payload.code}]` : '';
+    throw new Error(
+      `${payload.error || 'Request failed'}${code} (HTTP ${res.status}).`,
+    );
   }
   return payload.data;
 }
