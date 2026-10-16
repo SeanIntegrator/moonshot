@@ -1,0 +1,16 @@
+/* A dark band under the hero, between two thin lines. */
+.proof {
+  padding: 1.5rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  background: var(--bg);
+}
+
+.proof__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10rem clamp(6rem, 7vw, 10rem);
+  font-size: clamp(0.7rem, 0.9vw, 1.3rem);
+  line-height: 1.5;
+}

@@ -1,10 +1,10 @@
-import { getAdminLoginUrl } from '../hooks/useReducedMotion.js';
+import { getAdminLoginUrl } from '../lib/adminUrls.js';
 import './SiteFooter.css';
 
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <div className="container site-footer__inner">
+      <div className="container">
         <nav className="site-footer__links">
           <a href={getAdminLoginUrl()}>Sign in</a>
           <span aria-hidden>·</span>

@@ -1,0 +1,77 @@
+/* A faint lighter glow on the right, like the hero's. */
+.board {
+  background: radial-gradient(ellipse 90% 110% at 100% 40%, rgb(247 244 251 / 0.035), transparent 70%),
+    var(--bg);
+}
+
+.board__layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 3rem clamp(3rem, 9vw, 8rem);
+  align-items: center;
+}
+
+.board__shot {
+  position: relative;
+}
+
+.board__placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 7 / 5;
+  padding: 1rem;
+  border: 3px solid var(--text);
+  border-radius: 1.125rem;
+  background: var(--fill);
+  font-size: clamp(1rem, 1.7vw, 1.5rem);
+  text-align: center;
+}
+
+/* Green numbered dots, used both on the screenshot and in the list. */
+.board__pin,
+.board__list li::before {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.board__pin {
+  position: absolute;
+  translate: -50% -50%;
+}
+
+.board__list {
+  display: grid;
+  gap: 2.5rem;
+  counter-reset: callout;
+}
+
+.board__list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1.75rem;
+  align-items: center;
+  counter-increment: callout;
+}
+
+.board__list li::before {
+  content: counter(callout);
+  grid-row: span 2;
+}
+
+.board__list h3 {
+  font-size: 1.2rem;
+}
+
+/* Phones and small tablets: the list sits under the screenshot. */
+@media (max-width: 900px) {
+  .board__layout {
+    grid-template-columns: 1fr;
+  }
+}

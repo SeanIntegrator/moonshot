@@ -1,0 +1,23 @@
+.frame-sequence {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.frame-sequence__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The artwork is landscape with an empty centre: on narrow screens, fit it by
+   width (oversized) so the beans stay in view instead of being cropped away. */
+@media (max-width: 900px) {
+  .frame-sequence__canvas {
+    inset: 0 auto auto -35%;
+    width: 170%;
+    height: auto;
+  }
+}

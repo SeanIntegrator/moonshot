@@ -1,0 +1,52 @@
+/* Questions that open on click, split by off-white lines, with a faint red
+   glow in the bottom-left corner. */
+.faq {
+  padding-bottom: 5rem;
+  background: radial-gradient(ellipse 70% 80% at 0% 100%, color-mix(in srgb, var(--fill) 50%, transparent), transparent 70%),
+    var(--bg);
+}
+
+.faq__item {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+}
+
+.faq__item + .faq__item {
+  border-top: 2px solid var(--text);
+}
+
+.faq__item summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+/* Hides Safari's built-in arrow; the triangle below replaces it. */
+.faq__item summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A downward triangle that flips up while the answer is open. */
+.faq__item summary::after {
+  content: '';
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.125rem;
+  background: var(--text);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transition: rotate 0.2s;
+}
+
+.faq__item[open] summary::after {
+  rotate: 180deg;
+}
+
+.faq__item p {
+  padding: 0 0.75rem 1.5rem;
+  font-size: 1.05rem;
+  opacity: 0.8;
+}

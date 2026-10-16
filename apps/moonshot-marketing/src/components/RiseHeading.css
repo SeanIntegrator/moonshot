@@ -1,0 +1,19 @@
+/* Words fade in while rising, one after another, with the same timing as the
+   original site's hero heading. Words keep their final place throughout, so
+   nothing reflows. */
+.rise-word {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise-word {
+    animation: rise-in 0.5s ease-out calc(var(--i) * 0.08s) both;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    translate: 0 1.5rem;
+  }
+}

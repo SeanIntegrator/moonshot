@@ -1,0 +1,14 @@
+/* Centred on the plain page colour. */
+.final-cta {
+  padding: 4rem 0 6rem;
+  text-align: center;
+}
+
+.final-cta h2 {
+  margin-bottom: 1rem;
+}
+
+.final-cta .lead {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+}
