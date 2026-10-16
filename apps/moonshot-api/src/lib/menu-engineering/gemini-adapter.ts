@@ -1,8 +1,5 @@
 import { GoogleGenAI, Type, type Schema } from '@google/genai';
-import {
-  buildDeterministicNarrative,
-  CANONICAL_ITEMS,
-} from '@moonshot/domain';
+import { CANONICAL_ITEMS } from '@moonshot/domain';
 import {
   ApiErrorCode,
   MENU_GROUP_KINDS,
@@ -14,6 +11,7 @@ import { config } from '../config.js';
 import { ApiHttpError } from '../http-errors.js';
 import { explainMenuEngineeringFailure } from './gemini-errors.js';
 import type { MenuEngineeringLlmAdapter, MenuImageInput } from './llm-adapter.js';
+import { CascadingMenuEngineeringAdapter } from './model-cascade.js';
 import { normaliseRawModelExtraction } from './schemas.js';
 
 const CANONICAL_REFERENCE_LIST = CANONICAL_ITEMS.map(
@@ -127,13 +125,14 @@ const NARRATIVE_RESPONSE_SCHEMA: Schema = {
 };
 
 export class GeminiMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
-  readonly providerName = 'gemini';
+  readonly providerName: string;
   private readonly client: GoogleGenAI;
   private readonly model: string;
 
-  constructor(apiKey: string, model = 'gemini-2.5-flash') {
+  constructor(apiKey: string, model = 'gemini-3.8-flash') {
     this.client = new GoogleGenAI({ apiKey });
     this.model = model;
+    this.providerName = `gemini:${model}`;
   }
 
   async extractMenuFromImages(
@@ -235,7 +234,11 @@ ${JSON.stringify({
 
       const rawText = response.text;
       if (!rawText) {
-        return buildDeterministicNarrative(findings);
+        throw new ApiHttpError(
+          502,
+          ApiErrorCode.INTERNAL,
+          `Gemini narrate (model ${this.model}) failed: the model returned an empty response.`,
+        );
       }
       const parsed = JSON.parse(rawText) as Omit<MenuEngineeringNarrative, 'generatedBy'>;
       return {
@@ -243,11 +246,7 @@ ${JSON.stringify({
         generatedBy: 'gemini',
       };
     } catch (err) {
-      console.warn(
-        '[menu-engineering] Gemini narration failed; falling back to deterministic narrative:',
-        err instanceof Error ? err.message : String(err),
-      );
-      return buildDeterministicNarrative(findings);
+      throw explainMenuEngineeringFailure(err, `Gemini narrate (model ${this.model})`);
     }
   }
 }
@@ -266,8 +265,12 @@ export function setMenuEngineeringLlmAdapterForTests(
 
 export function resolveMenuEngineeringLlmAdapter(): MenuEngineeringLlmAdapter | null {
   if (overrideAdapter) return overrideAdapter;
-  if (config.geminiApiKey) {
-    return new GeminiMenuEngineeringAdapter(config.geminiApiKey, config.geminiModel);
-  }
-  return null;
+  if (!config.geminiApiKey) return null;
+
+  // Same key, up to three Gemini models. A second provider (OpenAI, Anthropic)
+  // is another MenuEngineeringLlmAdapter pushed onto this list when its key exists.
+  const attempts = config.geminiModels.map(
+    (model) => new GeminiMenuEngineeringAdapter(config.geminiApiKey as string, model),
+  );
+  return new CascadingMenuEngineeringAdapter(attempts);
 }

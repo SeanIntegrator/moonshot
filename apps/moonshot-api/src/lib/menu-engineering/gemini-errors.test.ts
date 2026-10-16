@@ -29,6 +29,7 @@ describe('menu engineering provider errors', () => {
     expect(httpErr.message).toContain('gemini-2.5-flash');
     expect(httpErr.message).toContain('schema too complex');
     expect(httpErr.message).not.toContain('AIza');
+    expect(httpErr).toMatchObject({ retryable: true });
   });
 
   it('maps an auth rejection to a config error', () => {
@@ -39,6 +40,7 @@ describe('menu engineering provider errors', () => {
     expect(httpErr.status).toBe(503);
     expect(httpErr.code).toBe(ApiErrorCode.CONFIG);
     expect(httpErr.message).toContain('API key not valid');
+    expect(httpErr).toMatchObject({ retryable: false });
   });
 
   it('passes ApiHttpError through unchanged', () => {
