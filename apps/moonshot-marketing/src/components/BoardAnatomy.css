@@ -1,6 +1,8 @@
-/* A faint lighter glow on the right, like the hero's. */
+/* A faint green glow on the right, like the hero's, and a faint red one
+   on the left behind the screenshot. */
 .board {
-  background: radial-gradient(ellipse 90% 110% at 100% 40%, rgb(247 244 251 / 0.035), transparent 70%),
+  background: radial-gradient(ellipse 90% 110% at 100% 40%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%),
+    radial-gradient(ellipse 60% 70% at 15% 60%, color-mix(in srgb, var(--fill) 8%, transparent), transparent 70%),
     var(--bg);
 }
 
