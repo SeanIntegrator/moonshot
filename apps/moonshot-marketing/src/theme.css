@@ -1,16 +1,56 @@
+/* Shared styles for the whole site: fonts, colours, base elements, and the few
+   pieces every section uses. Anything for one section lives in that
+   component's own .css file. */
+
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('./assets/fonts/InstrumentSerif-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('./assets/fonts/InstrumentSerif-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Spline Sans Mono';
+  src: url('./assets/fonts/SplineSansMono-Variable.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Spline Sans Mono';
+  src: url('./assets/fonts/SplineSansMono-Italic-Variable.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./assets/fonts/DMSans-Variable.woff2') format('woff2');
+  font-weight: 100 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'Spline Sans Mono', ui-monospace, monospace;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
   --bg: #0a0a0b;
-  --surface: #141416;
-  --border: #2a2a2e;
-  --accent: #e8ff47;
-  --accent-hover: #d4eb3a;
-  --coral: #ff4d4d;
-  --text: #f4f4f5;
-  --muted: #71717a;
-  --violet: #3b0764;
-  --font-display: 'Syne', system-ui, sans-serif;
-  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --fill: #371B1C;
+  --line: #697268;
+  --text: #F7F4FB;
+  --accent: #BFCC94;
 }
 
 *,
@@ -19,6 +59,7 @@
   box-sizing: border-box;
 }
 
+/* In-page links (like "See how it works") glide rather than jump. */
 html {
   scroll-behavior: smooth;
 }
@@ -31,15 +72,29 @@ html {
 
 body {
   margin: 0;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  min-height: 100vh;
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+p {
+  margin: 0;
+}
+
+ol,
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 a {
@@ -47,109 +102,91 @@ a {
   text-decoration: none;
 }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-
 .container {
   width: min(1120px, 100% - 2rem);
   margin-inline: auto;
 }
 
+/* Every section: mono text and a large serif heading. */
+.section {
+  padding: 5rem 0 8rem;
+  font-family: var(--font-mono);
+  /* Links like "See how it works" stop below the floating nav, not under it. */
+  scroll-margin-top: 5.5rem;
+}
+
+.section h2 {
+  margin-bottom: 3.5rem;
+  font-family: var(--font-serif);
+  font-size: clamp(2.25rem, 4.5vw, 4rem);
+}
+
+/* The small all-caps label above a section heading. */
+.eyebrow {
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* The line of text under a heading. */
+.lead {
+  font-size: 1.15rem;
+  margin-bottom: 2rem;
+}
+
+/* Short descriptions under a card or list title: plain sans-serif. */
+.desc {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.2;
+  padding-top: 0.3rem;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.875rem 1.5rem;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--accent);
   border-radius: 999px;
-  font-weight: 600;
-  font-size: 1rem;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.btn-primary {
+.btn--primary {
   background: var(--accent);
   color: var(--bg);
 }
 
-.btn-primary:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 32px rgba(232, 255, 71, 0.35);
+/* Lists marked `chain` bring their items in one after another once they
+   scroll into view (the useChain hook adds `is-shown`). `--i` is each item's
+   place in line, and each list sets `--enter-from`, the offset its items
+   arrive from. Skipped entirely for visitors who ask their device for less
+   motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .chain > * {
+    opacity: 0;
+  }
+
+  .chain.is-shown > * {
+    animation: chain-enter 0.7s ease-out calc(var(--i) * 0.15s) both;
+  }
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.btn-ghost:hover {
-  border-color: var(--muted);
-}
-
-.grain {
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  z-index: 1000;
-}
-
-.mesh {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.mesh-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.15;
-  animation: drift 20s ease-in-out infinite alternate;
-}
-
-.mesh-blob--lime {
-  width: 480px;
-  height: 480px;
-  background: var(--accent);
-  top: -10%;
-  right: -5%;
-}
-
-.mesh-blob--violet {
-  width: 400px;
-  height: 400px;
-  background: var(--violet);
-  bottom: 10%;
-  left: -10%;
-  animation-delay: -8s;
-}
-
-@keyframes drift {
+/* The end state is spelled out, as the items start hidden (opacity: 0). */
+@keyframes chain-enter {
   from {
-    transform: translate(0, 0);
+    opacity: 0;
+    translate: var(--enter-from);
   }
+
   to {
-    transform: translate(24px, -32px);
+    opacity: 1;
+    translate: 0 0;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mesh-blob {
-    animation: none;
-  }
-  .btn-primary:hover {
-    transform: none;
+/* Phones and small tablets get less space around each section. */
+@media (max-width: 900px) {
+  .section {
+    padding: 4rem 0;
   }
 }

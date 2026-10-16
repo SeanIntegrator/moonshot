@@ -1,67 +1,124 @@
+/* Fills the whole screen, with the floating nav laid over the top.
+   `svh` ignores mobile browser toolbars; the `vh` line is for older browsers. */
 .hero {
   position: relative;
+  display: grid;
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  padding: 4rem 0 6rem;
+  min-height: 100svh;
+  padding: 0;
   overflow: hidden;
+  /* A faint accent-green glow from the top, fading into the page colour,
+     to give the background some depth behind the beans. */
+  background: radial-gradient(
+      ellipse 130% 120% at 85% 0%,
+      rgb(191 204 148 / 0.08),
+      rgb(191 204 148 / 0) 75%
+    ),
+    var(--bg);
 }
 
+/* Scaled up from the centre so the outer beans are cropped by the screen edges. */
+.hero .frame-sequence__canvas {
+  opacity: 0.8;
+  scale: 1.5;
+}
+
+/* The bean animation sits behind the hero content. */
 .hero__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
-.hero__eyebrow {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  margin: 0 0 1.5rem;
+/* Left half: a full-height frosted pane that blurs the beans behind the text. */
+.hero__copy {
+  /* Space to the left of the text: grows with the screen width, from 1.5rem
+     up to 8rem. Larger values push the text right and pack it tighter. */
+  --inset-left: clamp(1.5rem, 12vw, 8rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6.5rem 3rem 3rem var(--inset-left);
+  background: rgb(247 244 251 / 0.025);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
-.hero__title {
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  margin: 0;
+/* Browsers without the blur get a more solid pane so text stays readable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hero__copy {
+    background: rgb(20 20 22 / 0.9);
+  }
 }
 
-.hero__title-line {
-  display: block;
+.hero h1 {
+  margin-bottom: 1.5rem;
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 5.2vw, 4.75rem);
+  line-height: 1.25;
 }
 
-.hero__sub {
-  margin: 1.5rem 0 0;
-  font-size: 1.125rem;
-  color: var(--muted);
-  max-width: 32rem;
+.hero .lead {
+  max-width: 38ch;
+  margin-bottom: 4rem;
+  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .hero__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 1rem 2rem;
 }
 
+.hero .btn:not(.btn--primary) {
+  border-width: 2px;
+  background: var(--bg);
+}
+
+/* Right half: the KDS screen placeholder, centred over the sharp beans. */
+.hero__device {
+  display: grid;
+  place-items: center;
+  padding: 5rem 2rem;
+}
+
+.hero__screen {
+  /* How solid the box's background is: 100% is fully solid, lower lets the
+     beans show through. The text stays solid either way. */
+  --screen-opacity: 60%;
+  display: grid;
+  place-items: center;
+  width: min(100%, 31rem);
+  aspect-ratio: 11 / 10;
+  padding: 1.5rem;
+  border-radius: clamp(2rem, 6vw, 4.5rem);
+  background: color-mix(in srgb, var(--fill) var(--screen-opacity), transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: var(--text);
+  font-size: clamp(1rem, 1.7vw, 1.5rem);
+  text-align: center;
+}
+
+/* Phones and small tablets: the text sits above the screen. */
 @media (max-width: 900px) {
   .hero__grid {
     grid-template-columns: 1fr;
-    text-align: center;
   }
 
-  .hero__sub {
-    margin-inline: auto;
+  .hero__copy {
+    padding: 7rem 1.5rem 3rem;
   }
 
-  .hero__actions {
-    justify-content: center;
+  .hero__device {
+    padding: 3rem 1.5rem 4rem;
   }
 
-  .hero__visual {
-    order: -1;
+  /* Phones already crop the beans wider (see FrameSequence.css), so no extra zoom. */
+  .hero .frame-sequence__canvas {
+    scale: none;
   }
 }
