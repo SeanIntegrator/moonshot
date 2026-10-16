@@ -11,6 +11,7 @@ export function SiteFooter() {
           <a href="mailto:hello@moonshot.app">Contact</a>
         </nav>
         <p className="site-footer__copy">© Moonshot · Built for independent coffee</p>
+        <p className="site-footer__copy">PR deploy check</p>
       </div>
     </footer>
   );
