@@ -41,6 +41,7 @@ export function resolveMenuEngineeringLlmAdapter(): MenuEngineeringLlmAdapter | 
 
   const attempts = config.menuEngineeringProviderOrder.flatMap(adaptersForProvider);
   if (attempts.length === 0) return null;
-  if (attempts.length === 1) return attempts[0] ?? null;
+  // A one-model list is a supported config. Wrapping it still gives narrateFindings
+  // the deterministic fallback when that single provider call fails.
   return new CascadingMenuEngineeringAdapter(attempts);
 }
