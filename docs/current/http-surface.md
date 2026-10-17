@@ -126,7 +126,7 @@ See [apps/moonshot-api/.env.example](../../apps/moonshot-api/.env.example).
 
 **Order-ahead / KDS / Admin:** `VITE_API_URL` = API origin **only** (no `/api/v1` suffix), plus `VITE_CAFE_SLUG`, `VITE_GOOGLE_CLIENT_ID` where applicable.
 
-**Marketing:** `VITE_ADMIN_SIGNUP_URL` and `VITE_ADMIN_LOGIN_URL` (baked at build). No API client. Live origin: `https://moonshotmarketing-production.up.railway.app`.
+**Marketing:** `VITE_ADMIN_SIGNUP_URL` and `VITE_ADMIN_LOGIN_URL` (baked at build). The landing page has no API client. `/menu-audit` reads `VITE_API_URL` (origin only) and, in local dev, falls back to `http://localhost:3000`. Live origin: `https://moonshotmarketing-production.up.railway.app`.
 
 Vite frontends load **`/runtime-config.js`** at startup. It is written from `VITE_API_URL` by `scripts/write-runtime-config.mjs`:
 
