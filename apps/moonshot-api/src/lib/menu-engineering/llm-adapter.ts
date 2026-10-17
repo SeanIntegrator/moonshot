@@ -21,8 +21,16 @@ export interface MenuImageInput {
  * - Swapping Gemini for OpenAI, Anthropic, or another model requires only a new
  *   implementation of this interface.
  */
+export interface MenuNarrationOptions {
+  /** Cancelled when the narration budget is spent and the deterministic report is used. */
+  signal?: AbortSignal;
+}
+
 export interface MenuEngineeringLlmAdapter {
   readonly providerName: string;
   extractMenuFromImages(images: readonly MenuImageInput[]): Promise<ExtractedMenuPayload>;
-  narrateFindings(findings: MenuEngineeringFindings): Promise<MenuEngineeringNarrative>;
+  narrateFindings(
+    findings: MenuEngineeringFindings,
+    options?: MenuNarrationOptions,
+  ): Promise<MenuEngineeringNarrative>;
 }
