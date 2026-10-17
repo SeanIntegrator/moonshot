@@ -3,6 +3,8 @@ import {
   analyseMenu,
   extractMenu,
   loadSampleMenu,
+  menuAuditApiBaseUrl,
+  menuAuditPageOrigin,
   type MenuAuditMenu,
   type MenuAuditReport,
 } from './api.js';
@@ -19,17 +21,23 @@ export function MenuAuditPage() {
   const [report, setReport] = useState<MenuAuditReport | null>(null);
   const [regionTier, setRegionTier] = useState<(typeof REGIONS)[number]>('city');
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const apiBase = menuAuditApiBaseUrl() || '(VITE_API_URL is not set)';
+  const pageOrigin = menuAuditPageOrigin();
 
-  async function run(action: () => Promise<void>) {
+  async function run(label: string, action: () => Promise<void>) {
     setBusy(true);
     setError(null);
+    setStatus(label);
     try {
       await action();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The menu API request failed.');
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || 'The menu API request failed with an empty error.');
     } finally {
       setBusy(false);
+      setStatus(null);
     }
   }
 
@@ -45,6 +53,11 @@ export function MenuAuditPage() {
           Temporary page for the API. Load the sample café or upload a JPEG, PNG, or WebP menu
           photo, then run the benchmark.
         </p>
+        <p className="menu-audit__meta">
+          API {apiBase}
+          <br />
+          This page {pageOrigin}
+        </p>
 
         <div className="menu-audit__panel">
           <button
@@ -53,7 +66,9 @@ export function MenuAuditPage() {
             disabled={busy}
             onClick={() => {
               setReport(null);
-              void run(async () => setMenu(await loadSampleMenu()));
+              void run(`GET ${apiBase}/api/v1/menu-engineering/sample`, async () =>
+                setMenu(await loadSampleMenu()),
+              );
             }}
           >
             Load sample menu
@@ -69,7 +84,10 @@ export function MenuAuditPage() {
                 event.target.value = '';
                 if (!file) return;
                 setReport(null);
-                void run(async () => setMenu(await extractMenu(file)));
+                void run(
+                  `POST ${apiBase}/api/v1/menu-engineering/extract (${file.name}, ${file.type || 'unknown type'}, ${file.size} bytes)`,
+                  async () => setMenu(await extractMenu(file)),
+                );
               }}
             />
           </label>
@@ -95,17 +113,20 @@ export function MenuAuditPage() {
             disabled={busy || !menu}
             onClick={() => {
               if (!menu) return;
-              void run(async () => setReport(await analyseMenu(menu, regionTier)));
+              void run(`POST ${apiBase}/api/v1/menu-engineering/analyse`, async () =>
+                setReport(await analyseMenu(menu, regionTier)),
+              );
             }}
           >
             Analyse
           </button>
         </div>
 
+        {status ? <p className="menu-audit__meta">{status}</p> : null}
         {error ? (
-          <p className="menu-audit__error" role="alert">
+          <pre className="menu-audit__error" role="alert">
             {error}
-          </p>
+          </pre>
         ) : null}
 
         {menu ? (

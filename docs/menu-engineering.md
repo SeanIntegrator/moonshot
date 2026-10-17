@@ -70,3 +70,5 @@ flowchart LR
 ## 5. Production API origin
 
 `GEMINI_API_KEY`, `OPENAI_API_KEY`, and the model env vars live on `moonshot-api`. Do not put provider keys in the marketing app. `/menu-audit` calls the API from the browser, so that service needs `VITE_API_URL` set to the API origin only (`https://moonshotapi-production.up.railway.app`) and `CORS_ORIGINS` must include the marketing origin. Local `vite` dev falls back to `http://localhost:3000` when `VITE_API_URL` is unset.
+
+A Railway preview of marketing still bakes the service's `VITE_API_URL`, which is usually the production API. The sample route is already there. The browser shows "Failed to fetch" when the preview hostname is not in production `CORS_ORIGINS` — the response is returned, but without `Access-Control-Allow-Origin` the page cannot read it. Add the preview origin (the page prints it) to `CORS_ORIGINS` on the API that `VITE_API_URL` names. OpenAI model choice from this branch is on that API only after it is deployed with `OPENAI_API_KEY`. The page prints the API origin, this page's origin, and the response body so a tablet can show the failure without a console.
