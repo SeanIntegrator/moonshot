@@ -6,13 +6,14 @@ const MAX_PROVIDER_DETAIL_CHARS = 360;
 
 const SECRET_PATTERNS: readonly RegExp[] = [
   /AIza[0-9A-Za-z\-_]{8,}/g,
+  /sk-[A-Za-z0-9_-]{12,}/g,
   /\bkey=[^&\s]+/gi,
   /\bBearer\s+[A-Za-z0-9\-._~+/]+=*/gi,
 ];
 
 /**
- * Strip credentials Google sometimes echoes (query `key=`, `AIza…` keys, bearer
- * tokens) before a provider message is logged or returned to the browser.
+ * Strip credentials a provider sometimes echoes (query `key=`, `AIza…` keys,
+ * `sk-…` keys, bearer tokens) before a message is logged or returned.
  */
 export function sanitizeProviderMessage(raw: string): string {
   let text = raw;
@@ -51,7 +52,7 @@ function statusToHttp(providerStatus: number | undefined): {
 
 /**
  * A provider failure the model cascade can choose to retry.
- * Auth failures (401/403) are not retryable: every Gemini model shares one key.
+ * Auth failures (401/403) are not retryable on the same provider: those models share one key.
  * Overload (503), rate limits, a missing model (404), and a menu the model
  * could not read are retryable on the next model.
  */

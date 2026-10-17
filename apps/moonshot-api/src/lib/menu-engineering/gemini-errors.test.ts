@@ -6,10 +6,11 @@ import { explainMenuEngineeringFailure, sanitizeProviderMessage } from './gemini
 describe('menu engineering provider errors', () => {
   it('redacts API keys and bearer tokens from provider text', () => {
     const raw =
-      'request failed key=AIzaSySUPERSECRETKEYVALUE Bearer abc.def-ghi for model';
+      'request failed key=AIzaSySUPERSECRETKEYVALUE Bearer abc.def-ghi sk-proj-FAKEKEYVALUE1234567890 for model';
     const clean = sanitizeProviderMessage(raw);
     expect(clean).not.toContain('AIza');
     expect(clean).not.toContain('abc.def');
+    expect(clean).not.toContain('sk-proj');
     expect(clean).toContain('[redacted]');
     expect(clean).toContain('request failed');
   });

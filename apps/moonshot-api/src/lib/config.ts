@@ -5,6 +5,11 @@
  */
 
 import { parseGeminiModelCascade } from './menu-engineering/gemini-models.js';
+import {
+  parseMenuEngineeringProviderOrder,
+  parseOpenAiModelCascade,
+  type MenuEngineeringProviderName,
+} from './menu-engineering/openai-models.js';
 
 export type AppConfig = {
   databaseUrl: string | undefined;
@@ -40,8 +45,13 @@ export type AppConfig = {
   orderAheadCancelUrl: string | undefined;
   posTokenEncryptionKey: string | undefined;
   geminiApiKey: string | undefined;
-  /** Up to three vision models, preferred first. See `parseGeminiModelCascade`. */
+  /** Up to three Gemini models, preferred first. See `parseGeminiModelCascade`. */
   geminiModels: readonly string[];
+  openaiApiKey: string | undefined;
+  /** Up to three OpenAI models, preferred first. See `parseOpenAiModelCascade`. */
+  openaiModels: readonly string[];
+  /** Providers tried in order. A provider with no key is skipped. */
+  menuEngineeringProviderOrder: readonly MenuEngineeringProviderName[];
   turnstileSecretKey: string | undefined;
 };
 
@@ -104,6 +114,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     posTokenEncryptionKey: trimOrUndefined(env.POS_TOKEN_ENCRYPTION_KEY),
     geminiApiKey: trimOrUndefined(env.GEMINI_API_KEY),
     geminiModels: parseGeminiModelCascade(env),
+    openaiApiKey: trimOrUndefined(env.OPENAI_API_KEY),
+    openaiModels: parseOpenAiModelCascade(env),
+    menuEngineeringProviderOrder: parseMenuEngineeringProviderOrder(env.MENU_ENGINEERING_PROVIDERS),
     turnstileSecretKey: trimOrUndefined(env.TURNSTILE_SECRET_KEY),
   };
 }

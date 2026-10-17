@@ -213,7 +213,7 @@ const REGION_LABEL: Record<MenuEngineeringRegionTier, string> = {
 
 /**
  * Deterministic prose builder derived strictly from `findings`.
- * Used when Gemini narration is not configured or as a zero-hallucination fallback.
+ * Used when no narration model is configured, or when every model attempt fails.
  */
 export function buildDeterministicNarrative(
   findings: MenuEngineeringFindings,
@@ -241,5 +241,6 @@ export function buildDeterministicNarrative(
     methodologyAndLimitsNote:
       'All figures are soft estimates based on typical UK specialty café prices and industry cost-of-goods percentages. Because this free audit does not use till volume data, it measures price positioning and menu structure — full Stars / Plowhorses / Puzzles / Dogs matrix engineering requires POS sales mix.',
     generatedBy: 'deterministic_fallback',
+    modelName: null,
   };
 }

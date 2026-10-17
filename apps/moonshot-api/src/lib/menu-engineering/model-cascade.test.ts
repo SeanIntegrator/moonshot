@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiHttpError } from '../http-errors.js';
 import { explainMenuEngineeringFailure } from './gemini-errors.js';
 import { parseGeminiModelCascade } from './gemini-models.js';
+import { parseMenuEngineeringProviderOrder, parseOpenAiModelCascade } from './openai-models.js';
 import type { MenuEngineeringLlmAdapter } from './llm-adapter.js';
 import { CascadingMenuEngineeringAdapter } from './model-cascade.js';
 
@@ -89,6 +90,47 @@ describe('gemini model cascade', () => {
       code: ApiErrorCode.CONFIG,
     });
     expect(second).not.toHaveBeenCalled();
+  });
+
+  it('continues with OpenAI after a Gemini auth failure', async () => {
+    const openai = vi.fn(async () => SAMPLE_UK_CAFE_MENU);
+    const cascade = new CascadingMenuEngineeringAdapter([
+      adapter('gemini:gemini-3.8-flash', {
+        extract: async () => {
+          throw explainMenuEngineeringFailure(
+            Object.assign(new Error('API key not valid'), { status: 401 }),
+            'Gemini extract (model gemini-3.8-flash)',
+          );
+        },
+      }),
+      adapter('gemini:gemini-3.6-flash', {
+        extract: async () => {
+          throw new Error('same Gemini key should not be tried');
+        },
+      }),
+      adapter('openai:gpt-5.4', { extract: openai }),
+    ]);
+
+    await expect(cascade.extractMenuFromImages([])).resolves.toBe(SAMPLE_UK_CAFE_MENU);
+    expect(openai).toHaveBeenCalledOnce();
+  });
+
+  it('parses the OpenAI model list and provider order', () => {
+    expect(parseOpenAiModelCascade({ OPENAI_MODEL: 'gpt-5.4-mini' })).toEqual([
+      'gpt-5.4-mini',
+      'gpt-5.4',
+      'gpt-5.4-nano',
+    ]);
+    expect(
+      parseOpenAiModelCascade({
+        OPENAI_MODELS: 'gpt-5.4-nano, gpt-5.4-mini, gpt-5.4, gpt-4.1',
+      }),
+    ).toEqual(['gpt-5.4-nano', 'gpt-5.4-mini', 'gpt-5.4']);
+    expect(parseMenuEngineeringProviderOrder('openai, gemini, openai')).toEqual([
+      'openai',
+      'gemini',
+    ]);
+    expect(parseMenuEngineeringProviderOrder(undefined)).toEqual(['gemini', 'openai']);
   });
 
   it('lists every failed model when the chain is exhausted', async () => {

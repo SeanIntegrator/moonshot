@@ -1,5 +1,4 @@
 import { GoogleGenAI, Type, type Schema } from '@google/genai';
-import { CANONICAL_ITEMS } from '@moonshot/domain';
 import {
   ApiErrorCode,
   MENU_GROUP_KINDS,
@@ -7,27 +6,11 @@ import {
   type MenuEngineeringFindings,
   type MenuEngineeringNarrative,
 } from '@moonshot/types';
-import { config } from '../config.js';
 import { ApiHttpError } from '../http-errors.js';
 import { explainMenuEngineeringFailure } from './gemini-errors.js';
 import type { MenuEngineeringLlmAdapter, MenuImageInput } from './llm-adapter.js';
-import { CascadingMenuEngineeringAdapter } from './model-cascade.js';
-import { normaliseRawModelExtraction } from './schemas.js';
-
-const CANONICAL_REFERENCE_LIST = CANONICAL_ITEMS.map(
-  (c) => `${c.id} (${c.label})`,
-).join(', ');
-
-const EXTRACTION_SYSTEM_PROMPT = `You are a specialist UK café menu data extractor.
-Extract every food and drink item visible in the menu image(s) into structured JSON.
-Rules:
-1. Convert all prices to GBP decimal numbers (e.g., "3.5" or "£3.50" -> 3.5, "65p" -> 0.65).
-2. If coffee/drinks have multiple size columns (e.g. Small/Reg/Large or 8oz/12oz), set pricePounds to the primary/regular size and list all sizes in sizeVariants.
-3. Capture modifiers/add-ons:
-   - If an add-on applies to a whole section (e.g. "Syrups +75p", "Oat milk +40p", "Extra shot +80p", "Add to any brunch dish: Halloumi +3.5"), place it in sectionModifiers.
-   - If an add-on is embedded inside a specific dish description (e.g. "add poached egg +1.5"), attach it to that item's modifiers array.
-4. Normalise dietary codes (e.g., VG, V, GF, GFO, N, DF).
-5. Map every item and modifier to the closest canonicalId from this exact list: ${CANONICAL_REFERENCE_LIST}. Use "other" only when no canonical item fits.`;
+import { buildMenuNarrationPrompt, MENU_EXTRACTION_INSTRUCTIONS } from './prompts.js';
+import { normaliseRawModelExtraction, readModelNarrative } from './schemas.js';
 
 const EXTRACTION_RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,
@@ -154,7 +137,7 @@ export class GeminiMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
             role: 'user',
             parts: [
               ...inlineParts,
-              { text: EXTRACTION_SYSTEM_PROMPT },
+              { text: MENU_EXTRACTION_INSTRUCTIONS },
             ],
           },
         ],
@@ -208,19 +191,7 @@ export class GeminiMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
             role: 'user',
             parts: [
               {
-                text: `You are writing a concise, supportive UK specialty café pricing & structure report.
-CRITICAL RULE: Use ONLY the numbers and findings in the provided JSON. Never invent prices, percentages, or benchmarks. Use soft, practical language ("typical UK specialty cafés", "estimated opportunity"). End methodologyAndLimitsNote by noting that full Stars/Plowhorses/Puzzles/Dogs matrix engineering requires POS sales volume data.
-
-Findings JSON:
-${JSON.stringify({
-  regionTier: findings.regionTier,
-  baselineCustomersPerDay: findings.baselineCustomersPerDay,
-  totalMonthlyOpportunityPoundsAtBaseline:
-    findings.totalMonthlyOpportunityPoundsAtBaseline,
-  ladderAndStructureFlags: findings.ladderAndStructureFlags,
-  suggestions: findings.suggestions,
-  categorySummaries: findings.categorySummaries,
-})}`,
+                text: buildMenuNarrationPrompt(findings),
               },
             ],
           },
@@ -240,37 +211,13 @@ ${JSON.stringify({
           `Gemini narrate (model ${this.model}) failed: the model returned an empty response.`,
         );
       }
-      const parsed = JSON.parse(rawText) as Omit<MenuEngineeringNarrative, 'generatedBy'>;
       return {
-        ...parsed,
+        ...readModelNarrative(JSON.parse(rawText) as unknown),
         generatedBy: 'gemini',
+        modelName: this.providerName,
       };
     } catch (err) {
       throw explainMenuEngineeringFailure(err, `Gemini narrate (model ${this.model})`);
     }
   }
-}
-
-/**
- * Factory that returns the configured LLM adapter.
- * Allows tests to inject a stub adapter without live network calls.
- */
-let overrideAdapter: MenuEngineeringLlmAdapter | null = null;
-
-export function setMenuEngineeringLlmAdapterForTests(
-  adapter: MenuEngineeringLlmAdapter | null,
-): void {
-  overrideAdapter = adapter;
-}
-
-export function resolveMenuEngineeringLlmAdapter(): MenuEngineeringLlmAdapter | null {
-  if (overrideAdapter) return overrideAdapter;
-  if (!config.geminiApiKey) return null;
-
-  // Same key, up to three Gemini models. A second provider (OpenAI, Anthropic)
-  // is another MenuEngineeringLlmAdapter pushed onto this list when its key exists.
-  const attempts = config.geminiModels.map(
-    (model) => new GeminiMenuEngineeringAdapter(config.geminiApiKey as string, model),
-  );
-  return new CascadingMenuEngineeringAdapter(attempts);
 }

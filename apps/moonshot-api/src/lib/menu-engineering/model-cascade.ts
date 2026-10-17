@@ -14,11 +14,8 @@ import type { MenuEngineeringLlmAdapter, MenuImageInput } from './llm-adapter.js
 
 /**
  * Tries each adapter in order. A retryable failure (overload, unknown model,
- * empty read) moves to the next adapter. An auth failure stops the chain
- * because later Gemini models use the same key.
- *
- * Another provider is another adapter appended by `resolveMenuEngineeringLlmAdapter`
- * once its API key is configured.
+ * empty read) moves to the next adapter. An auth failure skips the rest of
+ * that provider — they share one key — and continues with the next provider.
  */
 export class CascadingMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
   readonly providerName: string;
@@ -51,20 +48,42 @@ export class CascadingMenuEngineeringAdapter implements MenuEngineeringLlmAdapte
   }
 }
 
+function credentialGroup(providerName: string): string {
+  const colon = providerName.indexOf(':');
+  return colon === -1 ? providerName : providerName.slice(0, colon);
+}
+
 async function runModelCascade<T>(
   attempts: readonly MenuEngineeringLlmAdapter[],
   run: (attempt: MenuEngineeringLlmAdapter) => Promise<T>,
   operation: 'extract' | 'narrate',
 ): Promise<T> {
   const failures: string[] = [];
-  for (const attempt of attempts) {
+  let index = 0;
+  while (index < attempts.length) {
+    const attempt = attempts[index];
+    if (!attempt) break;
     try {
       return await run(attempt);
     } catch (err) {
       const detail = sanitizeProviderMessage(err instanceof Error ? err.message : String(err));
       failures.push(`${attempt.providerName}: ${detail}`);
       console.warn(`[menu-engineering] ${operation} attempt failed`, attempt.providerName, detail);
-      if (!isRetryableMenuEngineeringError(err)) throw err;
+      if (isRetryableMenuEngineeringError(err)) {
+        index += 1;
+        continue;
+      }
+      // Same-provider models share a key, so skip them and resume at the next provider.
+      const group = credentialGroup(attempt.providerName);
+      let nextIndex = index + 1;
+      while (
+        nextIndex < attempts.length &&
+        credentialGroup(attempts[nextIndex]?.providerName ?? '') === group
+      ) {
+        nextIndex += 1;
+      }
+      if (nextIndex >= attempts.length) throw err;
+      index = nextIndex;
     }
   }
 
