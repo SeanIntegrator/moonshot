@@ -65,7 +65,7 @@ flowchart LR
 - Each provider contributes up to three models: `GEMINI_MODEL` / `OPENAI_MODEL` first (defaults `gemini-3.8-flash` and `gpt-5.4`), then that provider's fallbacks, unless `GEMINI_MODELS` or `OPENAI_MODELS` replaces the list.
 - A retryable failure — overload, unknown model, empty read — tries the next model.
 - An auth failure skips the rest of that provider (one shared key) and continues with the next provider.
-- If every narration attempt fails, the deterministic narrative is returned. `narrative.modelName` records which model wrote the prose (`openai:gpt-5.4`, `gemini:…`), or null for the fallback.
+- If every narration attempt fails, or the cascade is still running after 50 seconds, the deterministic narrative is returned. Provider HTTP calls time out at 45 seconds and retry once. `narrative.modelName` records which model wrote the prose (`openai:gpt-5.4`, `gemini:…`), or null for the fallback. The browser waits 70 seconds so it receives that JSON instead of aborting a slow Gemini call.
 
 ## 5. Production API origin
 

@@ -33,7 +33,8 @@ export interface MenuAuditReport {
 /** Sample is a small JSON GET. Vision and narration can sit on the model for longer. */
 const SAMPLE_TIMEOUT_MS = 20_000;
 const EXTRACT_TIMEOUT_MS = 90_000;
-const ANALYSE_TIMEOUT_MS = 60_000;
+/** Above the API narration budget (50s) so a slow model still returns JSON. */
+const ANALYSE_TIMEOUT_MS = 70_000;
 const MAX_ERROR_BODY_CHARS = 1_500;
 
 type MenuApiResult = { response: Response; url: string; method: string };
@@ -67,7 +68,7 @@ function formatTransportError(method: string, url: string, err: unknown): string
     return [
       `${method} ${url} timed out before the API finished.`,
       `Page origin: ${pageOrigin}`,
-      'The buttons unlock after this timeout. A vision call that is still running on the API is not cancelled server-side.',
+      'The buttons unlock after this timeout. The API keeps working until its own narration budget, then returns the calculated report.',
     ].join('\n');
   }
   const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);

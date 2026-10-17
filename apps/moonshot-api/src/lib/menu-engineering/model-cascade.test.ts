@@ -1,20 +1,23 @@
 import { buildDeterministicNarrative, SAMPLE_UK_CAFE_MENU } from '@moonshot/domain';
 import { analyseMenuAgainstBenchmarks } from '@moonshot/domain';
 import { ApiErrorCode } from '@moonshot/types';
-import type { MenuEngineeringNarrative } from '@moonshot/types';
+import type { MenuEngineeringFindings, MenuEngineeringNarrative } from '@moonshot/types';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiHttpError } from '../http-errors.js';
 import { explainMenuEngineeringFailure } from './gemini-errors.js';
 import { parseGeminiModelCascade } from './gemini-models.js';
-import { parseMenuEngineeringProviderOrder, parseOpenAiModelCascade } from './openai-models.js';
-import type { MenuEngineeringLlmAdapter } from './llm-adapter.js';
+import type { MenuEngineeringLlmAdapter, MenuNarrationOptions } from './llm-adapter.js';
 import { CascadingMenuEngineeringAdapter } from './model-cascade.js';
+import { parseMenuEngineeringProviderOrder, parseOpenAiModelCascade } from './openai-models.js';
 
 function adapter(
   name: string,
   behavior: {
     extract?: () => Promise<typeof SAMPLE_UK_CAFE_MENU>;
-    narrate?: () => Promise<MenuEngineeringNarrative>;
+    narrate?: (
+      findings: MenuEngineeringFindings,
+      options?: MenuNarrationOptions,
+    ) => Promise<MenuEngineeringNarrative>;
   },
 ): MenuEngineeringLlmAdapter {
   return {
@@ -180,6 +183,29 @@ describe('gemini model cascade', () => {
     ]);
     const fallback = await exhausted.narrateFindings(findings);
     expect(fallback.generatedBy).toBe('deterministic_fallback');
+    expect(fallback.modelName).toBeNull();
     expect(fallback.headline).toContain('£');
+  });
+
+  it('returns the deterministic report when narration outlives the budget', async () => {
+    const findings = analyseMenuAgainstBenchmarks(SAMPLE_UK_CAFE_MENU, 'city');
+    let signal: AbortSignal | undefined;
+    const cascade = new CascadingMenuEngineeringAdapter(
+      [
+        adapter('gemini:slow', {
+          narrate: (_findings, options) => {
+            signal = options?.signal;
+            return new Promise(() => {});
+          },
+        }),
+      ],
+      40,
+    );
+    const started = Date.now();
+    const narrative = await cascade.narrateFindings(findings);
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(narrative.generatedBy).toBe('deterministic_fallback');
+    expect(narrative.modelName).toBeNull();
+    expect(signal?.aborted).toBe(true);
   });
 });

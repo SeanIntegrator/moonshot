@@ -11,6 +11,7 @@ import {
   sanitizeProviderMessage,
 } from './gemini-errors.js';
 import type { MenuEngineeringLlmAdapter, MenuImageInput } from './llm-adapter.js';
+import { NARRATION_BUDGET_MS } from './provider-limits.js';
 
 /**
  * Tries each adapter in order. A retryable failure (overload, unknown model,
@@ -20,7 +21,10 @@ import type { MenuEngineeringLlmAdapter, MenuImageInput } from './llm-adapter.js
 export class CascadingMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
   readonly providerName: string;
 
-  constructor(private readonly attempts: readonly MenuEngineeringLlmAdapter[]) {
+  constructor(
+    private readonly attempts: readonly MenuEngineeringLlmAdapter[],
+    private readonly narrationBudgetMs = NARRATION_BUDGET_MS,
+  ) {
     if (attempts.length === 0) {
       throw new Error('Menu engineering cascade needs at least one model');
     }
@@ -32,11 +36,16 @@ export class CascadingMenuEngineeringAdapter implements MenuEngineeringLlmAdapte
   }
 
   async narrateFindings(findings: MenuEngineeringFindings): Promise<MenuEngineeringNarrative> {
+    const controller = new AbortController();
     try {
-      return await runModelCascade(
-        this.attempts,
-        (attempt) => attempt.narrateFindings(findings),
-        'narrate',
+      return await withDeadline(
+        runModelCascade(
+          this.attempts,
+          (attempt) => attempt.narrateFindings(findings, { signal: controller.signal }),
+          'narrate',
+        ),
+        this.narrationBudgetMs,
+        controller,
       );
     } catch (err) {
       console.warn(
@@ -46,6 +55,29 @@ export class CascadingMenuEngineeringAdapter implements MenuEngineeringLlmAdapte
       return buildDeterministicNarrative(findings);
     }
   }
+}
+
+function withDeadline<T>(
+  work: Promise<T>,
+  budgetMs: number,
+  controller: AbortController,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`Narration exceeded ${budgetMs}ms`));
+    }, budgetMs);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
 }
 
 function credentialGroup(providerName: string): string {

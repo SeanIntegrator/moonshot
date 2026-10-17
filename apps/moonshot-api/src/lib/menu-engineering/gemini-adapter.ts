@@ -8,7 +8,12 @@ import {
 } from '@moonshot/types';
 import { ApiHttpError } from '../http-errors.js';
 import { explainMenuEngineeringFailure } from './gemini-errors.js';
-import type { MenuEngineeringLlmAdapter, MenuImageInput } from './llm-adapter.js';
+import type {
+  MenuEngineeringLlmAdapter,
+  MenuImageInput,
+  MenuNarrationOptions,
+} from './llm-adapter.js';
+import { MENU_MODEL_HTTP_TIMEOUT_MS, MENU_MODEL_MAX_ATTEMPTS } from './provider-limits.js';
 import { buildMenuNarrationPrompt, MENU_EXTRACTION_INSTRUCTIONS } from './prompts.js';
 import { normaliseRawModelExtraction, readModelNarrative } from './schemas.js';
 
@@ -113,7 +118,17 @@ export class GeminiMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
   private readonly model: string;
 
   constructor(apiKey: string, model = 'gemini-3.8-flash') {
-    this.client = new GoogleGenAI({ apiKey });
+    this.client = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        timeout: MENU_MODEL_HTTP_TIMEOUT_MS,
+        retryOptions: {
+          attempts: MENU_MODEL_MAX_ATTEMPTS,
+          initialDelay: 0.5,
+          maxDelay: 2,
+        },
+      },
+    });
     this.model = model;
     this.providerName = `gemini:${model}`;
   }
@@ -182,6 +197,7 @@ export class GeminiMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
 
   async narrateFindings(
     findings: MenuEngineeringFindings,
+    options?: MenuNarrationOptions,
   ): Promise<MenuEngineeringNarrative> {
     try {
       const response = await this.client.models.generateContent({
@@ -200,6 +216,7 @@ export class GeminiMenuEngineeringAdapter implements MenuEngineeringLlmAdapter {
           responseMimeType: 'application/json',
           responseSchema: NARRATIVE_RESPONSE_SCHEMA,
           temperature: 0.2,
+          abortSignal: options?.signal,
         },
       });
 
