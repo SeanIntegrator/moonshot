@@ -1,0 +1,74 @@
+.menu-audit {
+  min-height: 100vh;
+  padding: 3rem 0 4rem;
+  font-family: var(--font-mono);
+}
+
+.menu-audit h1 {
+  margin: 0.25rem 0 1rem;
+  font-family: var(--font-serif);
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+}
+
+.menu-audit__back {
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.menu-audit__panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 1.5rem 0;
+}
+
+.menu-audit select,
+.menu-audit input[type='file'] {
+  color: var(--text);
+  font: inherit;
+}
+
+.menu-audit button:disabled {
+  opacity: 0.5;
+}
+
+.menu-audit__error {
+  margin: 1rem 0;
+  color: #ffb4a8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+}
+
+.menu-audit__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 2rem;
+}
+
+.menu-audit__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.menu-audit__meta {
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.menu-audit article {
+  margin-top: 2rem;
+}
+
+.menu-audit article h2 {
+  margin-bottom: 1rem;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+}
+
+.menu-audit article li {
+  margin-bottom: 0.75rem;
+}

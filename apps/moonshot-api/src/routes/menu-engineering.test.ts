@@ -11,7 +11,7 @@ import sharp from 'sharp';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createMoonshotHttpServer } from '../create-moonshot-http-server.js';
-import { setMenuEngineeringLlmAdapterForTests } from '../lib/menu-engineering/gemini-adapter.js';
+import { setMenuEngineeringLlmAdapterForTests } from '../lib/menu-engineering/resolve-adapter.js';
 import type { MenuEngineeringLlmAdapter } from '../lib/menu-engineering/llm-adapter.js';
 
 describe('menu-engineering domain rules & HTTP endpoints', () => {

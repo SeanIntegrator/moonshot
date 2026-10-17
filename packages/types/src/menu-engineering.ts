@@ -140,7 +140,7 @@ export interface ExtractedMenuPayload {
   sectionModifiers: ExtractedMenuModifier[];
   items: ExtractedMenuItem[];
   extractionNotes: string[];
-  sourceMode: 'gemini_vision' | 'sample_preset';
+  sourceMode: 'gemini_vision' | 'openai_vision' | 'sample_preset';
 }
 
 export interface BenchmarkRow {
@@ -244,7 +244,9 @@ export interface MenuEngineeringNarrative {
   pricingCommentary: string;
   structureAndLadderCommentary: string;
   methodologyAndLimitsNote: string;
-  generatedBy: 'gemini' | 'deterministic_fallback';
+  generatedBy: 'gemini' | 'openai' | 'deterministic_fallback';
+  /** Provider and model that wrote the prose, e.g. `openai:gpt-5.4`. Null for the deterministic fallback. */
+  modelName: string | null;
 }
 
 export interface MenuEngineeringAnalysisRequest {

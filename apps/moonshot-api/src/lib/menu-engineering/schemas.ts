@@ -5,6 +5,7 @@ import {
   MENU_GROUP_KINDS,
   type CanonicalItemId,
   type ExtractedMenuPayload,
+  type MenuEngineeringNarrative,
 } from '@moonshot/types';
 import { inferCanonicalItemIdFromName } from '@moonshot/domain';
 import { z } from 'zod';
@@ -53,7 +54,7 @@ export const extractedMenuPayloadSchema = z.object({
   sectionModifiers: z.array(extractedMenuModifierSchema).max(40).default([]),
   items: z.array(extractedMenuItemSchema).min(1).max(200),
   extractionNotes: z.array(z.string().trim().max(300)).max(20).default([]),
-  sourceMode: z.enum(['gemini_vision', 'sample_preset']).default('gemini_vision'),
+  sourceMode: z.enum(['gemini_vision', 'openai_vision', 'sample_preset']).default('gemini_vision'),
 });
 
 export const menuEngineeringAnalysisRequestSchema = z.object({
@@ -66,7 +67,10 @@ export const menuEngineeringAnalysisRequestSchema = z.object({
  * Normalises raw JSON returned by a vision model into a clean `ExtractedMenuPayload`,
  * ensuring deterministic IDs, valid canonical item IDs, and deduplicated section lists.
  */
-export function normaliseRawModelExtraction(raw: unknown): ExtractedMenuPayload {
+export function normaliseRawModelExtraction(
+  raw: unknown,
+  sourceMode: ExtractedMenuPayload['sourceMode'] = 'gemini_vision',
+): ExtractedMenuPayload {
   const obj = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
   const rawItems = Array.isArray(obj.items) ? obj.items : [];
 
@@ -193,6 +197,30 @@ export function normaliseRawModelExtraction(raw: unknown): ExtractedMenuPayload 
     extractionNotes: Array.isArray(obj.extractionNotes)
       ? obj.extractionNotes.filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
       : [],
-    sourceMode: 'gemini_vision',
+    sourceMode,
   };
+}
+
+const NARRATIVE_FIELDS = [
+  'headline',
+  'executiveSummary',
+  'pricingCommentary',
+  'structureAndLadderCommentary',
+  'methodologyAndLimitsNote',
+] as const;
+
+/** Pull the five prose fields out of a model JSON object. Missing text is a failed attempt. */
+export function readModelNarrative(
+  raw: unknown,
+): Omit<MenuEngineeringNarrative, 'generatedBy' | 'modelName'> {
+  const obj = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const narrative = {} as Omit<MenuEngineeringNarrative, 'generatedBy' | 'modelName'>;
+  for (const field of NARRATIVE_FIELDS) {
+    const value = obj[field];
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new Error(`Model narration was missing ${field}.`);
+    }
+    narrative[field] = value.trim();
+  }
+  return narrative;
 }

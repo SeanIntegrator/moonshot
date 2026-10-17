@@ -16,7 +16,7 @@ import {
 } from 'express';
 import multer from 'multer';
 import { ApiHttpError } from '../lib/http-errors.js';
-import { resolveMenuEngineeringLlmAdapter } from '../lib/menu-engineering/gemini-adapter.js';
+import { resolveMenuEngineeringLlmAdapter } from '../lib/menu-engineering/resolve-adapter.js';
 import { explainMenuEngineeringFailure } from '../lib/menu-engineering/gemini-errors.js';
 import {
   MENU_ENGINEERING_MAX_FILE_BYTES,
@@ -140,7 +140,7 @@ menuEngineeringRouter.post(
               ...SAMPLE_UK_CAFE_MENU,
               extractionNotes: [
                 ...SAMPLE_UK_CAFE_MENU.extractionNotes,
-                'GEMINI_API_KEY is not set on the server — loaded sample UK specialty café extraction for local testing.',
+                'No vision API key is set on the server — loaded sample UK specialty café extraction for local testing.',
               ],
             },
             entitlements: resolveMenuEngineeringEntitlements('free'),
@@ -152,7 +152,7 @@ menuEngineeringRouter.post(
       throw new ApiHttpError(
         503,
         ApiErrorCode.CONFIG,
-        'Vision extraction requires GEMINI_API_KEY on @moonshot/api (or pass ?fallback=sample / use the Sample Menu button to test without a key).',
+        'Vision extraction requires GEMINI_API_KEY or OPENAI_API_KEY on @moonshot/api (or pass ?fallback=sample / use the Sample Menu button to test without a key).',
       );
     }
 

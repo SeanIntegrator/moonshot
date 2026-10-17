@@ -1,10 +1,10 @@
 # Menu Engineering & UK Price Benchmark Tool
 
-This document records the architecture for the **Menu Engineering & Price Benchmark Audit** API (`/api/v1/menu-engineering/*`). The marketing UI was removed so the landing-page redesign can merge cleanly. The API, benchmark rules, and Gemini model cascade stay.
+This document records the architecture for the **Menu Engineering & Price Benchmark Audit** API (`/api/v1/menu-engineering/*`). A skeleton client lives at `/menu-audit` on `@moonshot/marketing` so the landing-page redesign can keep moving. The API, benchmark rules, and model cascade stay.
 
 ## 1. Architecture & Data Flow
 
-The browser steps are the client to rebuild later. They are not mounted in `@moonshot/marketing` today.
+`/menu-audit` is a text-only skeleton (sample menu, one image upload, analyse). The confirmation table and charts below are the client to rebuild on the finished landing page.
 
 ```mermaid
 flowchart LR
@@ -17,7 +17,7 @@ flowchart LR
 
   subgraph API["@moonshot/api (Stateless Express Routes)"]
     Guard["Rate Limiter + Optional Turnstile\n+ Magic-Byte & Sharp Check"]
-    Adapter["MenuEngineeringLlmAdapter\n(Gemini model cascade)"]
+    Adapter["MenuEngineeringLlmAdapter\n(Gemini, then OpenAI)"]
     Engine["Deterministic Rules Engine\n(@moonshot/domain)"]
   end
 
@@ -57,8 +57,18 @@ flowchart LR
 - `extractMenuFromImages(images: MenuImageInput[]): Promise<ExtractedMenuPayload>`
 - `narrateFindings(findings: MenuEngineeringFindings): Promise<MenuEngineeringNarrative>`
 
-`GeminiMenuEngineeringAdapter` (`gemini-adapter.ts`) implements this contract using `@google/genai`. `resolveMenuEngineeringLlmAdapter()` builds a cascade of up to three models that share `GEMINI_API_KEY`: `GEMINI_MODEL` first (default `gemini-3.8-flash`), then `GEMINI_MODEL_FALLBACKS` (default `gemini-3.6-flash`, `gemini-3.5-flash-lite`). A retryable failure — overload, unknown model, empty read — tries the next model. An auth failure stops the chain. Another provider is another `MenuEngineeringLlmAdapter` appended in that resolver once its API key is set.
+`GeminiMenuEngineeringAdapter` (`gemini-adapter.ts`) uses `@google/genai`. `OpenAiMenuEngineeringAdapter` (`openai-adapter.ts`) uses the OpenAI chat completions API with a strict JSON schema. Both share the extraction and narration prompts in `prompts.ts`.
+
+`resolveMenuEngineeringLlmAdapter()` (`resolve-adapter.ts`) builds one cascade:
+
+- Provider order is `MENU_ENGINEERING_PROVIDERS` (default `gemini,openai`). A provider with no API key is skipped.
+- Each provider contributes up to three models: `GEMINI_MODEL` / `OPENAI_MODEL` first (defaults `gemini-3.8-flash` and `gpt-5.4`), then that provider's fallbacks, unless `GEMINI_MODELS` or `OPENAI_MODELS` replaces the list.
+- A retryable failure — overload, unknown model, empty read — tries the next model.
+- An auth failure skips the rest of that provider (one shared key) and continues with the next provider.
+- If every narration attempt fails, the deterministic narrative is returned. `narrative.modelName` records which model wrote the prose (`openai:gpt-5.4`, `gemini:…`), or null for the fallback.
 
 ## 5. Production API origin
 
-`GEMINI_API_KEY` and `GEMINI_MODEL` live on `moonshot-api`. There is no marketing client for this tool right now. When a page calls the API again, it needs `VITE_API_URL` set to the API origin only (`https://moonshotapi-production.up.railway.app`) and `CORS_ORIGINS` must include that page's origin.
+`GEMINI_API_KEY`, `OPENAI_API_KEY`, and the model env vars live on `moonshot-api`. Do not put provider keys in the marketing app. `/menu-audit` calls the API from the browser, so that service needs `VITE_API_URL` set to the API origin only (`https://moonshotapi-production.up.railway.app`) and `CORS_ORIGINS` must include the marketing origin. Local `vite` dev falls back to `http://localhost:3000` when `VITE_API_URL` is unset.
+
+A Railway preview of marketing still bakes the service's `VITE_API_URL`, which is usually the production API. The sample route is already there. The browser shows "Failed to fetch" when the preview hostname is not in production `CORS_ORIGINS` — the response is returned, but without `Access-Control-Allow-Origin` the page cannot read it. Add the preview origin (the page prints it) to `CORS_ORIGINS` on the API that `VITE_API_URL` names. OpenAI model choice from this branch is on that API only after it is deployed with `OPENAI_API_KEY`. The page prints the API origin, this page's origin, and the response body so a tablet can show the failure without a console.
