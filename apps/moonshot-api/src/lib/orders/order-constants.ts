@@ -13,12 +13,24 @@ export const KDS_OPEN_ORDER_STATUSES = ['confirmed', 'preparing', 'ready'] as co
 /** Open tickets older than this (by `board_opened_at`) leave the live board / recall-last and are auto-cancelled. */
 export const KDS_OPEN_MAX_AGE_HOURS = 16;
 
+/**
+ * Abandoned Stripe Checkout drafts (`pending` / `unpaid`) stay payable for 24h
+ * (Checkout Session default). Auto-expire them only after that window so a late
+ * payment cannot charge a cancelled order.
+ */
+export const PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS = 25;
+
 /** Alias — same open statuses that can be marked Done on the KDS. */
 export const COMPLETABLE_STATUSES = KDS_OPEN_ORDER_STATUSES;
 
 export const CUSTOMER_ACTIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready'] as const;
 
-export const CUSTOMER_CANCELLABLE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready'] as const;
+export const CUSTOMER_CANCELLABLE_STATUSES = [
+  'pending',
+  'confirmed',
+  'preparing',
+  'ready',
+] as const;
 
 export const CUSTOMER_TERMINAL_STATUSES = ['completed', 'cancelled'] as const;
 
@@ -38,17 +50,25 @@ export const ORDER_ITEM_SELECT_COLUMNS = `
 
 export function validateOrderLines(lines: CreateOrderLineInput[]): void {
   if (lines.length === 0) {
-    throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Order must include at least one line item');
+    throw new ApiHttpError(
+      400,
+      ApiErrorCode.VALIDATION,
+      'Order must include at least one line item'
+    );
   }
   for (const line of lines) {
     if (!line.menuItemId?.trim() || !UUID_RE.test(line.menuItemId)) {
-      throw new ApiHttpError(400, ApiErrorCode.VALIDATION, 'Each item requires a valid menuItemId UUID');
+      throw new ApiHttpError(
+        400,
+        ApiErrorCode.VALIDATION,
+        'Each item requires a valid menuItemId UUID'
+      );
     }
     if (!Number.isInteger(line.quantity) || line.quantity < 1) {
       throw new ApiHttpError(
         400,
         ApiErrorCode.VALIDATION,
-        'Each item requires quantity as a positive integer',
+        'Each item requires quantity as a positive integer'
       );
     }
   }

@@ -49,7 +49,7 @@ flowchart TD
 | `POST` | `/admin/onboarding/menu-pos-import` | Admin JWT | Catalog → normalise → Postgres |
 | `POST` | `/internal/pos/refresh-tokens` | `CRON_SECRET` | Refresh due Square access tokens |
 | `POST` | `/internal/pos/sync-catalogs` | `CRON_SECRET` | Safety-net catalog sync (stale >1 day) |
-| `POST` | `/internal/orders/expire-stale` | `CRON_SECRET` | Auto-cancel open orders older than 16h (`auto_expire`) |
+| `POST` | `/internal/orders/expire-stale` | `CRON_SECRET` | Auto-cancel KDS-open orders older than 16h, and unpaid pending Checkout drafts older than 25h (`auto_expire`) |
 | `POST` | `/admin/menu/sync-pos` | Admin JWT | Force Square → Moonshot menu sync |
 | `POST` | `/webhooks/square` | Square HMAC | Order ingress + catalog sync enqueue |
 

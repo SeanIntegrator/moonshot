@@ -156,10 +156,12 @@ If Square retrieve fails after three attempts, ingress persists `detailsPending:
 
 `GET /kds/orders` and `POST /kds/orders/recall-last` only consider rows from the last **16 hours** (`board_opened_at` / `completed_at`).
 
-Stale never-completed tickets (`pending` / `confirmed` / `preparing` / `ready`) are **auto-cancelled** with `cancel_reason = auto_expire` by:
+Stale never-completed **KDS tickets** (`confirmed` / `preparing` / `ready`) are **auto-cancelled** with `cancel_reason = auto_expire` after 16 hours by:
 
 1. `POST /internal/orders/expire-stale` (Railway cron, recommended hourly)
 2. On-read when listing KDS open orders (café-bound KDS JWT)
+
+Unpaid Stripe Checkout drafts (`pending`) are **not** on the KDS board. They stay open through the default 24h Checkout Session lifetime and are only auto-expired after **25 hours**. A `checkout.session.completed` webhook (or browser recovery) that arrives after `auto_expire` still confirms the order so a captured payment cannot be stranded.
 
 Customer `GET /orders/me` only lists the caller's rows — it must not run the café-wide sweep (customer JWTs are not café-bound; `X-Cafe-Slug` is chosen by the client). Age is measured from `board_opened_at` (defaults to place time; **recall sets it to now**) so a remade ticket whose original `created_at` is older than 16h is not immediately auto-cancelled. Specific-id recall and the Recent orders dialog (`LIMIT 20`) are not clock-bounded.
 

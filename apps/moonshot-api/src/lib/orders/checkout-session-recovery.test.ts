@@ -127,7 +127,7 @@ describe('recoverOrderFromStripeCheckoutSession', () => {
         cafeId: 'cafe-1',
         stripeSessionId: 'cs_test_abc',
         amountMinor: 500,
-      }),
+      })
     );
     expect(emitKdsServerToClient).toHaveBeenCalledWith('cafe-1', {
       type: 'kds:order:new',
@@ -159,5 +159,35 @@ describe('recoverOrderFromStripeCheckoutSession', () => {
     expect(result).toBe(pending);
     expect(confirmOrderPaidFromStripeCheckout).not.toHaveBeenCalled();
     expect(emitKdsServerToClient).not.toHaveBeenCalled();
+  });
+
+  it('still confirms when the unpaid draft was auto_expired during checkout', async () => {
+    const expired = mockPendingOrder({ status: 'cancelled', cancelReason: 'auto_expire' });
+    const confirmed = mockPendingOrder({ status: 'confirmed', paymentStatus: 'paid' });
+    findOrderByStripeCheckoutSessionForCafe.mockResolvedValue(expired);
+    retrieveStripeCheckoutSession.mockResolvedValue({
+      id: 'cs_test_abc',
+      payment_status: 'paid',
+      amount_total: 500,
+      currency: 'gbp',
+      payment_intent: 'pi_test',
+      metadata: {
+        moonshot_order_id: 'order-1',
+        moonshot_cafe_id: 'cafe-1',
+      },
+    });
+    confirmOrderPaidFromStripeCheckout.mockResolvedValue(confirmed);
+
+    const result = await recoverOrderFromStripeCheckoutSession({
+      sessionId: 'cs_test_abc',
+      cafeId: 'cafe-1',
+    });
+
+    expect(confirmOrderPaidFromStripeCheckout).toHaveBeenCalled();
+    expect(emitKdsServerToClient).toHaveBeenCalledWith('cafe-1', {
+      type: 'kds:order:new',
+      order: confirmed,
+    });
+    expect(result).toBe(confirmed);
   });
 });

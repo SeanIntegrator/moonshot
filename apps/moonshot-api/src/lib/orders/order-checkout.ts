@@ -10,7 +10,7 @@ export async function deleteAbandonedPendingOrder(orderId: string, cafeId: strin
   await pool.query(
     `DELETE FROM orders
      WHERE id = $1 AND cafe_id = $2 AND status = 'pending' AND payment_status = 'unpaid'`,
-    [orderId, cafeId],
+    [orderId, cafeId]
   );
 }
 
@@ -35,13 +35,13 @@ export async function recordStripeCheckoutSessionForOrder(params: {
         order_id, cafe_id, provider, session_id, payment_intent_id, amount_minor, currency, type
       ) VALUES ($1, $2, 'stripe', $3, $4, $5, $6, 'initial')
       ON CONFLICT (session_id) DO NOTHING`,
-      [orderId, cafeId, sessionId, paymentIntentId, amountMinor, currency],
+      [orderId, cafeId, sessionId, paymentIntentId, amountMinor, currency]
     );
 
     await client.query(
       `UPDATE orders SET stripe_checkout_session_id = $1, updated_at = NOW()
        WHERE id = $2 AND cafe_id = $3 AND status = 'pending' AND payment_status = 'unpaid'`,
-      [sessionId, orderId, cafeId],
+      [sessionId, orderId, cafeId]
     );
 
     await client.query('COMMIT');
@@ -55,14 +55,14 @@ export async function recordStripeCheckoutSessionForOrder(params: {
 
 export async function findOrderByStripeCheckoutSessionForCafe(
   sessionId: string,
-  cafeId: string,
+  cafeId: string
 ): Promise<NormalisedOrder | null> {
   const res = await pool.query<{ order_id: string }>(
     `SELECT ps.order_id
      FROM payment_sessions ps
      INNER JOIN orders o ON o.id = ps.order_id AND o.cafe_id = ps.cafe_id
      WHERE ps.session_id = $1 AND ps.cafe_id = $2`,
-    [sessionId, cafeId],
+    [sessionId, cafeId]
   );
   const orderId = res.rows[0]?.order_id;
   if (!orderId) return null;
@@ -70,7 +70,24 @@ export async function findOrderByStripeCheckoutSessionForCafe(
 }
 
 /**
+ * Stripe Checkout can still be paid after the 16h KDS sweep would have cancelled
+ * a `pending` draft (session lifetime is 24h). Board hygiene (`auto_expire`) must
+ * not strand a captured payment.
+ */
+export function canConfirmUnpaidCheckoutOrder(order: {
+  status: NormalisedOrder['status'];
+  paymentStatus: NormalisedOrder['paymentStatus'];
+  cancelReason: NormalisedOrder['cancelReason'];
+}): boolean {
+  if (order.paymentStatus !== 'unpaid') return false;
+  if (order.status === 'pending') return true;
+  return order.status === 'cancelled' && order.cancelReason === 'auto_expire';
+}
+
+/**
  * Webhook: mark pending order paid + confirmed; idempotent if already paid.
+ * Also reopens unpaid orders cancelled by `auto_expire` so a late Checkout
+ * payment still reaches the KDS instead of charging a dead ticket.
  */
 export async function confirmOrderPaidFromStripeCheckout(params: {
   orderId: string;
@@ -82,8 +99,16 @@ export async function confirmOrderPaidFromStripeCheckout(params: {
   redeemRewardId?: string | null;
   userId?: string | null;
 }): Promise<NormalisedOrder | null> {
-  const { orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency, redeemRewardId, userId } =
-    params;
+  const {
+    orderId,
+    cafeId,
+    stripeSessionId,
+    paymentIntentId,
+    amountMinor,
+    currency,
+    redeemRewardId,
+    userId,
+  } = params;
 
   const client = await pool.connect();
   try {
@@ -100,7 +125,7 @@ export async function confirmOrderPaidFromStripeCheckout(params: {
       return existing;
     }
 
-    if (existing.status !== 'pending' || existing.paymentStatus !== 'unpaid') {
+    if (!canConfirmUnpaidCheckoutOrder(existing)) {
       await client.query('ROLLBACK');
       return null;
     }
@@ -115,10 +140,15 @@ export async function confirmOrderPaidFromStripeCheckout(params: {
        SET status = 'confirmed',
            payment_status = 'paid',
            stripe_checkout_session_id = $1,
+           cancel_reason = NULL,
            updated_at = NOW()
-       WHERE id = $2 AND cafe_id = $3 AND status = 'pending' AND payment_status = 'unpaid'
+       WHERE id = $2 AND cafe_id = $3 AND payment_status = 'unpaid'
+         AND (
+           status = 'pending'
+           OR (status = 'cancelled' AND cancel_reason = 'auto_expire')
+         )
        RETURNING ${ORDER_SELECT_COLUMNS}`,
-      [stripeSessionId, orderId, cafeId],
+      [stripeSessionId, orderId, cafeId]
     );
 
     if (upd.rows.length === 0) {
@@ -131,7 +161,7 @@ export async function confirmOrderPaidFromStripeCheckout(params: {
         order_id, cafe_id, provider, session_id, payment_intent_id, amount_minor, currency, type
       ) VALUES ($1, $2, 'stripe', $3, $4, $5, $6, 'initial')
       ON CONFLICT (session_id) DO NOTHING`,
-      [orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency],
+      [orderId, cafeId, stripeSessionId, paymentIntentId, amountMinor, currency]
     );
 
     if (redeemRewardId && userId) {

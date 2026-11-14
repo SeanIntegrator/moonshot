@@ -1,17 +1,22 @@
 /**
  * Auto-expire open orders that have aged past the KDS board window.
  * Age is measured from `board_opened_at` (place time, or recall time after a remake).
- * Never-completed tickets become `cancelled` with `cancel_reason = auto_expire`
+ * Never-completed KDS tickets become `cancelled` with `cancel_reason = auto_expire`
  * so order-ahead and KDS stay in sync (KDS already hid them via list filter).
+ *
+ * Unpaid Stripe Checkout drafts (`pending`) are not KDS tickets and remain
+ * payable for 24h, so they use a longer window — see
+ * {@link PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS}.
  */
 import type { NormalisedOrder, OrderCancelReason } from '@moonshot/types';
 import type { Pool, PoolClient } from 'pg';
 import { pool } from '../../db.js';
 import type { OrderRowDb } from '../order-map.js';
 import {
-  CUSTOMER_ACTIVE_STATUSES,
   KDS_OPEN_MAX_AGE_HOURS,
+  KDS_OPEN_ORDER_STATUSES,
   ORDER_SELECT_COLUMNS,
+  PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS,
 } from './order-constants.js';
 import {
   notifyOrderCancelled,
@@ -28,7 +33,8 @@ export type ExpireStaleOpenOrdersResult = {
 type Db = Pool | PoolClient;
 
 /**
- * Cancel active orders whose `board_opened_at` is older than {@link KDS_OPEN_MAX_AGE_HOURS}.
+ * Cancel KDS-open orders whose `board_opened_at` is older than {@link KDS_OPEN_MAX_AGE_HOURS},
+ * and unpaid `pending` Checkout drafts older than {@link PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS}.
  * Optional `cafeId` scopes the sweep (KDS list); omit for cron.
  * Do not call from customer routes — JWTs are not café-bound.
  * Recall resets `board_opened_at` so remakes get a fresh window without rewriting place time.
@@ -41,33 +47,57 @@ export async function expireStaleOpenOrders(params?: {
   const db = params?.db ?? pool;
   const maxAgeHours = params?.maxAgeHours ?? KDS_OPEN_MAX_AGE_HOURS;
   const cafeId = params?.cafeId;
+  const reason: OrderCancelReason = 'auto_expire';
 
   const sql = cafeId
     ? `UPDATE orders
        SET status = 'cancelled',
-           cancel_reason = $4,
+           cancel_reason = $5,
            updated_at = NOW()
        WHERE cafe_id = $1
-         AND status = ANY($2::text[])
-         AND board_opened_at <= NOW() - ($3 * INTERVAL '1 hour')
+         AND (
+           (
+             status = ANY($2::text[])
+             AND board_opened_at <= NOW() - ($3 * INTERVAL '1 hour')
+           )
+           OR (
+             status = 'pending'
+             AND payment_status = 'unpaid'
+             AND board_opened_at <= NOW() - ($4 * INTERVAL '1 hour')
+           )
+         )
        RETURNING ${ORDER_SELECT_COLUMNS}`
     : `UPDATE orders
        SET status = 'cancelled',
-           cancel_reason = $3,
+           cancel_reason = $4,
            updated_at = NOW()
-       WHERE status = ANY($1::text[])
-         AND board_opened_at <= NOW() - ($2 * INTERVAL '1 hour')
+       WHERE (
+           (
+             status = ANY($1::text[])
+             AND board_opened_at <= NOW() - ($2 * INTERVAL '1 hour')
+           )
+           OR (
+             status = 'pending'
+             AND payment_status = 'unpaid'
+             AND board_opened_at <= NOW() - ($3 * INTERVAL '1 hour')
+           )
+         )
        RETURNING ${ORDER_SELECT_COLUMNS}`;
 
-  const reason: OrderCancelReason = 'auto_expire';
   const result = cafeId
     ? await db.query<OrderRowDb>(sql, [
         cafeId,
-        [...CUSTOMER_ACTIVE_STATUSES],
+        [...KDS_OPEN_ORDER_STATUSES],
         maxAgeHours,
+        PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS,
         reason,
       ])
-    : await db.query<OrderRowDb>(sql, [[...CUSTOMER_ACTIVE_STATUSES], maxAgeHours, reason]);
+    : await db.query<OrderRowDb>(sql, [
+        [...KDS_OPEN_ORDER_STATUSES],
+        maxAgeHours,
+        PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS,
+        reason,
+      ]);
 
   if (result.rows.length === 0) {
     return { expired: 0, byCafe: {}, orders: [] };

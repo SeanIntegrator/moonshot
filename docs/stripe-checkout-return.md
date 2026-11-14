@@ -59,6 +59,7 @@ sequenceDiagram
 3. **Confirmation** (either path, idempotent):
    - **`checkout.session.completed`** webhook → `confirmOrderPaidFromStripeCheckout` → **`kds:order:new`** + ETA recompute.
    - **Return URL** → `GET /api/v1/orders/checkout-session/:sessionId` → `recoverOrderFromStripeCheckoutSession` retrieves the session from Stripe when still pending and confirms the same way.
+   - If board hygiene already set `cancel_reason = auto_expire` on an unpaid draft, confirmation **reopens** it to `confirmed` / `paid`. Customer or POS cancels are not reopened.
 4. Order-ahead **`CheckoutRestore`** confirms the session, **clears the cart** (sessionStorage), then navigates to **`/orders/:id/confirmed`**.
 
 The cart is persisted in **`sessionStorage`** keyed by café slug so a Stripe cancel return to `/checkout` keeps lines; success clears it to avoid duplicate orders.

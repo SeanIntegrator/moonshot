@@ -26,13 +26,19 @@ vi.mock('./order-lifecycle-notify.js', () => ({
   recomputePickupEtasAfterOrderChange,
 }));
 
-import { CUSTOMER_ACTIVE_STATUSES, KDS_OPEN_MAX_AGE_HOURS } from './order-constants.js';
+import {
+  KDS_OPEN_MAX_AGE_HOURS,
+  KDS_OPEN_ORDER_STATUSES,
+  PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS,
+} from './order-constants.js';
 import { expireStaleOpenOrders } from './order-expire-stale.js';
 
 const CAFE_A = 'cafe-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const CAFE_B = 'cafe-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
-function staleOrder(partial: Partial<NormalisedOrder> & Pick<NormalisedOrder, 'id' | 'cafeId'>): NormalisedOrder {
+function staleOrder(
+  partial: Partial<NormalisedOrder> & Pick<NormalisedOrder, 'id' | 'cafeId'>
+): NormalisedOrder {
   return {
     source: 'app',
     customerName: 'Guest',
@@ -88,12 +94,17 @@ describe('expireStaleOpenOrders', () => {
     const result = await expireStaleOpenOrders();
 
     const [sql, params] = poolQuery.mock.calls[0] as [string, unknown[]];
-    expect(sql).toContain("cancel_reason = $3");
+    expect(sql).toContain('cancel_reason = $4');
     expect(sql).toContain('board_opened_at <= NOW()');
+    expect(sql).toContain("status = 'pending'");
+    expect(sql).toContain("payment_status = 'unpaid'");
     expect(sql).toContain("$2 * INTERVAL '1 hour'");
-    expect(params[0]).toEqual([...CUSTOMER_ACTIVE_STATUSES]);
+    expect(sql).toContain("$3 * INTERVAL '1 hour'");
+    expect(params[0]).toEqual([...KDS_OPEN_ORDER_STATUSES]);
+    expect(params[0]).not.toContain('pending');
     expect(params[1]).toBe(KDS_OPEN_MAX_AGE_HOURS);
-    expect(params[2]).toBe('auto_expire');
+    expect(params[2]).toBe(PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS);
+    expect(params[3]).toBe('auto_expire');
 
     expect(result.expired).toBe(1);
     expect(result.byCafe).toEqual({ [CAFE_A]: 1 });
@@ -102,7 +113,7 @@ describe('expireStaleOpenOrders', () => {
       order: orders[0],
     });
     expect(recomputePickupEtasAfterOrderChange).toHaveBeenCalledWith(
-      expect.objectContaining({ cafeId: CAFE_A, logTag: 'orders.expire-stale' }),
+      expect.objectContaining({ cafeId: CAFE_A, logTag: 'orders.expire-stale' })
     );
   });
 
@@ -111,7 +122,11 @@ describe('expireStaleOpenOrders', () => {
     await expireStaleOpenOrders({ cafeId: CAFE_A });
     const [sql, params] = poolQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('cafe_id = $1');
+    expect(sql).toContain("status = 'pending'");
     expect(params[0]).toBe(CAFE_A);
-    expect(params[3]).toBe('auto_expire');
+    expect(params[1]).toEqual([...KDS_OPEN_ORDER_STATUSES]);
+    expect(params[2]).toBe(KDS_OPEN_MAX_AGE_HOURS);
+    expect(params[3]).toBe(PENDING_UNPAID_EXPIRE_MAX_AGE_HOURS);
+    expect(params[4]).toBe('auto_expire');
   });
 });
