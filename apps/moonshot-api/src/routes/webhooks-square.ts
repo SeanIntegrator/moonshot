@@ -86,7 +86,9 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
     return;
   }
   if (claim.kind === 'skip_inflight') {
-    void res.json({ received: true });
+    // Must not 2xx — Square/Stripe stop retrying after success, and the
+    // in-flight worker may still crash, leaving the row stuck in `processing`.
+    void res.status(503).json({ received: false, retry: true });
     return;
   }
 

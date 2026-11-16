@@ -26,7 +26,7 @@ export async function insertPaymentSession(params: {
     `INSERT INTO payment_sessions (
       order_id, cafe_id, provider, session_id, payment_intent_id, amount_minor, currency, type
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [orderId, cafeId, provider, sessionId, paymentIntentId, amountMinor, currency, type],
+    [orderId, cafeId, provider, sessionId, paymentIntentId, amountMinor, currency, type]
   );
 }
 
@@ -34,7 +34,7 @@ export type StripeWebhookClaimResult =
   | { kind: 'process' }
   /** Same event already finished successfully — safe to ACK Stripe */
   | { kind: 'duplicate_processed' }
-  /** Concurrent delivery or stuck row — ACK Stripe without double-processing */
+  /** Concurrent delivery or stuck row — caller must NOT 2xx so Stripe retries */
   | { kind: 'skip_inflight' };
 
 /**
@@ -57,14 +57,14 @@ export async function claimStripeWebhookForProcessing(params: {
        AND event_id = $1
        AND processing_status = 'processing'
        AND updated_at < NOW() - INTERVAL '15 minutes'`,
-    [eventId],
+    [eventId]
   );
 
   await client.query(
     `INSERT INTO webhook_events (provider, event_id, cafe_id, processing_status)
      VALUES ('stripe', $1, $2, 'pending')
      ON CONFLICT (provider, event_id) DO NOTHING`,
-    [eventId, cafeId],
+    [eventId, cafeId]
   );
 
   const claimed = await client.query<{ id: string }>(
@@ -76,7 +76,7 @@ export async function claimStripeWebhookForProcessing(params: {
        AND event_id = $1
        AND processing_status IN ('pending', 'failed')
      RETURNING id`,
-    [eventId],
+    [eventId]
   );
 
   if (claimed.rows.length > 0) {
@@ -85,7 +85,7 @@ export async function claimStripeWebhookForProcessing(params: {
 
   const row = await client.query<{ processing_status: string }>(
     `SELECT processing_status FROM webhook_events WHERE provider = 'stripe' AND event_id = $1`,
-    [eventId],
+    [eventId]
   );
 
   const status = row.rows[0]?.processing_status;
@@ -107,7 +107,7 @@ export async function completeStripeWebhookProcessing(params: {
          updated_at = NOW(),
          last_error = NULL
      WHERE provider = 'stripe' AND event_id = $1`,
-    [params.eventId],
+    [params.eventId]
   );
 }
 
@@ -123,7 +123,7 @@ export async function failStripeWebhookProcessing(params: {
          last_error = $2,
          updated_at = NOW()
      WHERE provider = 'stripe' AND event_id = $1`,
-    [params.eventId, msg],
+    [params.eventId, msg]
   );
 }
 

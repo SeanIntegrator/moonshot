@@ -49,7 +49,9 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
   }
 
   if (claim.kind === 'skip_inflight') {
-    void res.json({ received: true });
+    // Must not 2xx — Stripe stops retrying after success, and the in-flight
+    // worker may still crash, leaving the row stuck in `processing`.
+    void res.status(503).json({ received: false, retry: true });
     return;
   }
 
@@ -73,7 +75,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
 
         const orderBefore = await pool.query<{ user_id: string | null }>(
           `SELECT user_id FROM orders WHERE id = $1 AND cafe_id = $2`,
-          [orderId, cafeId],
+          [orderId, cafeId]
         );
         const userId = orderBefore.rows[0]?.user_id ?? null;
 
@@ -88,7 +90,9 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
           userId,
         });
         if (!order) {
-          throw new Error('confirmOrderPaidFromStripeCheckout returned null (order mismatch or not pending)');
+          throw new Error(
+            'confirmOrderPaidFromStripeCheckout returned null (order mismatch or not pending)'
+          );
         }
 
         const cafe = await findCafeById(cafeId);

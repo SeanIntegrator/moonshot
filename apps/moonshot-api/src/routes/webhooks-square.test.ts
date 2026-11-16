@@ -40,7 +40,7 @@ vi.mock('../lib/webhooks/claim.js', () => ({
 
 vi.mock('../lib/pos-adapters/square/webhook.js', async () => {
   const actual = await vi.importActual<typeof import('../lib/pos-adapters/square/webhook.js')>(
-    '../lib/pos-adapters/square/webhook.js',
+    '../lib/pos-adapters/square/webhook.js'
   );
   return {
     ...actual,
@@ -102,11 +102,38 @@ describe('handleSquareWebhook oauth.authorization.revoked', () => {
     expect(findCafeIdByMerchantIdAnyStatus).toHaveBeenCalledWith(
       expect.anything(),
       'square',
-      'MERCHANT1',
+      'MERCHANT1'
     );
     expect(findCafeIdByMerchantId).not.toHaveBeenCalled();
     expect(markRevoked).toHaveBeenCalledWith(expect.anything(), 'cafe-1', 'square');
     expect(ensureFreshSquareAccessToken).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({ received: true, kind: 'oauth_revoked' });
+  });
+});
+
+describe('handleSquareWebhook skip_inflight', () => {
+  it('returns 503 so Square retries instead of ACKing a still-running delivery', async () => {
+    claimWebhookForProcessing.mockResolvedValueOnce({ kind: 'skip_inflight' });
+    findCafeIdByMerchantId.mockResolvedValueOnce('cafe-1');
+
+    const body = JSON.stringify({
+      merchant_id: 'MERCHANT1',
+      type: 'order.created',
+      event_id: 'ev-inflight-1',
+      data: { type: 'order', id: 'sq-ord-1', object: { order_created: { order_id: 'sq-ord-1' } } },
+    });
+
+    const req = {
+      body: Buffer.from(body),
+      headers: { 'x-square-hmacsha256-signature': 'sig' },
+    } as unknown as Request;
+    const res = mockRes();
+
+    await handleSquareWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith({ received: false, retry: true });
+    expect(completeWebhookProcessing).not.toHaveBeenCalled();
+    expect(ensureFreshSquareAccessToken).not.toHaveBeenCalled();
   });
 });

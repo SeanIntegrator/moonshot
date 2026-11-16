@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from 'pg';
 export type WebhookClaimResult =
   | { kind: 'process' }
   | { kind: 'duplicate_processed' }
+  /** Concurrent delivery or stuck row — caller must NOT 2xx so the provider retries */
   | { kind: 'skip_inflight' };
 
 /**
@@ -26,14 +27,14 @@ export async function claimWebhookForProcessing(params: {
        AND event_id = $2
        AND processing_status = 'processing'
        AND updated_at < NOW() - INTERVAL '15 minutes'`,
-    [provider, eventId],
+    [provider, eventId]
   );
 
   await client.query(
     `INSERT INTO webhook_events (provider, event_id, cafe_id, processing_status)
      VALUES ($1, $2, $3, 'pending')
      ON CONFLICT (provider, event_id) DO NOTHING`,
-    [provider, eventId, cafeId],
+    [provider, eventId, cafeId]
   );
 
   const claimed = await client.query<{ id: string }>(
@@ -46,7 +47,7 @@ export async function claimWebhookForProcessing(params: {
        AND event_id = $2
        AND processing_status IN ('pending', 'failed')
      RETURNING id`,
-    [provider, eventId, cafeId],
+    [provider, eventId, cafeId]
   );
 
   if (claimed.rows.length > 0) {
@@ -55,7 +56,7 @@ export async function claimWebhookForProcessing(params: {
 
   const row = await client.query<{ processing_status: string }>(
     `SELECT processing_status FROM webhook_events WHERE provider = $1 AND event_id = $2`,
-    [provider, eventId],
+    [provider, eventId]
   );
 
   const status = row.rows[0]?.processing_status;
@@ -78,7 +79,7 @@ export async function completeWebhookProcessing(params: {
          updated_at = NOW(),
          last_error = NULL
      WHERE provider = $1 AND event_id = $2`,
-    [params.provider, params.eventId],
+    [params.provider, params.eventId]
   );
 }
 
@@ -95,6 +96,6 @@ export async function failWebhookProcessing(params: {
          last_error = $3,
          updated_at = NOW()
      WHERE provider = $1 AND event_id = $2`,
-    [params.provider, params.eventId, msg],
+    [params.provider, params.eventId, msg]
   );
 }
