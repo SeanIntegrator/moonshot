@@ -8,6 +8,7 @@ import {
   ORDER_SELECT_COLUMNS,
   UUID_RE,
 } from './order-constants.js';
+import { expireUnpaidStripeCheckoutForOrder } from './order-checkout.js';
 import { fetchOrderWithItems, normalisedOrdersFromRows } from './order-read.js';
 
 export async function listCustomerOrdersForUser(params: {
@@ -21,7 +22,7 @@ export async function listCustomerOrdersForUser(params: {
      FROM orders
      WHERE cafe_id = $1 AND user_id = $2 AND status = ANY($3::text[])
      ORDER BY created_at DESC`,
-    [cafeId, userId, [...CUSTOMER_ACTIVE_STATUSES]],
+    [cafeId, userId, [...CUSTOMER_ACTIVE_STATUSES]]
   );
 
   const recentRes = await pool.query<OrderRowDb>(
@@ -30,7 +31,7 @@ export async function listCustomerOrdersForUser(params: {
      WHERE cafe_id = $1 AND user_id = $2 AND status = ANY($3::text[])
      ORDER BY created_at DESC
      LIMIT 10`,
-    [cafeId, userId, [...CUSTOMER_TERMINAL_STATUSES]],
+    [cafeId, userId, [...CUSTOMER_TERMINAL_STATUSES]]
   );
 
   const [active, recent] = await Promise.all([
@@ -47,7 +48,10 @@ export type CancelOrderDbResult =
   | { kind: 'not_found' }
   | { kind: 'not_cancellable'; order: NormalisedOrder };
 
-export async function cancelOrderAtCafe(orderId: string, cafeId: string): Promise<CancelOrderDbResult> {
+export async function cancelOrderAtCafe(
+  orderId: string,
+  cafeId: string
+): Promise<CancelOrderDbResult> {
   if (!UUID_RE.test(orderId)) return { kind: 'not_found' };
 
   const existing = await fetchOrderWithItems(pool, orderId, cafeId);
@@ -72,7 +76,7 @@ export async function cancelOrderAtCafe(orderId: string, cafeId: string): Promis
          updated_at = NOW()
      WHERE id = $1 AND cafe_id = $2 AND status = ANY($3::text[])
      RETURNING id`,
-    [orderId, cafeId, [...CUSTOMER_CANCELLABLE_STATUSES]],
+    [orderId, cafeId, [...CUSTOMER_CANCELLABLE_STATUSES]]
   );
 
   if (upd.rows.length === 0) {
@@ -84,5 +88,8 @@ export async function cancelOrderAtCafe(orderId: string, cafeId: string): Promis
 
   const order = await fetchOrderWithItems(pool, orderId, cafeId);
   if (!order) return { kind: 'not_found' };
+  if (existing.paymentStatus === 'unpaid') {
+    await expireUnpaidStripeCheckoutForOrder({ orderId, cafeId });
+  }
   return { kind: 'cancelled', order };
 }

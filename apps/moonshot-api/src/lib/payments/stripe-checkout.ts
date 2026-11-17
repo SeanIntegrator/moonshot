@@ -1,10 +1,10 @@
 import Stripe from 'stripe';
 import type { ResolvedOrderLine } from '../order-modifiers.js';
-import { requireStripe } from './stripe-client.js';
+import { getStripeOrNull, requireStripe } from './stripe-client.js';
 
 function buildLineItems(
   resolvedLines: ResolvedOrderLine[],
-  currency: string,
+  currency: string
 ): Stripe.Checkout.SessionCreateParams.LineItem[] {
   const c = currency.toLowerCase();
   return resolvedLines.map((l) => {
@@ -67,7 +67,7 @@ export async function createStripeCheckoutSessionDirectCharge(params: {
         duration: 'once',
         name: 'Loyalty reward',
       },
-      { stripeAccount: connectedAccountId },
+      { stripeAccount: connectedAccountId }
     );
     sessionParams.discounts = [{ coupon: coupon.id }];
   }
@@ -99,6 +99,33 @@ export async function retrieveStripeCheckoutSession(params: {
   return stripe.checkout.sessions.retrieve(params.sessionId, undefined, {
     stripeAccount: params.connectedAccountId,
   });
+}
+
+export async function expireStripeCheckoutSession(params: {
+  sessionId: string;
+  connectedAccountId: string;
+}): Promise<void> {
+  const stripe = getStripeOrNull();
+  if (!stripe) return;
+  // v22+: RequestOptions must be the third arg when params are omitted
+  await stripe.checkout.sessions.expire(params.sessionId, undefined, {
+    stripeAccount: params.connectedAccountId,
+  });
+}
+
+/** Best-effort: never fail the local cancel/cleanup if Stripe expire rejects (already paid/expired). */
+export async function expireStripeCheckoutSessionBestEffort(params: {
+  sessionId: string;
+  connectedAccountId: string;
+}): Promise<void> {
+  try {
+    await expireStripeCheckoutSession(params);
+  } catch (e) {
+    console.warn('[checkout] expire_session_failed', {
+      sessionId: params.sessionId,
+      err: e,
+    });
+  }
 }
 
 export async function createStripeExpressConnectedAccount(): Promise<{ accountId: string }> {

@@ -11,6 +11,7 @@ const recordStripeCheckoutSessionForOrder = vi.hoisted(() => vi.fn());
 const deleteAbandonedPendingOrder = vi.hoisted(() => vi.fn());
 const fetchOrderWithItems = vi.hoisted(() => vi.fn());
 const createStripeCheckoutSessionDirectCharge = vi.hoisted(() => vi.fn());
+const expireStripeCheckoutSessionBestEffort = vi.hoisted(() => vi.fn());
 
 const getStripeOrNull = vi.hoisted(() => vi.fn());
 const isStripeConnectReady = vi.hoisted(() => vi.fn());
@@ -41,6 +42,7 @@ vi.mock('./orders/order-read.js', () => ({
 
 vi.mock('./payments/stripe-checkout.js', () => ({
   createStripeCheckoutSessionDirectCharge,
+  expireStripeCheckoutSessionBestEffort,
 }));
 
 vi.mock('./payments/stripe-client.js', () => ({
@@ -125,6 +127,7 @@ describe('createStripeCheckoutOrderResponse', () => {
     });
     recordStripeCheckoutSessionForOrder.mockResolvedValue(undefined);
     deleteAbandonedPendingOrder.mockResolvedValue(undefined);
+    expireStripeCheckoutSessionBestEffort.mockResolvedValue(undefined);
     loadFoodSectionKeysForCafe.mockResolvedValue(['food']);
   });
 
@@ -141,7 +144,7 @@ describe('createStripeCheckoutOrderResponse', () => {
         orderType: 'takeaway',
         lines: [{ menuItemId: 'menu-1', quantity: 1 }],
         paymentConfig: {},
-      }),
+      })
     ).rejects.toMatchObject({
       status: 503,
       code: ApiErrorCode.CONFIG,
@@ -197,13 +200,14 @@ describe('createStripeCheckoutOrderResponse', () => {
         orderType: 'takeaway',
         lines: [{ menuItemId: 'menu-1', quantity: 1 }],
         paymentConfig: {},
-      }),
+      })
     ).rejects.toMatchObject({ message: 'stripe outage' });
 
     expect(deleteAbandonedPendingOrder).toHaveBeenCalledWith(
       '11111111-1111-1111-1111-111111111111',
-      '22222222-2222-2222-2222-222222222222',
+      '22222222-2222-2222-2222-222222222222'
     );
+    expect(expireStripeCheckoutSessionBestEffort).not.toHaveBeenCalled();
     expect(recordStripeCheckoutSessionForOrder).not.toHaveBeenCalled();
   });
 
@@ -220,9 +224,13 @@ describe('createStripeCheckoutOrderResponse', () => {
         orderType: 'takeaway',
         lines: [{ menuItemId: 'menu-1', quantity: 1 }],
         paymentConfig: {},
-      }),
+      })
     ).rejects.toMatchObject({ message: 'db write failed' });
 
+    expect(expireStripeCheckoutSessionBestEffort).toHaveBeenCalledWith({
+      sessionId: 'cs_test_unit',
+      connectedAccountId: 'acct_unit_test',
+    });
     expect(deleteAbandonedPendingOrder).toHaveBeenCalled();
   });
 
@@ -261,7 +269,12 @@ describe('createStripeCheckoutOrderResponse', () => {
         orderType: 'takeaway',
         lines: [{ menuItemId: 'menu-1', quantity: 1 }],
         paymentConfig: {},
-      }),
+      })
     ).rejects.toBeInstanceOf(ApiHttpError);
+
+    expect(expireStripeCheckoutSessionBestEffort).toHaveBeenCalledWith({
+      sessionId: 'cs_emptyurl',
+      connectedAccountId: 'acct_unit_test',
+    });
   });
 });

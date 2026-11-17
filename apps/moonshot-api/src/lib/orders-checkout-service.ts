@@ -15,7 +15,10 @@ import { loadFoodSectionKeysForCafe } from './menu/food-section-keys.js';
 import { findUnredeemedRewardById } from './loyalty/repository.js';
 import { getStripeConnectAccountId, isStripeConnectReady } from './payments/cafe-payment-config.js';
 import { getStripeOrNull } from './payments/stripe-client.js';
-import { createStripeCheckoutSessionDirectCharge } from './payments/stripe-checkout.js';
+import {
+  createStripeCheckoutSessionDirectCharge,
+  expireStripeCheckoutSessionBestEffort,
+} from './payments/stripe-checkout.js';
 import { checkoutUrlsForCafe } from './payments/checkout-urls.js';
 
 /**
@@ -23,7 +26,8 @@ import { checkoutUrlsForCafe } from './payments/checkout-urls.js';
  *
  * Flow: resolve menu prices once → insert pending/unpaid order (reward not consumed yet) →
  * create Checkout Session on the connected account → persist payment_sessions.
- * If Stripe or DB recording fails, the pending order is deleted so the customer can retry.
+ * If Stripe or DB recording fails, the Checkout Session is expired and the pending
+ * order is deleted so the customer can retry without leaving a payable orphan.
  * Payment confirmation (and reward consume) happens in confirmOrderPaidFromStripeCheckout
  * via webhook or GET checkout-session recovery — both paths share that helper.
  */
@@ -56,7 +60,7 @@ export async function createStripeCheckoutOrderResponse(params: {
     throw new ApiHttpError(
       401,
       ApiErrorCode.UNAUTHORIZED,
-      'Sign in to redeem a loyalty reward on this order',
+      'Sign in to redeem a loyalty reward on this order'
     );
   }
 
@@ -64,7 +68,7 @@ export async function createStripeCheckoutOrderResponse(params: {
     throw new ApiHttpError(
       503,
       ApiErrorCode.CONFIG,
-      'Stripe is not configured on this server (STRIPE_API_KEY)',
+      'Stripe is not configured on this server (STRIPE_API_KEY)'
     );
   }
 
@@ -72,7 +76,7 @@ export async function createStripeCheckoutOrderResponse(params: {
     throw new ApiHttpError(
       403,
       ApiErrorCode.FORBIDDEN,
-      'Online payments are not enabled for this café. Complete Stripe Connect onboarding in the admin app.',
+      'Online payments are not enabled for this café. Complete Stripe Connect onboarding in the admin app.'
     );
   }
 
@@ -81,11 +85,15 @@ export async function createStripeCheckoutOrderResponse(params: {
     throw new ApiHttpError(
       403,
       ApiErrorCode.CONFIG,
-      'Stripe connected account is missing from café configuration.',
+      'Stripe connected account is missing from café configuration.'
     );
   }
 
-  const { lines: resolvedLines, currency, totalMinor: subtotalMinor } = await resolveOrderLinesWithModifiers({
+  const {
+    lines: resolvedLines,
+    currency,
+    totalMinor: subtotalMinor,
+  } = await resolveOrderLinesWithModifiers({
     db: pool,
     cafeId,
     lines,
@@ -131,6 +139,7 @@ export async function createStripeCheckoutOrderResponse(params: {
 
   const { successUrl, cancelUrl } = checkoutUrlsForCafe(cafeSlug);
 
+  let createdSessionId: string | null = null;
   try {
     const session = await createStripeCheckoutSessionDirectCharge({
       connectedAccountId,
@@ -143,6 +152,7 @@ export async function createStripeCheckoutOrderResponse(params: {
       discountMinor,
       redeemRewardId: redeemRewardId ?? null,
     });
+    createdSessionId = session.sessionId;
 
     if (!session.url) {
       throw new ApiHttpError(500, ApiErrorCode.INTERNAL, 'Stripe did not return a checkout URL');
@@ -182,6 +192,12 @@ export async function createStripeCheckoutOrderResponse(params: {
       }),
     };
   } catch (e) {
+    if (createdSessionId) {
+      await expireStripeCheckoutSessionBestEffort({
+        sessionId: createdSessionId,
+        connectedAccountId,
+      });
+    }
     await deleteAbandonedPendingOrder(order.id, cafeId);
     throw e;
   }
