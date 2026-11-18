@@ -125,6 +125,10 @@ export async function refreshDueSquareTokens(
 /**
  * Ensure the café's Square access token is usable for an immediate API call.
  * Refreshes when expiry is within the 7-day window.
+ *
+ * A failed ObtainToken must not discard a still-valid access token: Square
+ * order webhooks treat `null` as "no connection" and used to ACK that as
+ * ignored, dropping till tickets that Square will not retry.
  */
 export async function ensureFreshSquareAccessToken(
   db: Db,
@@ -143,6 +147,11 @@ export async function ensureFreshSquareAccessToken(
   if (!needsRefresh) return conn;
 
   const result = await refreshSquareConnection(db, conn, environment);
-  if (result.kind !== 'refreshed') return null;
-  return getPosConnection(db, cafeId, POS_PROVIDERS.square);
+  if (result.kind === 'refreshed') {
+    return getPosConnection(db, cafeId, POS_PROVIDERS.square);
+  }
+  if (conn.accessTokenExpiresAt.getTime() > Date.now()) {
+    return conn;
+  }
+  return null;
 }

@@ -135,16 +135,20 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
 
     const conn = await ensureFreshSquareAccessToken(pool, cafeId);
     if (!conn) {
-      console.error('[square-webhook] missing_active_connection', {
+      // Do not ACK. A 2xx tells Square to stop retrying; a transient token
+      // refresh failure (or a brief disconnect) would then drop the till order.
+      console.error('[square-webhook] missing_usable_connection', {
         cafeId,
         merchantId: envelope.merchantId,
+        eventId: envelope.eventId,
       });
-      await completeWebhookProcessing({
+      await failWebhookProcessing({
         client: pool,
         provider: PROVIDER,
         eventId: envelope.eventId,
+        message: 'no_usable_square_token',
       });
-      void res.json({ received: true, ignored: true, reason: 'no_active_connection' });
+      void res.status(503).json({ received: false, retry: true, reason: 'no_usable_square_token' });
       return;
     }
 

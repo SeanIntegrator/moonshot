@@ -9,6 +9,7 @@ const {
   ensureFreshSquareAccessToken,
   claimWebhookForProcessing,
   completeWebhookProcessing,
+  failWebhookProcessing,
 } = vi.hoisted(() => ({
   findCafeIdByMerchantId: vi.fn(),
   findCafeIdByMerchantIdAnyStatus: vi.fn(),
@@ -17,6 +18,7 @@ const {
   ensureFreshSquareAccessToken: vi.fn(),
   claimWebhookForProcessing: vi.fn(),
   completeWebhookProcessing: vi.fn(),
+  failWebhookProcessing: vi.fn(),
 }));
 
 vi.mock('../db.js', () => ({ pool: {} }));
@@ -35,7 +37,7 @@ vi.mock('../lib/pos-adapters/square/token-refresh.js', () => ({
 vi.mock('../lib/webhooks/claim.js', () => ({
   claimWebhookForProcessing,
   completeWebhookProcessing,
-  failWebhookProcessing: vi.fn(),
+  failWebhookProcessing,
 }));
 
 vi.mock('../lib/pos-adapters/square/webhook.js', async () => {
@@ -108,5 +110,44 @@ describe('handleSquareWebhook oauth.authorization.revoked', () => {
     expect(markRevoked).toHaveBeenCalledWith(expect.anything(), 'cafe-1', 'square');
     expect(ensureFreshSquareAccessToken).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({ received: true, kind: 'oauth_revoked' });
+  });
+});
+
+describe('handleSquareWebhook order events', () => {
+  it('returns 503 so Square retries when no usable access token is available', async () => {
+    findCafeIdByMerchantId.mockResolvedValueOnce('cafe-1');
+    ensureFreshSquareAccessToken.mockResolvedValueOnce(null);
+
+    const body = JSON.stringify({
+      merchant_id: 'MERCHANT1',
+      type: 'order.created',
+      event_id: 'ev-order-1',
+      data: {
+        type: 'order_created',
+        object: { order_created: { order_id: 'sq-order-1' } },
+      },
+    });
+
+    const req = {
+      body: Buffer.from(body),
+      headers: { 'x-square-hmacsha256-signature': 'sig' },
+    } as unknown as Request;
+    const res = mockRes();
+
+    await handleSquareWebhook(req, res);
+
+    expect(completeWebhookProcessing).not.toHaveBeenCalled();
+    expect(failWebhookProcessing).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: 'ev-order-1',
+        message: 'no_usable_square_token',
+      }),
+    );
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith({
+      received: false,
+      retry: true,
+      reason: 'no_usable_square_token',
+    });
   });
 });
