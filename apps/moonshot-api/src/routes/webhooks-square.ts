@@ -156,14 +156,51 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
           orderId: envelope.orderId,
         });
       } catch (err) {
+        // Do not ACK. A 2xx tells Square to stop retrying; we would then persist
+        // an empty detailsPending stub that never fills in if later events also fail.
         console.error('[square-webhook] retrieve_order_failed', {
           cafeId,
           orderId: envelope.orderId,
+          eventId: envelope.eventId,
           message: err instanceof Error ? err.message : String(err),
         });
         if (isPermanentSquareAuthFailure(err)) {
           await markNeedsReauth(pool, cafeId, POS_PROVIDERS.square);
         }
+        await failWebhookProcessing({
+          client: pool,
+          provider: PROVIDER,
+          eventId: envelope.eventId,
+          message: `retrieve_order_failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+        void res.status(503).json({
+          received: false,
+          retry: true,
+          reason: 'square_order_retrieve_failed',
+        });
+        return;
+      }
+
+      if (!order) {
+        // Square often delivers the webhook before the order is readable.
+        // ACK'ing would persist a blank stub and drop retries.
+        console.error('[square-webhook] retrieve_order_empty', {
+          cafeId,
+          orderId: envelope.orderId,
+          eventId: envelope.eventId,
+        });
+        await failWebhookProcessing({
+          client: pool,
+          provider: PROVIDER,
+          eventId: envelope.eventId,
+          message: 'square_order_retrieve_empty',
+        });
+        void res.status(503).json({
+          received: false,
+          retry: true,
+          reason: 'square_order_retrieve_failed',
+        });
+        return;
       }
     }
 
