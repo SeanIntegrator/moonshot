@@ -17,6 +17,7 @@ import {
 import {
   findCafeIdByMerchantId,
   findCafeIdByMerchantIdAnyStatus,
+  getPosConnection,
   markNeedsReauth,
   markRevoked,
 } from '../lib/pos-connections-repository.js';
@@ -92,6 +93,38 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
 
   try {
     if (!cafeId) {
+      // Active-only lookup misses needs_reauth rows. ACK'ing those as
+      // unknown_merchant tells Square to stop retrying, so till tickets
+      // during the reconnect window never reach the KDS.
+      const knownCafeId = await findCafeIdByMerchantIdAnyStatus(
+        pool,
+        POS_PROVIDERS.square,
+        envelope.merchantId
+      );
+      const inactiveConn = knownCafeId
+        ? await getPosConnection(pool, knownCafeId, POS_PROVIDERS.square)
+        : null;
+      if (inactiveConn && inactiveConn.status !== 'active') {
+        console.error('[square-webhook] connection_not_active', {
+          cafeId: knownCafeId,
+          merchantId: envelope.merchantId,
+          eventId: envelope.eventId,
+          status: inactiveConn.status,
+        });
+        await failWebhookProcessing({
+          client: pool,
+          provider: PROVIDER,
+          eventId: envelope.eventId,
+          message: `square_connection_not_active:${inactiveConn.status}`,
+        });
+        void res.status(503).json({
+          received: false,
+          retry: true,
+          reason: 'square_connection_not_active',
+        });
+        return;
+      }
+
       console.info('[square-webhook] ignored_unknown_merchant', {
         merchantId: envelope.merchantId,
         type: envelope.type,
