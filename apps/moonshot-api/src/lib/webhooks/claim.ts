@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from 'pg';
 export type WebhookClaimResult =
   | { kind: 'process' }
   | { kind: 'duplicate_processed' }
+  /** Concurrent delivery or stuck row — caller must NOT 2xx so the provider retries */
   | { kind: 'skip_inflight' };
 
 /**

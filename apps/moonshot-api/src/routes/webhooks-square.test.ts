@@ -110,3 +110,39 @@ describe('handleSquareWebhook oauth.authorization.revoked', () => {
     expect(res.json).toHaveBeenCalledWith({ received: true, kind: 'oauth_revoked' });
   });
 });
+
+function orderCreatedBody(eventId = 'ev-order-1'): string {
+  return JSON.stringify({
+    merchant_id: 'MERCHANT1',
+    type: 'order.created',
+    event_id: eventId,
+    data: {
+      type: 'order_created',
+      object: { order_created: { order_id: 'sq-order-1' } },
+    },
+  });
+}
+
+describe('handleSquareWebhook skip_inflight', () => {
+  it('returns 503 so Square retries when another delivery is still processing', async () => {
+    claimWebhookForProcessing.mockResolvedValueOnce({ kind: 'skip_inflight' });
+
+    const req = {
+      body: Buffer.from(orderCreatedBody('ev-inflight-1')),
+      headers: { 'x-square-hmacsha256-signature': 'sig' },
+    } as unknown as Request;
+    const res = mockRes();
+
+    await handleSquareWebhook(req, res);
+
+    expect(completeWebhookProcessing).not.toHaveBeenCalled();
+    expect(ensureFreshSquareAccessToken).not.toHaveBeenCalled();
+    expect(findCafeIdByMerchantId).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith({
+      received: false,
+      retry: true,
+      reason: 'skip_inflight',
+    });
+  });
+});

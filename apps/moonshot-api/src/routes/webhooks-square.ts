@@ -86,7 +86,10 @@ export async function handleSquareWebhook(req: Request, res: Response): Promise<
     return;
   }
   if (claim.kind === 'skip_inflight') {
-    void res.json({ received: true });
+    // Must not 2xx — Square stops retrying after success, and the in-flight
+    // worker may still crash, leaving the row stuck in `processing` so a till
+    // ticket never reaches the KDS.
+    void res.status(503).json({ received: false, retry: true, reason: 'skip_inflight' });
     return;
   }
 
